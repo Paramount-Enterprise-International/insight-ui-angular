@@ -3,5 +3,6 @@
   "dest": "../../dist/insight-ui",
   "lib": {
     "entryFile": "src/public-api.ts"
-  }
+  },
+  "allowedNonPeerDependencies": ["dompurify", "marked"]
 }
