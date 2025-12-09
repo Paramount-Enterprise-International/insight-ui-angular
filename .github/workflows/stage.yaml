@@ -88,7 +88,7 @@ jobs:
         run: |
           git add .
           if ! git diff --cached --quiet; then
-            git commit -m "release: @insight/ui-angular v${{ steps.version.outputs.version }}"
+            git commit -m "release: insight-ui-angular v${{ steps.version.outputs.version }}"
             git push origin $RELEASE_BRANCH --force
           else
             echo "🟡 No changes to commit"
@@ -98,15 +98,15 @@ jobs:
 
       - name: Create and push tag
         run: |
-          TAG="@insight/ui-angular@${{ steps.version.outputs.version }}"
+          TAG="insight-ui-angular@${{ steps.version.outputs.version }}"
           git tag -f "$TAG"
           git push origin "$TAG" --force
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "@insight/ui-angular@${{ steps.version.outputs.version }}"
-          name: "@insight/ui-angular v${{ steps.version.outputs.version }}"
+          tag_name: "insight-ui-angular@${{ steps.version.outputs.version }}"
+          name: "insight-ui-angular v${{ steps.version.outputs.version }}"
           body: "Automated release from stage/ui-angular → release/ui-angular"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
