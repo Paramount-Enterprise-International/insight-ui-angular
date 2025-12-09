@@ -1,0 +1,24 @@
+<!-- input.html -->
+<!--
+ IInput
+ Version: 2.0.0 (template)
+-->
+
+@for (i of prepends; track $index) {
+  <i-input-addon [addon]="i" />
+}
+<input
+  #inputRef
+  [type]="type"
+  [placeholder]="placeholder"
+  [attr.autocomplete]="autocomplete || null"
+  [readonly]="readonly"
+  [disabled]="isDisabled"
+  [value]="value ?? ''"
+  [attr.aria-invalid]="invalid ? 'true' : null"
+  [iInputMask]="mask"
+  (input)="handleInput($event)"
+  (blur)="handleBlur()" />
+@for (i of appends; track $index) {
+  <i-input-addon [addon]="i" />
+}

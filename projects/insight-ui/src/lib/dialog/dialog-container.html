@@ -1,0 +1,10 @@
+<div class="i-dialog-backdrop" (click)="onBackdropClick()"></div>
+<div class="i-dialog-wrapper">
+  <div class="i-dialog-panel" [ngStyle]="panelStyles">
+    <ng-container
+      *ngComponentOutlet="
+        instance.component;
+        injector: dialogInjector
+      "></ng-container>
+  </div>
+</div>

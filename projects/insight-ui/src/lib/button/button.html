@@ -1,0 +1,8 @@
+@if (loading) {
+  <i-loading [light]="variant !== 'outline'" [label]="loadingText" />
+} @else {
+  @if (icon) {
+    <ic [icon]="icon" [size]="size" />
+  }
+  <ng-content />
+}

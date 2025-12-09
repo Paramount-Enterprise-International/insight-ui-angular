@@ -1,0 +1,48 @@
+<!--
+  ISelect
+  Version: 2.1.0
+  Primitive select, wraps <i-input>
+-->
+<i-input
+  [placeholder]="placeholder"
+  [value]="displayText"
+  [invalid]="invalid || hasNoResults"
+  [readonly]="disabled"
+  [append]="appendAddon">
+</i-input>
+
+@if (hasOptionsList) {
+  <div class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
+    @for (row of filteredOptions; track row; let idx = $index) {
+      <div
+        class="i-option"
+        [class.active]="highlightIndex === idx"
+        [class.selected]="isRowSelected(row)"
+        (mouseenter)="setActiveIndex(idx)"
+        (mousedown)="selectRow(row)">
+        @if (optionDef?.template) {
+          <div class="i-option-label">
+            <ng-container
+              *ngTemplateOutlet="
+                optionDef!.template;
+                context: { $implicit: row, row: row }
+              ">
+            </ng-container>
+          </div>
+        } @else {
+          <div
+            class="i-option-label"
+            [innerHTML]="
+              resolveDisplayText(row) | highlightSearch: filterText
+            "></div>
+        }
+
+        @if (isRowSelected(row)) {
+          <span class="i-option-check">
+            <ic icon="check" />
+          </span>
+        }
+      </div>
+    }
+  </div>
+}

@@ -1,0 +1,47 @@
+<!-- paginator.html -->
+
+<!--
+ IPaginator
+ Version: 1.1.0
+-->
+<div class="i-paginator flex align-items-center gap-2">
+  <!-- <button
+    type="button"
+    class="btn btn-sm btn-outline-secondary"
+    (click)="previousPage()"
+    [disabled]="pageIndex <= 0">
+    ‹
+  </button> -->
+  <i-button icon="prev" (onClick)="previousPage()" size="sm" [disabled]="pageIndex <= 0"></i-button>
+
+  <span>Page {{ pageIndex + 1 }} / {{ pageCount }}</span>
+
+  <!-- <button
+    type="button"
+    class="btn btn-sm btn-outline-secondary"
+    (click)="nextPage()"
+    [disabled]="pageIndex >= pageCount - 1">
+    ›
+  </button> -->
+
+  <i-button
+    icon="next"
+    (onClick)="nextPage()"
+    size="sm"
+    [disabled]="pageIndex >= pageCount - 1"
+  ></i-button>
+
+  <span class="ms-2">
+    | Show
+    <select
+      class="form-select form-select-sm d-inline-block w-auto"
+      [value]="pageSize"
+      (change)="changePageSize($any($event.target).value)"
+    >
+      @for (size of pageSizeOptions; track size) {
+        <option [value]="size">{{ size }}</option>
+      }
+    </select>
+    per page ({{ length }} total)
+  </span>
+</div>
