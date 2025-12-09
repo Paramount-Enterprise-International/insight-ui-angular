@@ -40,7 +40,7 @@ jobs:
       - name: Get library version from package.json
         id: version
         run: |
-          VERSION=$(node -p "require('./projects/${process.env.LIB_NAME}/package.json').version")
+          VERSION=$(node -p "require('./projects/${env.LIB_NAME}/package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         env:
           LIB_NAME: ${{ env.LIB_NAME }}
