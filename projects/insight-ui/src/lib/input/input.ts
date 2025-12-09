@@ -71,7 +71,11 @@ export class IInput implements ControlValueAccessor {
 
   @Input() prepend: IInputAddons | IInputAddons[] | undefined;
 
-  @Input() append: IInputAddons | IInputAddons[] | IInputAddonLoading | undefined;
+  @Input() append:
+    | IInputAddons
+    | IInputAddons[]
+    | IInputAddonLoading
+    | undefined;
 
   @ViewChild('inputRef') inputRef!: ElementRef<HTMLInputElement>;
 
@@ -160,11 +164,12 @@ export class IInput implements ControlValueAccessor {
   standalone: true,
   imports: [IInput],
   template: `@if (label) {
-    <label class="i-fc-input__label" (click)="focusInnerInput()">
-      {{ label }} : @if (required) {
-      <span class="i-fc-input__required">*</span>
-      }
-    </label>
+      <label class="i-fc-input__label" (click)="focusInnerInput()">
+        {{ label }} :
+        @if (required) {
+          <span class="i-fc-input__required">*</span>
+        }
+      </label>
     }
 
     <i-input
@@ -179,23 +184,15 @@ export class IInput implements ControlValueAccessor {
       [invalid]="controlInvalid"
       [disabled]="isDisabled"
       (input)="handleInnerInput($event)"
-      (blur)="handleInnerBlur()"
-    >
+      (blur)="handleInnerBlur()">
     </i-input>
 
     @if (controlInvalid && resolvedErrorText) {
-    <div class="i-fc-input__error">
-      {{ resolvedErrorText }}
-    </div>
+      <div class="i-fc-input__error">
+        {{ resolvedErrorText }}
+      </div>
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => IFCInput),
-      multi: true,
-    },
-  ],
 })
 export class IFCInput implements ControlValueAccessor {
   @ViewChild(IInput) innerInput!: IInput;
@@ -302,7 +299,11 @@ export class IFCInput implements ControlValueAccessor {
   }
 
   get resolvedErrorText(): string | null {
-    return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
+    return resolveControlErrorMessage(
+      this.ngControl,
+      this.label,
+      this.errorMessage
+    );
   }
 }
 

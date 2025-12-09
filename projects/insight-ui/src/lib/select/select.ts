@@ -737,13 +737,6 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     </div>
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => IFCSelect),
-      multi: true,
-    },
-  ],
 })
 export class IFCSelect<T = any> implements ControlValueAccessor {
   @ViewChild(ISelect) innerSelect!: ISelect<T>;
