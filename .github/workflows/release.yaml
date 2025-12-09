@@ -65,7 +65,7 @@ jobs:
       # 6) Build Angular library
       - name: Build Angular library
         run: |
-          npx --yes @angular/cli@20 ng build "$LIB_NAME" --configuration=production
+          npx --yes @angular/cli@20 build "$LIB_NAME" --configuration=production
 
       # 7) Copy dist output to a temporary folder
       - name: Prepare build artifacts
