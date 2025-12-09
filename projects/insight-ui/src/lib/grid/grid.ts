@@ -41,7 +41,7 @@ import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { IButton } from '../button/button';
 import { IIcon } from '../icon/icon';
 import { IPaginator } from './paginator';
-import { HighlightSearchPipe } from '../highlight-search.pipe';
+import { IHighlightSearchPipe } from '../highlight-search.pipe';
 
 /* ----------------------------------------------------
  * SORT TYPES
@@ -892,7 +892,7 @@ export class IGridHeaderCell {
     IGridCell,
     IPaginator,
     IButton,
-    HighlightSearchPipe,
+    IHighlightSearchPipe,
   ],
   templateUrl: './grid.html',
   exportAs: 'iGrid',

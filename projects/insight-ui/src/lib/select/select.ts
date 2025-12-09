@@ -33,7 +33,7 @@ import {
 } from '@angular/forms';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
-import { HighlightSearchPipe } from './../highlight-search.pipe';
+import { IHighlightSearchPipe } from './../highlight-search.pipe';
 import { IIcon } from '../icon/icon';
 import { IInput } from '../input/input';
 import { IInputAddonButton, IInputAddonLoading } from '../input/input-addon';
@@ -79,7 +79,7 @@ export type ISelectPanelPosition =
 @Component({
   selector: 'i-select',
   standalone: true,
-  imports: [IIcon, NgTemplateOutlet, HighlightSearchPipe, IInput, NgClass],
+  imports: [IIcon, NgTemplateOutlet, IHighlightSearchPipe, IInput, NgClass],
   templateUrl: './select.html',
   providers: [
     {
