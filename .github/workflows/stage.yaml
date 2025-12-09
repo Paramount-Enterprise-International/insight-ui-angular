@@ -71,8 +71,8 @@ jobs:
           # Remove everything tracked in this branch
           git rm -rf . || true
 
-          # Copy built files from temp
-          cp -R ../release-tmp/* .
+          # Copy built files from temp (same directory)
+          cp -R release-tmp/* .
 
           # Safety: remove any node_modules if they ended up here
           rm -rf node_modules
