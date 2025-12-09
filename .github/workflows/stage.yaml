@@ -1,104 +1,112 @@
-name: Build & Release insight-ui-angular
+name: Build and Flatten insight-ui-angular
+
+permissions:
+  contents: write
 
 on:
   push:
     branches:
-      - stage # ⬅️ change this if you use a different stage branch name
+      - stage # ⬅️ adjust if you use a different stage branch name
 
 jobs:
-  build-and-release:
+  release-build:
     runs-on: ubuntu-latest
 
     env:
-      LIB_NAME: insight-ui # Angular library name
-      RELEASE_BRANCH: release/insight-ui-angular
+      LIB_NAME: insight-ui # Angular library name in angular.json
+      RELEASE_BRANCH: release
 
     steps:
-      - name: Checkout repo
+      - name: Checkout source from pushed branch
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # we need full history for tags / branches
+          fetch-depth: 0
 
-      - name: Setup Node
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: 20
+          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
 
-      - name: Build Angular library
+      - name: Build the Angular library
         run: npx ng build $LIB_NAME --configuration=production
 
-      - name: Prepare release branch files
+      - name: Copy build output to temp folder
         run: |
           rm -rf release-tmp
           mkdir -p release-tmp
           cp -R dist/$LIB_NAME/* release-tmp/
 
-      - name: Get library version from package.json
+      - name: Get version from library package.json
         id: version
         run: |
-          VERSION=$(node -p "require('./projects/${env.LIB_NAME}/package.json').version")
+          VERSION=$(jq -r .version projects/${LIB_NAME}/package.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         env:
           LIB_NAME: ${{ env.LIB_NAME }}
 
       - name: Configure git user
         run: |
-          git config user.name "${GITHUB_ACTOR}"
-          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create/update release branch
+      - name: Checkout or create release branch
         run: |
-          # Fetch all branches
-          git fetch origin
-
-          # Check if release branch exists
-          if git show-ref --verify --quiet "refs/heads/${RELEASE_BRANCH}"; then
-            git checkout ${RELEASE_BRANCH}
+          git fetch origin $RELEASE_BRANCH || true
+          if git show-ref --quiet refs/heads/$RELEASE_BRANCH; then
+            git switch $RELEASE_BRANCH
           else
-            git checkout --orphan ${RELEASE_BRANCH}
+            git switch -c $RELEASE_BRANCH
           fi
-
-          # Remove everything except .git
-          git rm -rf . || true
-
-          # Copy built files into branch root
-          cp -R ../release-tmp/* .
-
-          # Add all files
-          git add .
-
-          # Commit (ignore failure if nothing changed)
-          git commit -m "chore(release): insight-ui-angular v${{ steps.version.outputs.version }}" || echo "No changes to commit"
-
-          # Force push release branch
-          git push origin ${RELEASE_BRANCH} --force
-
-        working-directory: .
         env:
           RELEASE_BRANCH: ${{ env.RELEASE_BRANCH }}
 
-      - name: Create tag
-        id: tag
+      - name: Replace contents of release branch with built files
         run: |
-          VERSION=${{ steps.version.outputs.version }}
-          TAG="ui-angular-v${VERSION}"
+          # Remove everything tracked in this branch
+          git rm -rf . || true
 
-          # Create or move tag to latest release commit
+          # Copy built files from temp
+          cp -R ../release-tmp/* .
+
+          # Safety: remove any node_modules if they ended up here
+          rm -rf node_modules
+          find . -type d -name "node_modules" -prune -exec rm -rf {} \;
+
+          # Optional: remove stray .ts (non-declaration) if any
+          find . -type f -name '*.ts' ! -name '*.d.ts' -delete
+
+          # Show resulting tree
+          ls -la
+
+      - name: Commit and push release branch
+        run: |
+          git add .
+          if ! git diff --cached --quiet; then
+            git commit -m "release: @insight/ui-angular v${{ steps.version.outputs.version }}"
+            git push origin $RELEASE_BRANCH --force
+          else
+            echo "🟡 No changes to commit"
+          fi
+        env:
+          RELEASE_BRANCH: ${{ env.RELEASE_BRANCH }}
+
+      - name: Create and push tag
+        run: |
+          TAG="@insight/ui-angular@${{ steps.version.outputs.version }}"
           git tag -f "$TAG"
           git push origin "$TAG" --force
-
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: insight-ui-angular ${{ steps.version.outputs.version }}
-          draft: false
-          prerelease: false
+          tag_name: "@insight/ui-angular@${{ steps.version.outputs.version }}"
+          name: "@insight/ui-angular v${{ steps.version.outputs.version }}"
+          body: "Automated release from stage/ui-angular → release/ui-angular"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
