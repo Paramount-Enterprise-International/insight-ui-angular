@@ -9,6 +9,7 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  forwardRef,
   HostListener,
   Input,
   Optional,
@@ -128,12 +129,11 @@ export class ITextArea implements ControlValueAccessor {
   standalone: true,
   imports: [ITextArea],
   template: `@if (label) {
-      <label class="i-fc-textarea__label" (click)="focusInnerTextarea()">
-        {{ label }} :
-        @if (required) {
-          <span class="i-fc-textarea__required">*</span>
-        }
-      </label>
+    <label class="i-fc-textarea__label" (click)="focusInnerTextarea()">
+      {{ label }} : @if (required) {
+      <span class="i-fc-textarea__required">*</span>
+      }
+    </label>
     }
 
     <i-textarea
@@ -144,15 +144,23 @@ export class ITextArea implements ControlValueAccessor {
       [invalid]="controlInvalid"
       [disabled]="isDisabled"
       (input)="handleInnerInput($event)"
-      (blur)="handleInnerBlur()">
+      (blur)="handleInnerBlur()"
+    >
     </i-textarea>
 
     @if (controlInvalid && resolvedErrorText) {
-      <div class="i-fc-textarea__error">
-        {{ resolvedErrorText }}
-      </div>
+    <div class="i-fc-textarea__error">
+      {{ resolvedErrorText }}
+    </div>
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => IFCTextArea),
+      multi: true,
+    },
+  ],
 })
 export class IFCTextArea implements ControlValueAccessor {
   @ViewChild(ITextArea) innerTextarea!: ITextArea;
@@ -253,10 +261,6 @@ export class IFCTextArea implements ControlValueAccessor {
   }
 
   get resolvedErrorText(): string | null {
-    return resolveControlErrorMessage(
-      this.ngControl,
-      this.label,
-      this.errorMessage
-    );
+    return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
   }
 }

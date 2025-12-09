@@ -189,9 +189,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
 
   /** Always read the REAL inner <input> value, ignore event.target type */
   private getInnerInput(): HTMLInputElement | null {
-    return this.hostEl.nativeElement.querySelector(
-      'i-input input'
-    ) as HTMLInputElement | null;
+    return this.hostEl.nativeElement.querySelector('i-input input') as HTMLInputElement | null;
   }
 
   private focusInput(): void {
@@ -233,9 +231,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     }
 
     const baseDate =
-      this._modelValue ??
-      this.parseInputDate(this._displayText) ??
-      this.startOfDay(new Date());
+      this._modelValue ?? this.parseInputDate(this._displayText) ?? this.startOfDay(new Date());
 
     this.updateView(baseDate);
   }
@@ -338,10 +334,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     const row = change?.value;
     if (!row) return;
 
-    const month =
-      typeof row === 'object' && 'value' in row
-        ? (row as IMonthOption).value
-        : row;
+    const month = typeof row === 'object' && 'value' in row ? (row as IMonthOption).value : row;
 
     if (typeof month !== 'number') return;
     if (month < 0 || month > 11) return;
@@ -384,8 +377,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     if (this._modelValue instanceof Date) {
       base = this.startOfDay(this._modelValue);
     } else if (this._displayText) {
-      base =
-        this.parseInputDate(this._displayText) ?? this.startOfDay(new Date());
+      base = this.parseInputDate(this._displayText) ?? this.startOfDay(new Date());
     } else {
       base = this.startOfDay(new Date());
     }
@@ -428,9 +420,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     const weeks: IDatepickerDay[][] = [];
     let current = new Date(startDate);
 
-    const selected: Date | null = this._modelValue
-      ? this.startOfDay(this._modelValue)
-      : null;
+    const selected: Date | null = this._modelValue ? this.startOfDay(this._modelValue) : null;
     const today = this.startOfDay(new Date());
 
     for (let w = 0; w < 6; w++) {
@@ -500,11 +490,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     if (!year || !month || !day) return null;
 
     const date = new Date(year, month - 1, day);
-    if (
-      date.getFullYear() !== year ||
-      date.getMonth() !== month - 1 ||
-      date.getDate() !== day
-    ) {
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
       return null;
     }
 
@@ -554,12 +540,11 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
   standalone: true,
   imports: [IDatepicker],
   template: `@if (label) {
-      <label class="i-fc-datepicker__label" (click)="focusInnerDatepicker()">
-        {{ label }} :
-        @if (required) {
-          <span class="i-fc-datepicker__required">*</span>
-        }
-      </label>
+    <label class="i-fc-datepicker__label" (click)="focusInnerDatepicker()">
+      {{ label }} : @if (required) {
+      <span class="i-fc-datepicker__required">*</span>
+      }
+    </label>
     }
 
     <i-datepicker
@@ -569,15 +554,23 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
       [format]="format"
       [value]="value"
       [panelPosition]="panelPosition"
-      (onChanged)="handleDateChange($event)">
+      (onChanged)="handleDateChange($event)"
+    >
     </i-datepicker>
 
     @if (controlInvalid && resolvedErrorText) {
-      <div class="i-fc-datepicker__error">
-        {{ resolvedErrorText }}
-      </div>
+    <div class="i-fc-datepicker__error">
+      {{ resolvedErrorText }}
+    </div>
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => IFCDatepicker),
+      multi: true,
+    },
+  ],
 })
 export class IFCDatepicker implements ControlValueAccessor {
   @ViewChild(IDatepicker) innerDatepicker!: IDatepicker;
@@ -686,10 +679,6 @@ export class IFCDatepicker implements ControlValueAccessor {
   }
 
   get resolvedErrorText(): string | null {
-    return resolveControlErrorMessage(
-      this.ngControl,
-      this.label,
-      this.errorMessage
-    );
+    return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
   }
 }
