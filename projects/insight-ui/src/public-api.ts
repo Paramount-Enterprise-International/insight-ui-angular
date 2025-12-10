@@ -11,6 +11,7 @@ export * from './lib/dialog/dialog';
 export * from './lib/grid/grid';
 export * from './lib/grid/paginator';
 export * from './lib/highlight-search.pipe';
+export * from './lib/host/content/content';
 export * from './lib/icon/icon';
 export * from './lib/input/input';
 export * from './lib/input/input-addon';
