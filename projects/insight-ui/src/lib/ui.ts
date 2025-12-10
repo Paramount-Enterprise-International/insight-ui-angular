@@ -12,6 +12,7 @@ import { ILoading } from './loading/loading';
 import { ISectionModule } from './section/section';
 import { IFCSelect, ISelect } from './select/select';
 import { ITextArea } from './textarea/textarea';
+import { IHContent } from './host/content/content';
 
 @NgModule({
   imports: [
@@ -30,6 +31,7 @@ import { ITextArea } from './textarea/textarea';
     ISelect,
     IFCSelect,
     ITextArea,
+    IHContent,
   ],
   exports: [
     IAlert,
@@ -47,6 +49,7 @@ import { ITextArea } from './textarea/textarea';
     ISelect,
     IFCSelect,
     ITextArea,
+    IHContent,
   ],
 })
 export class IUI {}
