@@ -5,17 +5,16 @@ import { Pipe, PipeTransform } from '@angular/core';
   standalone: true,
 })
 export class IHighlightSearchPipe implements PipeTransform {
-  transform(value: any, args: any): any {
-    if (!args || !value) {
-      return value;
-    }
+  transform(value: string, search: string): string {
+    if (!value || !search) return value;
 
-    const regex = new RegExp(args, 'gi');
-    const match = value.match(regex);
+    // Escape regex special chars: . * + ? ^ $ { } ( ) | [ ] \
+    const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    if (!match) {
-      return value;
-    }
-    return value.replace(regex, `<span class='highlight-search'>${match[0]}</span>`);
+    const regex = new RegExp(escaped, 'gi');
+
+    return value.replace(regex, (match) => {
+      return `<span class="highlight-search">${match}</span>`;
+    });
   }
 }
