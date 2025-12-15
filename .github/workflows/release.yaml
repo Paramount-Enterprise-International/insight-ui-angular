@@ -7,6 +7,7 @@ on:
 env:
   LIB_NAME: insight-ui # Angular project name: projects/insight-ui
   BUILD_BRANCH: build # Branch that will hold the built package
+  MAIN_BRANCH: main # Branch to merge the release source back into
 
 permissions:
   contents: write # Needed to push branches & tags
@@ -139,3 +140,47 @@ jobs:
           echo "Updating 'latest' tag"
           git tag -f latest
           git push origin latest --force
+
+      # 12) Merge release source branch back into main
+      #
+      # This merges the branch you chose when creating the Release
+      # (github.event.release.target_commitish) back into MAIN_BRANCH.
+      # If you always release from main, this will basically be a no-op merge.
+      - name: Merge release source branch back into main
+        run: |
+          SRC_REF="${{ github.event.release.target_commitish }}"
+          MAIN_BRANCH="${{ env.MAIN_BRANCH }}"
+
+          echo "Release target_commitish: $SRC_REF"
+          echo "Main branch: $MAIN_BRANCH"
+
+          # If the release was created from main itself, skip merge
+          if [ "$SRC_REF" = "$MAIN_BRANCH" ]; then
+            echo "Release source is already '$MAIN_BRANCH'. Nothing to merge."
+            exit 0
+          fi
+
+          # Fetch main and the source ref (branch or commit)
+          git fetch origin "$MAIN_BRANCH"
+
+          # Try to fetch source ref as branch; if it fails, assume it's a commit SHA
+          if git ls-remote --exit-code origin "$SRC_REF" >/dev/null 2>&1; then
+            echo "Fetching source branch '$SRC_REF' from origin"
+            git fetch origin "$SRC_REF":"$SRC_REF"
+          else
+            echo "'$SRC_REF' does not look like a remote branch, treating as commit/sha"
+          fi
+
+          # Checkout / create local main tracking branch
+          if git show-ref --quiet "refs/heads/$MAIN_BRANCH"; then
+            git switch "$MAIN_BRANCH"
+          else
+            git switch -c "$MAIN_BRANCH" "origin/$MAIN_BRANCH"
+          fi
+
+          # Merge the release source into main
+          echo "Merging '$SRC_REF' into '$MAIN_BRANCH'"
+          git merge --no-ff "$SRC_REF" -m "chore: merge release $SRC_REF into $MAIN_BRANCH"
+
+          # Push updated main
+          git push origin "$MAIN_BRANCH"
