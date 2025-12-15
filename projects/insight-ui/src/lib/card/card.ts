@@ -9,6 +9,7 @@ import {
   Component,
   EventEmitter,
   Input,
+  NgModule,
   OnInit,
   Output,
   isDevMode,
@@ -132,3 +133,32 @@ export class ICard implements OnInit {
     }
   }
 }
+
+@Component({
+  selector: 'i-card-image',
+  imports: [],
+  template: `<img [src]="src" />`,
+})
+export class ICardImage {
+  @Input() src!: string;
+}
+
+@Component({
+  selector: 'i-card-body',
+  imports: [],
+  template: `<ng-content />`,
+})
+export class ICardBody {}
+
+@Component({
+  selector: 'i-card-footer',
+  imports: [],
+  template: `<ng-content />`,
+})
+export class ICardFooter {}
+
+@NgModule({
+  imports: [ICard, ICardBody, ICardFooter, ICardImage],
+  exports: [ICard, ICardBody, ICardFooter, ICardImage],
+})
+export class ICardModule {}

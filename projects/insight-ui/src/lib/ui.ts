@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { IAlert } from './alert/alert';
 import { IButton } from './button/button';
-import { ICard } from './card/card';
+import { ICardModule } from './card/card';
 import { IConfirm } from './confirm/confirm';
 import { IDatepicker, IFCDatepicker } from './datepicker/datepicker';
 import { IDialogModule } from './dialog/dialog';
@@ -18,7 +18,7 @@ import { IHContent } from './host/content/content';
   imports: [
     IAlert,
     IButton,
-    ICard,
+    ICardModule,
     IConfirm,
     IDatepicker,
     IFCDatepicker,
@@ -36,7 +36,7 @@ import { IHContent } from './host/content/content';
   exports: [
     IAlert,
     IButton,
-    ICard,
+    ICardModule,
     IConfirm,
     IDatepicker,
     IFCDatepicker,
