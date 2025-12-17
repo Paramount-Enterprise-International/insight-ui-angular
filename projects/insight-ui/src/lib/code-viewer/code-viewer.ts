@@ -153,7 +153,7 @@ function normalizeHljsLanguage(lang: string): string {
         }
 
         <!-- content row -->
-        <div class="i-code-viewer-content">
+        <div class="i-code-viewer-content hljs">
           @if (lineNumbers) {
           <div class="i-code-viewer-gutter" aria-hidden="true">
             @for (n of lineNumberList; track n) {
@@ -163,11 +163,11 @@ function normalizeHljsLanguage(lang: string): string {
           }
 
           <pre class="i-code-viewer-pre">
-<code
-  class="i-code-viewer-code hljs"
-  [attr.data-language]="effectiveLanguage"
-  [innerHTML]="renderedHtml"
-></code>
+            <code
+            class="i-code-viewer-code hljs"
+            [attr.data-language]="effectiveLanguage"
+            [innerHTML]="renderedHtml"
+            ></code>
           </pre>
         </div>
       </div>
@@ -225,7 +225,7 @@ export class ICodeViewer {
   @Input({ transform: coerceBool }) compact = false;
 
   /** default true */
-  @Input({ transform: coerceBool }) lineNumbers = true;
+  @Input({ transform: coerceBool }) lineNumbers = false;
 
   /** overlay controls */
   @Input({ transform: coerceBool }) overlay = true;
