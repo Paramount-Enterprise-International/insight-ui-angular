@@ -73,7 +73,7 @@ export type IIconSize = keyof typeof I_ICON_SIZES;
 @Component({
   selector: 'ic',
   imports: [NgClass],
-  templateUrl: './icon.html',
+  template: `<i [ngClass]="iconClass"></i>`,
 })
 export class IIcon {
   @Input() icon!: IIconName | string;

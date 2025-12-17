@@ -9,7 +9,12 @@ import { Component, HostBinding, Input } from '@angular/core';
 @Component({
   selector: 'i-loading',
   imports: [],
-  templateUrl: './loading.html',
+  template: `<div
+      class="spinner-border spinner-border-sm"
+      role="status"
+      [class.light]="light"
+    ></div>
+    {{ label }}`,
 })
 export class ILoading {
   @Input() label = 'Loading..';

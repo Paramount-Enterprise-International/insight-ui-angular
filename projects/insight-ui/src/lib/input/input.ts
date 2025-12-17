@@ -38,7 +38,25 @@ import { IInputMask, IInputMaskDirective } from './input-mask';
   selector: 'i-input',
   standalone: true,
   imports: [IInputAddon, IInputMaskDirective],
-  templateUrl: './input.html',
+  template: `@for (i of prepends; track $index) {
+    <i-input-addon [addon]="i" />
+    }
+    <input
+      #inputRef
+      [type]="type"
+      [placeholder]="placeholder"
+      [attr.autocomplete]="autocomplete || null"
+      [readonly]="readonly"
+      [disabled]="isDisabled"
+      [value]="value ?? ''"
+      [attr.aria-invalid]="invalid ? 'true' : null"
+      [iInputMask]="mask"
+      (input)="handleInput($event)"
+      (blur)="handleBlur()"
+    />
+    @for (i of appends; track $index) {
+    <i-input-addon [addon]="i" />
+    } `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -71,11 +89,7 @@ export class IInput implements ControlValueAccessor {
 
   @Input() prepend: IInputAddons | IInputAddons[] | undefined;
 
-  @Input() append:
-    | IInputAddons
-    | IInputAddons[]
-    | IInputAddonLoading
-    | undefined;
+  @Input() append: IInputAddons | IInputAddons[] | IInputAddonLoading | undefined;
 
   @ViewChild('inputRef') inputRef!: ElementRef<HTMLInputElement>;
 
@@ -164,12 +178,11 @@ export class IInput implements ControlValueAccessor {
   standalone: true,
   imports: [IInput],
   template: `@if (label) {
-      <label class="i-fc-input__label" (click)="focusInnerInput()">
-        {{ label }} :
-        @if (required) {
-          <span class="i-fc-input__required">*</span>
-        }
-      </label>
+    <label class="i-fc-input__label" (click)="focusInnerInput()">
+      {{ label }} : @if (required) {
+      <span class="i-fc-input__required">*</span>
+      }
+    </label>
     }
 
     <i-input
@@ -184,13 +197,14 @@ export class IInput implements ControlValueAccessor {
       [invalid]="controlInvalid"
       [disabled]="isDisabled"
       (input)="handleInnerInput($event)"
-      (blur)="handleInnerBlur()">
+      (blur)="handleInnerBlur()"
+    >
     </i-input>
 
     @if (controlInvalid && resolvedErrorText) {
-      <div class="i-fc-input__error">
-        {{ resolvedErrorText }}
-      </div>
+    <div class="i-fc-input__error">
+      {{ resolvedErrorText }}
+    </div>
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -299,11 +313,7 @@ export class IFCInput implements ControlValueAccessor {
   }
 
   get resolvedErrorText(): string | null {
-    return resolveControlErrorMessage(
-      this.ngControl,
-      this.label,
-      this.errorMessage
-    );
+    return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
   }
 }
 

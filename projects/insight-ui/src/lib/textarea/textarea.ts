@@ -30,7 +30,17 @@ import {
 @Component({
   selector: 'i-textarea',
   standalone: true,
-  templateUrl: './textarea.html',
+  template: `<textarea
+    #textareaRef
+    [placeholder]="placeholder"
+    [readonly]="readonly"
+    [rows]="rows"
+    [disabled]="isDisabled"
+    [value]="value ?? ''"
+    [attr.aria-invalid]="invalid ? 'true' : null"
+    (input)="handleInput($event)"
+    (blur)="handleBlur()"
+  ></textarea>`,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -128,12 +138,11 @@ export class ITextArea implements ControlValueAccessor {
   standalone: true,
   imports: [ITextArea],
   template: `@if (label) {
-      <label class="i-fc-textarea__label" (click)="focusInnerTextarea()">
-        {{ label }} :
-        @if (required) {
-          <span class="i-fc-textarea__required">*</span>
-        }
-      </label>
+    <label class="i-fc-textarea__label" (click)="focusInnerTextarea()">
+      {{ label }} : @if (required) {
+      <span class="i-fc-textarea__required">*</span>
+      }
+    </label>
     }
 
     <i-textarea
@@ -144,13 +153,14 @@ export class ITextArea implements ControlValueAccessor {
       [invalid]="controlInvalid"
       [disabled]="isDisabled"
       (input)="handleInnerInput($event)"
-      (blur)="handleInnerBlur()">
+      (blur)="handleInnerBlur()"
+    >
     </i-textarea>
 
     @if (controlInvalid && resolvedErrorText) {
-      <div class="i-fc-textarea__error">
-        {{ resolvedErrorText }}
-      </div>
+    <div class="i-fc-textarea__error">
+      {{ resolvedErrorText }}
+    </div>
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -253,10 +263,6 @@ export class IFCTextArea implements ControlValueAccessor {
   }
 
   get resolvedErrorText(): string | null {
-    return resolveControlErrorMessage(
-      this.ngControl,
-      this.label,
-      this.errorMessage
-    );
+    return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
   }
 }

@@ -23,7 +23,23 @@ type RouterLinkInput = string | any[] | undefined;
   standalone: true,
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './card.html',
+  template: `<a
+    class="i-card"
+    [attr.href]="hrefAttr"
+    [attr.target]="target ?? null"
+    [attr.rel]="relAttr"
+    [attr.aria-disabled]="disabled ? 'true' : null"
+    [attr.tabindex]="disabled ? -1 : null"
+    [routerLink]="routerLinkAttr"
+    [queryParams]="queryParams"
+    [fragment]="fragment"
+    [replaceUrl]="replaceUrl"
+    [skipLocationChange]="skipLocationChange"
+    [state]="state"
+    (click)="onClick($event)"
+  >
+    <ng-content />
+  </a> `,
 })
 export class ICard implements OnInit {
   /* ======================

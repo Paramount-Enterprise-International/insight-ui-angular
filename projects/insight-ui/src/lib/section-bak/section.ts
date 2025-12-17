@@ -100,23 +100,6 @@ function parseBadge(v: any): { enabled: boolean; value: number | null } {
   return { enabled: true, value: null };
 }
 
-function parseTabsHeight(v: any): number | null {
-  // null => wrap (default)
-  if (v === null || v === undefined) return null;
-
-  const s = String(v).trim().toLowerCase();
-  if (s === '' || s === 'wrap' || s === 'auto') return null;
-
-  // allow "300", "300px"
-  if (s.endsWith('px')) {
-    const n = Number(s.slice(0, -2).trim());
-    return Number.isFinite(n) && n > 0 ? n : null;
-  }
-
-  const n = Number(s);
-  return Number.isFinite(n) && n > 0 ? n : null;
-}
-
 @Component({
   selector: 'i-section-tab-header',
   standalone: true,
@@ -147,18 +130,20 @@ export class ISectionTabContent {
   selector: 'i-section-tab',
   standalone: true,
   template: `
+    <!-- default header template when only title="" is provided -->
     <ng-template #defaultHeaderTpl>
-      <span class="i-section-tab-title">{{ title }}</span>
+      <span data-i-section-tab-title>{{ title }}</span>
 
       @if (_badgeEnabled) {
-        <span class="i-section-tab-badge" [class.has-number]="_badgeValue !== null">
-          @if (_badgeValue !== null) {
-            <span class="i-section-tab-badge-number">{{ _badgeValue }}</span>
-          }
-        </span>
+      <span data-i-section-tab-badge [attr.data-has-number]="_badgeValue !== null ? '' : null">
+        @if (_badgeValue !== null) {
+        <span data-i-section-tab-badge-number>{{ _badgeValue }}</span>
+        }
+      </span>
       }
     </ng-template>
 
+    <!-- fallback content template when i-section-tab-content is omitted -->
     <ng-template #defaultContentTpl>
       <ng-content />
     </ng-template>
@@ -176,7 +161,7 @@ export class ISectionTab implements AfterContentInit {
     this._badgeValue = parsed.value;
   }
   get badge(): any {
-    return this._badgeEnabled ? (this._badgeValue ?? true) : null;
+    return this._badgeEnabled ? this._badgeValue ?? true : null;
   }
 
   _badgeEnabled = false;
@@ -205,64 +190,38 @@ export class ISectionTab implements AfterContentInit {
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="i-section-tabs-headers" role="tablist">
-      @for (tab of tabsArr; track tab) {
+    <div data-i-section-tabs-root>
+      <div data-i-section-tabs-headers role="tablist">
+        @for (tab of tabsArr; track tab) {
         <button
           type="button"
-          class="i-section-tabs-header"
+          data-i-section-tabs-header
           role="tab"
           [attr.aria-selected]="tab._active"
           [attr.tabindex]="tab._active ? 0 : -1"
-          [class.active]="tab._active"
+          [attr.data-active]="tab._active ? '' : null"
           (click)="activateByTab(tab)"
         >
           <ng-container [ngTemplateOutlet]="tab.headerTpl"></ng-container>
         </button>
-      }
-    </div>
+        }
+      </div>
 
-    <div
-      class="i-section-tabs-content"
-      [class.scroll]="isFixedHeight"
-      [class.scroll-y]="isFixedHeight"
-      [style.height.px]="contentHeightPx"
-    >
-      @if (activeTab; as tab) {
-        <ng-container [ngTemplateOutlet]="tab.contentTpl"></ng-container>
-      }
+      <div data-i-section-tabs-body>
+        @if (activeTab; as tab) {
+        <div data-i-section-tabs-panel role="tabpanel">
+          <ng-container [ngTemplateOutlet]="tab.contentTpl"></ng-container>
+        </div>
+        }
+      </div>
     </div>
   `,
 })
 export class ISectionTabs implements AfterContentInit {
   @ContentChildren(ISectionTab) tabs!: QueryList<ISectionTab>;
 
-  /** optional controlled mode */
   @Input() selectedIndex: number | null = null;
   @Output() selectedIndexChange = new EventEmitter<number>();
-
-  /**
-   * height:
-   * - "wrap" (default) => content height depends on each tab
-   * - "300" / 300 / "300px" => fixed content height (px) + internal scroll
-   */
-  @Input()
-  set height(v: any) {
-    this._contentHeightPx = parseTabsHeight(v);
-    this.cdr.markForCheck();
-  }
-  get height(): any {
-    return this._contentHeightPx ?? 'wrap';
-  }
-
-  private _contentHeightPx: number | null = null;
-
-  get contentHeightPx(): number | null {
-    return this._contentHeightPx;
-  }
-
-  get isFixedHeight(): boolean {
-    return this._contentHeightPx !== null;
-  }
 
   tabsArr: ISectionTab[] = [];
   activeIndex = 0;

@@ -22,7 +22,13 @@ export type IButtonVariant = Extract<
 @Component({
   selector: 'i-button',
   standalone: true,
-  templateUrl: './button.html',
+  template: `@if (loading) {
+    <i-loading [light]="variant !== 'outline'" [label]="loadingText" />
+    } @else { @if (icon) {
+    <ic [icon]="icon" [size]="size" />
+    }
+    <ng-content />
+    } `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     role: 'button',
