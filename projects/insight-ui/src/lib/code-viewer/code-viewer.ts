@@ -106,7 +106,6 @@ function resolveFileUrl(file: string): string {
 }
 
 function normalizeHljsLanguage(lang: string): string {
-  // highlight.js commonly treats HTML under "xml"
   if (lang === 'html') return 'xml';
   return lang;
 }
@@ -117,7 +116,6 @@ function normalizeHljsLanguage(lang: string): string {
   imports: [CommonModule, IButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <!-- Capture projected code for fallback usage -->
     <ng-template #projected>
       <ng-content></ng-content>
     </ng-template>
@@ -129,11 +127,11 @@ function normalizeHljsLanguage(lang: string): string {
       <div class="i-code-viewer-error">{{ error }}</div>
       }
 
-      <!-- ONE scroll container so gutter + code always scroll together -->
       <div
         class="i-code-viewer-scroll"
         [class.scroll]="scrollEffective"
         [class.scroll-y]="scrollEffective"
+        [class.has-overlay]="showOverlay"
         [style.height.px]="heightPx"
       >
         @if (showOverlay) {
@@ -152,21 +150,26 @@ function normalizeHljsLanguage(lang: string): string {
           </i-button>
           }
         </div>
-        } @if (lineNumbers) {
-        <div class="i-code-viewer-gutter" aria-hidden="true">
-          @for (n of lineNumberList; track n) {
-          <div class="i-code-viewer-line">{{ n }}</div>
-          }
-        </div>
         }
 
-        <pre class="i-code-viewer-pre">
+        <!-- content row -->
+        <div class="i-code-viewer-content">
+          @if (lineNumbers) {
+          <div class="i-code-viewer-gutter" aria-hidden="true">
+            @for (n of lineNumberList; track n) {
+            <div class="i-code-viewer-line">{{ n }}</div>
+            }
+          </div>
+          }
+
+          <pre class="i-code-viewer-pre">
 <code
   class="i-code-viewer-code hljs"
   [attr.data-language]="effectiveLanguage"
   [innerHTML]="renderedHtml"
 ></code>
-        </pre>
+          </pre>
+        </div>
       </div>
     </div>
   `,
@@ -178,7 +181,6 @@ export class ICodeViewer {
   @ViewChild('projected', { static: true }) private projectedTpl!: TemplateRef<unknown>;
 
   // ===== Inputs =====
-
   private _languageOverride: string | null = null;
   @Input()
   set language(v: string | null | undefined) {
@@ -198,9 +200,8 @@ export class ICodeViewer {
 
     this._file = next;
 
-    if (this._file) {
-      this.loadFile(this._file);
-    } else {
+    if (this._file) this.loadFile(this._file);
+    else {
       this.loading = false;
       this.error = '';
       this.recompute();
@@ -220,7 +221,6 @@ export class ICodeViewer {
     return this._code;
   }
 
-  /** visual options */
   @Input({ transform: coerceBool }) wrap = false;
   @Input({ transform: coerceBool }) compact = false;
 
@@ -228,14 +228,12 @@ export class ICodeViewer {
   @Input({ transform: coerceBool }) lineNumbers = true;
 
   /** overlay controls */
-  @Input({ transform: coerceBool }) overlay = true; // enable/disable overlay entirely
-  @Input({ transform: coerceBool }) showFileType = true; // show language chip
+  @Input({ transform: coerceBool }) overlay = true;
+  @Input({ transform: coerceBool }) showFileType = true;
   @Input({ transform: coerceBool }) copy = true;
 
-  /** If true, enable scroll (fixed height also forces scroll) */
   @Input({ transform: coerceBool }) scroll = false;
 
-  /** height="wrap"(default) or height="300" (px) */
   private _heightPx: number | null = null;
   @Input()
   set height(v: any) {
@@ -246,7 +244,6 @@ export class ICodeViewer {
     return this._heightPx ?? 'wrap';
   }
 
-  /** Highlight engine */
   @Input() highlighter: ICodeHighlighter = 'auto';
 
   @Output() fileLoaded = new EventEmitter<{ file: string; language: string }>();
@@ -256,13 +253,11 @@ export class ICodeViewer {
   error = '';
   renderedHtml = '';
   copied = false;
-
   lineNumberList: number[] = [];
 
   private requestSeq = 0;
   private _fileLanguage: string = 'text';
 
-  // highlight.js lazy
   private hljsPromise: Promise<any> | null = null;
   private hljs: any | null = null;
 
@@ -276,8 +271,6 @@ export class ICodeViewer {
   }
 
   get showOverlay(): boolean {
-    // If overlay disabled, nothing floats.
-    // If both filetype and copy are disabled, also hide overlay.
     return this.overlay && (this.showFileType || this.copy);
   }
 
@@ -294,13 +287,11 @@ export class ICodeViewer {
 
   // ===== Core =====
   private recompute(): void {
-    // fallback: projected content (only when no [code] and no [file])
     if (!this._code && !this._file) {
       const projected = this.readProjectedContent();
       if (projected) this._code = projected;
     }
 
-    // line numbers
     if (this.lineNumbers) {
       const lines = this.countLines(this._code);
       this.lineNumberList = Array.from({ length: lines }, (_, i) => i + 1);
@@ -308,11 +299,9 @@ export class ICodeViewer {
       this.lineNumberList = [];
     }
 
-    // render sync first (escaped or hljs if already loaded)
     this.renderedHtml = this.renderToHtmlSync(this._code, this.effectiveLanguage);
     this.cdr.markForCheck();
 
-    // then async highlight if needed
     this.maybeHighlightAsync();
   }
 
@@ -342,13 +331,11 @@ export class ICodeViewer {
   private renderToHtmlSync(raw: string, language: string): string {
     const text = raw ?? '';
     if (!text) return '';
-
     if (this.highlighter === 'none') return escapeHtml(text);
 
     if (this.shouldUseHljs() && this.hljs) {
       return this.highlightWithHljs(text, language);
     }
-
     return escapeHtml(text);
   }
 
@@ -470,7 +457,7 @@ export class ICodeViewer {
 }
 
 @NgModule({
-  imports: [ICodeViewer, HttpClientModule],
+  imports: [ICodeViewer],
   exports: [ICodeViewer],
 })
 export class ICodeViewerModule {}
