@@ -4,11 +4,11 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  ElementRef,
   EventEmitter,
   Input,
   NgModule,
   Output,
+  TemplateRef,
   ViewChild,
   inject,
 } from '@angular/core';
@@ -53,7 +53,7 @@ function languageFromExt(ext: string): string {
       return 'json';
     case 'html':
     case 'htm':
-      return 'html'; // hljs often uses 'xml' too; we'll map below
+      return 'html';
     case 'css':
       return 'css';
     case 'scss':
@@ -68,6 +68,8 @@ function languageFromExt(ext: string): string {
     case 'sh':
     case 'bash':
       return 'bash';
+    case 'txt':
+      return 'text';
     default:
       return 'text';
   }
@@ -94,7 +96,7 @@ function isAbsoluteUrl(path: string): boolean {
 
 /**
  * MF remote-safe: resolve relative file path against the remote bundle URL,
- * not the host shell URL.
+ * not the host shell base href.
  */
 function resolveFileUrl(file: string): string {
   const f = (file ?? '').trim();
@@ -107,7 +109,7 @@ function resolveFileUrl(file: string): string {
 }
 
 function normalizeHljsLanguage(lang: string): string {
-  // highlight.js calls HTML "xml" in many builds
+  // highlight.js commonly treats HTML under "xml"
   if (lang === 'html') return 'xml';
   return lang;
 }
@@ -118,7 +120,7 @@ function normalizeHljsLanguage(lang: string): string {
   imports: [CommonModule, IButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <!-- capture projected code if user uses <i-code-viewer>...</i-code-viewer> -->
+    <!-- Capture projected code for fallback usage -->
     <ng-template #projected>
       <ng-content></ng-content>
     </ng-template>
@@ -126,27 +128,23 @@ function normalizeHljsLanguage(lang: string): string {
     <div class="i-code-viewer" [class.compact]="compact" [class.wrap]="wrap">
       @if (showHeader) {
       <div class="i-code-viewer-header">
-        <div class="i-code-viewer-title">
-          @if (title) {
-          <span class="i-code-viewer-title-text">{{ title }}</span>
-          } @else {
-          <span class="i-code-viewer-title-text">{{ languageLabel }}</span>
-          }
+        <div class="i-code-viewer-header-main">
+          <div class="i-code-viewer-header-title">
+            {{ title || languageLabel }}
+          </div>
+
+          <div class="i-code-viewer-header-actions">
+            @if (copy) {
+            <i-button size="xs" variant="outline" (click)="onCopy()" [disabled]="loading">
+              {{ copied ? 'Copied' : 'Copy' }}
+            </i-button>
+            }
+          </div>
         </div>
 
-        <div class="i-code-viewer-actions">
-          @if (copy) {
-          <i-button
-            class="i-code-viewer-copy-btn"
-            size="xs"
-            variant="primary"
-            (click)="onCopy()"
-            [disabled]="loading"
-          >
-            {{ copied ? 'Copied' : 'Copy' }}
-          </i-button>
-          }
-        </div>
+        @if (fileName) {
+        <div class="i-code-viewer-header-sub">{{ fileName }}</div>
+        }
       </div>
       } @if (loading) {
       <div class="i-code-viewer-loading">Loading…</div>
@@ -154,7 +152,13 @@ function normalizeHljsLanguage(lang: string): string {
       <div class="i-code-viewer-error">{{ error }}</div>
       }
 
-      <div class="i-code-viewer-body">
+      <!-- ONE scroll container so gutter + code always scroll together -->
+      <div
+        class="i-code-viewer-scroll"
+        [class.scroll]="scrollEffective"
+        [class.scroll-y]="scrollEffective"
+        [style.height.px]="heightPx"
+      >
         @if (lineNumbers) {
         <div class="i-code-viewer-gutter" aria-hidden="true">
           @for (n of lineNumberList; track n) {
@@ -163,17 +167,13 @@ function normalizeHljsLanguage(lang: string): string {
         </div>
         }
 
-        <pre
-          class="i-code-viewer-pre"
-          [class.scroll]="scrollEffective"
-          [class.scroll-y]="scrollEffective"
-          [style.height.px]="heightPx"
-        ><code
-          #codeEl
-          class="i-code-viewer-code"
-          [attr.data-language]="effectiveLanguage"
-          [innerHTML]="renderedHtml"
-        ></code></pre>
+        <pre class="i-code-viewer-pre">
+<code
+  class="i-code-viewer-code hljs"
+  [attr.data-language]="effectiveLanguage"
+  [innerHTML]="renderedHtml"
+></code>
+        </pre>
       </div>
     </div>
   `,
@@ -182,8 +182,7 @@ export class ICodeViewer {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly http = inject(HttpClient);
 
-  @ViewChild('codeEl', { static: false }) codeEl?: ElementRef<HTMLElement>;
-  @ViewChild('projected', { static: true }) private projectedTpl!: any; // TemplateRef<unknown> (kept any to avoid extra imports)
+  @ViewChild('projected', { static: true }) private projectedTpl!: TemplateRef<unknown>;
 
   // ===== Inputs =====
   @Input() title: string = '';
@@ -230,12 +229,16 @@ export class ICodeViewer {
   }
 
   @Input({ transform: coerceBool }) copy = true;
-  @Input({ transform: coerceBool }) lineNumbers = false;
   @Input({ transform: coerceBool }) wrap = false;
   @Input({ transform: coerceBool }) compact = false;
 
+  /** ✅ Default true */
+  @Input({ transform: coerceBool }) lineNumbers = true;
+
+  /** If true, enable scroll (fixed height also forces scroll) */
   @Input({ transform: coerceBool }) scroll = false;
 
+  /** height="wrap"(default) or height="300" (px) */
   private _heightPx: number | null = null;
   @Input()
   set height(v: any) {
@@ -256,12 +259,13 @@ export class ICodeViewer {
   error = '';
   renderedHtml = '';
   copied = false;
+
   lineNumberList: number[] = [];
 
   private requestSeq = 0;
   private _fileLanguage: string = 'text';
 
-  // highlight.js loader (lazy, so it doesn’t blow bundle if you don’t use it)
+  // highlight.js lazy
   private hljsPromise: Promise<any> | null = null;
   private hljs: any | null = null;
 
@@ -275,7 +279,8 @@ export class ICodeViewer {
   }
 
   get showHeader(): boolean {
-    return !!this.title || this.copy;
+    // keep header visible if copy enabled, title exists, or file exists
+    return !!this.title || this.copy || !!this._file;
   }
 
   get effectiveLanguage(): string {
@@ -289,6 +294,12 @@ export class ICodeViewer {
     return l === 'TEXT' ? 'CODE' : l;
   }
 
+  get fileName(): string | null {
+    if (!this._file) return null;
+    const clean = this._file.split('?')[0].split('#')[0];
+    return clean.split('/').pop() ?? null;
+  }
+
   // ===== Core =====
   private recompute(): void {
     // fallback: projected content (only when no [code] and no [file])
@@ -299,22 +310,27 @@ export class ICodeViewer {
 
     // line numbers
     if (this.lineNumbers) {
-      const lines = this._code.length ? this._code.split('\n').length : 1;
+      const lines = this.countLines(this._code);
       this.lineNumberList = Array.from({ length: lines }, (_, i) => i + 1);
     } else {
       this.lineNumberList = [];
     }
 
-    // render (sync first; if hljs is not ready, we’ll update later)
+    // render sync first (escaped or hljs if already loaded)
     this.renderedHtml = this.renderToHtmlSync(this._code, this.effectiveLanguage);
     this.cdr.markForCheck();
 
-    // async highlight (only if enabled)
+    // then async highlight if needed
     this.maybeHighlightAsync();
   }
 
+  private countLines(text: string): number {
+    if (!text) return 1;
+    // preserve last empty line if code ends with \n
+    return text.endsWith('\n') ? text.split('\n').length : text.split('\n').length;
+  }
+
   private readProjectedContent(): string {
-    // Create embedded view and read text content
     const host = document.createElement('div');
     const view = this.projectedTpl.createEmbeddedView({});
     view.detectChanges();
@@ -328,34 +344,32 @@ export class ICodeViewer {
     return host.textContent?.trim() ?? '';
   }
 
+  private shouldUseHljs(): boolean {
+    return this.highlighter === 'hljs' || this.highlighter === 'auto';
+  }
+
   private renderToHtmlSync(raw: string, language: string): string {
     const text = raw ?? '';
     if (!text) return '';
 
-    // If hljs already loaded and highlighter says yes, render with hljs now
+    if (this.highlighter === 'none') return escapeHtml(text);
+
     if (this.shouldUseHljs() && this.hljs) {
       return this.highlightWithHljs(text, language);
     }
 
-    // otherwise just escape for now
     return escapeHtml(text);
-  }
-
-  private shouldUseHljs(): boolean {
-    return this.highlighter === 'hljs' || this.highlighter === 'auto';
   }
 
   private async maybeHighlightAsync(): Promise<void> {
     if (!this.shouldUseHljs()) return;
     if (!this._code) return;
 
-    // load hljs if needed
     if (!this.hljs) {
       await this.loadHljsIfNeeded();
       if (!this.hljs) return;
     }
 
-    // re-render using hljs
     this.renderedHtml = this.highlightWithHljs(this._code, this.effectiveLanguage);
     this.cdr.markForCheck();
   }
@@ -368,8 +382,6 @@ export class ICodeViewer {
       if (lang && hljs.getLanguage?.(lang)) {
         return hljs.highlight(text, { language: lang }).value;
       }
-
-      // auto detect if unknown
       return hljs.highlightAuto(text).value;
     } catch {
       return escapeHtml(text);
@@ -379,14 +391,13 @@ export class ICodeViewer {
   private async loadHljsIfNeeded(): Promise<void> {
     if (this.hljs) return;
 
-    // if already on window (in case you choose to load globally)
+    // allow global window.hljs if you ever decide to load it globally
     const w = globalThis as any;
     if (w?.hljs?.highlight && w?.hljs?.highlightAuto) {
       this.hljs = w.hljs;
       return;
     }
 
-    // lazy import (bundled)
     if (!this.hljsPromise) {
       this.hljsPromise = import('highlight.js').then((m: any) => m.default ?? m).catch(() => null);
     }
@@ -469,7 +480,7 @@ export class ICodeViewer {
 }
 
 @NgModule({
-  imports: [ICodeViewer],
+  imports: [ICodeViewer, HttpClientModule],
   exports: [ICodeViewer],
 })
 export class ICodeViewerModule {}
