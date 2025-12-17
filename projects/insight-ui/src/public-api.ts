@@ -6,6 +6,7 @@ export * from './lib/alert/alert';
 export * from './lib/button/button';
 export * from './lib/card/card';
 export * from './lib/confirm/confirm';
+export * from './lib/code-viewer/code-viewer';
 export * from './lib/datepicker/datepicker';
 export * from './lib/dialog/dialog';
 export * from './lib/grid/grid';
