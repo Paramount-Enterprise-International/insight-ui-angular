@@ -13,25 +13,9 @@ import {
   inject,
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { IButton } from './../button/button';
+import { IButton } from '../button/button';
 
-type ICodeHighlighter = 'auto' | 'hljs' | 'prism' | 'none';
-
-function isAbsoluteUrl(path: string): boolean {
-  return /^https?:\/\//i.test(path) || /^\/\//.test(path);
-}
-
-function resolveFileUrl(file: string): string {
-  const f = (file ?? '').trim();
-  if (!f) return f;
-
-  // If absolute URL or root-absolute, keep it as-is
-  if (isAbsoluteUrl(f) || f.startsWith('/')) return f;
-
-  // Resolve relative to the remote bundle URL (NOT the host app URL)
-  const base = (import.meta as any).url as string; // ESM
-  return new URL(f.replace(/^\.\//, ''), base).toString();
-}
+type ICodeHighlighter = 'auto' | 'hljs' | 'none';
 
 function coerceBool(v: any): boolean {
   return v !== null && v !== undefined && `${v}` !== 'false';
@@ -44,13 +28,6 @@ function escapeHtml(s: string): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
-}
-
-function detectGlobalHighlighter(): { kind: 'hljs' | 'prism' | null; api: any } {
-  const w = globalThis as any;
-  if (w?.hljs?.highlight && w?.hljs?.highlightAuto) return { kind: 'hljs', api: w.hljs };
-  if (w?.Prism?.highlight && w?.Prism?.languages) return { kind: 'prism', api: w.Prism };
-  return { kind: null, api: null };
 }
 
 function getExtFromPath(path: string): string {
@@ -76,17 +53,11 @@ function languageFromExt(ext: string): string {
       return 'json';
     case 'html':
     case 'htm':
-      return 'html';
+      return 'html'; // hljs often uses 'xml' too; we'll map below
     case 'css':
       return 'css';
     case 'scss':
       return 'scss';
-    case 'sass':
-      return 'sass';
-    case 'less':
-      return 'less';
-    case 'xml':
-      return 'xml';
     case 'yml':
     case 'yaml':
       return 'yaml';
@@ -97,30 +68,6 @@ function languageFromExt(ext: string): string {
     case 'sh':
     case 'bash':
       return 'bash';
-    case 'zsh':
-      return 'zsh';
-    case 'go':
-      return 'go';
-    case 'java':
-      return 'java';
-    case 'kt':
-    case 'kts':
-      return 'kotlin';
-    case 'cs':
-      return 'csharp';
-    case 'c':
-      return 'c';
-    case 'cpp':
-    case 'cc':
-    case 'cxx':
-      return 'cpp';
-    case 'rs':
-      return 'rust';
-    case 'php':
-      return 'php';
-    case 'dart':
-      return 'dart';
-    case 'txt':
     default:
       return 'text';
   }
@@ -141,12 +88,41 @@ function parseHeight(v: any): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+function isAbsoluteUrl(path: string): boolean {
+  return /^https?:\/\//i.test(path) || /^\/\//.test(path);
+}
+
+/**
+ * MF remote-safe: resolve relative file path against the remote bundle URL,
+ * not the host shell URL.
+ */
+function resolveFileUrl(file: string): string {
+  const f = (file ?? '').trim();
+  if (!f) return f;
+
+  if (isAbsoluteUrl(f) || f.startsWith('/')) return f;
+
+  const base = (import.meta as any).url as string;
+  return new URL(f.replace(/^\.\//, ''), base).toString();
+}
+
+function normalizeHljsLanguage(lang: string): string {
+  // highlight.js calls HTML "xml" in many builds
+  if (lang === 'html') return 'xml';
+  return lang;
+}
+
 @Component({
   selector: 'i-code-viewer',
   standalone: true,
   imports: [CommonModule, IButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <!-- capture projected code if user uses <i-code-viewer>...</i-code-viewer> -->
+    <ng-template #projected>
+      <ng-content></ng-content>
+    </ng-template>
+
     <div class="i-code-viewer" [class.compact]="compact" [class.wrap]="wrap">
       @if (showHeader) {
       <div class="i-code-viewer-header">
@@ -207,9 +183,9 @@ export class ICodeViewer {
   private readonly http = inject(HttpClient);
 
   @ViewChild('codeEl', { static: false }) codeEl?: ElementRef<HTMLElement>;
+  @ViewChild('projected', { static: true }) private projectedTpl!: any; // TemplateRef<unknown> (kept any to avoid extra imports)
 
   // ===== Inputs =====
-
   @Input() title: string = '';
 
   private _languageOverride: string | null = null;
@@ -246,7 +222,6 @@ export class ICodeViewer {
   private _code = '';
   @Input()
   set code(v: string | null | undefined) {
-    // manual code overrides rendered output immediately
     this._code = v ?? '';
     this.recompute();
   }
@@ -259,10 +234,8 @@ export class ICodeViewer {
   @Input({ transform: coerceBool }) wrap = false;
   @Input({ transform: coerceBool }) compact = false;
 
-  /** If true, enables your "scroll scroll-y" classes. Fixed height also forces scroll. */
   @Input({ transform: coerceBool }) scroll = false;
 
-  /** height="wrap"(default) or height="300" (px) */
   private _heightPx: number | null = null;
   @Input()
   set height(v: any) {
@@ -273,13 +246,12 @@ export class ICodeViewer {
     return this._heightPx ?? 'wrap';
   }
 
+  /** Highlight engine */
   @Input() highlighter: ICodeHighlighter = 'auto';
 
-  // Optional: emit when file loaded
   @Output() fileLoaded = new EventEmitter<{ file: string; language: string }>();
 
   // ===== State =====
-
   loading = false;
   error = '';
   renderedHtml = '';
@@ -289,8 +261,11 @@ export class ICodeViewer {
   private requestSeq = 0;
   private _fileLanguage: string = 'text';
 
-  // ===== Derived =====
+  // highlight.js loader (lazy, so it doesn’t blow bundle if you don’t use it)
+  private hljsPromise: Promise<any> | null = null;
+  private hljs: any | null = null;
 
+  // ===== Derived =====
   get heightPx(): number | null {
     return this._heightPx;
   }
@@ -304,13 +279,8 @@ export class ICodeViewer {
   }
 
   get effectiveLanguage(): string {
-    // explicit language wins
     if (this._languageOverride) return this._languageOverride;
-
-    // if file provided, we infer from file extension
     if (this._file) return this._fileLanguage;
-
-    // otherwise plain
     return 'text';
   }
 
@@ -320,8 +290,13 @@ export class ICodeViewer {
   }
 
   // ===== Core =====
-
   private recompute(): void {
+    // fallback: projected content (only when no [code] and no [file])
+    if (!this._code && !this._file) {
+      const projected = this.readProjectedContent();
+      if (projected) this._code = projected;
+    }
+
     // line numbers
     if (this.lineNumbers) {
       const lines = this._code.length ? this._code.split('\n').length : 1;
@@ -330,44 +305,96 @@ export class ICodeViewer {
       this.lineNumberList = [];
     }
 
-    this.renderedHtml = this.renderToHtml(this._code, this.effectiveLanguage);
+    // render (sync first; if hljs is not ready, we’ll update later)
+    this.renderedHtml = this.renderToHtmlSync(this._code, this.effectiveLanguage);
     this.cdr.markForCheck();
+
+    // async highlight (only if enabled)
+    this.maybeHighlightAsync();
   }
 
-  private renderToHtml(raw: string, language: string): string {
+  private readProjectedContent(): string {
+    // Create embedded view and read text content
+    const host = document.createElement('div');
+    const view = this.projectedTpl.createEmbeddedView({});
+    view.detectChanges();
+
+    view.rootNodes.forEach((n: any) => {
+      if (typeof n === 'string') host.append(n);
+      else if (n?.textContent) host.append(n.textContent);
+    });
+
+    view.destroy();
+    return host.textContent?.trim() ?? '';
+  }
+
+  private renderToHtmlSync(raw: string, language: string): string {
     const text = raw ?? '';
     if (!text) return '';
 
-    if (this.highlighter === 'none') return escapeHtml(text);
-
-    const detected = detectGlobalHighlighter();
-    const mode =
-      this.highlighter === 'auto'
-        ? detected.kind
-        : this.highlighter === 'hljs' || this.highlighter === 'prism'
-        ? this.highlighter
-        : null;
-
-    try {
-      if (mode === 'hljs' && detected.kind === 'hljs') {
-        const hljs = detected.api;
-        if (language && hljs.getLanguage?.(language)) {
-          return hljs.highlight(text, { language }).value;
-        }
-        return hljs.highlightAuto(text).value;
-      }
-
-      if (mode === 'prism' && detected.kind === 'prism') {
-        const Prism = detected.api;
-        const lang = Prism.languages?.[language] ?? Prism.languages?.plaintext;
-        if (!lang) return escapeHtml(text);
-        return Prism.highlight(text, lang, language);
-      }
-    } catch {
-      // fallback
+    // If hljs already loaded and highlighter says yes, render with hljs now
+    if (this.shouldUseHljs() && this.hljs) {
+      return this.highlightWithHljs(text, language);
     }
 
+    // otherwise just escape for now
     return escapeHtml(text);
+  }
+
+  private shouldUseHljs(): boolean {
+    return this.highlighter === 'hljs' || this.highlighter === 'auto';
+  }
+
+  private async maybeHighlightAsync(): Promise<void> {
+    if (!this.shouldUseHljs()) return;
+    if (!this._code) return;
+
+    // load hljs if needed
+    if (!this.hljs) {
+      await this.loadHljsIfNeeded();
+      if (!this.hljs) return;
+    }
+
+    // re-render using hljs
+    this.renderedHtml = this.highlightWithHljs(this._code, this.effectiveLanguage);
+    this.cdr.markForCheck();
+  }
+
+  private highlightWithHljs(text: string, language: string): string {
+    try {
+      const hljs = this.hljs;
+      const lang = normalizeHljsLanguage(language);
+
+      if (lang && hljs.getLanguage?.(lang)) {
+        return hljs.highlight(text, { language: lang }).value;
+      }
+
+      // auto detect if unknown
+      return hljs.highlightAuto(text).value;
+    } catch {
+      return escapeHtml(text);
+    }
+  }
+
+  private async loadHljsIfNeeded(): Promise<void> {
+    if (this.hljs) return;
+
+    // if already on window (in case you choose to load globally)
+    const w = globalThis as any;
+    if (w?.hljs?.highlight && w?.hljs?.highlightAuto) {
+      this.hljs = w.hljs;
+      return;
+    }
+
+    // lazy import (bundled)
+    if (!this.hljsPromise) {
+      this.hljsPromise = import('highlight.js').then((m: any) => m.default ?? m).catch(() => null);
+    }
+
+    const loaded = await this.hljsPromise;
+    if (loaded?.highlight && loaded?.highlightAuto) {
+      this.hljs = loaded;
+    }
   }
 
   private async loadFile(path: string): Promise<void> {
@@ -377,12 +404,10 @@ export class ICodeViewer {
     this.error = '';
     this.cdr.markForCheck();
 
-    // infer language from extension
     this._fileLanguage = languageFromExt(getExtFromPath(path));
 
     try {
       const url = resolveFileUrl(path);
-
       const content = await firstValueFrom(this.http.get(url, { responseType: 'text' }));
 
       if (seq !== this.requestSeq) return;
