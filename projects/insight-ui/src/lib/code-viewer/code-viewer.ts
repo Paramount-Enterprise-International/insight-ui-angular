@@ -94,10 +94,7 @@ function isAbsoluteUrl(path: string): boolean {
   return /^https?:\/\//i.test(path) || /^\/\//.test(path);
 }
 
-/**
- * MF remote-safe: resolve relative file path against the remote bundle URL,
- * not the host shell base href.
- */
+/** MF remote-safe: resolve relative file path against the remote bundle URL */
 function resolveFileUrl(file: string): string {
   const f = (file ?? '').trim();
   if (!f) return f;
@@ -125,28 +122,8 @@ function normalizeHljsLanguage(lang: string): string {
       <ng-content></ng-content>
     </ng-template>
 
-    <div class="i-code-viewer" [class.compact]="compact" [class.wrap]="wrap">
-      @if (showHeader) {
-      <div class="i-code-viewer-header">
-        <div class="i-code-viewer-header-main">
-          <div class="i-code-viewer-header-title">
-            {{ title || languageLabel }}
-          </div>
-
-          <div class="i-code-viewer-header-actions">
-            @if (copy) {
-            <i-button size="xs" variant="outline" (click)="onCopy()" [disabled]="loading">
-              {{ copied ? 'Copied' : 'Copy' }}
-            </i-button>
-            }
-          </div>
-        </div>
-
-        @if (fileName) {
-        <div class="i-code-viewer-header-sub">{{ fileName }}</div>
-        }
-      </div>
-      } @if (loading) {
+    <div class="i-code-viewer" [class.wrap]="wrap" [class.compact]="compact">
+      @if (loading) {
       <div class="i-code-viewer-loading">Loading…</div>
       } @if (error) {
       <div class="i-code-viewer-error">{{ error }}</div>
@@ -159,7 +136,23 @@ function normalizeHljsLanguage(lang: string): string {
         [class.scroll-y]="scrollEffective"
         [style.height.px]="heightPx"
       >
-        @if (lineNumbers) {
+        @if (showOverlay) {
+        <div class="i-code-viewer-overlay">
+          @if (showFileType) {
+          <span class="i-code-viewer-filetype">{{ fileTypeLabel }}</span>
+          } @if (copy) {
+          <i-button
+            class="i-code-viewer-copy"
+            size="xs"
+            variant="outline"
+            (click)="onCopy()"
+            [disabled]="loading"
+          >
+            {{ copied ? 'Copied' : 'Copy' }}
+          </i-button>
+          }
+        </div>
+        } @if (lineNumbers) {
         <div class="i-code-viewer-gutter" aria-hidden="true">
           @for (n of lineNumberList; track n) {
           <div class="i-code-viewer-line">{{ n }}</div>
@@ -185,7 +178,6 @@ export class ICodeViewer {
   @ViewChild('projected', { static: true }) private projectedTpl!: TemplateRef<unknown>;
 
   // ===== Inputs =====
-  @Input() title: string = '';
 
   private _languageOverride: string | null = null;
   @Input()
@@ -228,12 +220,17 @@ export class ICodeViewer {
     return this._code;
   }
 
-  @Input({ transform: coerceBool }) copy = true;
+  /** visual options */
   @Input({ transform: coerceBool }) wrap = false;
   @Input({ transform: coerceBool }) compact = false;
 
-  /** ✅ Default true */
+  /** default true */
   @Input({ transform: coerceBool }) lineNumbers = true;
+
+  /** overlay controls */
+  @Input({ transform: coerceBool }) overlay = true; // enable/disable overlay entirely
+  @Input({ transform: coerceBool }) showFileType = true; // show language chip
+  @Input({ transform: coerceBool }) copy = true;
 
   /** If true, enable scroll (fixed height also forces scroll) */
   @Input({ transform: coerceBool }) scroll = false;
@@ -278,9 +275,10 @@ export class ICodeViewer {
     return this.scroll || this._heightPx !== null;
   }
 
-  get showHeader(): boolean {
-    // keep header visible if copy enabled, title exists, or file exists
-    return !!this.title || this.copy || !!this._file;
+  get showOverlay(): boolean {
+    // If overlay disabled, nothing floats.
+    // If both filetype and copy are disabled, also hide overlay.
+    return this.overlay && (this.showFileType || this.copy);
   }
 
   get effectiveLanguage(): string {
@@ -289,15 +287,9 @@ export class ICodeViewer {
     return 'text';
   }
 
-  get languageLabel(): string {
+  get fileTypeLabel(): string {
     const l = (this.effectiveLanguage || 'text').toUpperCase();
     return l === 'TEXT' ? 'CODE' : l;
-  }
-
-  get fileName(): string | null {
-    if (!this._file) return null;
-    const clean = this._file.split('?')[0].split('#')[0];
-    return clean.split('/').pop() ?? null;
   }
 
   // ===== Core =====
@@ -326,8 +318,7 @@ export class ICodeViewer {
 
   private countLines(text: string): number {
     if (!text) return 1;
-    // preserve last empty line if code ends with \n
-    return text.endsWith('\n') ? text.split('\n').length : text.split('\n').length;
+    return text.split('\n').length;
   }
 
   private readProjectedContent(): string {
@@ -391,7 +382,6 @@ export class ICodeViewer {
   private async loadHljsIfNeeded(): Promise<void> {
     if (this.hljs) return;
 
-    // allow global window.hljs if you ever decide to load it globally
     const w = globalThis as any;
     if (w?.hljs?.highlight && w?.hljs?.highlightAuto) {
       this.hljs = w.hljs;
