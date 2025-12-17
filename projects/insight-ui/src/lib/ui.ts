@@ -13,12 +13,14 @@ import { ISectionModule } from './section/section';
 import { IFCSelect, ISelect } from './select/select';
 import { ITextArea } from './textarea/textarea';
 import { IHContent } from './host/content/content';
+import { ICodeViewerModule } from './code-viewer/code-viewer';
 
 @NgModule({
   imports: [
     IAlert,
     IButton,
     ICardModule,
+    ICodeViewerModule,
     IConfirm,
     IDatepicker,
     IFCDatepicker,
@@ -37,6 +39,7 @@ import { IHContent } from './host/content/content';
     IAlert,
     IButton,
     ICardModule,
+    ICodeViewerModule,
     IConfirm,
     IDatepicker,
     IFCDatepicker,
