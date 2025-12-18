@@ -135,7 +135,7 @@ function normalizeHljsLanguage(lang: string): string {
         [style.height.px]="heightPx"
       >
         @if (showOverlay) {
-        <div class="i-code-viewer-overlay">
+        <div class="i-code-viewer-overlay hljs">
           @if (showFileType) {
           <span class="i-code-viewer-filetype">{{ fileTypeLabel }}</span>
           } @if (copy) {
@@ -153,7 +153,7 @@ function normalizeHljsLanguage(lang: string): string {
         }
 
         <!-- content row -->
-        <div class="i-code-viewer-content hljs">
+        <div class="i-code-viewer-content hljs scroll scroll-y">
           @if (lineNumbers) {
           <div class="i-code-viewer-gutter" aria-hidden="true">
             @for (n of lineNumberList; track n) {
