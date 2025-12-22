@@ -80,16 +80,7 @@ export class IIcon {
   @Input() size: IIconSize = 'md';
 
   get iconSize() {
-    const sizes: Record<string, string> = {
-      xs: 'i-icon-xs',
-      sm: 'i-icon-sm',
-      md: 'i-icon-md',
-      lg: 'i-icon-lg',
-      xl: 'i-icon-xl',
-      '2xl': 'i-icon-2xl',
-    };
-
-    return sizes[this.size] || 'sm';
+    return I_ICON_SIZES[this.size] || 'sm';
   }
 
   get iconClass() {
