@@ -1,7 +1,7 @@
 /* grid.ts */
 /**
  * IGrid
- * Version: 1.22.0
+ * Version: 1.23.0
  *
  * - Observable-based data source via IGridDataSource.data$
  * - Tree view support via [tree] input
@@ -12,6 +12,15 @@
  *    - string
  *    - { recursive: true, text: string, key?: string } for recursive tree filter
  * - Highlighting of filter text via HighlightSearchPipe for default cells
+ *
+ * NEW (1.23.0):
+ * - Expandable detail rows via:
+ *     <i-grid-expandable-row *iRowDef="let row; expandSingle: true">
+ *       ...detail template...
+ *     </i-grid-expandable-row>
+ * - Explicit toggle UI column (like tree toggle)
+ * - Imperative API: expandRow/collapseRow/toggleRowExpanded/expandAll/collapseAll
+ * - Outputs: rowExpandChange, expandedRowsChange
  */
 
 import { NgTemplateOutlet } from '@angular/common';
@@ -30,11 +39,13 @@ import {
   NgModule,
   OnChanges,
   OnDestroy,
+  OnInit,
   Optional,
   Output,
   QueryList,
   SimpleChanges,
   TemplateRef,
+  ViewContainerRef,
   booleanAttribute,
 } from '@angular/core';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
@@ -497,6 +508,60 @@ export class IGridCellDefDirective {
 }
 
 /* ----------------------------------------------------
+ * EXPANDABLE ROW DEF (detail row template)
+ * Usage:
+ *   <i-grid-expandable-row *iRowDef="let row; let index = index; expandSingle: true">
+ *     ...detail...
+ *   </i-grid-expandable-row>
+ *
+ * Notes:
+ * - `expandSingle` is configured via microsyntax key:
+ *     expandSingle: true  -> binds to input iRowDefExpandSingle
+ * ---------------------------------------------------- */
+
+@Directive({
+  selector: '[iRowDef]',
+  standalone: true,
+})
+export class IGridRowDefDirective<T = any> implements OnInit {
+  /**
+   * Microsyntax: `expandSingle: true` -> input `iRowDefExpandSingle`
+   */
+  @Input() iRowDefExpandSingle: boolean = false;
+
+  constructor(public readonly template: TemplateRef<any>, private readonly vcr: ViewContainerRef) {}
+
+  ngOnInit(): void {
+    // IMPORTANT:
+    // This directive is used as a definition holder.
+    // We don't want it to render by itself where it is projected.
+    this.vcr.clear();
+  }
+
+  static ngTemplateContextGuard<T>(
+    _dir: IGridRowDefDirective<T>,
+    _ctx: any
+  ): _ctx is { $implicit: T; row: T; index: number } {
+    return true;
+  }
+}
+
+/**
+ * Optional semantic wrapper component for your markup.
+ * It is not queried for config (config lives on iRowDef microsyntax),
+ * but it helps keep HTML readable.
+ */
+@Component({
+  selector: 'i-grid-expandable-row',
+  standalone: true,
+  template: `<ng-content></ng-content>`,
+  host: {
+    class: 'i-grid-expandable-row',
+  },
+})
+export class IGridExpandableRow {}
+
+/* ----------------------------------------------------
  * ROW DIRECTIVES
  * ---------------------------------------------------- */
 
@@ -893,8 +958,246 @@ export class IGridHeaderCell {
     IPaginator,
     IButton,
     IHighlightSearchPipe,
+    IGridRowDefDirective,
+    IGridExpandableRow,
   ],
-  templateUrl: './grid.html',
+  template: `<div
+      class="i-grid-viewport"
+      [style.height.px]="bodyHeight || null"
+      [style.max-height.px]="bodyMaxHeight || null"
+    >
+      <!-- HEADER -->
+      @if (columns.length) {
+      <i-grid-header-row>
+        <!-- Selection header column:
+           - Shown normally for flat grid / single selection
+           - Hidden for tree + multiple (tree has its own column)
+      -->
+        @if (selectionMode && !(treeEnabled && selectionMode === 'multiple')) {
+        <i-grid-header-cell
+          class="i-grid-selection-cell i-grid-selection-cell--header i-grid-header-cell--frozen"
+          [fixedWidth]="selectionColumnWidth"
+          [style.position]="'sticky'"
+          [style.left.px]="0"
+        >
+          @if (selectionMode === 'multiple') {
+          <input
+            type="checkbox"
+            [checked]="allVisibleSelected"
+            [indeterminate]="someVisibleSelected"
+            (click)="$event.stopPropagation()"
+            (change)="onToggleAllVisible()"
+          />
+          }
+        </i-grid-header-cell>
+        }
+
+        <!-- Tree control header column (toggler/checkbox lives here, not in data column) -->
+        @if (treeEnabled) {
+        <i-grid-header-cell
+          class="i-grid-tree-cell i-grid-tree-cell--header i-grid-header-cell--frozen"
+          [fixedWidth]="treeColumnWidth"
+          [style.position]="'sticky'"
+          [style.left.px]="getStickyLeftForTreeColumn()"
+        >
+          @if (selectionMode === 'multiple') {
+          <input
+            type="checkbox"
+            class="i-grid-tree-header-checkbox"
+            [checked]="allVisibleSelected"
+            [indeterminate]="someVisibleSelected"
+            (click)="$event.stopPropagation()"
+            (change)="onToggleAllVisible()"
+          />
+          }
+        </i-grid-header-cell>
+        }
+
+        <!-- Expand control header column -->
+        @if (hasExpandableRow) {
+        <i-grid-header-cell
+          class="i-grid-expand-cell i-grid-expand-cell--header i-grid-header-cell--frozen"
+          [fixedWidth]="expandColumnWidth"
+          [style.position]="'sticky'"
+          [style.left.px]="getStickyLeftForExpandColumn()"
+        >
+        </i-grid-header-cell>
+        } @if (showNumberColumnEffective) {
+        <i-grid-header-cell
+          class="i-grid-number-cell i-grid-number-cell--header"
+          [column]="numberColumn"
+          [style.position]="hasFrozenColumns ? 'sticky' : null"
+          [style.left.px]="hasFrozenColumns ? getStickyLeftForNumberColumn() : null"
+        >
+          {{ numberColumn.title }}
+        </i-grid-header-cell>
+        } @for (col of columns; track col; let colIndex = $index) { @if (col.headerDef; as tmpl) {
+        <!-- Custom header: user owns the <i-grid-header-cell> inside -->
+        <ng-container [ngTemplateOutlet]="tmpl"></ng-container>
+        } @else {
+        <!-- Default header -->
+        <i-grid-header-cell [column]="col" [class.i-grid-header-cell--auto]="col.isAuto">
+          {{ col.title || col.fieldName }}
+        </i-grid-header-cell>
+        } }
+      </i-grid-header-row>
+      }
+
+      <!-- ROWS -->
+      @for (row of renderedData; track rowIndex; let rowIndex = $index) {
+      <i-grid-row (click)="onRowClicked(row)" [class.i-grid-selection-row]="!!selectionMode">
+        <!-- Selection column:
+           - Only when not in tree + multiple mode
+           - In tree + multiple, checkbox is in the tree column
+      -->
+        @if (selectionMode && !(treeEnabled && selectionMode === 'multiple')) {
+        <i-grid-cell
+          class="i-grid-selection-cell i-grid-selection-cell--body"
+          [fixedWidth]="selectionColumnWidth"
+          (click)="$event.stopPropagation()"
+          [style.position]="'sticky'"
+          [style.left.px]="0"
+        >
+          @if (selectionMode === 'multiple') {
+          <input
+            type="checkbox"
+            [checked]="getRowChecked(row)"
+            [indeterminate]="getRowIndeterminate(row)"
+            (change)="onRowSelectionToggle(row)"
+          />
+          } @else if (selectionMode === 'single') {
+          <input
+            type="radio"
+            [name]="singleSelectionName"
+            [checked]="isRowSelected(row)"
+            (change)="onRowSelectionToggle(row)"
+          />
+          }
+        </i-grid-cell>
+        }
+
+        <!-- Tree control column -->
+        @if (treeEnabled) {
+        <i-grid-cell
+          class="i-grid-tree-cell i-grid-tree-cell--body"
+          [fixedWidth]="treeColumnWidth"
+          (click)="$event.stopPropagation()"
+          [style.position]="'sticky'"
+          [style.left.px]="getStickyLeftForTreeColumn()"
+        >
+          <span
+            class="i-grid-tree-cell__content"
+            [style.padding-left.px]="8 + getRowLevel(row) * treeIndent"
+          >
+            @if (hasChildren(row)) {
+            <i-button
+              class="i-grid-tree-toggle"
+              size="2xs"
+              variant="outline"
+              [icon]="isExpanded(row) ? 'down' : 'next'"
+              (onClick)="onTreeToggle(row, $event)"
+            >
+            </i-button>
+            } @else {
+            <span class="i-grid-tree-spacer"></span>
+            } @if (selectionMode === 'multiple') {
+            <input
+              type="checkbox"
+              class="i-grid-tree-checkbox"
+              [checked]="getRowChecked(row)"
+              [indeterminate]="getRowIndeterminate(row)"
+              (click)="$event.stopPropagation()"
+              (change)="onRowSelectionToggle(row)"
+            />
+            }
+          </span>
+        </i-grid-cell>
+        }
+
+        <!-- Expand control column -->
+        @if (hasExpandableRow) {
+        <i-grid-cell
+          class="i-grid-expand-cell i-grid-expand-cell--body"
+          [fixedWidth]="expandColumnWidth"
+          (click)="$event.stopPropagation()"
+          [style.position]="'sticky'"
+          [style.left.px]="getStickyLeftForExpandColumn()"
+        >
+          <span class="i-grid-expand-cell__content">
+            <i-button
+              class="i-grid-expand-toggle"
+              size="2xs"
+              variant="outline"
+              [icon]="isRowExpanded(row) ? 'down' : 'next'"
+              (onClick)="onExpandToggle(row, $event)"
+            >
+            </i-button>
+          </span>
+        </i-grid-cell>
+        } @if (showNumberColumnEffective) {
+        <i-grid-cell
+          class="i-grid-number-cell i-grid-number-cell--body"
+          [column]="numberColumn"
+          (click)="$event.stopPropagation()"
+          [style.position]="hasFrozenColumns ? 'sticky' : null"
+          [style.left.px]="hasFrozenColumns ? getStickyLeftForNumberColumn() : null"
+        >
+          <span class="i-grid-cell__content">
+            {{ getRowNumber(rowIndex) }}
+          </span>
+        </i-grid-cell>
+        } @for (col of columns; track col; let colIndex = $index) { @if (col.cellDef; as tmpl) {
+        <!-- Custom cell: template root should be <i-grid-cell> -->
+        <ng-container
+          [ngTemplateOutlet]="tmpl"
+          [ngTemplateOutletContext]="{
+                  $implicit: row,
+                  row: row,
+                  index: rowIndex,
+                  column: col,
+                }"
+        >
+        </ng-container>
+        } @else {
+        <!-- Default cell: show highlighted row[fieldName] (for data-backed columns) -->
+        <i-grid-cell [column]="col" [class.i-grid-cell--auto]="col.isAuto">
+          <span
+            class="i-grid-cell__content"
+            [innerHTML]="
+              col.fieldName ? ($any(row)[col.fieldName] | highlightSearch : currentFilterText) : ''
+            "
+          >
+          </span>
+        </i-grid-cell>
+        } }
+      </i-grid-row>
+
+      <!-- DETAIL ROW -->
+      @if (hasExpandableRow && isRowExpanded(row)) {
+      <div class="i-grid-row i-grid-row--detail" role="row">
+        <div class="i-grid-cell i-grid-cell--detail" role="cell">
+          <ng-container
+            [ngTemplateOutlet]="expandableRowDef!.template"
+            [ngTemplateOutletContext]="{ $implicit: row, row: row, index: rowIndex }"
+          >
+          </ng-container>
+        </div>
+      </div>
+      } }
+    </div>
+
+    @if (hasPagination) {
+    <div class="i-grid-footer">
+      <i-paginator
+        [length]="totalLength"
+        [pageIndex]="pageIndex"
+        [pageSize]="pageSize"
+        [pageSizeOptions]="pageSizeOptions"
+        (pageChange)="onPageChange($event)"
+      >
+      </i-paginator>
+    </div>
+    }`,
   exportAs: 'iGrid',
   host: {
     class: 'i-grid',
@@ -927,11 +1230,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
    * - false / null / undefined → flat mode
    * - true / "" / "children" → tree, children key = "children"
    * - "nodes" → tree, children key = "nodes"
-   *
-   * Example:
-   *   <i-grid [dataSource]="rows" tree></i-grid>            // children = "children"
-   *   <i-grid [dataSource]="rows" tree="children"></i-grid> // children = "children"
-   *   <i-grid [dataSource]="rows" tree="nodes"></i-grid>    // children = "nodes"
    */
   @Input() tree: string | boolean | null = null;
 
@@ -948,7 +1246,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   /**
    * Show auto number column (1-based).
-   * Placed after selection + tree column (if any).
+   * Placed after selection + tree + expand column (if any).
    *
    * NOTE: In tree mode, this is disabled by default via showNumberColumnEffective.
    */
@@ -969,6 +1267,10 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   /** Emits on row click (before selection logic) */
   @Output() rowClick = new EventEmitter<T>();
 
+  /** Expand events */
+  @Output() rowExpandChange = new EventEmitter<{ row: T; expanded: boolean }>();
+  @Output() expandedRowsChange = new EventEmitter<T[]>();
+
   /** Data columns projected as <i-grid-column> */
   @ContentChildren(IGridColumn)
   columnDefs!: QueryList<IGridColumn<T>>;
@@ -976,6 +1278,17 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   /** Custom columns projected as <i-grid-custom-column> */
   @ContentChildren(IGridCustomColumn)
   customColumnDefs!: QueryList<IGridCustomColumn<T>>;
+
+  /**
+   * Expandable detail row definition (template holder).
+   * See: IGridRowDefDirective usage.
+   */
+  @ContentChild(IGridRowDefDirective)
+  expandableRowDef?: IGridRowDefDirective<T>;
+
+  get hasExpandableRow(): boolean {
+    return !!this.expandableRowDef?.template;
+  }
 
   /** Concrete array used in template loops (data + custom, or auto + custom) */
   columns: IGridColumnLike<T>[] = [];
@@ -996,28 +1309,25 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   // selection
   private _selection = new Set<T>();
 
+  // expanded detail rows
+  private _expanded = new Set<T>();
+
   private readonly _id = Math.random().toString(36).slice(2);
 
   /** default width (px) when column.width is undefined */
   private readonly _defaultColumnWidth = 200;
 
-  /** special widths (px) for selection + number + tree columns */
+  /** special widths (px) for selection + number + tree + expand columns */
   readonly selectionColumnWidth = 28;
   readonly numberColumnWidth = 60;
   readonly treeColumnWidth = 52;
+  readonly expandColumnWidth = 52;
 
   /** internal auto-number column object (not part of columns[]) */
   private _numberColumnInternal?: IGridColumnLike<T>;
 
   // ---------- TREE: internal state ----------
 
-  /**
-   * Map of row → metadata:
-   * - level: depth (0 = root)
-   * - parent: parent row or null
-   * - hasChildren: whether children array is non-empty
-   * - expanded: expanded state (controls visibility of descendants)
-   */
   private _treeMeta = new Map<
     T,
     { level: number; parent: T | null; hasChildren: boolean; expanded: boolean }
@@ -1054,6 +1364,117 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   @HostBinding('style.--i-grid-sticky-top')
   get stickyTopVar(): string | null {
     return this.stickyHeader ? `${this.stickyHeaderOffset}px` : null;
+  }
+
+  /* ----------------------------------------------------
+   * EXPANDABLE ROW API
+   * ---------------------------------------------------- */
+
+  /** Expand a row detail */
+  expandRow(row: T): void {
+    this._setExpanded(row, true);
+  }
+
+  /** Collapse a row detail */
+  collapseRow(row: T): void {
+    this._setExpanded(row, false);
+  }
+
+  /** Toggle a row detail */
+  toggleRowExpanded(row: T): void {
+    this._setExpanded(row, !this.isRowExpanded(row));
+  }
+
+  /** True if row is expanded */
+  isRowExpanded(row: T): boolean {
+    return this._expanded.has(row);
+  }
+
+  /** Return expanded rows */
+  getExpandedRows(): T[] {
+    return Array.from(this._expanded);
+  }
+
+  /** Expand all visible rows (renderedData). If expandSingle, expands only first visible row. */
+  expandAll(): void {
+    if (!this.hasExpandableRow) return;
+
+    const expandSingle = !!this.expandableRowDef?.iRowDefExpandSingle;
+
+    if (expandSingle) {
+      this._expanded.clear();
+      const first = this.renderedData[0];
+      if (first) this._expanded.add(first);
+      if (first) this.rowExpandChange.emit({ row: first, expanded: true });
+      this.expandedRowsChange.emit(this.getExpandedRows());
+      return;
+    }
+
+    const before = new Set(this._expanded);
+    for (const row of this.renderedData) {
+      this._expanded.add(row);
+    }
+
+    // emit per-row changes only for newly expanded
+    for (const row of this.renderedData) {
+      if (!before.has(row)) {
+        this.rowExpandChange.emit({ row, expanded: true });
+      }
+    }
+
+    this.expandedRowsChange.emit(this.getExpandedRows());
+  }
+
+  /** Collapse all rows */
+  collapseAll(): void {
+    if (!this.hasExpandableRow) return;
+
+    const prev = Array.from(this._expanded);
+    this._expanded.clear();
+
+    // emit per-row collapse
+    prev.forEach((row) => this.rowExpandChange.emit({ row, expanded: false }));
+
+    this.expandedRowsChange.emit(this.getExpandedRows());
+  }
+
+  /** Toggle click handler from template */
+  onExpandToggle(row: T, event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.toggleRowExpanded(row);
+  }
+
+  private _setExpanded(row: T, expanded: boolean): void {
+    if (!this.hasExpandableRow) return;
+
+    // Validate row exists in current data (flat or tree)
+    const all = this._getAllDataRows();
+    if (all.length) {
+      const valid = new Set(all);
+      if (!valid.has(row)) return;
+    }
+
+    const expandSingle = !!this.expandableRowDef?.iRowDefExpandSingle;
+
+    const wasExpanded = this._expanded.has(row);
+    if (expanded === wasExpanded) return;
+
+    if (expanded) {
+      if (expandSingle) {
+        // collapse others
+        const prev = Array.from(this._expanded).filter((r) => r !== row);
+        this._expanded.clear();
+        prev.forEach((r) => this.rowExpandChange.emit({ row: r, expanded: false }));
+      }
+
+      this._expanded.add(row);
+      this.rowExpandChange.emit({ row, expanded: true });
+    } else {
+      this._expanded.delete(row);
+      this.rowExpandChange.emit({ row, expanded: false });
+    }
+
+    this.expandedRowsChange.emit(this.getExpandedRows());
   }
 
   /* ------- TREE helpers (config) ------- */
@@ -1168,6 +1589,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
     this.renderedData = result;
     this._reconcileSelectionWithData();
+    this._reconcileExpandedWithData();
     this._updateCurrentFilterText();
   }
 
@@ -1442,6 +1864,41 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     }
   }
 
+  private _reconcileExpandedWithData(): void {
+    if (!this.hasExpandableRow) return;
+
+    const all = this._getAllDataRows();
+    if (!all.length) {
+      if (this._expanded.size) {
+        this._expanded.clear();
+        this.expandedRowsChange.emit(this.getExpandedRows());
+      }
+      return;
+    }
+
+    const validSet = new Set(all);
+    const prev = new Set(this._expanded);
+
+    const newExpanded = new Set<T>();
+    this._expanded.forEach((row) => {
+      if (validSet.has(row)) {
+        newExpanded.add(row);
+      }
+    });
+
+    // emit collapse for invalid ones
+    prev.forEach((row) => {
+      if (!newExpanded.has(row)) {
+        this.rowExpandChange.emit({ row, expanded: false });
+      }
+    });
+
+    if (newExpanded.size !== this._expanded.size) {
+      this._expanded = newExpanded;
+      this.expandedRowsChange.emit(this.getExpandedRows());
+    }
+  }
+
   private _getAllDataRows(): T[] {
     // In tree mode, flatten the full hierarchy (ignoring expansion)
     if (this.treeEnabled && this._treeRoots.length) {
@@ -1511,13 +1968,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   /* ------- column width / flex API ------- */
 
-  /**
-   * Returns numeric column width (px) for fixed-width columns.
-   * - override from resize
-   * - explicit numeric [width]
-   * - default width when width is undefined
-   * For "fill" we return null to signal flex-fill (CSS min-width handles autos).
-   */
   getColumnWidth(column: IGridColumnLike<any>): number | null {
     const override = this._columnWidths.get(column);
     if (typeof override === 'number') {
@@ -1587,6 +2037,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
    * We also offset by:
    * - selection column width (if selectionMode && not tree+multiple)
    * - tree column width (if treeEnabled)
+   * - expand column width (if hasExpandableRow)
    * - number column width (if showNumberColumnEffective)
    */
   getColumnStickyLeft(column: IGridColumnLike<any>): number | null {
@@ -1600,23 +2051,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
     let left = 0;
 
-    const hasSelectionColumn =
-      !!this.selectionMode && !(this.treeEnabled && this.selectionMode === 'multiple');
-
-    if (hasSelectionColumn) {
-      left += this.selectionColumnWidth;
-    }
-
-    if (this.treeEnabled) {
-      left += this.treeColumnWidth;
-    }
-
-    if (this.showNumberColumnEffective) {
-      const numWidth = this.getColumnWidth(this.numberColumn);
-      if (numWidth != null) {
-        left += numWidth;
-      }
-    }
+    left += this._getSpecialColumnsLeftOffset();
 
     for (let i = 0; i < idx; i++) {
       const col = this.columns[i];
@@ -1629,6 +2064,77 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     }
 
     return left;
+  }
+
+  /**
+   * Sticky left offsets for special columns (selection/tree/expand/number),
+   * in the same order we render them.
+   */
+  private _getSpecialColumnsLeftOffset(options?: {
+    includeNumber?: boolean;
+    includeExpand?: boolean;
+    includeTree?: boolean;
+    includeSelection?: boolean;
+  }): number {
+    const includeSelection = options?.includeSelection ?? true;
+    const includeTree = options?.includeTree ?? true;
+    const includeExpand = options?.includeExpand ?? true;
+    const includeNumber = options?.includeNumber ?? true;
+
+    let left = 0;
+
+    const hasSelectionColumn =
+      !!this.selectionMode && !(this.treeEnabled && this.selectionMode === 'multiple');
+
+    if (includeSelection && hasSelectionColumn) {
+      left += this.selectionColumnWidth;
+    }
+
+    if (includeTree && this.treeEnabled) {
+      left += this.treeColumnWidth;
+    }
+
+    if (includeExpand && this.hasExpandableRow) {
+      left += this.expandColumnWidth;
+    }
+
+    if (includeNumber && this.showNumberColumnEffective) {
+      const numWidth = this.getColumnWidth(this.numberColumn);
+      if (numWidth != null) left += numWidth;
+    }
+
+    return left;
+  }
+
+  /** Left for tree column (after selection, before tree) */
+  getStickyLeftForTreeColumn(): number {
+    // tree is after selection only
+    return this._getSpecialColumnsLeftOffset({
+      includeSelection: true,
+      includeTree: false,
+      includeExpand: false,
+      includeNumber: false,
+    });
+  }
+
+  /** Left for expand column (after selection + tree) */
+  getStickyLeftForExpandColumn(): number {
+    return this._getSpecialColumnsLeftOffset({
+      includeSelection: true,
+      includeTree: true,
+      includeExpand: false,
+      includeNumber: false,
+    });
+  }
+
+  /** Left for number column (after selection + tree + expand) */
+  getStickyLeftForNumberColumn(): number {
+    return this._getSpecialColumnsLeftOffset({
+      includeSelection: true,
+      includeTree: true,
+      includeExpand: true,
+      includeNumber: false,
+    });
   }
 
   /* ------- paginator proxies ------- */
@@ -1682,6 +2188,11 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     this._rebuildColumns();
     this.columnDefs.changes.subscribe(() => this._rebuildColumns());
     this.customColumnDefs.changes.subscribe(() => this._rebuildColumns());
+
+    // if expandable row template changes, we should reconcile expanded state with data
+    // (this is rare; but safe)
+    // NOTE: ContentChild doesn't expose changes easily, so we just reconcile on connect updates.
+
     this._connectData();
     this._applyExistingDataSourceSort();
   }
@@ -1740,12 +2251,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     }));
   }
 
-  /**
-   * Build columns:
-   * - If there are projected <i-grid-column>, use them (manual data columns).
-   * - If there are none, infer data columns from data keys (auto mode).
-   * - In both cases, append <i-grid-custom-column> at the end.
-   */
   private _rebuildColumns(fromDataChange: boolean = false): void {
     const projectedDataCols = this.columnDefs?.toArray?.() ?? [];
     const customCols = this.customColumnDefs?.toArray?.() ?? [];
@@ -1789,14 +2294,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     }
   }
 
-  /**
-   * Auto column builder:
-   * - Only used when there are NO projected <i-grid-column>.
-   * - Uses the first data row's keys as columns.
-   * - Field name & title are identical, so renaming the object key
-   *   automatically renames the header.
-   * - Auto columns are flex-fill and have a min width (via CSS).
-   */
   private _buildAutoColumnsFromData(): IGridColumnLike<T>[] {
     const rows = this._getAllDataRows();
     if (!rows.length) {
@@ -1844,7 +2341,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
           const roots = data || [];
 
           this._buildTreeMeta(roots);
-          this._rebuildTreeRendered(); // also updates filter text
+          this._rebuildTreeRendered(); // also updates filter text + reconciles selection/expanded
           this._rebuildColumns(true);
         });
         return;
@@ -1855,7 +2352,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
         const roots = this.dataSource;
 
         this._buildTreeMeta(roots);
-        this._rebuildTreeRendered(); // also updates filter text
+        this._rebuildTreeRendered(); // also updates filter text + reconciles selection/expanded
         this._rebuildColumns(true);
         return;
       }
@@ -1863,6 +2360,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       // Fallback
       this.renderedData = [];
       this._reconcileSelectionWithData();
+      this._reconcileExpandedWithData();
       this._rebuildColumns(true);
       this._updateCurrentFilterText();
       return;
@@ -1873,6 +2371,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       this._dataSub = this.dataSource.connect().subscribe((data) => {
         this.renderedData = data || [];
         this._reconcileSelectionWithData();
+        this._reconcileExpandedWithData();
 
         // auto-columns: rebuild when data shape changes and no manual columns
         this._rebuildColumns(true);
@@ -1884,6 +2383,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     if (Array.isArray(this.dataSource)) {
       this.renderedData = this.dataSource;
       this._reconcileSelectionWithData();
+      this._reconcileExpandedWithData();
 
       // auto-columns: rebuild when data shape changes and no manual columns
       this._rebuildColumns(true);
@@ -1893,6 +2393,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
     this.renderedData = [];
     this._reconcileSelectionWithData();
+    this._reconcileExpandedWithData();
     this._rebuildColumns(true);
     this._updateCurrentFilterText();
   }
@@ -1961,6 +2462,8 @@ export const I_GRID_DECLARATIONS = [
   IGridCustomColumn,
   IGridHeaderCellDefDirective,
   IGridCellDefDirective,
+  IGridRowDefDirective,
+  IGridExpandableRow,
   IGridHeaderCell,
   IGridCell,
   IGridHeaderRowDirective,
@@ -1974,6 +2477,8 @@ export const I_GRID_DECLARATIONS = [
     IGridCustomColumn,
     IGridHeaderCellDefDirective,
     IGridCellDefDirective,
+    IGridRowDefDirective,
+    IGridExpandableRow,
     IGridHeaderCell,
     IGridCell,
     IGridHeaderRowDirective,
@@ -1986,6 +2491,8 @@ export const I_GRID_DECLARATIONS = [
     IGridCustomColumn,
     IGridHeaderCellDefDirective,
     IGridCellDefDirective,
+    IGridRowDefDirective,
+    IGridExpandableRow,
     IGridHeaderCell,
     IGridCell,
     IGridHeaderRowDirective,

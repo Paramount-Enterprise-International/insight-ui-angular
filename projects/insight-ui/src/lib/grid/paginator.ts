@@ -17,7 +17,35 @@ export interface IPaginatorState {
   selector: 'i-paginator',
   standalone: true,
   imports: [IButton],
-  templateUrl: './paginator.html',
+  template: `<div class="i-paginator flex align-items-center gap-2">
+    <i-button
+      icon="prev"
+      (onClick)="previousPage()"
+      size="sm"
+      [disabled]="pageIndex <= 0"
+    ></i-button>
+    <span>Page {{ pageIndex + 1 }} / {{ pageCount }}</span>
+    <i-button
+      icon="next"
+      (onClick)="nextPage()"
+      size="sm"
+      [disabled]="pageIndex >= pageCount - 1"
+    ></i-button>
+
+    <span class="ms-2">
+      | Show
+      <select
+        class="form-select form-select-sm d-inline-block w-auto"
+        [value]="pageSize"
+        (change)="changePageSize($any($event.target).value)"
+      >
+        @for (size of pageSizeOptions; track size) {
+        <option [value]="size">{{ size }}</option>
+        }
+      </select>
+      per page ({{ length }} total)
+    </span>
+  </div>`,
 })
 export class IPaginator {
   @Input() length = 0;
