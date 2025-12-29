@@ -17,7 +17,7 @@ export interface IPaginatorState {
   selector: 'i-paginator',
   standalone: true,
   imports: [IButton],
-  template: `<div class="i-paginator flex align-items-center gap-2">
+  template: `<div class="i-paginator flex align-center gap-2">
     <i-button
       icon="prev"
       (onClick)="previousPage()"
