@@ -1,0 +1,48 @@
+<i-section>
+  <i-section-header>IGrid </i-section-header>
+  <i-section-body class="p-0">
+    <i-grid
+      [dataSource]="dataSource"
+      selectionMode="multiple"
+      stickyHeader
+      (rowClick)="onRowClick($event)"
+      (selectionChange)="onSelectionChange($event)"
+      (rowExpandChange)="onRowExpandChange($event)"
+      (expandedRowsChange)="onExpandedRowsChange($event)"
+    >
+      <!-- Data column: Name (frozen) -->
+      <i-grid-column fieldName="name" title="Name" [freeze]="true" [width]="220">
+        <i-grid-cell *iCellDef="let row">
+          <div class="font-semibold">{{ row.name }}</div>
+        </i-grid-cell>
+      </i-grid-column>
+
+      <!-- Data column: Email -->
+      <i-grid-column fieldName="email" title="Email" [width]="260">
+        <i-grid-cell *iCellDef="let row">
+          <span class="text-muted">{{ row.email }}</span>
+        </i-grid-cell>
+      </i-grid-column>
+
+      <!-- Data column: Role -->
+      <i-grid-column fieldName="role" title="Role" [width]="160"></i-grid-column>
+
+      <!-- Custom column: Actions -->
+      <i-grid-custom-column title="Actions" [width]="220">
+        <i-grid-cell *iCellDef="let row">
+          <i-button size="xs" variant="outline"> Edit </i-button>
+          <i-button size="xs" variant="outline"> Delete </i-button>
+        </i-grid-cell>
+      </i-grid-custom-column>
+
+      <!-- Expandable detail row (single expanded at a time) -->
+      <i-grid-expandable-row *iRowDef="let row">
+        <div class="flex flex-col gap-md p-md">
+          <div><b>ID:</b> {{ row.id }}</div>
+          <div><b>Department:</b> {{ row.department }}</div>
+          <div><b>Status:</b> {{ row.status }}</div>
+        </div>
+      </i-grid-expandable-row>
+    </i-grid>
+  </i-section-body>
+</i-section>
