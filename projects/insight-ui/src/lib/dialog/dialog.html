@@ -1,63 +1,42 @@
 @if (title) {
-  <h4 class="i-dialog-title">{{ title }}</h4>
+<h4 class="i-dialog-title">{{ title }}</h4>
 }
 <div class="i-dialog-content">
   <ng-content />
 </div>
 @if (actions.length > 0) {
-  <div class="flex i-dialog-actions" [align]="actionAlign">
-    @if (customActions.length > 0) {
-      @for (a of customActions; track $index) {
-        <i-button
-          [icon]="a.icon"
-          [ngClass]="a.className"
-          [variant]="a.variant || 'primary'"
-          (onClick)="onCustomActionClick(a)"
-          >{{ a.label }}</i-button
-        >
-      }
-    }
-    @if (
-      (okAction || confirmAction || saveAction || cancelAction) &&
-      customActions.length > 0
-    ) {
-      <span class="flex-fill"></span>
-    }
-    @if (okAction) {
-      <i-button
-        icon="check"
-        variant="primary"
-        [ngClass]="okAction.className"
-        (onClick)="onOkClick()"
-        >OK</i-button
-      >
-    }
-    @if (confirmAction) {
-      <i-button
-        icon="save"
-        variant="primary"
-        [ngClass]="confirmAction.className"
-        (onClick)="onConfirmClick()"
-        >Confirm</i-button
-      >
-    }
-    @if (saveAction) {
-      <i-button
-        icon="save"
-        variant="primary"
-        [ngClass]="saveAction.className"
-        (onClick)="onSaveClick()"
-        >Save</i-button
-      >
-    }
-    @if (cancelAction) {
-      <i-button
-        i-dialog-close
-        icon="cancel"
-        variant="danger"
-        [ngClass]="cancelAction.className"
-        >Cancel</i-button
-      >
-    }
-  </div>
+<div class="i-dialog-actions" [align]="actionAlign">
+  @if (customActions.length > 0) { @for (a of customActions; track $index) {
+  <i-button
+    [icon]="a.icon"
+    [ngClass]="a.className"
+    [variant]="a.variant || 'primary'"
+    (onClick)="onCustomActionClick(a)"
+    >{{ a.label }}</i-button
+  >
+  } } @if ( (okAction || confirmAction || saveAction || cancelAction) && customActions.length > 0 )
+  {
+  <span class="flex-fill"></span>
+  } @if (okAction) {
+  <i-button icon="check" variant="primary" [ngClass]="okAction.className" (onClick)="onOkClick()"
+    >OK</i-button
+  >
+  } @if (confirmAction) {
+  <i-button
+    icon="save"
+    variant="primary"
+    [ngClass]="confirmAction.className"
+    (onClick)="onConfirmClick()"
+    >Confirm</i-button
+  >
+  } @if (saveAction) {
+  <i-button icon="save" variant="primary" [ngClass]="saveAction.className" (onClick)="onSaveClick()"
+    >Save</i-button
+  >
+  } @if (cancelAction) {
+  <i-button i-dialog-close icon="cancel" variant="danger" [ngClass]="cancelAction.className"
+    >Cancel</i-button
+  >
+  }
+</div>
 }

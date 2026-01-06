@@ -65,6 +65,8 @@ export const I_ICON_SIZES = {
   lg: 'i-icon-lg',
   xl: 'i-icon-xl',
   '2xl': 'i-icon-2xl',
+  '3xl': 'i-icon-3xl',
+  '4xl': 'i-icon-4xl',
 } as const;
 
 export type IIconName = keyof typeof I_ICON_NAMES;
