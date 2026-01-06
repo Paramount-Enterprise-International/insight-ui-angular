@@ -1,9 +1,10 @@
 import { Component, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { IAlertService, IConfirmService, IUI } from '@insight-ui';
 
 @Component({
   selector: 'app-dialog',
-  imports: [IUI],
+  imports: [IUI, RouterLink],
   templateUrl: './dialog.html',
   styleUrl: './dialog.css',
   host: {
