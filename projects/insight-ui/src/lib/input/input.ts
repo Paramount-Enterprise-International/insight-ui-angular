@@ -43,16 +43,16 @@ import { IInputMask, IInputMaskDirective } from './input-mask';
     }
     <input
       #inputRef
-      [type]="type"
-      [placeholder]="placeholder"
-      [attr.autocomplete]="autocomplete || null"
-      [readonly]="readonly"
-      [disabled]="isDisabled"
-      [value]="value ?? ''"
       [attr.aria-invalid]="invalid ? 'true' : null"
+      [attr.autocomplete]="autocomplete || null"
+      [disabled]="isDisabled"
       [iInputMask]="mask"
-      (input)="handleInput($event)"
+      [placeholder]="placeholder"
+      [readonly]="readonly"
+      [type]="type"
+      [value]="value ?? ''"
       (blur)="handleBlur()"
+      (input)="handleInput($event)"
     />
     @for (i of appends; track $index) {
     <i-input-addon [addon]="i" />
@@ -67,9 +67,12 @@ import { IInputMask, IInputMaskDirective } from './input-mask';
   ],
 })
 export class IInput implements ControlValueAccessor {
-  @Input() type: string = 'text';
-  @Input() placeholder: string = '';
+  @Input() type = 'text';
+
+  @Input() placeholder = '';
+
   @Input() autocomplete: string | undefined;
+
   @Input() readonly = false;
 
   /** invalid state (controlled by form or wrapper) */
@@ -83,6 +86,7 @@ export class IInput implements ControlValueAccessor {
   get value(): string | null {
     return this._value;
   }
+
   set value(v: string | null) {
     this._value = v ?? '';
   }
@@ -101,12 +105,18 @@ export class IInput implements ControlValueAccessor {
   get disabled(): boolean {
     return this.isDisabled;
   }
+
   set disabled(value: boolean) {
     this.isDisabled = value;
   }
 
-  private onChange: (value: any) => void = () => {};
-  private onTouched: () => void = () => {};
+  private onChange: (value: any) => void = () => {
+    /*  */
+  };
+
+  private onTouched: () => void = () => {
+    /*  */
+  };
 
   // -----------------------------
   // ControlValueAccessor
@@ -158,14 +168,14 @@ export class IInput implements ControlValueAccessor {
     this.inputRef.nativeElement.focus();
   }
 
-  get prepends() {
+  get prepends(): IInputAddons[] {
     if (!this.prepend) {
       return [];
     }
     return Array.isArray(this.prepend) ? this.prepend : [this.prepend];
   }
 
-  get appends() {
+  get appends(): IInputAddons[] {
     if (!this.append) {
       return [];
     }
@@ -186,20 +196,19 @@ export class IInput implements ControlValueAccessor {
     }
 
     <i-input
-      [type]="type"
-      [placeholder]="placeholder"
-      [autocomplete]="autocomplete"
-      [readonly]="readonly"
-      [mask]="mask"
-      [prepend]="prepend"
       [append]="append"
-      [value]="value"
-      [invalid]="controlInvalid"
+      [autocomplete]="autocomplete"
       [disabled]="isDisabled"
-      (input)="handleInnerInput($event)"
+      [invalid]="controlInvalid"
+      [mask]="mask"
+      [placeholder]="placeholder"
+      [prepend]="prepend"
+      [readonly]="readonly"
+      [type]="type"
+      [value]="value"
       (blur)="handleInnerBlur()"
-    >
-    </i-input>
+      (input)="handleInnerInput($event)"
+    />
 
     @if (controlInvalid && resolvedErrorText) {
     <div class="i-fc-input__error">
@@ -212,14 +221,20 @@ export class IFCInput implements ControlValueAccessor {
   @ViewChild(IInput) innerInput!: IInput;
 
   // ---------- UI inputs ----------
-  @Input() label: string = '';
-  @Input() placeholder: string = '';
+  @Input() label = '';
+
+  @Input() placeholder = '';
+
   @Input() autocomplete: string | undefined;
+
   @Input() readonly = false;
-  @Input() type: string = 'text';
+
+  @Input() type = 'text';
 
   @Input() mask: IInputMask | undefined;
+
   @Input() prepend: IInput['prepend'];
+
   @Input() append: IInput['append'];
 
   /** old-style custom error templates: { required: '{label} is cuwax' } */
@@ -230,15 +245,18 @@ export class IFCInput implements ControlValueAccessor {
   get value(): string | null {
     return this._value;
   }
+
   set value(v: string | null) {
     this._value = v ?? '';
   }
 
   // ---------- internal state ----------
   private _value: string | null = null;
+
   isDisabled = false;
 
   private onChange: (v: any) => void = () => {};
+
   private onTouched: () => void = () => {};
 
   constructor(
@@ -297,7 +315,9 @@ export class IFCInput implements ControlValueAccessor {
   // ---------- validation helpers ----------
   get controlInvalid(): boolean {
     const c = this.ngControl?.control;
-    if (!c) return false;
+    if (!c) {
+      return false;
+    }
 
     // 🧠 mimic old IInput.isInvalid: invalid && form submitted
     if (this.formDir) {

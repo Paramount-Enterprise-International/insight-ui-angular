@@ -1,9 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  HostBinding,
-  Input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostBinding, Input } from '@angular/core';
 import { IButton, IButtonVariant } from '../button/button';
 import { IIcon } from '../icon/icon';
 import { ILoading } from '../loading/loading';
@@ -61,30 +56,31 @@ export type IInputAddons =
   imports: [IButton, IIcon, ILoading],
   template: `
     @if (!addon || addon.visible === false) {
-      <!-- render nothing -->
+    <!-- render nothing -->
     } @else if (addon.type === 'button') {
-      <i-button
-        type="button"
-        size="xs"
-        [icon]="addon.icon"
-        [variant]="addon.variant ?? 'primary'"
-        (onClick)="addon.onClick ? addon.onClick() : null">
-      </i-button>
+    <i-button
+      size="xs"
+      type="button"
+      [icon]="addon.icon"
+      [variant]="addon.variant ?? 'primary'"
+      (onClick)="addon.onClick ? addon.onClick() : null"
+    />
     } @else if (addon.type === 'link') {
-      <a
-        class="i-btn i-btn-xs"
-        [href]="addon.href"
-        [attr.variant]="addon.variant ?? 'primary'"
-        target="_blank">
-        <ic [icon]="addon.icon" size="xs" />
-      </a>
+    <a
+      class="i-btn i-btn-xs"
+      target="_blank"
+      [attr.variant]="addon.variant ?? 'primary'"
+      [href]="addon.href"
+    >
+      <i-icon size="xs" [icon]="addon.icon" />
+    </a>
     } @else if (addon.type === 'icon') {
-      <ic [icon]="addon.icon" size="sm" />
+    <i-icon size="sm" [icon]="addon.icon" />
     } @else if (addon.type === 'loading') {
-      <i-loading label=""></i-loading>
+    <i-loading label="" />
     } @else {
-      <!-- text -->
-      <span>{{ addon.text }}</span>
+    <!-- text -->
+    <span>{{ addon.text }}</span>
     }
   `,
 })

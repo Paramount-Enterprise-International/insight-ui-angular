@@ -25,14 +25,9 @@ import {
   SimpleChanges,
 } from '@angular/core';
 
-export type IInputMaskType =
-  | 'date'
-  | 'integer'
-  | 'number'
-  | 'currency'
-  | 'time';
+export type IInputMaskType = 'date' | 'integer' | 'number' | 'currency' | 'time';
 
-export interface IInputMask {
+export type IInputMask = {
   type: IInputMaskType;
   /**
    * Optional format, used for:
@@ -41,7 +36,7 @@ export interface IInputMask {
    * For 'integer' | 'number' | 'currency' format is currently ignored.
    */
   format?: string;
-}
+};
 
 @Directive({
   selector: '[iInputMask]',
@@ -88,7 +83,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
   }
 
   private computeDefaultForMask(): string | null {
-    if (!this.mask) return null;
+    if (!this.mask) {
+      return null;
+    }
 
     const now = new Date();
 
@@ -106,14 +103,22 @@ export class IInputMaskDirective implements OnInit, OnChanges {
   }
 
   private applyInitialDefaultIfNeeded(): void {
-    if (!this.mask) return;
-    if (this._defaultApplied) return;
+    if (!this.mask) {
+      return;
+    }
+    if (this._defaultApplied) {
+      return;
+    }
 
     const el = this.el;
-    if (el.value && el.value.trim().length > 0) return;
+    if (el.value && el.value.trim().length > 0) {
+      return;
+    }
 
     const def = this.computeDefaultForMask();
-    if (def === null) return;
+    if (def === null) {
+      return;
+    }
 
     this._defaultApplied = true;
     el.value = def;
@@ -136,8 +141,12 @@ export class IInputMaskDirective implements OnInit, OnChanges {
       'Escape',
     ];
 
-    if (controlKeys.includes(key)) return true;
-    if (event.ctrlKey || event.metaKey || event.altKey) return true;
+    if (controlKeys.includes(key)) {
+      return true;
+    }
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return true;
+    }
 
     return false;
   }
@@ -161,7 +170,7 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     let currentSep = '';
     let i = 0;
 
-    const isTokenChar = (c: string) => c === 'd' || c === 'M' || c === 'y';
+    const isTokenChar = (c: string): boolean => c === 'd' || c === 'M' || c === 'y';
 
     while (i < format.length) {
       const c = format[i];
@@ -224,8 +233,7 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     for (let i = 0; i < tokens.length; i++) {
       const tok = tokens[i];
       const ch = tok[0];
-      const kind: 'day' | 'month' | 'year' =
-        ch === 'd' ? 'day' : ch === 'M' ? 'month' : 'year';
+      const kind: 'day' | 'month' | 'year' = ch === 'd' ? 'day' : ch === 'M' ? 'month' : 'year';
 
       const start = pos;
       let end = pos;
@@ -249,12 +257,7 @@ export class IInputMaskDirective implements OnInit, OnChanges {
   }
 
   /** Format day/month/year back to string according to format tokens. */
-  private formatDateFromParts(
-    day: number,
-    month: number,
-    year: number,
-    format: string
-  ): string {
+  private formatDateFromParts(day: number, month: number, year: number, format: string): string {
     const { tokens, seps } = this.splitDateFormat(format);
     let result = seps[0] ?? '';
 
@@ -289,10 +292,14 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
   /** Normalize full date string (used on blur / Enter). */
   private normalizeDateValue(value: string, format: string): string {
-    if (!value) return value;
+    if (!value) {
+      return value;
+    }
 
     const segments = this.getDateSegments(value, format);
-    if (!segments.length) return value;
+    if (!segments.length) {
+      return value;
+    }
 
     let day = 1;
     let month = 1;
@@ -300,7 +307,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
     for (const seg of segments) {
       const n = seg.raw ? Number(seg.raw) : NaN;
-      if (Number.isNaN(n)) continue;
+      if (Number.isNaN(n)) {
+        continue;
+      }
 
       if (seg.kind === 'day') {
         day = n;
@@ -311,12 +320,20 @@ export class IInputMaskDirective implements OnInit, OnChanges {
       }
     }
 
-    if (month < 1) month = 1;
-    if (month > 12) month = 12;
+    if (month < 1) {
+      month = 1;
+    }
+    if (month > 12) {
+      month = 12;
+    }
 
     const maxDay = this.daysInMonth(year > 0 ? year : 2000, month);
-    if (day < 1) day = 1;
-    if (day > maxDay) day = maxDay;
+    if (day < 1) {
+      day = 1;
+    }
+    if (day > maxDay) {
+      day = maxDay;
+    }
 
     return this.formatDateFromParts(day, month, year, format);
   }
@@ -331,7 +348,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
    */
   private applyDateMaskDigitsOnly(digits: string, format: string): string {
     const { tokens, seps } = this.splitDateFormat(format);
-    if (!tokens.length) return digits;
+    if (!tokens.length) {
+      return digits;
+    }
 
     const firstSep = seps[1] ?? '';
     const secondSep = seps[2] ?? '';
@@ -371,14 +390,22 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
     let day = Number(dStr || '1');
     let month = Number(mStr || '1');
-    let year = Number(yStr || '2000');
+    const year = Number(yStr || '2000');
 
-    if (month < 1) month = 1;
-    if (month > 12) month = 12;
+    if (month < 1) {
+      month = 1;
+    }
+    if (month > 12) {
+      month = 12;
+    }
 
     const maxDay = this.daysInMonth(year > 0 ? year : 2000, month);
-    if (day < 1) day = 1;
-    if (day > maxDay) day = maxDay;
+    if (day < 1) {
+      day = 1;
+    }
+    if (day > maxDay) {
+      day = maxDay;
+    }
 
     return this.formatDateFromParts(day, month, year, format);
   }
@@ -390,7 +417,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
    * - clamping for day/month
    */
   private applyDateMask(raw: string, format: string): string {
-    if (!raw) return '';
+    if (!raw) {
+      return '';
+    }
 
     const hasSeparator = /[^0-9]/.test(raw);
     const { tokens, seps } = this.splitDateFormat(format);
@@ -404,7 +433,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     // ------------------------------
     if (!hasSeparator) {
       const digits = raw.replace(/\D/g, '');
-      if (!digits) return '';
+      if (!digits) {
+        return '';
+      }
       return this.applyDateMaskDigitsOnly(digits, format);
     }
 
@@ -460,13 +491,17 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     let monthNumForClamp: number | null = null;
     if (monthPart && monthPart.closed && monthPart.raw) {
       let m = Number(monthPart.raw);
-      if (m < 1) m = 1;
-      if (m > 12) m = 12;
+      if (m < 1) {
+        m = 1;
+      }
+      if (m > 12) {
+        m = 12;
+      }
       monthNumForClamp = m;
     }
 
     // year used for day clamp (leap year)
-    let yearForCalc: number = 2000;
+    let yearForCalc = 2000;
     if (yearPart && yearPart.closed && yearPart.raw) {
       const y = Number(yearPart.raw);
       yearForCalc = y > 0 ? y : 2000;
@@ -476,8 +511,12 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     if (monthPart) {
       if (monthPart.closed && monthPart.raw) {
         let m = monthNumForClamp ?? Number(monthPart.raw);
-        if (m < 1) m = 1;
-        if (m > 12) m = 12;
+        if (m < 1) {
+          m = 1;
+        }
+        if (m > 12) {
+          m = 12;
+        }
         monthPart.out = String(m).padStart(monthPart.len, '0');
         monthNumForClamp = m;
       } else {
@@ -492,8 +531,12 @@ export class IInputMaskDirective implements OnInit, OnChanges {
         const monthForDay = monthNumForClamp !== null ? monthNumForClamp : 1;
         const maxDay = this.daysInMonth(yearForCalc, monthForDay);
 
-        if (d < 1) d = 1;
-        if (d > maxDay) d = maxDay;
+        if (d < 1) {
+          d = 1;
+        }
+        if (d > maxDay) {
+          d = maxDay;
+        }
 
         dayPart.out = String(d).padStart(dayPart.len, '0');
       } else {
@@ -544,17 +587,25 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     const value = el.value;
 
     const segments = this.getDateSegments(value, format);
-    if (!segments.length) return;
+    if (!segments.length) {
+      return;
+    }
 
     const caret = el.selectionStart ?? value.length;
 
     let idx = segments.findIndex((s) => caret >= s.start && caret <= s.end);
     if (idx === -1) {
       idx = segments.findIndex((s) => caret < s.start);
-      if (idx === -1) idx = segments.length - 1;
-      if (idx > 0 && caret > segments[idx - 1].end) idx = idx - 1;
+      if (idx === -1) {
+        idx = segments.length - 1;
+      }
+      if (idx > 0 && caret > segments[idx - 1].end) {
+        idx = idx - 1;
+      }
     }
-    if (idx < 0) idx = 0;
+    if (idx < 0) {
+      idx = 0;
+    }
 
     let day = 1;
     let month = 1;
@@ -562,7 +613,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
     for (const seg of segments) {
       const n = seg.raw ? Number(seg.raw) : NaN;
-      if (Number.isNaN(n)) continue;
+      if (Number.isNaN(n)) {
+        continue;
+      }
 
       if (seg.kind === 'day') {
         day = n;
@@ -573,42 +626,62 @@ export class IInputMaskDirective implements OnInit, OnChanges {
       }
     }
 
-    if (month < 1) month = 1;
-    if (month > 12) month = 12;
+    if (month < 1) {
+      month = 1;
+    }
+    if (month > 12) {
+      month = 12;
+    }
 
     let maxDay = this.daysInMonth(year > 0 ? year : 2000, month);
-    if (day < 1) day = 1;
-    if (day > maxDay) day = maxDay;
+    if (day < 1) {
+      day = 1;
+    }
+    if (day > maxDay) {
+      day = maxDay;
+    }
 
     const seg = segments[idx];
 
     if (seg.kind === 'day') {
       if (key === 'ArrowUp') {
         day = day + 1;
-        if (day > maxDay) day = 1;
+        if (day > maxDay) {
+          day = 1;
+        }
       } else {
         day = day - 1;
-        if (day < 1) day = maxDay;
+        if (day < 1) {
+          day = maxDay;
+        }
       }
     } else if (seg.kind === 'month') {
       if (key === 'ArrowUp') {
         month = month + 1;
-        if (month > 12) month = 1;
+        if (month > 12) {
+          month = 1;
+        }
       } else {
         month = month - 1;
-        if (month < 1) month = 12;
+        if (month < 1) {
+          month = 12;
+        }
       }
     } else {
       if (key === 'ArrowUp') {
         year = year + 1;
       } else {
         year = year - 1;
-        if (year < 0) year = 0;
+        if (year < 0) {
+          year = 0;
+        }
       }
     }
 
     maxDay = this.daysInMonth(year > 0 ? year : 2000, month);
-    if (day > maxDay) day = maxDay;
+    if (day > maxDay) {
+      day = maxDay;
+    }
 
     const newValue = this.formatDateFromParts(day, month, year, format);
     el.value = newValue;
@@ -636,7 +709,7 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     let currentSep = '';
     let i = 0;
 
-    const isTokenChar = (c: string) => c === 'H' || c === 'm' || c === 's';
+    const isTokenChar = (c: string): boolean => c === 'H' || c === 'm' || c === 's';
 
     while (i < format.length) {
       const c = format[i];
@@ -757,10 +830,14 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
   /** Normalize full time string (used on blur / Enter). */
   private normalizeTimeValue(value: string, format: string): string {
-    if (!value) return value;
+    if (!value) {
+      return value;
+    }
 
     const segments = this.getTimeSegments(value, format);
-    if (!segments.length) return value;
+    if (!segments.length) {
+      return value;
+    }
 
     let hour = 0;
     let minute = 0;
@@ -768,7 +845,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
     for (const seg of segments) {
       const n = seg.raw ? Number(seg.raw) : NaN;
-      if (Number.isNaN(n)) continue;
+      if (Number.isNaN(n)) {
+        continue;
+      }
 
       if (seg.kind === 'hour') {
         hour = n;
@@ -779,14 +858,26 @@ export class IInputMaskDirective implements OnInit, OnChanges {
       }
     }
 
-    if (hour < 0) hour = 0;
-    if (hour > 23) hour = 23;
+    if (hour < 0) {
+      hour = 0;
+    }
+    if (hour > 23) {
+      hour = 23;
+    }
 
-    if (minute < 0) minute = 0;
-    if (minute > 59) minute = 59;
+    if (minute < 0) {
+      minute = 0;
+    }
+    if (minute > 59) {
+      minute = 59;
+    }
 
-    if (second < 0) second = 0;
-    if (second > 59) second = 59;
+    if (second < 0) {
+      second = 0;
+    }
+    if (second > 59) {
+      second = 59;
+    }
 
     return this.formatTimeFromParts(hour, minute, second, format);
   }
@@ -806,7 +897,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
    */
   private applyTimeMaskDigitsOnly(digits: string, format: string): string {
     const { tokens, seps } = this.splitTimeFormat(format);
-    if (!tokens.length) return digits;
+    if (!tokens.length) {
+      return digits;
+    }
 
     const firstSep = seps[1] ?? '';
     const secondSep = seps[2] ?? '';
@@ -830,7 +923,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
         const mRaw = digits.slice(2); // 1–2 digits
 
         let res = hRaw;
-        if (firstSep) res += firstSep; // "12:"
+        if (firstSep) {
+          res += firstSep;
+        } // "12:"
 
         if (mRaw.length) {
           res += mRaw; // "12:3" or "12:34"
@@ -846,11 +941,19 @@ export class IInputMaskDirective implements OnInit, OnChanges {
       let hour = Number(hStr || '0');
       let minute = Number(mStr || '0');
 
-      if (hour < 0) hour = 0;
-      if (hour > 23) hour = 23;
+      if (hour < 0) {
+        hour = 0;
+      }
+      if (hour > 23) {
+        hour = 23;
+      }
 
-      if (minute < 0) minute = 0;
-      if (minute > 59) minute = 59;
+      if (minute < 0) {
+        minute = 0;
+      }
+      if (minute > 59) {
+        minute = 59;
+      }
 
       return this.formatTimeFromParts(hour, minute, 0, format);
     }
@@ -869,7 +972,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
         const mRaw = digits.slice(2); // 1–2 digits
 
         let res = hRaw;
-        if (firstSep) res += firstSep; // "12:"
+        if (firstSep) {
+          res += firstSep;
+        } // "12:"
 
         if (mRaw.length) {
           res += mRaw; // "12:3" or "12:34"
@@ -887,9 +992,13 @@ export class IInputMaskDirective implements OnInit, OnChanges {
         const sRaw = digits.slice(4); // 1–2 digits
 
         let res = hRaw;
-        if (firstSep) res += firstSep;
+        if (firstSep) {
+          res += firstSep;
+        }
         res += mRaw;
-        if (secondSep) res += secondSep;
+        if (secondSep) {
+          res += secondSep;
+        }
         res += sRaw;
 
         return res;
@@ -904,14 +1013,26 @@ export class IInputMaskDirective implements OnInit, OnChanges {
       let minute = Number(mStr || '0');
       let second = Number(sStr || '0');
 
-      if (hour < 0) hour = 0;
-      if (hour > 23) hour = 23;
+      if (hour < 0) {
+        hour = 0;
+      }
+      if (hour > 23) {
+        hour = 23;
+      }
 
-      if (minute < 0) minute = 0;
-      if (minute > 59) minute = 59;
+      if (minute < 0) {
+        minute = 0;
+      }
+      if (minute > 59) {
+        minute = 59;
+      }
 
-      if (second < 0) second = 0;
-      if (second > 59) second = 59;
+      if (second < 0) {
+        second = 0;
+      }
+      if (second > 59) {
+        second = 59;
+      }
 
       return this.formatTimeFromParts(hour, minute, second, format);
     }
@@ -926,7 +1047,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
    * - segment-based path with clamping (only when segment fully typed)
    */
   private applyTimeMask(raw: string, format: string): string {
-    if (!raw) return '';
+    if (!raw) {
+      return '';
+    }
 
     const hasSeparator = /[^0-9]/.test(raw);
     const { tokens, seps } = this.splitTimeFormat(format);
@@ -938,7 +1061,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     // No separators yet → digits-only behavior
     if (!hasSeparator) {
       const digits = raw.replace(/\D/g, '');
-      if (!digits) return '';
+      if (!digits) {
+        return '';
+      }
       return this.applyTimeMaskDigitsOnly(digits, format);
     }
 
@@ -1005,8 +1130,12 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     // Clamp only when segment is closed
     if (hourPart) {
       if (hourPart.closed && hourPart.raw) {
-        if (hour < 0) hour = 0;
-        if (hour > 23) hour = 23;
+        if (hour < 0) {
+          hour = 0;
+        }
+        if (hour > 23) {
+          hour = 23;
+        }
         hourPart.out = String(hour).padStart(hourPart.len, '0');
       } else {
         hourPart.out = hourPart.raw;
@@ -1015,8 +1144,12 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
     if (minutePart) {
       if (minutePart.closed && minutePart.raw) {
-        if (minute < 0) minute = 0;
-        if (minute > 59) minute = 59;
+        if (minute < 0) {
+          minute = 0;
+        }
+        if (minute > 59) {
+          minute = 59;
+        }
         minutePart.out = String(minute).padStart(minutePart.len, '0');
       } else {
         minutePart.out = minutePart.raw;
@@ -1025,8 +1158,12 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
     if (secondPart) {
       if (secondPart.closed && secondPart.raw) {
-        if (second < 0) second = 0;
-        if (second > 59) second = 59;
+        if (second < 0) {
+          second = 0;
+        }
+        if (second > 59) {
+          second = 59;
+        }
         secondPart.out = String(second).padStart(secondPart.len, '0');
       } else {
         secondPart.out = secondPart.raw;
@@ -1071,17 +1208,25 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     const value = el.value;
 
     const segments = this.getTimeSegments(value, format);
-    if (!segments.length) return;
+    if (!segments.length) {
+      return;
+    }
 
     const caret = el.selectionStart ?? value.length;
 
     let idx = segments.findIndex((s) => caret >= s.start && caret <= s.end);
     if (idx === -1) {
       idx = segments.findIndex((s) => caret < s.start);
-      if (idx === -1) idx = segments.length - 1;
-      if (idx > 0 && caret > segments[idx - 1].end) idx = idx - 1;
+      if (idx === -1) {
+        idx = segments.length - 1;
+      }
+      if (idx > 0 && caret > segments[idx - 1].end) {
+        idx = idx - 1;
+      }
     }
-    if (idx < 0) idx = 0;
+    if (idx < 0) {
+      idx = 0;
+    }
 
     let hour = 0;
     let minute = 0;
@@ -1089,7 +1234,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
     for (const seg of segments) {
       const n = seg.raw ? Number(seg.raw) : NaN;
-      if (Number.isNaN(n)) continue;
+      if (Number.isNaN(n)) {
+        continue;
+      }
 
       if (seg.kind === 'hour') {
         hour = n;
@@ -1105,26 +1252,38 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     if (seg.kind === 'hour') {
       if (key === 'ArrowUp') {
         hour = hour + 1;
-        if (hour > 23) hour = 0;
+        if (hour > 23) {
+          hour = 0;
+        }
       } else {
         hour = hour - 1;
-        if (hour < 0) hour = 23;
+        if (hour < 0) {
+          hour = 23;
+        }
       }
     } else if (seg.kind === 'minute') {
       if (key === 'ArrowUp') {
         minute = minute + 1;
-        if (minute > 59) minute = 0;
+        if (minute > 59) {
+          minute = 0;
+        }
       } else {
         minute = minute - 1;
-        if (minute < 0) minute = 59;
+        if (minute < 0) {
+          minute = 59;
+        }
       }
     } else {
       if (key === 'ArrowUp') {
         second = second + 1;
-        if (second > 59) second = 0;
+        if (second > 59) {
+          second = 0;
+        }
       } else {
         second = second - 1;
-        if (second < 0) second = 59;
+        if (second < 0) {
+          second = 59;
+        }
       }
     }
 
@@ -1144,7 +1303,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
   // ----------------------------------------------------
 
   private applyNumericMask(raw: string, allowDecimal: boolean): string {
-    if (!raw) return '';
+    if (!raw) {
+      return '';
+    }
 
     let result = '';
     let hasDecimal = false;
@@ -1173,7 +1334,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
   @HostListener('input', ['$event'])
   onInput(event: Event): void {
-    if (!this.hasMask || !this.mask) return;
+    if (!this.hasMask || !this.mask) {
+      return;
+    }
 
     const el = this.el;
     const oldValue = el.value ?? '';
@@ -1206,11 +1369,15 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
   @HostListener('blur')
   onBlur(): void {
-    if (!this.mask) return;
+    if (!this.mask) {
+      return;
+    }
     const el = this.el;
 
     if (this.mask.type === 'date' && this.mask.format) {
-      if (!el.value) return;
+      if (!el.value) {
+        return;
+      }
       const normalized = this.normalizeDateValue(el.value, this.mask.format);
       if (normalized !== el.value) {
         el.value = normalized;
@@ -1219,7 +1386,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     }
 
     if (this.mask.type === 'time' && this.mask.format) {
-      if (!el.value) return;
+      if (!el.value) {
+        return;
+      }
       const normalized = this.normalizeTimeValue(el.value, this.mask.format);
       if (normalized !== el.value) {
         el.value = normalized;
@@ -1230,7 +1399,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
   @HostListener('focus')
   onFocus(): void {
-    if (!this.mask) return;
+    if (!this.mask) {
+      return;
+    }
 
     if (!this._defaultApplied && this.el.value.trim() === '') {
       this.applyInitialDefaultIfNeeded();
@@ -1239,28 +1410,22 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
   @HostListener('keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
-    if (!this.mask || this.el.readOnly || this.el.disabled) return;
+    if (!this.mask || this.el.readOnly || this.el.disabled) {
+      return;
+    }
 
     const type = this.mask.type;
     const key = event.key;
 
     // Date ↑/↓ segment adjust
-    if (
-      type === 'date' &&
-      this.mask.format &&
-      (key === 'ArrowUp' || key === 'ArrowDown')
-    ) {
+    if (type === 'date' && this.mask.format && (key === 'ArrowUp' || key === 'ArrowDown')) {
       event.preventDefault();
       this.adjustDateSegmentByArrow(key as 'ArrowUp' | 'ArrowDown');
       return;
     }
 
     // Time ↑/↓ segment adjust
-    if (
-      type === 'time' &&
-      this.mask.format &&
-      (key === 'ArrowUp' || key === 'ArrowDown')
-    ) {
+    if (type === 'time' && this.mask.format && (key === 'ArrowUp' || key === 'ArrowDown')) {
       event.preventDefault();
       this.adjustTimeSegmentByArrow(key as 'ArrowUp' | 'ArrowDown');
       return;
@@ -1309,8 +1474,12 @@ export class IInputMaskDirective implements OnInit, OnChanges {
         }
       }
 
-      if (/\d/.test(key)) return;
-      if (allowedSeps.has(key)) return;
+      if (/\d/.test(key)) {
+        return;
+      }
+      if (allowedSeps.has(key)) {
+        return;
+      }
 
       event.preventDefault();
       return;
@@ -1326,7 +1495,9 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
     // Number/currency
     if (type === 'number' || type === 'currency') {
-      if (/\d/.test(key)) return;
+      if (/\d/.test(key)) {
+        return;
+      }
 
       if (key === '.' || key === ',') {
         const v = this.el.value;

@@ -1,18 +1,21 @@
-<i-dialog [actions]="[{
-  type: 'ok',
-  className: 'w-full'
-}]" [ngClass]="alertClass" (onOk)="submit()">
+<i-dialog
+  [actions]="[
+    {
+      type: 'ok',
+      className: 'w-full'
+    }
+  ]"
+  [ngClass]="alertClass"
+  (onOk)="submit()"
+>
   @if(data.type === 'information') {
-  <ic icon="info" size="2xl" />
-  }
-  @if(data.type === 'success') {
-  <ic icon="check-circle" size="2xl" />
-  }
-  @if(data.type === 'warning') {
-  <ic icon="exclamation" size="2xl" />
-  }
-  @if(data.type === 'danger') {
-  <ic icon="x-circle" size="2xl" />
+  <i-icon icon="info" size="2xl" />
+  } @if(data.type === 'success') {
+  <i-icon icon="check-circle" size="2xl" />
+  } @if(data.type === 'warning') {
+  <i-icon icon="exclamation" size="2xl" />
+  } @if(data.type === 'danger') {
+  <i-icon icon="x-circle" size="2xl" />
   }
   <h4>{{ data.title }}</h4>
   <p [innerHtml]="data.description"></p>

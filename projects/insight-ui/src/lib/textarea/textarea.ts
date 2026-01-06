@@ -32,14 +32,14 @@ import {
   standalone: true,
   template: `<textarea
     #textareaRef
+    [attr.aria-invalid]="invalid ? 'true' : null"
+    [disabled]="isDisabled"
     [placeholder]="placeholder"
     [readonly]="readonly"
     [rows]="rows"
-    [disabled]="isDisabled"
     [value]="value ?? ''"
-    [attr.aria-invalid]="invalid ? 'true' : null"
-    (input)="handleInput($event)"
     (blur)="handleBlur()"
+    (input)="handleInput($event)"
   ></textarea>`,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
@@ -51,9 +51,11 @@ import {
   ],
 })
 export class ITextArea implements ControlValueAccessor {
-  @Input() placeholder: string = '';
+  @Input() placeholder = '';
+
   @Input() readonly = false;
-  @Input() rows: number = 3;
+
+  @Input() rows = 3;
 
   /** invalid state (controlled by form or wrapper) */
   @Input() invalid = false;
@@ -63,6 +65,7 @@ export class ITextArea implements ControlValueAccessor {
   get value(): string | null {
     return this._value;
   }
+
   set value(v: string | null) {
     this._value = v ?? '';
   }
@@ -70,18 +73,25 @@ export class ITextArea implements ControlValueAccessor {
   @ViewChild('textareaRef') textareaRef!: ElementRef<HTMLTextAreaElement>;
 
   private _value: string | null = null;
+
   isDisabled = false;
 
   @Input()
   get disabled(): boolean {
     return this.isDisabled;
   }
+
   set disabled(value: boolean) {
     this.isDisabled = value;
   }
 
-  private onChange: (value: any) => void = () => {};
-  private onTouched: () => void = () => {};
+  private onChange: (value: any) => void = () => {
+    /*  */
+  };
+
+  private onTouched: () => void = () => {
+    /*  */
+  };
 
   // -----------------------------
   // ControlValueAccessor
@@ -146,16 +156,15 @@ export class ITextArea implements ControlValueAccessor {
     }
 
     <i-textarea
+      [disabled]="isDisabled"
+      [invalid]="controlInvalid"
       [placeholder]="placeholder"
       [readonly]="readonly"
       [rows]="rows"
       [value]="value"
-      [invalid]="controlInvalid"
-      [disabled]="isDisabled"
-      (input)="handleInnerInput($event)"
       (blur)="handleInnerBlur()"
-    >
-    </i-textarea>
+      (input)="handleInnerInput($event)"
+    />
 
     @if (controlInvalid && resolvedErrorText) {
     <div class="i-fc-textarea__error">
@@ -168,10 +177,13 @@ export class IFCTextArea implements ControlValueAccessor {
   @ViewChild(ITextArea) innerTextarea!: ITextArea;
 
   // ---------- UI inputs ----------
-  @Input() label: string = '';
-  @Input() placeholder: string = '';
+  @Input() label = '';
+
+  @Input() placeholder = '';
+
   @Input() readonly = false;
-  @Input() rows: number = 3;
+
+  @Input() rows = 3;
 
   /** old-style custom error templates: { required: '{label} is xxx' } */
   @Input() errorMessage?: IFormControlErrorMessage;
@@ -181,15 +193,18 @@ export class IFCTextArea implements ControlValueAccessor {
   get value(): string | null {
     return this._value;
   }
+
   set value(v: string | null) {
     this._value = v ?? '';
   }
 
   // ---------- internal state ----------
   private _value: string | null = null;
+
   isDisabled = false;
 
   private onChange: (v: any) => void = () => {};
+
   private onTouched: () => void = () => {};
 
   constructor(
@@ -248,7 +263,9 @@ export class IFCTextArea implements ControlValueAccessor {
   // ---------- validation helpers ----------
   get controlInvalid(): boolean {
     const c = this.ngControl?.control;
-    if (!c) return false;
+    if (!c) {
+      return false;
+    }
 
     // same behavior as i-fc-input:
     // invalid + form submitted, otherwise fallback to dirty/touched

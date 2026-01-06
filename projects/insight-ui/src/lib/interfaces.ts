@@ -11,37 +11,32 @@ export type IFormControlErrorMessage = {
 };
 
 export type IUISize = '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-export type IUIVariant =
-  | 'primary'
-  | 'info'
-  | 'warning'
-  | 'danger'
-  | 'success'
-  | 'outline';
+export type IUIVariant = 'primary' | 'info' | 'warning' | 'danger' | 'success' | 'outline';
 
 import { AbstractControl, NgControl, Validators } from '@angular/forms';
 
-export interface IErrorContext {
+export type IErrorContext = {
   label: string;
   error: any;
   control: AbstractControl | null;
-}
+};
 
-const DEFAULT_ERROR_FACTORIES: Record<string, (ctx: IErrorContext) => string> =
-  {
-    required: ({ label }) => `${label || 'This field'} is required.`,
-    requiredTrue: ({ label }) => `Please confirm ${label || 'this field'}.`,
-    minlength: ({ label, error }) =>
-      `${label || 'This field'} must be at least ${error.requiredLength} characters (currently ${error.actualLength}).`,
-    maxlength: ({ label, error }) =>
-      `${label || 'This field'} must be at most ${error.requiredLength} characters (currently ${error.actualLength}).`,
-    pattern: ({ label }) => `${label || 'This field'} format is invalid.`,
-    email: ({ label }) => `Please enter a valid ${label || 'email'}.`,
-    min: ({ label, error }) =>
-      `${label || 'This field'} must be ≥ ${error.min}.`,
-    max: ({ label, error }) =>
-      `${label || 'This field'} must be ≤ ${error.max}.`,
-  };
+const DEFAULT_ERROR_FACTORIES: Record<string, (ctx: IErrorContext) => string> = {
+  required: ({ label }) => `${label || 'This field'} is required.`,
+  requiredTrue: ({ label }) => `Please confirm ${label || 'this field'}.`,
+  minlength: ({ label, error }) =>
+    `${label || 'This field'} must be at least ${error.requiredLength} characters (currently ${
+      error.actualLength
+    }).`,
+  maxlength: ({ label, error }) =>
+    `${label || 'This field'} must be at most ${error.requiredLength} characters (currently ${
+      error.actualLength
+    }).`,
+  pattern: ({ label }) => `${label || 'This field'} format is invalid.`,
+  email: ({ label }) => `Please enter a valid ${label || 'email'}.`,
+  min: ({ label, error }) => `${label || 'This field'} must be ≥ ${error.min}.`,
+  max: ({ label, error }) => `${label || 'This field'} must be ≤ ${error.max}.`,
+};
 
 export function resolveControlErrorMessage(
   ngControl: NgControl | null,
@@ -51,10 +46,14 @@ export function resolveControlErrorMessage(
 ): string | null {
   const control = ngControl?.control ?? null;
   const errors = control?.errors ?? null;
-  if (!errors) return null;
+  if (!errors) {
+    return null;
+  }
 
   const keys = Object.keys(errors);
-  if (!keys.length) return null;
+  if (!keys.length) {
+    return null;
+  }
 
   const key = keys[0];
   const err = errors[key];
@@ -89,7 +88,9 @@ export function isControlRequired(
 ): boolean {
   const control = ngControl?.control ?? null;
   const hasCustomRequired = !!errorMessage?.['required'];
-  if (!control) return hasCustomRequired;
+  if (!control) {
+    return hasCustomRequired;
+  }
 
   let hasRequired = false;
   const asAny: any = control;
@@ -115,6 +116,6 @@ function interpolate(tpl: string, ctx: IErrorContext): string {
   };
 
   return tpl.replace(/\{(\w+)\}/g, (_match, key) =>
-    map[key] != null ? String(map[key]) : `{${key}}`
+    map[key] !== null ? String(map[key]) : `{${key}}`
   );
 }

@@ -9,10 +9,10 @@ import {
   Component,
   EventEmitter,
   Input,
+  isDevMode,
   NgModule,
   OnInit,
   Output,
-  isDevMode,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
@@ -25,15 +25,15 @@ type RouterLinkInput = string | any[] | undefined;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<a
     class="i-card"
-    [attr.href]="hrefAttr"
-    [attr.target]="target ?? null"
-    [attr.rel]="relAttr"
     [attr.aria-disabled]="disabled ? 'true' : null"
+    [attr.href]="hrefAttr"
+    [attr.rel]="relAttr"
     [attr.tabindex]="disabled ? -1 : null"
-    [routerLink]="routerLinkAttr"
-    [queryParams]="queryParams"
+    [attr.target]="target ?? null"
     [fragment]="fragment"
+    [queryParams]="queryParams"
     [replaceUrl]="replaceUrl"
+    [routerLink]="routerLinkAttr"
     [skipLocationChange]="skipLocationChange"
     [state]="state"
     (click)="onClick($event)"
@@ -51,27 +51,35 @@ export class ICard implements OnInit {
 
   // Angular Router
   @Input() routerLink?: RouterLinkInput;
+
   @Input() queryParams?: Record<string, any> | null;
+
   @Input() fragment?: string;
+
   @Input() replaceUrl = false;
+
   @Input() skipLocationChange = false;
+
   @Input() state?: Record<string, any>;
 
   // Anchor-related
   @Input() target?: '_self' | '_blank' | '_parent' | '_top' | string;
+
   @Input() rel?: string | null;
 
   @Input() disabled = false;
 
   // Click-only usage
-  @Output() cardClick = new EventEmitter<MouseEvent>();
+  @Output() readonly cardClick = new EventEmitter<MouseEvent>();
 
   /* ======================
    * Dev-mode validation
    * ====================== */
 
-  ngOnInit() {
-    if (!isDevMode()) return;
+  ngOnInit(): void {
+    if (!isDevMode()) {
+      return;
+    }
 
     const hasHref = !!this.href;
     const hasRouter =
@@ -103,7 +111,9 @@ export class ICard implements OnInit {
    * ====================== */
 
   get relAttr(): string | null {
-    if (this.rel) return this.rel;
+    if (this.rel) {
+      return this.rel;
+    }
     if ((this.target ?? '').toLowerCase() === '_blank') {
       return 'noopener noreferrer';
     }
@@ -111,13 +121,19 @@ export class ICard implements OnInit {
   }
 
   get hrefAttr(): string | null {
-    if (this.disabled) return null;
-    if (this.routerLinkAttr) return null;
+    if (this.disabled) {
+      return null;
+    }
+    if (this.routerLinkAttr) {
+      return null;
+    }
     return this.href ?? null;
   }
 
   get routerLinkAttr(): RouterLinkInput {
-    if (this.disabled) return undefined;
+    if (this.disabled) {
+      return undefined;
+    }
     return this.routerLink ?? undefined;
   }
 
@@ -125,7 +141,7 @@ export class ICard implements OnInit {
    * Click handling
    * ====================== */
 
-  onClick(ev: MouseEvent) {
+  onClick(ev: MouseEvent): void {
     if (this.disabled) {
       ev.preventDefault();
       ev.stopPropagation();
@@ -153,7 +169,7 @@ export class ICard implements OnInit {
 @Component({
   selector: 'i-card-image',
   imports: [],
-  template: `<img [src]="src" />`,
+  template: `<img alt="card-image" [src]="src" />`,
 })
 export class ICardImage {
   @Input() src!: string;

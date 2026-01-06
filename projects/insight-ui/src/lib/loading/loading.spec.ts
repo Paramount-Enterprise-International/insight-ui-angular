@@ -1,18 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Loading } from './loading';
+import { ILoading } from './loading';
 
-describe('Loading', () => {
-  let component: Loading;
-  let fixture: ComponentFixture<Loading>;
+describe('ILoading', () => {
+  let component: ILoading;
+  let fixture: ComponentFixture<ILoading>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Loading]
-    })
-    .compileComponents();
+      imports: [ILoading],
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(Loading);
+    fixture = TestBed.createComponent(ILoading);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

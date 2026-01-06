@@ -17,29 +17,31 @@ module.exports = tseslint.config(
     ],
     processor: angular.processInlineTemplates,
     rules: {
-      '@angular-eslint/directive-selector': [
-        'error',
-        {
-          type: 'attribute',
-          prefix: 'app',
-          style: 'camelCase',
-        },
-      ],
+      // '@angular-eslint/directive-selector': [
+      //   'error',
+      //   {
+      //     type: 'attribute',
+      //     prefix: 'i',
+      //     style: 'camelCase',
+      //   },
+      // ],
       '@angular-eslint/component-selector': [
         'error',
         {
           type: ['attribute', 'element'],
-          prefix: 'app',
+          prefix: ['app', 'i', 'ih', 'ir'],
           style: 'kebab-case',
         },
       ],
 
       // Angular best practices
       '@angular-eslint/no-empty-lifecycle-method': 'warn',
-      '@angular-eslint/prefer-on-push-component-change-detection': 'warn',
+      '@angular-eslint/no-output-on-prefix': 'off',
+      // '@angular-eslint/prefer-on-push-component-change-detection': 'warn',
       '@angular-eslint/prefer-output-readonly': 'warn',
-      '@angular-eslint/prefer-signals': 'warn',
+      // '@angular-eslint/prefer-signals': 'warn',
       '@angular-eslint/prefer-standalone': 'warn',
+      '@angular-eslint/prefer-inject': 'warn',
 
       // TypeScript best practices
       '@typescript-eslint/array-type': ['warn'],
@@ -62,17 +64,16 @@ module.exports = tseslint.config(
       ],
       '@typescript-eslint/no-empty-function': 'warn',
       '@typescript-eslint/no-empty-interface': 'error',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-inferrable-types': 'warn',
       '@typescript-eslint/no-shadow': 'warn',
       '@typescript-eslint/no-unused-vars': 'warn',
 
       // JavaScript best practices
       eqeqeq: 'error',
-      complexity: ['error', 20],
-      curly: 'error',
+      complexity: ['warn', 50],
+      // curly: 'error',
       'guard-for-in': 'error',
-      'max-classes-per-file': ['error', 1],
       'max-len': [
         'warn',
         {
@@ -80,7 +81,7 @@ module.exports = tseslint.config(
           comments: 160,
         },
       ],
-      'max-lines': ['error', 400], // my favorite rule to keep files small
+      // 'max-lines': ['error', 400], // my favorite rule to keep files small
       'no-bitwise': 'error',
       'no-console': 'off',
       'no-new-wrappers': 'error',
@@ -105,11 +106,7 @@ module.exports = tseslint.config(
       'no-implied-eval': 'error',
 
       // 1️⃣ Blank line between class methods (components, services, etc.)
-      'lines-between-class-members': [
-        'error',
-        'always',
-        { exceptAfterSingleLine: false },
-      ],
+      // 'lines-between-class-members': ['error', 'always', { exceptAfterSingleLine: false }],
 
       // 2️⃣ Blank line before & after standalone functions
       'padding-line-between-statements': [
@@ -125,10 +122,7 @@ module.exports = tseslint.config(
   },
   {
     files: ['**/*.html'],
-    extends: [
-      ...angular.configs.templateRecommended,
-      ...angular.configs.templateAccessibility,
-    ],
+    extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
     rules: {
       // Angular template best practices
       '@angular-eslint/template/attributes-order': [
@@ -145,14 +139,14 @@ module.exports = tseslint.config(
           ],
         },
       ],
+      '@angular-eslint/template/label-has-associated-control': 'off',
+      '@angular-eslint/template/interactive-supports-focus': 'off',
+      '@angular-eslint/template/click-events-have-key-events': 'off',
       '@angular-eslint/template/button-has-type': 'warn',
-      '@angular-eslint/template/cyclomatic-complexity': [
-        'warn',
-        { maxComplexity: 10 },
-      ],
+      '@angular-eslint/template/cyclomatic-complexity': ['warn', { maxComplexity: 10 }],
       '@angular-eslint/template/eqeqeq': 'error',
       '@angular-eslint/template/prefer-control-flow': 'error',
-      '@angular-eslint/template/prefer-ngsrc': 'warn',
+      // '@angular-eslint/template/prefer-ngsrc': 'warn',
       '@angular-eslint/template/prefer-self-closing-tags': 'warn',
       '@angular-eslint/template/use-track-by-function': 'warn',
     },

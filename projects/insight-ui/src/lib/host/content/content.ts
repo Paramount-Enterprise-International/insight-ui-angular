@@ -3,10 +3,10 @@ import { Component, EventEmitter, inject, Output } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map, Observable, shareReplay, startWith } from 'rxjs';
 
-export interface BreadcrumbItem {
+export type BreadcrumbItem = {
   label: string;
   url: string;
-}
+};
 
 @Component({
   selector: 'ih-content',
@@ -15,32 +15,33 @@ export interface BreadcrumbItem {
 })
 export class IHContent {
   private readonly router = inject(Router);
+
   private readonly activatedRoute = inject(ActivatedRoute);
 
-  sidebarVisibility: boolean = true;
+  sidebarVisibility = true;
 
-  @Output() onSidebarToggled: EventEmitter<boolean> = new EventEmitter();
+  @Output() onSidebarToggled = new EventEmitter<boolean>();
 
   /** Stream of breadcrumb items built from the activated route tree */
   readonly breadcrumb$: Observable<BreadcrumbItem[]> = this.router.events.pipe(
     filter((e) => e instanceof NavigationEnd),
     startWith(null), // emit once on init
     map(() => this.buildBreadcrumb(this.activatedRoute.root)),
-    shareReplay(1),
+    shareReplay(1)
   );
 
   /** Last breadcrumb label = current page title */
   readonly pageTitle$: Observable<string | null> = this.breadcrumb$.pipe(
     map((breadcrumbs) =>
-      breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null,
+      breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null
     ),
-    shareReplay(1),
+    shareReplay(1)
   );
 
   private buildBreadcrumb(
     route: ActivatedRoute,
-    url: string = '',
-    breadcrumbs: BreadcrumbItem[] = [],
+    url = '',
+    breadcrumbs: BreadcrumbItem[] = []
   ): BreadcrumbItem[] {
     const routeConfig = route.routeConfig;
 
@@ -85,7 +86,7 @@ export class IHContent {
     return breadcrumbs;
   }
 
-  toggleSidebar() {
+  toggleSidebar(): void {
     this.sidebarVisibility = !this.sidebarVisibility;
     this.onSidebarToggled.emit(this.sidebarVisibility);
   }

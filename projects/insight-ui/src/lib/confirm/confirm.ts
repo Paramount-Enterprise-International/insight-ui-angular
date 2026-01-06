@@ -10,12 +10,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Observable } from 'rxjs';
-import {
-  I_DIALOG_DATA,
-  IDialog,
-  IDialogRef,
-  IDialogService,
-} from '../dialog/dialog';
+import { I_DIALOG_DATA, IDialog, IDialogRef, IDialogService } from '../dialog/dialog';
 import { IIcon } from '../icon/icon';
 import { IFCTextArea } from '../textarea/textarea';
 
@@ -28,21 +23,18 @@ export type IConfirmData = {
 
 @Component({
   selector: 'i-confirm',
-  imports: [
-    IDialog,
-    NgClass,
-    IIcon,
-    IFCTextArea,
-    ReactiveFormsModule,
-    FormsModule,
-  ],
+  imports: [IDialog, NgClass, IIcon, IFCTextArea, ReactiveFormsModule, FormsModule],
   templateUrl: './confirm.html',
 })
 export class IConfirm {
   data: IConfirmData = inject(I_DIALOG_DATA);
+
   dialog: IDialogRef<IConfirm> = inject(IDialogRef);
+
   formBuilder: FormBuilder = inject(FormBuilder);
+
   reason: FormControl = new FormControl('', [Validators.required]);
+
   formGroup: FormGroup = this.formBuilder.group({
     reason: this.reason,
   });
@@ -50,11 +42,11 @@ export class IConfirm {
   @ViewChild(FormGroupDirective) formGroupDir!: FormGroupDirective;
   // @ViewChild('submitButton') submitButton!: ElementRef<HTMLButtonElement>;
 
-  get confirmClass() {
+  get confirmClass(): string {
     return `i-confirm i-confirm-${this.data.type}`;
   }
 
-  submit() {
+  submit(): void {
     if (this.data.reason) {
       this.formGroupDir.onSubmit(new Event('submit'));
       return;
@@ -62,8 +54,10 @@ export class IConfirm {
     this.dialog.close(true);
   }
 
-  onSubmit() {
-    if (this.formGroup.invalid) return;
+  onSubmit(): void {
+    if (this.formGroup.invalid) {
+      return;
+    }
     this.dialog.close(this.reason.value);
   }
 }
@@ -74,7 +68,7 @@ export class IConfirm {
 export class IConfirmService {
   dialog: IDialogService = inject(IDialogService);
 
-  show({ title, description, type, reason }: IConfirmData) {
+  show({ title, description, type, reason }: IConfirmData): Observable<any> {
     return this.dialog
       .open(IConfirm, {
         width: '',
@@ -96,19 +90,11 @@ export class IConfirmService {
     return this.show({ title, description, type: 'success' });
   }
 
-  warning(
-    title: string,
-    description: string,
-    reason?: boolean
-  ): Observable<boolean> {
+  warning(title: string, description: string, reason?: boolean): Observable<boolean> {
     return this.show({ title, description, type: 'warning', reason });
   }
 
-  danger(
-    title: string,
-    description: string,
-    reason?: boolean
-  ): Observable<boolean> {
+  danger(title: string, description: string, reason?: boolean): Observable<boolean> {
     return this.show({ title, description, type: 'danger', reason });
   }
 }

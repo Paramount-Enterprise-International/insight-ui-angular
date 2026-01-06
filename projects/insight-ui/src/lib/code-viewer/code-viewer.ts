@@ -1,16 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   EventEmitter,
+  inject,
   Input,
   NgModule,
   Output,
   TemplateRef,
   ViewChild,
-  inject,
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { IButton } from '../button/button';
@@ -76,10 +76,14 @@ function languageFromExt(ext: string): string {
 }
 
 function parseHeight(v: any): number | null {
-  if (v === null || v === undefined) return null;
+  if (v === null || v === undefined) {
+    return null;
+  }
 
   const s = String(v).trim().toLowerCase();
-  if (s === '' || s === 'wrap' || s === 'auto') return null;
+  if (s === '' || s === 'wrap' || s === 'auto') {
+    return null;
+  }
 
   if (s.endsWith('px')) {
     const n = Number(s.slice(0, -2).trim());
@@ -97,16 +101,22 @@ function isAbsoluteUrl(path: string): boolean {
 /** MF remote-safe: resolve relative file path against the remote bundle URL */
 function resolveFileUrl(file: string): string {
   const f = (file ?? '').trim();
-  if (!f) return f;
+  if (!f) {
+    return f;
+  }
 
-  if (isAbsoluteUrl(f) || f.startsWith('/')) return f;
+  if (isAbsoluteUrl(f) || f.startsWith('/')) {
+    return f;
+  }
 
   const base = (import.meta as any).url as string;
   return new URL(f.replace(/^\.\//, ''), base).toString();
 }
 
 function normalizeHljsLanguage(lang: string): string {
-  if (lang === 'html') return 'xml';
+  if (lang === 'html') {
+    return 'xml';
+  }
   return lang;
 }
 
@@ -117,10 +127,10 @@ function normalizeHljsLanguage(lang: string): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ng-template #projected>
-      <ng-content></ng-content>
+      <ng-content />
     </ng-template>
 
-    <div class="i-code-viewer" [class.wrap]="wrap" [class.compact]="compact">
+    <div class="i-code-viewer" [class.compact]="compact" [class.wrap]="wrap">
       @if (loading) {
       <div class="i-code-viewer-loading">Loading…</div>
       } @if (error) {
@@ -129,9 +139,9 @@ function normalizeHljsLanguage(lang: string): string {
 
       <div
         class="i-code-viewer-scroll"
+        [class.has-overlay]="showOverlay"
         [class.scroll]="scrollEffective"
         [class.scroll-y]="scrollEffective"
-        [class.has-overlay]="showOverlay"
         [style.height.px]="heightPx"
       >
         @if (showOverlay) {
@@ -143,8 +153,8 @@ function normalizeHljsLanguage(lang: string): string {
             class="i-code-viewer-copy"
             size="xs"
             variant="outline"
-            (click)="onCopy()"
             [disabled]="loading"
+            (click)="onCopy()"
           >
             {{ copied ? 'Copied' : 'Copy' }}
           </i-button>
@@ -155,7 +165,7 @@ function normalizeHljsLanguage(lang: string): string {
         <!-- content row -->
         <div class="i-code-viewer-content hljs scroll scroll-y">
           @if (lineNumbers) {
-          <div class="i-code-viewer-gutter" aria-hidden="true">
+          <div aria-hidden="true" class="i-code-viewer-gutter">
             @for (n of lineNumberList; track n) {
             <div class="i-code-viewer-line">{{ n }}</div>
             }
@@ -176,52 +186,63 @@ function normalizeHljsLanguage(lang: string): string {
 })
 export class ICodeViewer {
   private readonly cdr = inject(ChangeDetectorRef);
+
   private readonly http = inject(HttpClient);
 
   @ViewChild('projected', { static: true }) private projectedTpl!: TemplateRef<unknown>;
 
   // ===== Inputs =====
   private _languageOverride: string | null = null;
+
   @Input()
   set language(v: string | null | undefined) {
     const s = (v ?? '').trim();
     this._languageOverride = s ? s : null;
     this.recompute();
   }
+
   get language(): string | null {
     return this._languageOverride;
   }
 
-  private _file: string = '';
+  private _file = '';
+
   @Input()
   set file(v: string | null | undefined) {
     const next = (v ?? '').trim();
-    if (next === this._file) return;
+    if (next === this._file) {
+      return;
+    }
 
     this._file = next;
 
-    if (this._file) this.loadFile(this._file);
-    else {
+    if (this._file) {
+      this.loadFile(this._file);
+    } else {
       this.loading = false;
       this.error = '';
       this.recompute();
     }
   }
+
   get file(): string {
     return this._file;
   }
 
   private _code = '';
+
   @Input()
   set code(v: string | null | undefined) {
     this._code = v ?? '';
     this.recompute();
   }
+
   get code(): string {
     return this._code;
   }
 
   @Input({ transform: coerceBool }) wrap = false;
+
   @Input({ transform: coerceBool }) compact = false;
 
   /** default true */
@@ -229,36 +250,46 @@ export class ICodeViewer {
 
   /** overlay controls */
   @Input({ transform: coerceBool }) overlay = true;
+
   @Input({ transform: coerceBool }) showFileType = true;
+
   @Input({ transform: coerceBool }) copy = true;
 
   @Input({ transform: coerceBool }) scroll = false;
 
   private _heightPx: number | null = null;
+
   @Input()
   set height(v: any) {
     this._heightPx = parseHeight(v);
     this.cdr.markForCheck();
   }
+
   get height(): any {
     return this._heightPx ?? 'wrap';
   }
 
   @Input() highlighter: ICodeHighlighter = 'auto';
 
-  @Output() fileLoaded = new EventEmitter<{ file: string; language: string }>();
+  @Output() readonly fileLoaded = new EventEmitter<{ file: string; language: string }>();
 
   // ===== State =====
   loading = false;
+
   error = '';
+
   renderedHtml = '';
+
   copied = false;
+
   lineNumberList: number[] = [];
 
   private requestSeq = 0;
-  private _fileLanguage: string = 'text';
+
+  private _fileLanguage = 'text';
 
   private hljsPromise: Promise<any> | null = null;
+
   private hljs: any | null = null;
 
   // ===== Derived =====
@@ -275,8 +306,12 @@ export class ICodeViewer {
   }
 
   get effectiveLanguage(): string {
-    if (this._languageOverride) return this._languageOverride;
-    if (this._file) return this._fileLanguage;
+    if (this._languageOverride) {
+      return this._languageOverride;
+    }
+    if (this._file) {
+      return this._fileLanguage;
+    }
     return 'text';
   }
 
@@ -289,7 +324,9 @@ export class ICodeViewer {
   private recompute(): void {
     if (!this._code && !this._file) {
       const projected = this.readProjectedContent();
-      if (projected) this._code = projected;
+      if (projected) {
+        this._code = projected;
+      }
     }
 
     if (this.lineNumbers) {
@@ -306,7 +343,9 @@ export class ICodeViewer {
   }
 
   private countLines(text: string): number {
-    if (!text) return 1;
+    if (!text) {
+      return 1;
+    }
     return text.split('\n').length;
   }
 
@@ -316,8 +355,11 @@ export class ICodeViewer {
     view.detectChanges();
 
     view.rootNodes.forEach((n: any) => {
-      if (typeof n === 'string') host.append(n);
-      else if (n?.textContent) host.append(n.textContent);
+      if (typeof n === 'string') {
+        host.append(n);
+      } else if (n?.textContent) {
+        host.append(n.textContent);
+      }
     });
 
     view.destroy();
@@ -330,8 +372,12 @@ export class ICodeViewer {
 
   private renderToHtmlSync(raw: string, language: string): string {
     const text = raw ?? '';
-    if (!text) return '';
-    if (this.highlighter === 'none') return escapeHtml(text);
+    if (!text) {
+      return '';
+    }
+    if (this.highlighter === 'none') {
+      return escapeHtml(text);
+    }
 
     if (this.shouldUseHljs() && this.hljs) {
       return this.highlightWithHljs(text, language);
@@ -340,12 +386,18 @@ export class ICodeViewer {
   }
 
   private async maybeHighlightAsync(): Promise<void> {
-    if (!this.shouldUseHljs()) return;
-    if (!this._code) return;
+    if (!this.shouldUseHljs()) {
+      return;
+    }
+    if (!this._code) {
+      return;
+    }
 
     if (!this.hljs) {
       await this.loadHljsIfNeeded();
-      if (!this.hljs) return;
+      if (!this.hljs) {
+        return;
+      }
     }
 
     this.renderedHtml = this.highlightWithHljs(this._code, this.effectiveLanguage);
@@ -367,7 +419,9 @@ export class ICodeViewer {
   }
 
   private async loadHljsIfNeeded(): Promise<void> {
-    if (this.hljs) return;
+    if (this.hljs) {
+      return;
+    }
 
     const w = globalThis as any;
     if (w?.hljs?.highlight && w?.hljs?.highlightAuto) {
@@ -398,7 +452,9 @@ export class ICodeViewer {
       const url = resolveFileUrl(path);
       const content = await firstValueFrom(this.http.get(url, { responseType: 'text' }));
 
-      if (seq !== this.requestSeq) return;
+      if (seq !== this.requestSeq) {
+        return;
+      }
 
       this._code = content ?? '';
       this.loading = false;
@@ -407,7 +463,9 @@ export class ICodeViewer {
       this.recompute();
       this.fileLoaded.emit({ file: url, language: this.effectiveLanguage });
     } catch {
-      if (seq !== this.requestSeq) return;
+      if (seq !== this.requestSeq) {
+        return;
+      }
 
       this.loading = false;
       this.error = `Failed to load: ${path}`;
@@ -417,9 +475,11 @@ export class ICodeViewer {
 
   async onCopy(): Promise<void> {
     const text = this._code ?? '';
-    if (!text || this.loading) return;
+    if (!text || this.loading) {
+      return;
+    }
 
-    const done = () => {
+    const done = (): void => {
       this.copied = true;
       this.cdr.markForCheck();
       setTimeout(() => {

@@ -25,10 +25,10 @@
     }
     @if (okAction) {
       <i-button
+        icon="check"
         variant="primary"
         [ngClass]="okAction.className"
         (onClick)="onOkClick()"
-        icon="check"
         >OK</i-button
       >
     }
@@ -52,8 +52,8 @@
     }
     @if (cancelAction) {
       <i-button
-        icon="cancel"
         i-dialog-close
+        icon="cancel"
         variant="danger"
         [ngClass]="cancelAction.className"
         >Cancel</i-button

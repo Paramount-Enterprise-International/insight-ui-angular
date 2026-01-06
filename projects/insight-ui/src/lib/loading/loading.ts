@@ -18,7 +18,9 @@ import { Component, HostBinding, Input } from '@angular/core';
 })
 export class ILoading {
   @Input() label = 'Loading..';
-  @Input() light: boolean = false;
+
+  @Input() light = false;
+
   @HostBinding('attr.light')
   get isLight(): boolean {
     return this.light;

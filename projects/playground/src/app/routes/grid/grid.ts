@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { IGridDataSource, ISection, IUI } from '@insight-ui';
+import { IGridDataSource, IUI } from '@insight-ui';
 
 @Component({
   selector: 'app-grid',
@@ -84,19 +84,19 @@ export class Grid {
     },
   });
 
-  onRowClick(row: any) {
+  onRowClick(row: any): void {
     console.log('rowClick', row);
   }
 
-  onSelectionChange(e: { selected: any[]; lastChanged: any | null }) {
+  onSelectionChange(e: { selected: any[]; lastChanged: any | null }): void {
     console.log('selectionChange', e);
   }
 
-  onRowExpandChange(e: { row: any; expanded: boolean }) {
+  onRowExpandChange(e: { row: any; expanded: boolean }): void {
     console.log('rowExpandChange', e);
   }
 
-  onExpandedRowsChange(rows: any[]) {
+  onExpandedRowsChange(rows: any[]): void {
     console.log('expandedRowsChange', rows);
   }
 }

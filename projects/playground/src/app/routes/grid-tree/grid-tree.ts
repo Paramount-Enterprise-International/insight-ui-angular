@@ -1,12 +1,12 @@
 import { Component } from '@angular/core';
 import { IUI } from '@insight-ui';
 
-interface TreeNode {
+type TreeNode = {
   id: number;
   name: string;
   status: 'Active' | 'Inactive';
   children?: TreeNode[];
-}
+};
 
 @Component({
   selector: 'app-grid-tree',
@@ -49,22 +49,22 @@ export class GridTree {
   ];
 
   // selection events (tree-aware, cascaded)
-  onRowSelectionChange(payload: { selected: TreeNode[]; lastChanged: TreeNode | null }) {
+  onRowSelectionChange(payload: { selected: TreeNode[]; lastChanged: TreeNode | null }): void {
     console.log('rowSelectionChange', payload);
   }
 
   // plain row click (remember: row click DOES NOT change selection anymore)
-  onRowClick(row: TreeNode) {
+  onRowClick(row: TreeNode): void {
     console.log('rowClick', row);
   }
 
   // optional: listen to expand/collapse of a single row
-  onRowExpandChange(ev: { row: TreeNode; expanded: boolean }) {
+  onRowExpandChange(ev: { row: TreeNode; expanded: boolean }): void {
     console.log('rowExpandChange', ev);
   }
 
   // optional: whenever the set of expanded rows changes
-  onExpandedRowsChange(expandedRows: TreeNode[]) {
+  onExpandedRowsChange(expandedRows: TreeNode[]): void {
     console.log('expandedRowsChange', expandedRows);
   }
 }

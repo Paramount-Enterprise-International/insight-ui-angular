@@ -8,29 +8,24 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { IButton } from '../button/button';
 
-export interface IPaginatorState {
+export type IPaginatorState = {
   pageIndex: number;
   pageSize: number;
-}
+};
 
 @Component({
   selector: 'i-paginator',
   standalone: true,
   imports: [IButton],
   template: `<div class="i-paginator flex align-center gap-2">
-    <i-button
-      icon="prev"
-      (onClick)="previousPage()"
-      size="sm"
-      [disabled]="pageIndex <= 0"
-    ></i-button>
+    <i-button icon="prev" size="sm" [disabled]="pageIndex <= 0" (onClick)="previousPage()" />
     <span>Page {{ pageIndex + 1 }} / {{ pageCount }}</span>
     <i-button
       icon="next"
-      (onClick)="nextPage()"
       size="sm"
       [disabled]="pageIndex >= pageCount - 1"
-    ></i-button>
+      (onClick)="nextPage()"
+    />
 
     <span class="ms-2">
       | Show
@@ -49,38 +44,41 @@ export interface IPaginatorState {
 })
 export class IPaginator {
   @Input() length = 0;
+
   @Input() pageIndex = 0;
+
   @Input() pageSize = 10;
+
   @Input() pageSizeOptions = [10, 50, 100];
 
   @Output() pageChange = new EventEmitter<IPaginatorState>();
 
-  get pageCount() {
+  get pageCount(): number {
     return Math.max(1, Math.ceil(this.length / this.pageSize));
   }
 
-  private emit() {
+  private emit(): void {
     this.pageChange.emit({
       pageIndex: this.pageIndex,
       pageSize: this.pageSize,
     });
   }
 
-  nextPage() {
+  nextPage(): void {
     if (this.pageIndex < this.pageCount - 1) {
       this.pageIndex++;
       this.emit();
     }
   }
 
-  previousPage() {
+  previousPage(): void {
     if (this.pageIndex > 0) {
       this.pageIndex--;
       this.emit();
     }
   }
 
-  changePageSize(value: string) {
+  changePageSize(value: string): void {
     const newSize = Number(value);
     const oldSize = this.pageSize;
 
