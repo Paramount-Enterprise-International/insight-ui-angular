@@ -4,6 +4,7 @@
  * <i-card></i-card>
  */
 
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -21,9 +22,13 @@ type RouterLinkInput = string | any[] | undefined;
 @Component({
   selector: 'i-card',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <ng-template #content>
+      <ng-content />
+    </ng-template>
+
     @if (useRouterLink) {
     <a
       class="i-card"
@@ -39,7 +44,7 @@ type RouterLinkInput = string | any[] | undefined;
       [state]="state"
       (click)="onClick($event)"
     >
-      <ng-content />
+      <ng-container [ngTemplateOutlet]="content" />
     </a>
     } @else {
     <a
@@ -51,7 +56,7 @@ type RouterLinkInput = string | any[] | undefined;
       [attr.target]="target ?? null"
       (click)="onClick($event)"
     >
-      <ng-content />
+      <ng-container [ngTemplateOutlet]="content" />
     </a>
     }
   `,
