@@ -23,23 +23,38 @@ type RouterLinkInput = string | any[] | undefined;
   standalone: true,
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<a
-    class="i-card"
-    [attr.aria-disabled]="disabled ? 'true' : null"
-    [attr.href]="hrefAttr"
-    [attr.rel]="relAttr"
-    [attr.tabindex]="disabled ? -1 : null"
-    [attr.target]="target ?? null"
-    [fragment]="fragment"
-    [queryParams]="queryParams"
-    [replaceUrl]="replaceUrl"
-    [routerLink]="routerLinkAttr"
-    [skipLocationChange]="skipLocationChange"
-    [state]="state"
-    (click)="onClick($event)"
-  >
-    <ng-content />
-  </a> `,
+  template: `
+    @if (useRouterLink) {
+    <a
+      class="i-card"
+      [attr.aria-disabled]="disabled ? 'true' : null"
+      [attr.rel]="relAttr"
+      [attr.tabindex]="disabled ? -1 : null"
+      [attr.target]="target ?? null"
+      [fragment]="fragment"
+      [queryParams]="queryParams"
+      [replaceUrl]="replaceUrl"
+      [routerLink]="routerLink!"
+      [skipLocationChange]="skipLocationChange"
+      [state]="state"
+      (click)="onClick($event)"
+    >
+      <ng-content />
+    </a>
+    } @else {
+    <a
+      class="i-card"
+      [attr.aria-disabled]="disabled ? 'true' : null"
+      [attr.href]="hrefAttr"
+      [attr.rel]="relAttr"
+      [attr.tabindex]="disabled ? -1 : null"
+      [attr.target]="target ?? null"
+      (click)="onClick($event)"
+    >
+      <ng-content />
+    </a>
+    }
+  `,
 })
 export class ICard implements OnInit {
   /* ======================
@@ -53,18 +68,13 @@ export class ICard implements OnInit {
   @Input() routerLink?: RouterLinkInput;
 
   @Input() queryParams?: Record<string, any> | null;
-
   @Input() fragment?: string;
-
   @Input() replaceUrl = false;
-
   @Input() skipLocationChange = false;
-
   @Input() state?: Record<string, any>;
 
   // Anchor-related
   @Input() target?: '_self' | '_blank' | '_parent' | '_top' | string;
-
   @Input() rel?: string | null;
 
   @Input() disabled = false;
@@ -73,13 +83,20 @@ export class ICard implements OnInit {
   @Output() readonly cardClick = new EventEmitter<MouseEvent>();
 
   /* ======================
+   * Derived flags
+   * ====================== */
+
+  get useRouterLink(): boolean {
+    if (this.disabled) return false;
+    return this.routerLink !== undefined && this.routerLink !== null && this.routerLink !== '';
+  }
+
+  /* ======================
    * Dev-mode validation
    * ====================== */
 
   ngOnInit(): void {
-    if (!isDevMode()) {
-      return;
-    }
+    if (!isDevMode()) return;
 
     const hasHref = !!this.href;
     const hasRouter =
@@ -111,30 +128,15 @@ export class ICard implements OnInit {
    * ====================== */
 
   get relAttr(): string | null {
-    if (this.rel) {
-      return this.rel;
-    }
-    if ((this.target ?? '').toLowerCase() === '_blank') {
-      return 'noopener noreferrer';
-    }
+    if (this.rel) return this.rel;
+    if ((this.target ?? '').toLowerCase() === '_blank') return 'noopener noreferrer';
     return null;
   }
 
   get hrefAttr(): string | null {
-    if (this.disabled) {
-      return null;
-    }
-    if (this.routerLinkAttr) {
-      return null;
-    }
+    if (this.disabled) return null;
+    // only for the non-router template
     return this.href ?? null;
-  }
-
-  get routerLinkAttr(): RouterLinkInput {
-    if (this.disabled) {
-      return undefined;
-    }
-    return this.routerLink ?? undefined;
   }
 
   /* ======================
@@ -155,10 +157,9 @@ export class ICard implements OnInit {
       return;
     }
 
-    // Prevent empty anchor navigation (# / top)
+    // Prevent empty anchor navigation
     const hasHref = !!this.href;
-    const hasRouter =
-      this.routerLink !== undefined && this.routerLink !== null && this.routerLink !== '';
+    const hasRouter = this.useRouterLink;
 
     if (!hasHref && !hasRouter) {
       ev.preventDefault();
