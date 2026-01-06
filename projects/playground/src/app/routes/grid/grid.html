@@ -2,13 +2,13 @@
   <i-section-header>IGrid </i-section-header>
   <i-section-body class="p-0">
     <i-grid
-      [dataSource]="dataSource"
       selectionMode="multiple"
       stickyHeader
-      (rowClick)="onRowClick($event)"
-      (selectionChange)="onSelectionChange($event)"
-      (rowExpandChange)="onRowExpandChange($event)"
+      [dataSource]="dataSource"
       (expandedRowsChange)="onExpandedRowsChange($event)"
+      (rowClick)="onRowClick($event)"
+      (rowExpandChange)="onRowExpandChange($event)"
+      (selectionChange)="onSelectionChange($event)"
     >
       <!-- Data column: Name (frozen) -->
       <i-grid-column fieldName="name" title="Name" [freeze]="true" [width]="220">
@@ -25,7 +25,7 @@
       </i-grid-column>
 
       <!-- Data column: Role -->
-      <i-grid-column fieldName="role" title="Role" [width]="160"></i-grid-column>
+      <i-grid-column fieldName="role" title="Role" [width]="160" />
 
       <!-- Custom column: Actions -->
       <i-grid-custom-column title="Actions" [width]="220">

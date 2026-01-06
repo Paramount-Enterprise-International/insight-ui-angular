@@ -1,7 +1,7 @@
 /**
  * IIcon
  * Version: 1.0.0
- * <ic />
+ * <i-icon />
  */
 
 import { NgClass } from '@angular/common';
@@ -65,25 +65,28 @@ export const I_ICON_SIZES = {
   lg: 'i-icon-lg',
   xl: 'i-icon-xl',
   '2xl': 'i-icon-2xl',
+  '3xl': 'i-icon-3xl',
+  '4xl': 'i-icon-4xl',
 } as const;
 
 export type IIconName = keyof typeof I_ICON_NAMES;
 export type IIconSize = keyof typeof I_ICON_SIZES;
 
 @Component({
-  selector: 'ic',
+  selector: 'i-icon',
   imports: [NgClass],
   template: `<i [ngClass]="iconClass"></i>`,
 })
 export class IIcon {
   @Input() icon!: IIconName | string;
+
   @Input() size: IIconSize = 'md';
 
-  get iconSize() {
+  get iconSize(): string {
     return I_ICON_SIZES[this.size] || 'sm';
   }
 
-  get iconClass() {
+  get iconClass(): string {
     return `${I_ICON_NAMES[this.icon as IIconName] || this.icon} ${this.iconSize}`;
   }
 }

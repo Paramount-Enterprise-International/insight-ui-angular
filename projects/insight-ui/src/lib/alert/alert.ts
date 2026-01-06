@@ -1,12 +1,7 @@
 import { NgClass } from '@angular/common';
 import { Component, inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
-import {
-  I_DIALOG_DATA,
-  IDialog,
-  IDialogRef,
-  IDialogService,
-} from '../dialog/dialog';
+import { I_DIALOG_DATA, IDialog, IDialogRef, IDialogService } from '../dialog/dialog';
 import { IIcon } from '../icon/icon';
 
 export type IAlertData = {
@@ -22,13 +17,14 @@ export type IAlertData = {
 })
 export class IAlert {
   data: IAlertData = inject(I_DIALOG_DATA);
+
   dialog: IDialogRef<IAlert> = inject(IDialogRef);
 
-  get alertClass() {
+  get alertClass(): string {
     return `i-alert i-alert-${this.data.type}`;
   }
 
-  submit() {
+  submit(): void {
     this.dialog.close();
   }
 }
@@ -39,7 +35,7 @@ export class IAlert {
 export class IAlertService {
   dialog: IDialogService = inject(IDialogService);
 
-  show({ title, description, type }: IAlertData) {
+  show({ title, description, type }: IAlertData): Observable<boolean> {
     return this.dialog
       .open(IAlert, {
         width: '',

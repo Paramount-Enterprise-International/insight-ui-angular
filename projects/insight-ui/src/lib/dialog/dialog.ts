@@ -1,15 +1,10 @@
-import {
-  AsyncPipe,
-  NgClass,
-  NgComponentOutlet,
-  NgForOf,
-  NgStyle,
-} from '@angular/common';
+import { AsyncPipe, NgClass, NgComponentOutlet, NgStyle } from '@angular/common';
 import {
   Component,
   Directive,
   EventEmitter,
   HostListener,
+  inject,
   Injectable,
   InjectionToken,
   Injector,
@@ -19,7 +14,6 @@ import {
   Output,
   SimpleChanges,
   Type,
-  inject,
 } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { IButton, IButtonVariant } from '../button/button';
@@ -29,14 +23,14 @@ import { IIconName } from '../icon/icon';
  * CONFIG + TOKENS
  */
 
-export interface IDialogConfig<TData = any> {
+export type IDialogConfig<TData = any> = {
   id?: string;
   data?: TData;
   width?: string;
   height?: string;
   disableClose?: boolean; // ignore ESC
   backdropClose?: boolean; // allow click backdrop to close
-}
+};
 
 export const I_DIALOG_DATA = new InjectionToken<any>('I_DIALOG_DATA');
 
@@ -46,10 +40,10 @@ export const I_DIALOG_DATA = new InjectionToken<any>('I_DIALOG_DATA');
  * TResult   = result type of close()
  */
 
-export class IDialogRef<TComponent = any, TResult = any> {
+export class IDialogRef<TResult = any> {
   private readonly _afterClosed$ = new Subject<TResult | undefined>();
 
-  close(result?: TResult): void {
+  close(result?: any): void {
     this._afterClosed$.next(result);
     this._afterClosed$.complete();
   }
@@ -63,12 +57,12 @@ export class IDialogRef<TComponent = any, TResult = any> {
  * INTERNAL INSTANCE
  */
 
-interface IDialogInstance<TData = any, TResult = any> {
+type IDialogInstance<TData = any, TResult = any> = {
   id: string;
   component: Type<any>;
   config: Required<IDialogConfig<TData>>;
-  ref: IDialogRef<any, TResult>;
-}
+  ref: IDialogRef<TResult>;
+};
 
 /**
  * SERVICE
@@ -79,14 +73,15 @@ let DIALOG_ID_COUNTER = 0;
 @Injectable({ providedIn: 'root' })
 export class IDialogService {
   private readonly _dialogs$ = new BehaviorSubject<IDialogInstance[]>([]);
+
   dialogs$ = this._dialogs$.asObservable();
 
   open<TComponent, TData = any, TResult = any>(
     component: Type<TComponent>,
     config: IDialogConfig<TData> = {}
-  ): IDialogRef<TComponent, TResult> {
+  ): IDialogRef<TResult> {
     const id = config.id ?? `i-dialog-${++DIALOG_ID_COUNTER}`;
-    const ref = new IDialogRef<TComponent, TResult>();
+    const ref = new IDialogRef<TResult>();
 
     const instance: IDialogInstance<TData, TResult> = {
       id,
@@ -116,14 +111,12 @@ export class IDialogService {
   closeById(id: string, result?: any): void {
     const instance = this._dialogs$.value.find((d) => d.id === id);
     if (instance) {
-      (instance.ref as IDialogRef<any, any>).close(result);
+      instance.ref.close(result);
     }
   }
 
   closeAll(): void {
-    this._dialogs$.value.forEach((d) =>
-      (d.ref as IDialogRef<any, any>).close()
-    );
+    this._dialogs$.value.forEach((d) => d.ref.close());
   }
 }
 
@@ -139,9 +132,11 @@ export class IDialogService {
 })
 export class IDialogContainer implements OnChanges {
   @Input({ required: true }) instance!: IDialogInstance;
+
   @Input() isTopMost = false;
 
   private rootInjector = inject(Injector);
+
   dialogInjector!: Injector;
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -166,19 +161,20 @@ export class IDialogContainer implements OnChanges {
 
   @HostListener('document:keydown.escape')
   onEscKey(): void {
-    if (!this.isTopMost) return; // only the topmost dialog reacts
+    if (!this.isTopMost) {
+      return;
+    } // only the topmost dialog reacts
     if (!this.instance?.config.disableClose) {
-      (this.instance.ref as IDialogRef<any, any>).close();
+      this.instance.ref.close();
     }
   }
 
   onBackdropClick(): void {
-    if (!this.isTopMost) return; // only topmost backdrop closes
-    if (
-      !this.instance?.config.disableClose &&
-      this.instance?.config.backdropClose
-    ) {
-      (this.instance.ref as IDialogRef<any, any>).close();
+    if (!this.isTopMost) {
+      return;
+    } // only topmost backdrop closes
+    if (!this.instance?.config.disableClose && this.instance?.config.backdropClose) {
+      this.instance.ref.close();
     }
   }
 }
@@ -190,17 +186,16 @@ export class IDialogContainer implements OnChanges {
 @Component({
   selector: 'i-dialog-outlet',
   standalone: true,
-  imports: [NgForOf, AsyncPipe, IDialogContainer],
+  imports: [AsyncPipe, IDialogContainer],
   template: `
-    <ng-container *ngFor="let dialog of dialogs$ | async; let last = last">
-      <i-dialog-container
-        [instance]="dialog"
-        [isTopMost]="last"></i-dialog-container>
-    </ng-container>
+    @for (dialog of (dialogs$ | async) ?? []; track dialog.id; let last = $last) {
+    <i-dialog-container [instance]="dialog" [isTopMost]="last" />
+    }
   `,
 })
 export class IDialogOutlet {
   private dialogService = inject(IDialogService);
+
   dialogs$ = this.dialogService.dialogs$;
 }
 
@@ -221,10 +216,10 @@ export class IDialogCloseDirective {
    */
   @Input('iDialogClose') result: any;
 
-  private dialogRef = inject<IDialogRef<any, any>>(IDialogRef);
+  private dialogRef = inject<IDialogRef<any>>(IDialogRef);
 
   @HostListener('click', ['$event'])
-  onClick(event: MouseEvent) {
+  onClick(event: MouseEvent): void {
     event.preventDefault();
     this.dialogRef.close(this.result);
   }
@@ -291,13 +286,18 @@ export type DialogAction = IDialogActionType | IDialogActionObject;
 })
 export class IDialog {
   @Input() title: string | undefined;
+
   @Input() actions: DialogAction[] = ['save', 'cancel'];
+
   @Input() actionAlign?: 'start' | 'center' | 'end' = 'end';
 
-  @Output() onOk: EventEmitter<any> = new EventEmitter<any>();
-  @Output() onConfirm: EventEmitter<any> = new EventEmitter<any>();
-  @Output() onSave: EventEmitter<any> = new EventEmitter<any>();
-  @Output() onCustomAction: EventEmitter<IDialogActionObject> =
+  @Output() readonly onOk: EventEmitter<any> = new EventEmitter<any>();
+
+  @Output() readonly onConfirm: EventEmitter<any> = new EventEmitter<any>();
+
+  @Output() readonly onSave: EventEmitter<any> = new EventEmitter<any>();
+
+  @Output() readonly onCustomAction: EventEmitter<IDialogActionObject> =
     new EventEmitter<IDialogActionObject>();
 
   get normalizedActions(): IDialogActionObject[] {
@@ -306,49 +306,43 @@ export class IDialog {
     );
   }
 
-  get saveAction() {
-    return this.normalizedActions.find((a) => a.type === 'save') as
-      | IDialogActionSave
-      | undefined;
+  get saveAction(): IDialogActionSave | undefined {
+    return this.normalizedActions.find((a) => a.type === 'save') as IDialogActionSave | undefined;
   }
 
-  get okAction() {
-    return this.normalizedActions.find((a) => a.type === 'ok') as
-      | IDialogActionOK
-      | undefined;
+  get okAction(): IDialogActionOK | undefined {
+    return this.normalizedActions.find((a) => a.type === 'ok') as IDialogActionOK | undefined;
   }
 
-  get confirmAction() {
+  get confirmAction(): IDialogActionConfirm | undefined {
     return this.normalizedActions.find((a) => a.type === 'confirm') as
       | IDialogActionConfirm
       | undefined;
   }
 
   get customActions(): IDialogActionCustom[] {
-    return this.normalizedActions.filter(
-      (a) => a.type === 'custom'
-    ) as IDialogActionCustom[];
+    return this.normalizedActions.filter((a) => a.type === 'custom') as IDialogActionCustom[];
   }
 
-  get cancelAction() {
+  get cancelAction(): IDialogActionCancel | undefined {
     return this.normalizedActions.find((a) => a.type === 'cancel') as
       | IDialogActionCancel
       | undefined;
   }
 
-  onConfirmClick() {
+  onConfirmClick(): void {
     this.onConfirm.emit();
   }
 
-  onOkClick() {
+  onOkClick(): void {
     this.onOk.emit();
   }
 
-  onSaveClick() {
+  onSaveClick(): void {
     this.onSave.emit();
   }
 
-  onCustomActionClick(a: IDialogActionCustom) {
+  onCustomActionClick(a: IDialogActionCustom): void {
     this.onCustomAction.emit(a);
   }
 }

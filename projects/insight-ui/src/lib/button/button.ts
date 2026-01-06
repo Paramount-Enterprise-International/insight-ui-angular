@@ -23,9 +23,9 @@ export type IButtonVariant = Extract<
   selector: 'i-button',
   standalone: true,
   template: `@if (loading) {
-    <i-loading [light]="variant !== 'outline'" [label]="loadingText" />
+    <i-loading [label]="loadingText" [light]="variant !== 'outline'" />
     } @else { @if (icon) {
-    <ic [icon]="icon" [size]="size" />
+    <i-icon [icon]="icon" [size]="size" />
     }
     <ng-content />
     } `,
@@ -38,16 +38,21 @@ export type IButtonVariant = Extract<
 export class IButton {
   // @Input({ transform: booleanAttribute }) disabled = false;
   @Input() disabled = false;
+
   @Input({ transform: booleanAttribute }) loading = false;
 
   @Input() type: IButtonType = 'button';
-  @Input() loadingText: string = '';
+
+  @Input() loadingText = '';
+
   @Input() variant: IButtonVariant = 'primary';
+
   @Input() size: IButtonSize = 'md';
+
   @Input() icon: string | undefined;
 
   /** Public click output if you want to use (onClick) */
-  @Output() onClick = new EventEmitter<MouseEvent>();
+  @Output() readonly onClick = new EventEmitter<MouseEvent>();
 
   /* ---------- HOST BINDINGS ---------- */
 
@@ -111,7 +116,9 @@ export class IButton {
   // Keyboard activation (Space/Enter)
   @HostListener('keydown', ['$event'])
   handleKeydown(event: KeyboardEvent): void {
-    if (this.disabled || this.loading) return;
+    if (this.disabled || this.loading) {
+      return;
+    }
 
     const key = event.key;
 

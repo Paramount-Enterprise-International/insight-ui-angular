@@ -6,7 +6,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 })
 export class IHighlightSearchPipe implements PipeTransform {
   transform(value: string, search: string): string {
-    if (!value || !search) return value;
+    if (!value || !search) {return value;}
 
     // Escape regex special chars: . * + ? ^ $ { } ( ) | [ ] \
     const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

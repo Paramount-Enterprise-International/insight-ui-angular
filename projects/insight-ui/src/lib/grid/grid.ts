@@ -26,6 +26,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import {
   AfterContentInit,
+  booleanAttribute,
   Component,
   ContentChild,
   ContentChildren,
@@ -46,7 +47,6 @@ import {
   SimpleChanges,
   TemplateRef,
   ViewContainerRef,
-  booleanAttribute,
 } from '@angular/core';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { IPaginator } from './paginator';
@@ -60,10 +60,10 @@ import { IHighlightSearchPipe } from '../highlight-search.pipe';
 
 export type ISortDirection = 'asc' | 'desc' | '';
 
-export interface ISortState {
+export type ISortState = {
   active: string;
   direction: ISortDirection;
-}
+};
 
 export type ISortConfig = ISortState | ISortState[] | null;
 
@@ -95,7 +95,7 @@ export type IGridPaginatorInput =
       pageSizeOptions?: number[];
     };
 
-export interface IGridDataSourceConfig<T = any> {
+export type IGridDataSourceConfig<T = any> = {
   sort?: ISortConfig;
   filter?: IGridFilter;
 
@@ -106,7 +106,7 @@ export interface IGridDataSourceConfig<T = any> {
    * - { pageIndex?, pageSize?, pageSizeOptions? } → enabled + overridden
    */
   paginator?: IGridPaginatorInput;
-}
+};
 
 /* ----------------------------------------------------
  * SELECTION TYPES
@@ -114,10 +114,10 @@ export interface IGridDataSourceConfig<T = any> {
 
 export type IGridSelectionMode = false | 'single' | 'multiple';
 
-export interface IGridSelectionChange<T = any> {
+export type IGridSelectionChange<T = any> = {
   selected: T[];
   lastChanged: T | null;
-}
+};
 
 /* ----------------------------------------------------
  * COLUMN WIDTH TYPES
@@ -129,7 +129,7 @@ export type IGridColumnWidth = number | 'fill';
  * COLUMN-LIKE INTERFACE (manual + auto + custom)
  * ---------------------------------------------------- */
 
-export interface IGridColumnLike<T = any> {
+export type IGridColumnLike<T = any> = {
   fieldName?: string;
   title: string;
   sortable: boolean;
@@ -141,7 +141,7 @@ export interface IGridColumnLike<T = any> {
 
   /** true for auto-generated columns from datasource keys */
   isAuto?: boolean;
-}
+};
 
 /* ----------------------------------------------------
  * DATASOURCE
@@ -153,27 +153,33 @@ export class IGridDataSource<T = any> {
   private _rawData: T[] = [];
 
   // filter internal state
-  private _filter: string = '';
-  private _recursive: boolean = false;
-  private _childrenKey: string = 'children';
+  private _filter = '';
+
+  private _recursive = false;
+
+  private _childrenKey = 'children';
 
   private _sort: ISortState[] | null = null;
 
   // pagination state
   private _paginatorEnabled = true;
+
   private _pageIndex = 0;
+
   private _pageSize = 10;
+
   private _pageSizeOptions = [10, 50, 100];
 
   // external observable data source
   private _externalDataSub?: Subscription;
+
   private _dataSource$?: Observable<T[]>;
 
   constructor(initialData: T[] = [], config: IGridDataSourceConfig<T> = {}) {
     this._rawData = initialData || [];
 
     // filter (uses setter to normalize)
-    if (config.filter != null) {
+    if (config.filter !== null) {
       this.filter = config.filter;
     }
 
@@ -229,7 +235,9 @@ export class IGridDataSource<T = any> {
   }
 
   set paginator(state: { pageIndex: number; pageSize: number } | null) {
-    if (!this._paginatorEnabled || !state) return;
+    if (!this._paginatorEnabled || !state) {
+      return;
+    }
 
     this._pageIndex = state.pageIndex;
     this._pageSize = state.pageSize;
@@ -237,7 +245,9 @@ export class IGridDataSource<T = any> {
   }
 
   get paginator(): { pageIndex: number; pageSize: number } | null {
-    if (!this._paginatorEnabled) return null;
+    if (!this._paginatorEnabled) {
+      return null;
+    }
     return { pageIndex: this._pageIndex, pageSize: this._pageSize };
   }
 
@@ -332,7 +342,9 @@ export class IGridDataSource<T = any> {
 
   // can be customized by consumer
   filterPredicate: (data: T, filter: string) => boolean = (data, filter) => {
-    if (!filter) return true;
+    if (!filter) {
+      return true;
+    }
     const target = JSON.stringify(data).toLowerCase();
     return target.includes(filter);
   };
@@ -360,7 +372,9 @@ export class IGridDataSource<T = any> {
 
   /** Basic row match using public filterPredicate */
   private _rowMatchesFilter(data: T, filter: string): boolean {
-    if (!filter) return true;
+    if (!filter) {
+      return true;
+    }
     return this.filterPredicate(data, filter);
   }
 
@@ -377,7 +391,7 @@ export class IGridDataSource<T = any> {
     const result: any[] = [];
     for (const node of nodes) {
       const pruned = this._filterRecursiveNode(node, filter);
-      if (pruned != null) {
+      if (pruned !== null) {
         result.push(pruned);
       }
     }
@@ -410,7 +424,7 @@ export class IGridDataSource<T = any> {
       clone[this._childrenKey] = filteredChildren;
     } else {
       // remove children property so leaf really becomes a leaf
-      if (clone.hasOwnProperty(this._childrenKey)) {
+      if (Object.prototype.hasOwnProperty.call(clone, this._childrenKey)) {
         delete clone[this._childrenKey];
       }
     }
@@ -421,7 +435,9 @@ export class IGridDataSource<T = any> {
   /* -------- internal sort normalize -------- */
 
   private _normalizeSort(sort: ISortConfig): ISortState[] | null {
-    if (!sort) return null;
+    if (!sort) {
+      return null;
+    }
 
     const arr: ISortState[] = Array.isArray(sort) ? sort : [sort];
 
@@ -459,15 +475,25 @@ export class IGridDataSource<T = any> {
       data.sort((a: T, b: T) => {
         for (const sort of sorts) {
           const { active, direction } = sort;
-          if (!active || !direction) continue;
+          if (!active || !direction) {
+            continue;
+          }
 
           const dir = direction === 'asc' ? 1 : -1;
-          const aValue = this.sortAccessor(a, active);
-          const bValue = this.sortAccessor(b, active);
 
-          if (aValue == null && bValue == null) continue;
-          if (aValue == null) return -1 * dir;
-          if (bValue == null) return 1 * dir;
+          // normalize undefined to null
+          const aValue = (this.sortAccessor(a, active) ?? null) as any;
+          const bValue = (this.sortAccessor(b, active) ?? null) as any;
+
+          if (aValue === null && bValue === null) {
+            continue;
+          }
+          if (aValue === null) {
+            return -1 * dir;
+          }
+          if (bValue === null) {
+            return 1 * dir;
+          }
 
           if (aValue < bValue) return -1 * dir;
           if (aValue > bValue) return 1 * dir;
@@ -496,7 +522,7 @@ export class IGridDataSource<T = any> {
   standalone: true,
 })
 export class IGridHeaderCellDefDirective {
-  constructor(public readonly template: TemplateRef<any>) {}
+  constructor(readonly template: TemplateRef<any>) {}
 }
 
 @Directive({
@@ -504,7 +530,7 @@ export class IGridHeaderCellDefDirective {
   standalone: true,
 })
 export class IGridCellDefDirective {
-  constructor(public readonly template: TemplateRef<any>) {}
+  constructor(readonly template: TemplateRef<any>) {}
 }
 
 /* ----------------------------------------------------
@@ -527,9 +553,9 @@ export class IGridRowDefDirective<T = any> implements OnInit {
   /**
    * Microsyntax: `expandSingle: true` -> input `iRowDefExpandSingle`
    */
-  @Input() iRowDefExpandSingle: boolean = false;
+  @Input() iRowDefExpandSingle = false;
 
-  constructor(public readonly template: TemplateRef<any>, private readonly vcr: ViewContainerRef) {}
+  constructor(readonly template: TemplateRef<any>, private readonly vcr: ViewContainerRef) {}
 
   ngOnInit(): void {
     // Definition holder only — do not render at projection location.
@@ -552,7 +578,7 @@ export class IGridRowDefDirective<T = any> implements OnInit {
 @Component({
   selector: 'i-grid-expandable-row',
   standalone: true,
-  template: `<ng-content></ng-content>`,
+  template: `<ng-content />`,
   host: {
     class: 'i-grid-expandable-row flex',
     role: 'row',
@@ -598,13 +624,13 @@ export class IGridColumn<T = any> implements IGridColumnLike<T> {
   @Input({ required: true }) fieldName!: string;
 
   /** Header text if you don't use iHeaderCellDef */
-  @Input() title: string = '';
+  @Input() title = '';
 
   /** Per-column sort control */
-  @Input() sortable: boolean = true;
+  @Input() sortable = true;
 
   /** Per-column resize control */
-  @Input() resizable: boolean = true;
+  @Input() resizable = true;
 
   /**
    * Column width:
@@ -618,7 +644,7 @@ export class IGridColumn<T = any> implements IGridColumnLike<T> {
    * Freeze block always starts from the first column.
    * Mark the last frozen column with [freeze].
    */
-  @Input({ transform: booleanAttribute }) freeze: boolean = false;
+  @Input({ transform: booleanAttribute }) freeze = false;
 
   /**
    * Projected templates
@@ -644,17 +670,17 @@ export class IGridColumn<T = any> implements IGridColumnLike<T> {
 })
 export class IGridCustomColumn<T = any> implements IGridColumnLike<T> {
   /** Custom header title (e.g. "Actions") */
-  @Input() title: string = '';
+  @Input() title = '';
 
   /** Custom columns are not sortable by default */
-  @Input() sortable: boolean = false;
+  @Input() sortable = false;
 
   /** Per-column resize control */
-  @Input() resizable: boolean = true;
+  @Input() resizable = true;
 
   @Input() width?: IGridColumnWidth;
 
-  @Input({ transform: booleanAttribute }) freeze: boolean = false;
+  @Input({ transform: booleanAttribute }) freeze = false;
 
   // For custom column there is normally no fieldName
   fieldName?: string;
@@ -679,7 +705,7 @@ export class IGridCustomColumn<T = any> implements IGridColumnLike<T> {
     class: 'i-grid-cell',
     role: 'cell',
   },
-  template: ` <ng-content></ng-content> `,
+  template: ` <ng-content /> `,
 })
 export class IGridCell {
   /** Column instance (set automatically by grid OR injected from host column) */
@@ -706,7 +732,9 @@ export class IGridCell {
     }
 
     const col = this._column;
-    if (!this.grid || !col) return '1 1 0';
+    if (!this.grid || !col) {
+      return '1 1 0';
+    }
 
     return this.grid.getColumnFlex(col);
   }
@@ -729,7 +757,9 @@ export class IGridCell {
 
   @HostBinding('style.left.px')
   get stickyLeft(): number | null {
-    if (!this._isFrozen || !this.grid || !this._column) return null;
+    if (!this._isFrozen || !this.grid || !this._column) {
+      return null;
+    }
     return this.grid.getColumnStickyLeft(this._column);
   }
 
@@ -749,12 +779,12 @@ export class IGridCell {
   imports: [IIcon],
   template: `
     <span class="i-grid-header-cell__content">
-      <ng-content></ng-content>
+      <ng-content />
     </span>
 
     @if (showIcon) {
     <span class="i-grid-header-cell__icon">
-      <ic [icon]="iconName" size="sm"></ic>
+      <i-icon size="sm" [icon]="iconName" />
     </span>
     }
 
@@ -773,8 +803,11 @@ export class IGridHeaderCell {
   @Input() fixedWidth?: number;
 
   private _isResizing = false;
+
   private _startX = 0;
+
   private _startWidth = 0;
+
   private readonly _minWidth = 50;
 
   constructor(
@@ -794,20 +827,26 @@ export class IGridHeaderCell {
   }
 
   private get _direction(): ISortDirection {
-    if (!this.grid || !this._columnId) return '';
+    if (!this.grid || !this._columnId) {
+      return '';
+    }
     return this.grid.getColumnDirection(this._columnId);
   }
 
   private get _sortableFlag(): boolean {
     const col = this._column;
-    if (!col) return false;
+    if (!col) {
+      return false;
+    }
     // only sortable when fieldName is present
     return col.sortable !== false && !!col.fieldName;
   }
 
   get resizable(): boolean {
     const col = this._column;
-    if (!col) return false;
+    if (!col) {
+      return false;
+    }
     return col.resizable !== false;
   }
 
@@ -880,13 +919,17 @@ export class IGridHeaderCell {
 
   @HostBinding('style.left.px')
   get stickyLeft(): number | null {
-    if (!this._isFrozen || !this.grid || !this._column) return null;
+    if (!this._isFrozen || !this.grid || !this._column) {
+      return null;
+    }
     return this.grid.getColumnStickyLeft(this._column);
   }
 
   @HostBinding('style.zIndex')
   get stickyZ(): number | null {
-    if (!this._isFrozen || !this.grid || !this._column) return null;
+    if (!this._isFrozen || !this.grid || !this._column) {
+      return null;
+    }
     return this.grid.getFrozenColumnZ(this._column);
   }
 
@@ -894,16 +937,22 @@ export class IGridHeaderCell {
   @HostListener('click')
   onClick(): void {
     // if we just resized, ignore click (to avoid accidental sort)
-    if (this._isResizing) return;
+    if (this._isResizing) {
+      return;
+    }
 
     const col = this._column;
-    if (!this.grid || !this._sortableFlag || !col) return;
+    if (!this.grid || !this._sortableFlag || !col) {
+      return;
+    }
     this.grid.sort(col);
   }
 
   onResizeMouseDown(event: MouseEvent): void {
     const col = this._column;
-    if (!this.grid || !col || !this.resizable) return;
+    if (!this.grid || !col || !this.resizable) {
+      return;
+    }
 
     event.stopPropagation();
     event.preventDefault();
@@ -919,7 +968,9 @@ export class IGridHeaderCell {
   @HostListener('document:mousemove', ['$event'])
   onDocumentMouseMove(event: MouseEvent): void {
     const col = this._column;
-    if (!this._isResizing || !this.grid || !col) return;
+    if (!this._isResizing || !this.grid || !col) {
+      return;
+    }
 
     const delta = event.clientX - this._startX;
     let newWidth = this._startWidth + delta;
@@ -933,7 +984,9 @@ export class IGridHeaderCell {
 
   @HostListener('document:mouseup')
   onDocumentMouseUp(): void {
-    if (!this._isResizing) return;
+    if (!this._isResizing) {
+      return;
+    }
 
     setTimeout(() => {
       this._isResizing = false;
@@ -973,8 +1026,8 @@ export class IGridHeaderCell {
         <i-grid-header-cell
           class="i-grid-tree-cell i-grid-tree-cell--header i-grid-header-cell--frozen"
           [fixedWidth]="treeColumnWidth"
-          [style.position]="'sticky'"
           [style.left.px]="0"
+          [style.position]="'sticky'"
         >
           <span class="i-grid-header-cell__content">
             <i-button
@@ -983,8 +1036,7 @@ export class IGridHeaderCell {
               variant="outline"
               [icon]="allTreeExpanded ? 'down' : 'next'"
               (onClick)="onToggleAllTree()"
-            >
-            </i-button>
+            />
           </span>
         </i-grid-header-cell>
 
@@ -993,17 +1045,17 @@ export class IGridHeaderCell {
         <i-grid-header-cell
           class="i-grid-selection-cell i-grid-selection-cell--header i-grid-header-cell--frozen"
           [fixedWidth]="selectionColumnWidth"
-          [style.position]="'sticky'"
           [style.left.px]="treeColumnWidth"
+          [style.position]="'sticky'"
         >
           <span class="i-grid-header-cell__content">
             <input
-              type="checkbox"
               class="i-grid-tree-header-checkbox"
+              type="checkbox"
               [checked]="allVisibleSelected"
               [indeterminate]="someVisibleSelected"
-              (click)="$event.stopPropagation()"
               (change)="onToggleAllVisible()"
+              (click)="$event.stopPropagation()"
             />
           </span>
         </i-grid-header-cell>
@@ -1013,8 +1065,8 @@ export class IGridHeaderCell {
         <i-grid-header-cell
           class="i-grid-expand-cell i-grid-expand-cell--header i-grid-header-cell--frozen"
           [fixedWidth]="expandColumnWidth"
-          [style.position]="'sticky'"
           [style.left.px]="getStickyLeftForExpandColumn()"
+          [style.position]="'sticky'"
         >
           <span class="i-grid-header-cell__content">
             <i-button
@@ -1023,8 +1075,7 @@ export class IGridHeaderCell {
               variant="outline"
               [icon]="allVisibleExpanded ? 'down' : 'next'"
               (onClick)="onToggleAllExpanded()"
-            >
-            </i-button>
+            />
           </span>
         </i-grid-header-cell>
         }
@@ -1034,8 +1085,8 @@ export class IGridHeaderCell {
         <i-grid-header-cell
           class="i-grid-selection-cell i-grid-selection-cell--header i-grid-header-cell--frozen"
           [fixedWidth]="selectionColumnWidth"
-          [style.position]="'sticky'"
           [style.left.px]="getStickyLeftForSelectionColumn()"
+          [style.position]="'sticky'"
         >
           <span class="i-grid-header-cell__content">
             @if (selectionMode === 'multiple') {
@@ -1043,8 +1094,8 @@ export class IGridHeaderCell {
               type="checkbox"
               [checked]="allVisibleSelected"
               [indeterminate]="someVisibleSelected"
-              (click)="$event.stopPropagation()"
               (change)="onToggleAllVisible()"
+              (click)="$event.stopPropagation()"
             />
             }
           </span>
@@ -1055,10 +1106,10 @@ export class IGridHeaderCell {
         @if (showNumberColumnEffective) {
         <i-grid-header-cell
           class="i-grid-number-cell i-grid-number-cell--header"
-          [column]="numberColumn"
           [class.i-grid-header-cell--frozen]="hasFrozenColumns"
-          [style.position]="hasFrozenColumns ? 'sticky' : null"
+          [column]="numberColumn"
           [style.left.px]="hasFrozenColumns ? getStickyLeftForNumberColumn() : null"
+          [style.position]="hasFrozenColumns ? 'sticky' : null"
           [style.zIndex]="hasFrozenColumns ? 3 : null"
         >
           {{ numberColumn.title }}
@@ -1067,9 +1118,9 @@ export class IGridHeaderCell {
 
         <!-- Data & custom headers -->
         @for (col of columns; track col; let colIndex = $index) { @if (col.headerDef; as tmpl) {
-        <ng-container [ngTemplateOutlet]="tmpl"></ng-container>
+        <ng-container [ngTemplateOutlet]="tmpl" />
         } @else {
-        <i-grid-header-cell [column]="col" [class.i-grid-header-cell--auto]="col.isAuto">
+        <i-grid-header-cell [class.i-grid-header-cell--auto]="col.isAuto" [column]="col">
           {{ col.title || col.fieldName }}
         </i-grid-header-cell>
         } }
@@ -1078,15 +1129,15 @@ export class IGridHeaderCell {
 
       <!-- ROWS -->
       @for (row of renderedData; track rowIndex; let rowIndex = $index) {
-      <i-grid-row (click)="onRowClicked(row)" [class.i-grid-selection-row]="!!selectionMode">
+      <i-grid-row [class.i-grid-selection-row]="!!selectionMode" (click)="onRowClicked(row)">
         <!-- Tree control column -->
         @if (treeEnabled) {
         <i-grid-cell
           class="i-grid-tree-cell i-grid-tree-cell--body"
           [fixedWidth]="treeColumnWidth"
-          (click)="$event.stopPropagation()"
-          [style.position]="'sticky'"
           [style.left.px]="getStickyLeftForTreeColumn()"
+          [style.position]="'sticky'"
+          (click)="$event.stopPropagation()"
         >
           <span
             class="i-grid-tree-cell__content"
@@ -1099,18 +1150,17 @@ export class IGridHeaderCell {
               variant="outline"
               [icon]="isExpanded(row) ? 'down' : 'next'"
               (onClick)="onTreeToggle(row, $event)"
-            >
-            </i-button>
+            />
             } @else {
             <span class="i-grid-tree-spacer"></span>
             } @if (selectionMode === 'multiple') {
             <input
-              type="checkbox"
               class="i-grid-tree-checkbox"
+              type="checkbox"
               [checked]="getRowChecked(row)"
               [indeterminate]="getRowIndeterminate(row)"
-              (click)="$event.stopPropagation()"
               (change)="onRowSelectionToggle(row)"
+              (click)="$event.stopPropagation()"
             />
             }
           </span>
@@ -1122,9 +1172,9 @@ export class IGridHeaderCell {
         <i-grid-cell
           class="i-grid-expand-cell i-grid-expand-cell--body"
           [fixedWidth]="expandColumnWidth"
-          (click)="$event.stopPropagation()"
-          [style.position]="'sticky'"
           [style.left.px]="getStickyLeftForExpandColumn()"
+          [style.position]="'sticky'"
+          (click)="$event.stopPropagation()"
         >
           <span class="i-grid-expand-cell__content">
             <i-button
@@ -1133,8 +1183,7 @@ export class IGridHeaderCell {
               variant="outline"
               [icon]="isRowExpanded(row) ? 'down' : 'next'"
               (onClick)="onExpandToggle(row, $event)"
-            >
-            </i-button>
+            />
           </span>
         </i-grid-cell>
         }
@@ -1144,9 +1193,9 @@ export class IGridHeaderCell {
         <i-grid-cell
           class="i-grid-selection-cell i-grid-selection-cell--body"
           [fixedWidth]="selectionColumnWidth"
-          (click)="$event.stopPropagation()"
-          [style.position]="'sticky'"
           [style.left.px]="getStickyLeftForSelectionColumn()"
+          [style.position]="'sticky'"
+          (click)="$event.stopPropagation()"
         >
           @if (selectionMode === 'multiple') {
           <input
@@ -1158,8 +1207,8 @@ export class IGridHeaderCell {
           } @else if (selectionMode === 'single') {
           <input
             type="radio"
-            [name]="singleSelectionName"
             [checked]="isRowSelected(row)"
+            [name]="singleSelectionName"
             (change)="onRowSelectionToggle(row)"
           />
           }
@@ -1170,12 +1219,12 @@ export class IGridHeaderCell {
         @if (showNumberColumnEffective) {
         <i-grid-cell
           class="i-grid-number-cell i-grid-number-cell--body"
-          [column]="numberColumn"
-          (click)="$event.stopPropagation()"
           [class.i-grid-cell--frozen]="hasFrozenColumns"
-          [style.position]="hasFrozenColumns ? 'sticky' : null"
+          [column]="numberColumn"
           [style.left.px]="hasFrozenColumns ? getStickyLeftForNumberColumn() : null"
+          [style.position]="hasFrozenColumns ? 'sticky' : null"
           [style.zIndex]="hasFrozenColumns ? 2 : null"
+          (click)="$event.stopPropagation()"
         >
           <span class="i-grid-cell__content">
             {{ getRowNumber(rowIndex) }}
@@ -1193,10 +1242,9 @@ export class IGridHeaderCell {
               index: rowIndex,
               column: col,
             }"
-        >
-        </ng-container>
+        />
         } @else {
-        <i-grid-cell [column]="col" [class.i-grid-cell--auto]="col.isAuto">
+        <i-grid-cell [class.i-grid-cell--auto]="col.isAuto" [column]="col">
           <span
             class="i-grid-cell__content"
             [innerHTML]="
@@ -1213,8 +1261,7 @@ export class IGridHeaderCell {
       <ng-container
         [ngTemplateOutlet]="expandableRowDef!.template"
         [ngTemplateOutletContext]="{ $implicit: row, row: row, index: rowIndex }"
-      >
-      </ng-container>
+      />
       } }
     </div>
 
@@ -1226,8 +1273,7 @@ export class IGridHeaderCell {
         [pageSize]="pageSize"
         [pageSizeOptions]="pageSizeOptions"
         (pageChange)="onPageChange($event)"
-      >
-      </i-paginator>
+      />
     </div>
     }`,
   exportAs: 'iGrid',
@@ -1250,22 +1296,25 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   /** Scrollable body */
   @Input() bodyHeight?: number;
+
   @Input() bodyMaxHeight?: number;
 
   /** Tree mode */
   @Input() tree: string | boolean | null = null;
 
   /** Indent per tree level (px) */
-  @Input() treeIndent: number = 16;
+  @Input() treeIndent = 16;
 
   /** Initial auto-expand level for tree mode (1-based) */
   @Input() treeInitialExpandLevel: number | null = null;
 
   /** Show auto number column (disabled by default in tree) */
-  @Input({ transform: booleanAttribute }) showNumberColumn: boolean = true;
+  @Input({ transform: booleanAttribute }) showNumberColumn = true;
 
   get showNumberColumnEffective(): boolean {
-    if (this.treeEnabled) return false;
+    if (this.treeEnabled) {
+      return false;
+    }
     return this.showNumberColumn;
   }
 
@@ -1277,6 +1326,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   /** Expand events */
   @Output() rowExpandChange = new EventEmitter<{ row: T; expanded: boolean }>();
+
   @Output() expandedRowsChange = new EventEmitter<T[]>();
 
   /** Data columns projected as <i-grid-column> */
@@ -1296,14 +1346,19 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   columns: IGridColumnLike<T>[] = [];
+
   renderedData: T[] = [];
-  currentFilterText: string = '';
+
+  currentFilterText = '';
+
   sortStates: ISortState[] = [];
 
   private _columnWidths = new Map<IGridColumnLike<any>, number>();
+
   private _dataSub?: Subscription;
 
   private _selection = new Set<T>();
+
   private _expanded = new Set<T>();
 
   private readonly _id = Math.random().toString(36).slice(2);
@@ -1311,8 +1366,11 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   private readonly _defaultColumnWidth = 200;
 
   readonly selectionColumnWidth = 20;
+
   readonly numberColumnWidth = 60;
+
   readonly treeColumnWidth = 32;
+
   readonly expandColumnWidth = 32;
 
   private _numberColumnInternal?: IGridColumnLike<T>;
@@ -1322,6 +1380,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     T,
     { level: number; parent: T | null; hasChildren: boolean; expanded: boolean }
   >();
+
   private _treeRoots: T[] = [];
 
   get numberColumn(): IGridColumnLike<T> {
@@ -1378,7 +1437,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   expandAll(): void {
-    if (!this.hasExpandableRow) return;
+    if (!this.hasExpandableRow) {
+      return;
+    }
 
     const expandSingle = !!this.expandableRowDef?.iRowDefExpandSingle;
 
@@ -1397,16 +1458,22 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     }
 
     const before = new Set(this._expanded);
-    for (const row of this.renderedData) this._expanded.add(row);
+    for (const row of this.renderedData) {
+      this._expanded.add(row);
+    }
 
     for (const row of this.renderedData) {
-      if (!before.has(row)) this.rowExpandChange.emit({ row, expanded: true });
+      if (!before.has(row)) {
+        this.rowExpandChange.emit({ row, expanded: true });
+      }
     }
     this.expandedRowsChange.emit(this.getExpandedRows());
   }
 
   collapseAll(): void {
-    if (!this.hasExpandableRow) return;
+    if (!this.hasExpandableRow) {
+      return;
+    }
 
     const prev = Array.from(this._expanded);
     this._expanded.clear();
@@ -1416,15 +1483,22 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   get allVisibleExpanded(): boolean {
-    if (!this.hasExpandableRow || !this.renderedData.length) return false;
+    if (!this.hasExpandableRow || !this.renderedData.length) {
+      return false;
+    }
     return this.renderedData.every((row) => this._expanded.has(row));
   }
 
   onToggleAllExpanded(): void {
-    if (!this.hasExpandableRow) return;
+    if (!this.hasExpandableRow) {
+      return;
+    }
     const shouldExpand = !this.allVisibleExpanded;
-    if (shouldExpand) this.expandAll();
-    else this.collapseAll();
+    if (shouldExpand) {
+      this.expandAll();
+    } else {
+      this.collapseAll();
+    }
   }
 
   onExpandToggle(row: T, event?: MouseEvent): void {
@@ -1433,19 +1507,25 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   private _setExpanded(row: T, expanded: boolean): void {
-    if (!this.hasExpandableRow) return;
+    if (!this.hasExpandableRow) {
+      return;
+    }
 
     // Validate row exists in current data
     const all = this._getAllDataRows();
     if (all.length) {
       const valid = new Set(all);
-      if (!valid.has(row)) return;
+      if (!valid.has(row)) {
+        return;
+      }
     }
 
     const expandSingle = !!this.expandableRowDef?.iRowDefExpandSingle;
 
     const wasExpanded = this._expanded.has(row);
-    if (expanded === wasExpanded) return;
+    if (expanded === wasExpanded) {
+      return;
+    }
 
     if (expanded) {
       if (expandSingle) {
@@ -1471,12 +1551,18 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   get treeChildrenKey(): string {
-    if (!this.treeEnabled) return 'children';
+    if (!this.treeEnabled) {
+      return 'children';
+    }
 
-    if (this.tree === true) return 'children';
+    if (this.tree === true) {
+      return 'children';
+    }
     if (typeof this.tree === 'string') {
       const t = this.tree.trim();
-      if (!t || t === 'true') return 'children';
+      if (!t || t === 'true') {
+        return 'children';
+      }
       return t;
     }
 
@@ -1484,22 +1570,34 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   private _getInitialExpandLevelInternal(): number | null {
-    if (!this.treeEnabled) return null;
-    if (this.treeInitialExpandLevel == null) return null;
+    if (!this.treeEnabled) {
+      return null;
+    }
+    if (this.treeInitialExpandLevel === null) {
+      return null;
+    }
     const n = Number(this.treeInitialExpandLevel);
-    if (!Number.isFinite(n) || n <= 0) return null;
+    if (!Number.isFinite(n) || n <= 0) {
+      return null;
+    }
     return n - 1;
   }
 
   private _shouldRowStartExpanded(level: number, hasChildren: boolean): boolean {
-    if (!hasChildren) return false;
+    if (!hasChildren) {
+      return false;
+    }
     const max = this._getInitialExpandLevelInternal();
-    if (max == null) return false;
+    if (max === null) {
+      return false;
+    }
     return level <= max;
   }
 
   private _getTreeChildren(row: T): T[] {
-    if (!this.treeEnabled || !row) return [];
+    if (!this.treeEnabled || !row) {
+      return [];
+    }
     const anyRow: any = row;
     const value = anyRow?.[this.treeChildrenKey];
     return Array.isArray(value) ? value : [];
@@ -1507,7 +1605,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   private _getTreeDescendants(row: T): T[] {
     const result: T[] = [];
-    const visit = (r: T) => {
+    const visit = (r: T): void => {
       const children = this._getTreeChildren(r);
       for (const child of children) {
         result.push(child);
@@ -1522,14 +1620,18 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     this._treeMeta.clear();
     this._treeRoots = [];
 
-    if (!Array.isArray(data)) return;
+    if (!Array.isArray(data)) {
+      return;
+    }
 
-    const visit = (row: T, level: number, parent: T | null) => {
+    const visit = (row: T, level: number, parent: T | null): void => {
       const children = this._getTreeChildren(row);
       const hasChildren = children.length > 0;
       const expanded = this._shouldRowStartExpanded(level, hasChildren);
 
-      if (parent === null) this._treeRoots.push(row);
+      if (parent === null) {
+        this._treeRoots.push(row);
+      }
 
       this._treeMeta.set(row, { level, parent, hasChildren, expanded });
 
@@ -1540,20 +1642,28 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   private _rebuildTreeRendered(): void {
-    if (!this.treeEnabled) return;
+    if (!this.treeEnabled) {
+      return;
+    }
 
     const result: T[] = [];
 
-    const appendVisible = (row: T) => {
+    const appendVisible = (row: T): void => {
       result.push(row);
       const meta = this._treeMeta.get(row);
-      if (!meta?.expanded) return;
+      if (!meta?.expanded) {
+        return;
+      }
 
       const children = this._getTreeChildren(row);
-      for (const child of children) appendVisible(child);
+      for (const child of children) {
+        appendVisible(child);
+      }
     };
 
-    for (const root of this._treeRoots) appendVisible(root);
+    for (const root of this._treeRoots) {
+      appendVisible(root);
+    }
 
     this.renderedData = result;
     this._reconcileSelectionWithData();
@@ -1562,23 +1672,31 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   getRowLevel(row: T): number {
-    if (!this.treeEnabled) return 0;
+    if (!this.treeEnabled) {
+      return 0;
+    }
     return this._treeMeta.get(row)?.level ?? 1;
   }
 
   hasChildren(row: T): boolean {
-    if (!this.treeEnabled) return false;
+    if (!this.treeEnabled) {
+      return false;
+    }
     return this._treeMeta.get(row)?.hasChildren ?? false;
   }
 
   isExpanded(row: T): boolean {
-    if (!this.treeEnabled) return false;
+    if (!this.treeEnabled) {
+      return false;
+    }
     return this._treeMeta.get(row)?.expanded ?? false;
   }
 
   /** TRUE when every node that has children is expanded */
   get allTreeExpanded(): boolean {
-    if (!this.treeEnabled || !this._treeRoots.length) return false;
+    if (!this.treeEnabled || !this._treeRoots.length) {
+      return false;
+    }
 
     for (const meta of this._treeMeta.values()) {
       if (meta.hasChildren && !meta.expanded) {
@@ -1591,7 +1709,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   /** Toggle expand/collapse for all tree nodes */
   onToggleAllTree(): void {
-    if (!this.treeEnabled) return;
+    if (!this.treeEnabled) {
+      return;
+    }
 
     const shouldExpand = !this.allTreeExpanded;
 
@@ -1605,9 +1725,13 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   toggleRow(row: T): void {
-    if (!this.treeEnabled) return;
+    if (!this.treeEnabled) {
+      return;
+    }
     const meta = this._treeMeta.get(row);
-    if (!meta || !meta.hasChildren) return;
+    if (!meta || !meta.hasChildren) {
+      return;
+    }
     meta.expanded = !meta.expanded;
     this._rebuildTreeRendered();
   }
@@ -1624,10 +1748,14 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   getRowChecked(row: T): boolean {
-    if (!this.treeEnabled) return this.isRowSelected(row);
+    if (!this.treeEnabled) {
+      return this.isRowSelected(row);
+    }
 
     const descendants = this._getTreeDescendants(row);
-    if (!descendants.length) return this.isRowSelected(row);
+    if (!descendants.length) {
+      return this.isRowSelected(row);
+    }
 
     const total = descendants.length;
     const selectedChildren = descendants.filter((child) => this._selection.has(child)).length;
@@ -1635,17 +1763,25 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     const allChildrenSelected = total > 0 && selectedChildren === total;
     const anyChildrenSelected = selectedChildren > 0;
 
-    if (allChildrenSelected && this._selection.has(row)) return true;
-    if (anyChildrenSelected && !allChildrenSelected) return false;
+    if (allChildrenSelected && this._selection.has(row)) {
+      return true;
+    }
+    if (anyChildrenSelected && !allChildrenSelected) {
+      return false;
+    }
 
     return this._selection.has(row);
   }
 
   getRowIndeterminate(row: T): boolean {
-    if (!this.treeEnabled) return false;
+    if (!this.treeEnabled) {
+      return false;
+    }
 
     const descendants = this._getTreeDescendants(row);
-    if (!descendants.length) return false;
+    if (!descendants.length) {
+      return false;
+    }
 
     const total = descendants.length;
     const selectedChildren = descendants.filter((child) => this._selection.has(child)).length;
@@ -1661,12 +1797,16 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   get allVisibleSelected(): boolean {
-    if (!this.selectionMode || !this.renderedData.length) return false;
+    if (!this.selectionMode || !this.renderedData.length) {
+      return false;
+    }
     return this.renderedData.every((row) => this.getRowChecked(row));
   }
 
   get someVisibleSelected(): boolean {
-    if (!this.selectionMode || !this.renderedData.length) return false;
+    if (!this.selectionMode || !this.renderedData.length) {
+      return false;
+    }
 
     const anySelected = this.renderedData.some(
       (row) => this.getRowChecked(row) || this.getRowIndeterminate(row)
@@ -1675,7 +1815,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   private _emitSelectionChange(lastChanged: T | null): void {
-    if (!this.selectionMode) return;
+    if (!this.selectionMode) {
+      return;
+    }
     this.selectionChange.emit({ selected: this.selectedRows, lastChanged });
   }
 
@@ -1686,25 +1828,36 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   private _toggleMultiple(row: T): void {
-    if (this._selection.has(row)) this._selection.delete(row);
-    else this._selection.add(row);
+    if (this._selection.has(row)) {
+      this._selection.delete(row);
+    } else {
+      this._selection.add(row);
+    }
     this._emitSelectionChange(row);
   }
 
   private _setBranchSelection(row: T, selected: boolean): void {
     if (!this.treeEnabled) {
-      if (selected) this._selection.add(row);
-      else this._selection.delete(row);
+      if (selected) {
+        this._selection.add(row);
+      } else {
+        this._selection.delete(row);
+      }
       return;
     }
 
     const allRows = [row, ...this._getTreeDescendants(row)];
-    if (selected) allRows.forEach((r) => this._selection.add(r));
-    else allRows.forEach((r) => this._selection.delete(r));
+    if (selected) {
+      allRows.forEach((r) => this._selection.add(r));
+    } else {
+      allRows.forEach((r) => this._selection.delete(r));
+    }
   }
 
   private _syncSelectionUpwardsFrom(row: T): void {
-    if (!this.treeEnabled) return;
+    if (!this.treeEnabled) {
+      return;
+    }
 
     let current = this._treeMeta.get(row)?.parent ?? null;
 
@@ -1718,16 +1871,22 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       const total = descendants.length;
       const selectedChildren = descendants.filter((child) => this._selection.has(child)).length;
 
-      if (selectedChildren === 0) this._selection.delete(current);
-      else if (selectedChildren === total) this._selection.add(current);
-      else this._selection.delete(current);
+      if (selectedChildren === 0) {
+        this._selection.delete(current);
+      } else if (selectedChildren === total) {
+        this._selection.add(current);
+      } else {
+        this._selection.delete(current);
+      }
 
       current = this._treeMeta.get(current)?.parent ?? null;
     }
   }
 
   onRowSelectionToggle(row: T): void {
-    if (!this.selectionMode) return;
+    if (!this.selectionMode) {
+      return;
+    }
 
     if (this.selectionMode === 'single') {
       this._selectSingle(row);
@@ -1741,8 +1900,11 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
         const currentlyChecked = this.getRowChecked(row);
         this._setBranchSelection(row, !currentlyChecked);
       } else {
-        if (this._selection.has(row)) this._selection.delete(row);
-        else this._selection.add(row);
+        if (this._selection.has(row)) {
+          this._selection.delete(row);
+        } else {
+          this._selection.add(row);
+        }
       }
 
       this._syncSelectionUpwardsFrom(row);
@@ -1753,7 +1915,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   onToggleAllVisible(): void {
-    if (this.selectionMode !== 'multiple') return;
+    if (this.selectionMode !== 'multiple') {
+      return;
+    }
 
     const shouldSelect = !this.allVisibleSelected;
 
@@ -1765,8 +1929,11 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
         this._syncSelectionUpwardsFrom(row);
       });
     } else {
-      if (shouldSelect) this.renderedData.forEach((row) => this._selection.add(row));
-      else this.renderedData.forEach((row) => this._selection.delete(row));
+      if (shouldSelect) {
+        this.renderedData.forEach((row) => this._selection.add(row));
+      } else {
+        this.renderedData.forEach((row) => this._selection.delete(row));
+      }
     }
 
     this._emitSelectionChange(null);
@@ -1778,7 +1945,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   private _reconcileSelectionWithData(): void {
-    if (!this.selectionMode) return;
+    if (!this.selectionMode) {
+      return;
+    }
 
     const all = this._getAllDataRows();
     if (!all.length) {
@@ -1792,7 +1961,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     const validSet = new Set(all);
     const newSelection = new Set<T>();
     this._selection.forEach((row) => {
-      if (validSet.has(row)) newSelection.add(row);
+      if (validSet.has(row)) {
+        newSelection.add(row);
+      }
     });
 
     if (newSelection.size !== this._selection.size) {
@@ -1802,7 +1973,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   private _reconcileExpandedWithData(): void {
-    if (!this.hasExpandableRow) return;
+    if (!this.hasExpandableRow) {
+      return;
+    }
 
     const all = this._getAllDataRows();
     if (!all.length) {
@@ -1820,11 +1993,15 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
     const next = new Set<T>();
     this._expanded.forEach((row) => {
-      if (validSet.has(row)) next.add(row);
+      if (validSet.has(row)) {
+        next.add(row);
+      }
     });
 
     prev.forEach((row) => {
-      if (!next.has(row)) this.rowExpandChange.emit({ row, expanded: false });
+      if (!next.has(row)) {
+        this.rowExpandChange.emit({ row, expanded: false });
+      }
     });
 
     if (next.size !== this._expanded.size) {
@@ -1836,7 +2013,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   private _getAllDataRows(): T[] {
     if (this.treeEnabled && this._treeRoots.length) {
       const result: T[] = [];
-      const visit = (row: T) => {
+      const visit = (row: T): void => {
         result.push(row);
         this._getTreeChildren(row).forEach(visit);
       };
@@ -1844,8 +2021,12 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       return result;
     }
 
-    if (this.dataSource instanceof IGridDataSource) return this.dataSource.data;
-    if (Array.isArray(this.dataSource)) return this.dataSource;
+    if (this.dataSource instanceof IGridDataSource) {
+      return this.dataSource.data;
+    }
+    if (Array.isArray(this.dataSource)) {
+      return this.dataSource;
+    }
     return [];
   }
 
@@ -1857,10 +2038,14 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   sort(column: IGridColumnLike<any>): void {
-    if (!(this.dataSource instanceof IGridDataSource)) return;
+    if (!(this.dataSource instanceof IGridDataSource)) {
+      return;
+    }
 
     const columnId = column.fieldName;
-    if (!columnId) return;
+    if (!columnId) {
+      return;
+    }
 
     const index = this.sortStates.findIndex((s) => s.active === columnId);
 
@@ -1868,16 +2053,22 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       this.sortStates.push({ active: columnId, direction: 'asc' });
     } else {
       const current = this.sortStates[index];
-      if (current.direction === 'asc') current.direction = 'desc';
-      else if (current.direction === 'desc') this.sortStates.splice(index, 1);
-      else current.direction = 'asc';
+      if (current.direction === 'asc') {
+        current.direction = 'desc';
+      } else if (current.direction === 'desc') {
+        this.sortStates.splice(index, 1);
+      } else {
+        current.direction = 'asc';
+      }
     }
 
     this._applySortToDataSource();
   }
 
   private _applySortToDataSource(): void {
-    if (!(this.dataSource instanceof IGridDataSource)) return;
+    if (!(this.dataSource instanceof IGridDataSource)) {
+      return;
+    }
 
     if (!this.sortStates.length) {
       this.dataSource.sort = null;
@@ -1894,22 +2085,32 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   getColumnWidth(column: IGridColumnLike<any>): number | null {
     const override = this._columnWidths.get(column);
-    if (typeof override === 'number') return override;
+    if (typeof override === 'number') {
+      return override;
+    }
 
-    if (typeof column.width === 'number') return column.width;
-    if (column.width === 'fill') return null;
+    if (typeof column.width === 'number') {
+      return column.width;
+    }
+    if (column.width === 'fill') {
+      return null;
+    }
 
     return this._defaultColumnWidth;
   }
 
   getColumnFlex(column: IGridColumnLike<any>): string {
     const px = this.getColumnWidth(column);
-    if (px != null) return `0 0 ${px}px`;
+    if (px !== null) {
+      return `0 0 ${px}px`;
+    }
     return '1 1 0';
   }
 
   setColumnWidth(column: IGridColumnLike<any>, width: number): void {
-    if (!column) return;
+    if (!column) {
+      return;
+    }
     this._columnWidths.set(column, width);
   }
 
@@ -1917,7 +2118,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   private _getFrozenEndIndex(): number {
     for (let i = this.columns.length - 1; i >= 0; i--) {
-      if (this.columns[i].freeze) return i;
+      if (this.columns[i].freeze) {
+        return i;
+      }
     }
     return -1;
   }
@@ -1928,32 +2131,46 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   isColumnFrozen(column: IGridColumnLike<any>): boolean {
     const endIndex = this._getFrozenEndIndex();
-    if (endIndex < 0) return false;
+    if (endIndex < 0) {
+      return false;
+    }
 
     const idx = this.columns.indexOf(column);
-    if (idx === -1) return false;
+    if (idx === -1) {
+      return false;
+    }
 
     return idx <= endIndex;
   }
 
   getColumnStickyLeft(column: IGridColumnLike<any>): number | null {
-    if (!this.isColumnFrozen(column)) return null;
+    if (!this.isColumnFrozen(column)) {
+      return null;
+    }
 
     const endIndex = this._getFrozenEndIndex();
-    if (endIndex < 0) return null;
+    if (endIndex < 0) {
+      return null;
+    }
 
     const idx = this.columns.indexOf(column);
-    if (idx === -1 || idx > endIndex) return null;
+    if (idx === -1 || idx > endIndex) {
+      return null;
+    }
 
     let left = 0;
     left += this._getSpecialColumnsLeftOffset();
 
     for (let i = 0; i < idx; i++) {
       const col = this.columns[i];
-      if (!this.isColumnFrozen(col)) continue;
+      if (!this.isColumnFrozen(col)) {
+        continue;
+      }
 
       const w = this.getColumnWidth(col);
-      if (w == null) return null;
+      if (w === null) {
+        return null;
+      }
       left += w;
     }
 
@@ -1976,13 +2193,21 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     const hasSelectionColumn =
       !!this.selectionMode && !(this.treeEnabled && this.selectionMode === 'multiple');
 
-    if (includeSelection && hasSelectionColumn) left += this.selectionColumnWidth;
-    if (includeTree && this.treeEnabled) left += this.treeColumnWidth;
-    if (includeExpand && this.hasExpandableRow) left += this.expandColumnWidth;
+    if (includeSelection && hasSelectionColumn) {
+      left += this.selectionColumnWidth;
+    }
+    if (includeTree && this.treeEnabled) {
+      left += this.treeColumnWidth;
+    }
+    if (includeExpand && this.hasExpandableRow) {
+      left += this.expandColumnWidth;
+    }
 
     if (includeNumber && this.showNumberColumnEffective) {
       const width = this.getColumnWidth(this.numberColumn);
-      if (width != null) left += width;
+      if (width !== null) {
+        left += width;
+      }
     }
 
     return left;
@@ -2031,32 +2256,44 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   /* ------- paginator proxies ------- */
 
   get hasPagination(): boolean {
-    if (this.treeEnabled) return false;
+    if (this.treeEnabled) {
+      return false;
+    }
     return this.dataSource instanceof IGridDataSource && this.dataSource.paginatorEnabled;
   }
 
   get totalLength(): number {
-    if (this.dataSource instanceof IGridDataSource) return this.dataSource.length;
+    if (this.dataSource instanceof IGridDataSource) {
+      return this.dataSource.length;
+    }
     return this.renderedData.length;
   }
 
   get pageIndex(): number {
-    if (this.dataSource instanceof IGridDataSource) return this.dataSource.pageIndex;
+    if (this.dataSource instanceof IGridDataSource) {
+      return this.dataSource.pageIndex;
+    }
     return 0;
   }
 
   get pageSize(): number {
-    if (this.dataSource instanceof IGridDataSource) return this.dataSource.pageSize;
+    if (this.dataSource instanceof IGridDataSource) {
+      return this.dataSource.pageSize;
+    }
     return 0;
   }
 
   get pageSizeOptions(): number[] {
-    if (this.dataSource instanceof IGridDataSource) return this.dataSource.pageSizeOptions;
+    if (this.dataSource instanceof IGridDataSource) {
+      return this.dataSource.pageSizeOptions;
+    }
     return [];
   }
 
   onPageChange(event: { pageIndex: number; pageSize: number }): void {
-    if (!(this.dataSource instanceof IGridDataSource)) return;
+    if (!(this.dataSource instanceof IGridDataSource)) {
+      return;
+    }
     this.dataSource.paginator = { pageIndex: event.pageIndex, pageSize: event.pageSize };
   }
 
@@ -2099,7 +2336,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this._dataSub?.unsubscribe();
-    if (this.dataSource instanceof IGridDataSource) this.dataSource.disconnect();
+    if (this.dataSource instanceof IGridDataSource) {
+      this.dataSource.disconnect();
+    }
   }
 
   private _applyExistingDataSourceSort(): void {
@@ -2118,7 +2357,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     this.sortStates = sort.map((s) => ({ active: s.active, direction: s.direction }));
   }
 
-  private _rebuildColumns(fromDataChange: boolean = false): void {
+  private _rebuildColumns(fromDataChange = false): void {
     const projectedDataCols = this.columnDefs?.toArray?.() ?? [];
     const customCols = this.customColumnDefs?.toArray?.() ?? [];
 
@@ -2139,7 +2378,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     this.columns.forEach((col) => {
       if (!this._columnWidths.has(col)) {
         const px = this.getColumnWidth(col);
-        if (px != null) this._columnWidths.set(col, px);
+        if (px !== null) {
+          this._columnWidths.set(col, px);
+        }
       }
     });
 
@@ -2147,17 +2388,23 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       const numCol = this.numberColumn;
       if (!this._columnWidths.has(numCol)) {
         const px = this.getColumnWidth(numCol);
-        if (px != null) this._columnWidths.set(numCol, px);
+        if (px !== null) {
+          this._columnWidths.set(numCol, px);
+        }
       }
     }
   }
 
   private _buildAutoColumnsFromData(): IGridColumnLike<T>[] {
     const rows = this._getAllDataRows();
-    if (!rows.length) return [];
+    if (!rows.length) {
+      return [];
+    }
 
     const first = rows[0] as any;
-    if (first == null || typeof first !== 'object') return [];
+    if (first === null || typeof first !== 'object') {
+      return [];
+    }
 
     const keys = Object.keys(first);
 
@@ -2259,10 +2506,14 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   getFrozenColumnZ(column: IGridColumnLike<any>): number {
     const endIndex = this._getFrozenEndIndex();
-    if (endIndex < 0) return 2;
+    if (endIndex < 0) {
+      return 2;
+    }
 
     const idx = this.columns.indexOf(column);
-    if (idx === -1) return 2;
+    if (idx === -1) {
+      return 2;
+    }
 
     const base = 20;
     return base + (endIndex - idx);

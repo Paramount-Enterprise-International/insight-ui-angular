@@ -18,11 +18,10 @@ import {
   EventEmitter,
   forwardRef,
   HostListener,
+  inject,
   Input,
   OnInit,
-  Optional,
   Output,
-  Self,
   ViewChild,
 } from '@angular/core';
 import {
@@ -43,12 +42,12 @@ import {
 import { ISelect, ISelectChange } from '../select/select';
 
 /** Internal structure for datepicker days */
-interface IDatepickerDay {
+type IDatepickerDay = {
   date: Date;
   inCurrentMonth: boolean;
   isToday: boolean;
   isSelected: boolean;
-}
+};
 
 type IMonthOption = { value: number; label: string };
 
@@ -62,6 +61,10 @@ export type IDatepickerPanelPosition =
   | 'top right'
   | 'bottom left'
   | 'bottom right';
+
+const noop = (): void => {
+  /**/
+};
 
 @Component({
   selector: 'i-datepicker',
@@ -78,9 +81,13 @@ export type IDatepickerPanelPosition =
   ],
 })
 export class IDatepicker implements ControlValueAccessor, OnInit {
+  // Prefer inject() over constructor injection
+  private readonly hostEl = inject(ElementRef<HTMLElement>);
+
   // ------------- Inputs -------------
 
-  @Input() placeholder: string = '';
+  @Input() placeholder = '';
+
   @Input() disabled = false;
 
   /** visual invalid state (from i-fc-datepicker or manual) */
@@ -92,33 +99,22 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
    */
   @Input() format = 'dd/MM/yyyy';
 
-  /**
-   * Dropdown / popup position relative to the input.
-   *
-   * Single:
-   *  - 'bottom' (default)
-   *  - 'top'
-   *  - 'left'
-   *  - 'right'
-   *
-   * Compound:
-   *  - 'top left'
-   *  - 'top right'
-   *  - 'bottom left'
-   *  - 'bottom right'
-   */
   @Input() panelPosition: IDatepickerPanelPosition = 'bottom left';
 
   /**
    * Allow [value]="..." when not using reactive forms.
    * Accepts Date or string, normalizes via writeValue.
    */
-  @Input('value')
-  set valueInput(v: Date | string | null) {
+  @Input()
+  set value(v: Date | string | null) {
     this.writeValue(v);
   }
 
-  @Output() onChanged = new EventEmitter<Date | null>();
+  get value(): Date | string | null {
+    return this._modelValue;
+  }
+
+  @Output() readonly onChanged = new EventEmitter<Date | null>();
 
   // ------------- CVA state -------------
 
@@ -127,12 +123,15 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
 
   /** Displayed text in the input */
   private _displayText = '';
+
   get displayText(): string {
     return this._displayText;
   }
 
-  private onChange: (value: Date | null) => void = () => {};
-  private onTouched: () => void = () => {};
+  // Use noop to avoid “unexpected empty method”
+  private onChange: (value: Date | null) => void = noop;
+
+  private onTouched: () => void = noop;
 
   // ------------- Datepicker state -------------
 
@@ -141,6 +140,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
 
   /** Calendar view year/month (0-11) */
   viewYear = 0;
+
   viewMonth = 0;
 
   /** Calendar weeks (6 rows x 7 cols) */
@@ -167,6 +167,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
 
   /** Year options for the year <i-select> */
   private _years: number[] = [];
+
   get years(): number[] {
     return this._years;
   }
@@ -183,22 +184,15 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     return `i-datepicker-panel--${normalized}`;
   }
 
-  constructor(private hostEl: ElementRef<HTMLElement>) {}
-
   // ------------- Helpers -------------
 
   /** Always read the REAL inner <input> value, ignore event.target type */
   private getInnerInput(): HTMLInputElement | null {
-    return this.hostEl.nativeElement.querySelector(
-      'i-input input'
-    ) as HTMLInputElement | null;
+    return this.hostEl.nativeElement.querySelector('i-input input') as HTMLInputElement | null;
   }
 
   private focusInput(): void {
-    const input = this.getInnerInput();
-    if (input) {
-      input.focus();
-    }
+    this.getInnerInput()?.focus();
   }
 
   // ------------- Lifecycle -------------
@@ -230,12 +224,12 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
 
     if (date) {
       this._displayText = this.formatDate(date);
+    } else {
+      this._displayText = '';
     }
 
     const baseDate =
-      this._modelValue ??
-      this.parseInputDate(this._displayText) ??
-      this.startOfDay(new Date());
+      this._modelValue ?? this.parseInputDate(this._displayText) ?? this.startOfDay(new Date());
 
     this.updateView(baseDate);
   }
@@ -260,7 +254,8 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
       icon: 'calendar',
       visible: true,
       variant: 'primary',
-      onClick: () => {
+      // add explicit return type to satisfy lint
+      onClick: (): void => {
         this.toggleOpen();
         this.focusInput(); // keep behavior same as i-select
       },
@@ -269,10 +264,6 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
 
   // ------------- Input & typing -------------
 
-  /**
-   * Called when user types in the inner input.
-   * Formatting / clamping is handled by IInputMaskDirective.
-   */
   private handleInput(raw: string): void {
     this._displayText = raw;
 
@@ -299,7 +290,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     if (!this.isOpen) {
       // when opening, sync calendar from current input text if any
       const input = this.getInnerInput();
-      if (input && input.value) {
+      if (input?.value) {
         const parsed = this.parseInputDate(input.value);
         if (parsed) {
           this._modelValue = parsed;
@@ -308,6 +299,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
       }
       this.initViewFromModel();
     }
+
     this.isOpen = !this.isOpen;
   }
 
@@ -333,15 +325,11 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     this.buildCalendar();
   }
 
-  /** Month changed from <i-select> */
   onMonthChange(change: ISelectChange<any>): void {
     const row = change?.value;
     if (!row) return;
 
-    const month =
-      typeof row === 'object' && 'value' in row
-        ? (row as IMonthOption).value
-        : row;
+    const month = typeof row === 'object' && 'value' in row ? (row as IMonthOption).value : row;
 
     if (typeof month !== 'number') return;
     if (month < 0 || month > 11) return;
@@ -350,7 +338,6 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     this.buildCalendar();
   }
 
-  /** Year changed from <i-select> */
   onYearChange(change: ISelectChange<number>): void {
     const year = change.value;
     if (typeof year !== 'number') return;
@@ -377,15 +364,13 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
 
   // ------------- Date view helpers -------------
 
-  /** Initialize view year/month from model or today */
   private initViewFromModel(): void {
     let base: Date;
 
     if (this._modelValue instanceof Date) {
       base = this.startOfDay(this._modelValue);
     } else if (this._displayText) {
-      base =
-        this.parseInputDate(this._displayText) ?? this.startOfDay(new Date());
+      base = this.parseInputDate(this._displayText) ?? this.startOfDay(new Date());
     } else {
       base = this.startOfDay(new Date());
     }
@@ -409,9 +394,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
       const start = focusYear - 50;
       const end = focusYear + 10;
       const arr: number[] = [];
-      for (let y = start; y <= end; y++) {
-        arr.push(y);
-      }
+      for (let y = start; y <= end; y++) arr.push(y);
       this._years = arr;
     }
   }
@@ -426,11 +409,9 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     const startDate = new Date(year, month, 1 - startDay);
 
     const weeks: IDatepickerDay[][] = [];
-    let current = new Date(startDate);
+    const current = new Date(startDate);
 
-    const selected: Date | null = this._modelValue
-      ? this.startOfDay(this._modelValue)
-      : null;
+    const selected: Date | null = this._modelValue ? this.startOfDay(this._modelValue) : null;
     const today = this.startOfDay(new Date());
 
     for (let w = 0; w < 6; w++) {
@@ -466,9 +447,6 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     );
   }
 
-  /**
-   * Parse date string according to this.format (yyyy, MM, dd)
-   */
   private parseInputDate(value: string): Date | null {
     if (!value) return null;
 
@@ -488,32 +466,21 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
       if (!p) return;
       const n = Number(p);
 
-      if (t === 'yyyy') {
-        year = n;
-      } else if (t === 'MM') {
-        month = n;
-      } else if (t === 'dd') {
-        day = n;
-      }
+      if (t === 'yyyy') year = n;
+      else if (t === 'MM') month = n;
+      else if (t === 'dd') day = n;
     });
 
     if (!year || !month || !day) return null;
 
     const date = new Date(year, month - 1, day);
-    if (
-      date.getFullYear() !== year ||
-      date.getMonth() !== month - 1 ||
-      date.getDate() !== day
-    ) {
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
       return null;
     }
 
     return this.startOfDay(date);
   }
 
-  /**
-   * Format Date → string according to this.format.
-   */
   private formatDate(date: Date): string {
     const fmt = this.format || 'yyyy-MM-dd';
     return formatDate(date, fmt, 'en');
@@ -521,10 +488,6 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
 
   // ------------- Host listeners -------------
 
-  /**
-   * Listen to any 'input' bubbling inside <i-datepicker>
-   * and always read from the inner <input>, not event.target.
-   */
   @HostListener('input')
   onHostInput(): void {
     const input = this.getInnerInput();
@@ -533,8 +496,8 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
   }
 
   /** Blur anywhere inside → mark touched */
-  @HostListener('focusout', ['$event'])
-  onHostFocusOut(_event: FocusEvent): void {
+  @HostListener('focusout')
+  onHostFocusOut(): void {
     this.handleBlur();
   }
 
@@ -554,44 +517,45 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
   standalone: true,
   imports: [IDatepicker],
   template: `@if (label) {
-      <label class="i-fc-datepicker__label" (click)="focusInnerDatepicker()">
-        {{ label }} :
-        @if (required) {
-          <span class="i-fc-datepicker__required">*</span>
-        }
-      </label>
+    <label class="i-fc-datepicker__label" (click)="focusInnerDatepicker()">
+      {{ label }} : @if (required) {
+      <span class="i-fc-datepicker__required">*</span>
+      }
+    </label>
     }
 
     <i-datepicker
-      [placeholder]="placeholder"
       [disabled]="isDisabled"
-      [invalid]="controlInvalid"
       [format]="format"
-      [value]="value"
+      [invalid]="controlInvalid"
       [panelPosition]="panelPosition"
-      (onChanged)="handleDateChange($event)">
-    </i-datepicker>
+      [placeholder]="placeholder"
+      [value]="value"
+      (onChanged)="handleDateChange($event)"
+    />
 
     @if (controlInvalid && resolvedErrorText) {
-      <div class="i-fc-datepicker__error">
-        {{ resolvedErrorText }}
-      </div>
+    <div class="i-fc-datepicker__error">
+      {{ resolvedErrorText }}
+    </div>
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IFCDatepicker implements ControlValueAccessor {
   @ViewChild(IDatepicker) innerDatepicker!: IDatepicker;
 
-  @Input() label: string = '';
-  @Input() placeholder: string = '';
-
-  /** Passed through to IDatepicker's [format] input */
-  @Input() format: string = 'dd/MM/yyyy';
-
-  /** Passed through to IDatepicker's [panelPosition] input */
+  @Input() label = '';
+  @Input() placeholder = '';
+  @Input() format = 'dd/MM/yyyy';
   @Input() panelPosition: IDatepickerPanelPosition = 'bottom left';
-
   @Input() errorMessage?: IFormControlErrorMessage;
+
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly hostEl = inject(ElementRef<HTMLElement>);
+
+  // optional injections (keep your existing behavior)
+  readonly ngControl = inject(NgControl, { self: true, optional: true });
+  private readonly formDir = inject(FormGroupDirective, { optional: true });
 
   @Input()
   get value(): Date | null {
@@ -600,28 +564,23 @@ export class IFCDatepicker implements ControlValueAccessor {
   set value(v: Date | null) {
     this._value = v ?? null;
   }
-
   private _value: Date | null = null;
+
   isDisabled = false;
 
-  private onChange: (v: any) => void = () => {};
-  private onTouched: () => void = () => {};
+  private onChange: (v: any) => void = noop;
+  private onTouched: () => void = noop;
 
-  constructor(
-    @Optional() @Self() public ngControl: NgControl | null,
-    @Optional() private formDir: FormGroupDirective | null,
-    private cdr: ChangeDetectorRef,
-    private hostEl: ElementRef<HTMLElement>
-  ) {
+  constructor() {
+    // preserve “if ngControl then set valueAccessor”
     if (this.ngControl) {
       this.ngControl.valueAccessor = this;
     }
 
-    if (this.formDir) {
-      this.formDir.ngSubmit.subscribe(() => {
-        this.cdr.markForCheck();
-      });
-    }
+    // preserve submit markForCheck behavior
+    this.formDir?.ngSubmit.subscribe(() => {
+      this.cdr.markForCheck();
+    });
   }
 
   // ---- CVA ----
@@ -686,10 +645,6 @@ export class IFCDatepicker implements ControlValueAccessor {
   }
 
   get resolvedErrorText(): string | null {
-    return resolveControlErrorMessage(
-      this.ngControl,
-      this.label,
-      this.errorMessage
-    );
+    return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
   }
 }

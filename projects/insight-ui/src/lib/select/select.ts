@@ -13,6 +13,7 @@ import {
   Directive,
   ElementRef,
   EventEmitter,
+  forwardRef,
   HostListener,
   Input,
   NgZone,
@@ -23,7 +24,6 @@ import {
   Self,
   TemplateRef,
   ViewChild,
-  forwardRef,
 } from '@angular/core';
 import {
   ControlValueAccessor,
@@ -43,10 +43,10 @@ import {
   resolveControlErrorMessage,
 } from '../interfaces';
 
-export interface ISelectOptionContext<T> {
+export type ISelectOptionContext<T> = {
   $implicit: T;
   row: T;
-}
+};
 
 @Directive({
   selector: '[iSelectOption]',
@@ -55,15 +55,15 @@ export interface ISelectOptionContext<T> {
 export class ISelectOptionDefDirective<T = any> {
   constructor(public template: TemplateRef<ISelectOptionContext<T>>) {}
 
-  @Input('iSelectOption') set iSelectOption(_value: any) {
+  @Input() set iSelectOption(_value: any) {
     // not used, needed for structural directive syntax
   }
 }
 
-export interface ISelectChange<T = any> {
+export type ISelectChange<T = any> = {
   value: T | null;
   label: string;
-}
+};
 
 /** Position of popup options relative to the input */
 export type ISelectPanelPosition =
@@ -82,13 +82,12 @@ export type ISelectPanelPosition =
   imports: [IIcon, NgTemplateOutlet, IHighlightSearchPipe, IInput, NgClass],
   // templateUrl: './select.html',
   template: `<i-input
-      [placeholder]="placeholder"
-      [value]="displayText"
-      [invalid]="invalid || hasNoResults"
-      [readonly]="disabled"
       [append]="appendAddon"
-    >
-    </i-input>
+      [invalid]="invalid || hasNoResults"
+      [placeholder]="placeholder"
+      [readonly]="disabled"
+      [value]="displayText"
+    />
 
     @if (hasOptionsList) {
     <div class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
@@ -97,15 +96,14 @@ export type ISelectPanelPosition =
         class="i-option"
         [class.active]="highlightIndex === idx"
         [class.selected]="isRowSelected(row)"
-        (mouseenter)="setActiveIndex(idx)"
         (mousedown)="selectRow(row)"
+        (mouseenter)="setActiveIndex(idx)"
       >
         @if (optionDef?.template) {
         <div class="i-option-label">
           <ng-container
             *ngTemplateOutlet="optionDef!.template; context: { $implicit: row, row: row }"
-          >
-          </ng-container>
+          />
         </div>
         } @else {
         <div
@@ -114,7 +112,7 @@ export type ISelectPanelPosition =
         ></div>
         } @if (isRowSelected(row)) {
         <span class="i-option-check">
-          <ic icon="check" />
+          <i-icon icon="check" />
         </span>
         }
       </div>
@@ -131,8 +129,10 @@ export type ISelectPanelPosition =
 })
 export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterContentInit, OnDestroy {
   // ---------- Inputs ----------
-  @Input() placeholder: string = '';
+  @Input() placeholder = '';
+
   @Input() disabled = false;
+
   @Input() invalid = false;
 
   /** debounce delay (ms) for filter when typing */
@@ -193,7 +193,8 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   }
 
   private _displayWith: ((row: T | null) => string) | string = (row) =>
-    row == null ? '' : String(row as any);
+    row === null ? '' : String(row as any);
+
   private _displayWithExplicit = false;
 
   @Input()
@@ -202,12 +203,13 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
       // treat as: "no explicit displayWith"
       this._displayWithExplicit = false;
       // keep or reset to default
-      this._displayWith = (row) => (row == null ? '' : String(row as any));
+      this._displayWith = (row): string => (row === null ? '' : String(row as any));
     } else {
       this._displayWith = value;
       this._displayWithExplicit = true;
     }
   }
+
   get displayWith(): ((row: T | null) => string) | string {
     return this._displayWith;
   }
@@ -217,14 +219,23 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     return haystack.includes(term);
   };
 
-  @Input('value')
-  set valueInput(val: T | null) {
-    this.writeValue(val);
+  // @Input('value')
+  // set valueInput(val: T | null) {
+  //   this.writeValue(val);
+  // }
+  @Input()
+  set value(v: T | null) {
+    this.writeValue(v);
+  }
+
+  get value(): T | null {
+    return this._modelValue;
   }
 
   // ---------- Outputs ----------
-  @Output() onChanged = new EventEmitter<ISelectChange<T>>();
-  @Output() onOptionSelected = new EventEmitter<ISelectChange<T>>();
+  @Output() readonly onChanged = new EventEmitter<ISelectChange<T>>();
+
+  @Output() readonly onOptionSelected = new EventEmitter<ISelectChange<T>>();
 
   // ---------- Template refs ----------
   @ContentChild(ISelectOptionDefDirective)
@@ -232,22 +243,27 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
 
   // ---------- Internal state ----------
   private _rawOptions: T[] = [];
+
   filteredOptions: T[] = [];
 
   private _modelValue: T | null = null;
+
   private pendingModelValue: T | null = null;
 
   private _displayText = '';
+
   get displayText(): string {
     return this._displayText;
   }
 
   private _filterText = '';
+
   get filterText(): string {
     return this._filterText;
   }
 
   isOpen = false;
+
   highlightIndex = -1;
 
   isLoading = false;
@@ -255,11 +271,17 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   private optionsSub?: Subscription;
 
   private filterInput$ = new Subject<string>();
+
   private filterInputSub?: Subscription;
 
   // ---------- CVA ----------
-  onChange = (_: any) => {};
-  onTouched = () => {};
+  onChange = (_: any): void => {
+    /*  */
+  };
+
+  onTouched = (): void => {
+    /*  */
+  };
 
   /** Panel position class for CSS modifier */
   get panelPositionClass(): string {
@@ -296,7 +318,7 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     this.filterInputSub?.unsubscribe();
   }
 
-  private cleanupOptionsSub() {
+  private cleanupOptionsSub(): void {
     if (this.optionsSub) {
       this.optionsSub.unsubscribe();
       this.optionsSub = undefined;
@@ -334,7 +356,7 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
       return;
     }
 
-    let valueToUse =
+    const valueToUse =
       this._modelValue !== null && this._modelValue !== undefined
         ? this._modelValue
         : this.pendingModelValue;
@@ -359,7 +381,7 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     this.applyFilter(true);
   }
 
-  private applyFilter(force: boolean = false): void {
+  private applyFilter(force = false): void {
     if (!this.isOpen && !force) {
       return;
     }
@@ -381,7 +403,7 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   }
 
   get hasSelection(): boolean {
-    return this._modelValue != null;
+    return this._modelValue !== null;
   }
 
   /** true when user filtered and no options match */
@@ -401,7 +423,9 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
    * 4) Else, fallback to default function String(row).
    */
   resolveDisplayText(row: T | null): string {
-    if (row == null) return '';
+    if (row === null) {
+      return '';
+    }
 
     const dw = this.displayWith;
 
@@ -416,23 +440,27 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
       let value: any = row;
 
       for (const segment of path) {
-        if (value == null) return '';
+        if (value === null) {
+          return '';
+        }
         value = value[segment];
       }
 
-      return value != null ? String(value) : '';
+      return value !== null ? String(value) : '';
     }
 
     // CASE 3A: AUTO-MAPPING when row itself is an object
     if (!this._displayWithExplicit && row !== null && typeof row === 'object') {
       const entries = Object.entries(row as any);
-      if (!entries.length) return '';
+      if (!entries.length) {
+        return '';
+      }
 
       // Prefer 2nd property as label, fallback to 1st
       const labelEntry = entries[1] ?? entries[0];
       const labelValue = labelEntry[1];
 
-      return labelValue != null ? String(labelValue) : '';
+      return labelValue !== null ? String(labelValue) : '';
     }
 
     // CASE 3B: AUTO-MAPPING when row is a primitive "value" (e.g. ID)
@@ -442,9 +470,13 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
       const primitive = row as any;
 
       const match = this._rawOptions.find((opt: any) => {
-        if (opt == null || typeof opt !== 'object') return false;
+        if (opt === null || typeof opt !== 'object') {
+          return false;
+        }
         const entries = Object.entries(opt);
-        if (!entries.length) return false;
+        if (!entries.length) {
+          return false;
+        }
 
         const valueEntry = entries[0]; // first property = "value"
         return valueEntry[1] === primitive;
@@ -452,13 +484,15 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
 
       if (match) {
         const entries = Object.entries(match as any);
-        if (!entries.length) return String(primitive);
+        if (!entries.length) {
+          return String(primitive);
+        }
 
         // label = 2nd property if exists, else 1st
         const labelEntry = entries[1] ?? entries[0];
         const labelValue = labelEntry[1];
 
-        return labelValue != null ? String(labelValue) : String(primitive);
+        return labelValue !== null ? String(labelValue) : String(primitive);
       }
     }
 
@@ -514,7 +548,9 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
       event.preventDefault();
       event.stopPropagation();
     }
-    if (this.disabled) return;
+    if (this.disabled) {
+      return;
+    }
 
     if (!this.isOpen) {
       // closed → open
@@ -535,8 +571,12 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   }
 
   private openDropdown(): void {
-    if (this.disabled) return;
-    if (this.isOpen) return;
+    if (this.disabled) {
+      return;
+    }
+    if (this.isOpen) {
+      return;
+    }
 
     this.isOpen = true;
 
@@ -549,7 +589,7 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     }
 
     const current = this._modelValue;
-    if (current != null) {
+    if (current !== null) {
       const idx = this.filteredOptions.indexOf(current as T);
       if (idx >= 0) {
         this.highlightIndex = idx;
@@ -615,10 +655,14 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   private scrollHighlightedIntoView(): void {
     // Defer until after Angular has rendered the options
     setTimeout(() => {
-      if (!this.isOpen) return;
+      if (!this.isOpen) {
+        return;
+      }
 
       const list = this.hostEl.nativeElement.querySelector('.i-options');
-      if (!list) return;
+      if (!list) {
+        return;
+      }
 
       const items = list.querySelectorAll('.i-option');
       const el = items[this.highlightIndex] as HTMLElement | undefined;
@@ -630,7 +674,9 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   }
 
   focus(): void {
-    if (this.disabled) return;
+    if (this.disabled) {
+      return;
+    }
     const input = this.hostEl.nativeElement.querySelector(
       'i-input input'
     ) as HTMLInputElement | null;
@@ -683,7 +729,9 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   @HostListener('input', ['$event'])
   onHostInput(event: Event): void {
     const target = event.target as HTMLInputElement | null;
-    if (!target) return;
+    if (!target) {
+      return;
+    }
 
     this.isLoading = true;
     this.filterInput$.next(target.value);
@@ -696,7 +744,9 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!this.isOpen) return;
+    if (!this.isOpen) {
+      return;
+    }
     const target = event.target as Node | null;
     if (target && !this.hostEl.nativeElement.contains(target)) {
       this.closeDropdown();
@@ -756,19 +806,19 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     }
 
     <i-select
-      [placeholder]="placeholder"
       [disabled]="isDisabled"
-      [invalid]="controlInvalid"
-      [options]="options"
-      [options$]="options$"
       [displayWith]="displayWith"
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
+      [invalid]="controlInvalid"
+      [options]="options"
+      [options$]="options$"
       [panelPosition]="panelPosition"
+      [placeholder]="placeholder"
       [value]="value"
       (onChanged)="handleSelectChange($event)"
     >
-      <ng-content></ng-content>
+      <ng-content />
     </i-select>
 
     @if (controlInvalid && resolvedErrorText) {
@@ -781,16 +831,19 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
 export class IFCSelect<T = any> implements ControlValueAccessor {
   @ViewChild(ISelect) innerSelect!: ISelect<T>;
 
-  @Input() label: string = '';
-  @Input() placeholder: string = '';
+  @Input() label = '';
+
+  @Input() placeholder = '';
 
   @Input() options: T[] | null = null;
+
   @Input() options$: Observable<T[]> | null = null;
 
   // 👇 no default, undefined means “not explicit”
   @Input() displayWith?: ((row: T | null) => string) | string;
 
   @Input() filterDelay = 200;
+
   @Input() filterPredicate: (row: T, term: string) => boolean = (row, term) => {
     const haystack = JSON.stringify(row).toLowerCase();
     return haystack.includes(term);
@@ -805,14 +858,17 @@ export class IFCSelect<T = any> implements ControlValueAccessor {
   get value(): T | null {
     return this._value;
   }
+
   set value(v: T | null) {
     this._value = v ?? null;
   }
 
   private _value: T | null = null;
+
   isDisabled = false;
 
   private onChange: (v: any) => void = () => {};
+
   private onTouched: () => void = () => {};
 
   constructor(
@@ -861,7 +917,9 @@ export class IFCSelect<T = any> implements ControlValueAccessor {
 
   get controlInvalid(): boolean {
     const c = this.ngControl?.control;
-    if (!c) return false;
+    if (!c) {
+      return false;
+    }
 
     if (this.formDir) {
       return c.invalid && !!this.formDir.submitted;

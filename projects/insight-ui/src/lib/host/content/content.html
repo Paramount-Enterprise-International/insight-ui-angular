@@ -1,49 +1,33 @@
 <div class="ih-content-header">
   <a class="i-clickable" (click)="toggleSidebar()">
     @if (sidebarVisibility) {
-      <img src="svgs/sidebar-left.svg" />
+    <img alt="sidebar-left" src="svgs/sidebar-left.svg" />
     } @else {
-      <img src="svgs/sidebar-right.svg" />
+    <img alt="sidebar-right" src="svgs/sidebar-right.svg" />
     }
   </a>
   <h1>{{ (pageTitle$ | async) || 'Insight' }}</h1>
 </div>
 <div class="ih-content-breadcrumbs">
-  @if (breadcrumb$ | async; as breadcrumbs) {
-    @if (breadcrumbs.length > 0) {
-      @for (
-        breadcrumb of breadcrumbs;
-        track breadcrumb.url;
-        let first = $first;
-        let last = $last
-      ) {
-        @if (!last) {
-          @if (!first) {
-            <a
-              [routerLink]="breadcrumb.url"
-              class="ih-content-breadcrumb ih-content-breadcrumb__link">
-              {{ breadcrumb.label }}
-            </a>
-          } @else {
-            <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
-              {{ breadcrumb.label }}
-            </span>
-          }
-          <span class="ih-content-breadcrumb ih-content-breadcrumb__separator"
-            >></span
-          >
-        } @else {
-          <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
-            {{ breadcrumb.label }}
-          </span>
-        }
-      }
-    } @else {
-      <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
-        Home
-      </span>
-    }
+  @if (breadcrumb$ | async; as breadcrumbs) { @if (breadcrumbs.length > 0) { @for ( breadcrumb of
+  breadcrumbs; track breadcrumb.url; let first = $first; let last = $last ) { @if (!last) { @if
+  (!first) {
+  <a class="ih-content-breadcrumb ih-content-breadcrumb__link" [routerLink]="breadcrumb.url">
+    {{ breadcrumb.label }}
+  </a>
+  } @else {
+  <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
+    {{ breadcrumb.label }}
+  </span>
   }
+  <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
+  } @else {
+  <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
+    {{ breadcrumb.label }}
+  </span>
+  } } } @else {
+  <span class="ih-content-breadcrumb ih-content-breadcrumb__first"> Home </span>
+  } }
 </div>
 <div class="ih-content-body scroll scroll-y">
   <router-outlet />

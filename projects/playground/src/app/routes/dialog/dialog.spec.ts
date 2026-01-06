@@ -1,17 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ILoading } from './loading';
+import { Dialog } from './dialog';
 
-describe('ILoading', () => {
-  let component: ILoading;
-  let fixture: ComponentFixture<ILoading>;
+describe('Dialog', () => {
+  let component: Dialog;
+  let fixture: ComponentFixture<Dialog>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ILoading],
-    }).compileComponents();
+      imports: [Dialog]
+    })
+    .compileComponents();
 
-    fixture = TestBed.createComponent(ILoading);
+    fixture = TestBed.createComponent(Dialog);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

@@ -80,17 +80,25 @@ export class ISectionFooter {}
  */
 
 function isTruthyAttr(v: any): boolean {
-  if (v === null || v === undefined) return false;
+  if (v === null || v === undefined) {
+    return false;
+  }
   const s = String(v).trim().toLowerCase();
-  if (s === 'false' || s === '0' || s === 'null' || s === 'undefined') return false;
+  if (s === 'false' || s === '0' || s === 'null' || s === 'undefined') {
+    return false;
+  }
   return true;
 }
 
 function parseBadge(v: any): { enabled: boolean; value: number | null } {
-  if (!isTruthyAttr(v)) return { enabled: false, value: null };
+  if (!isTruthyAttr(v)) {
+    return { enabled: false, value: null };
+  }
 
   const s = String(v).trim();
-  if (s === '' || s.toLowerCase() === 'true') return { enabled: true, value: null };
+  if (s === '' || s.toLowerCase() === 'true') {
+    return { enabled: true, value: null };
+  }
 
   const n = Number(s);
   if (Number.isFinite(n) && Number.isInteger(n) && n >= 0) {
@@ -102,10 +110,14 @@ function parseBadge(v: any): { enabled: boolean; value: number | null } {
 
 function parseTabsHeight(v: any): number | null {
   // null => wrap (default)
-  if (v === null || v === undefined) return null;
+  if (v === null || v === undefined) {
+    return null;
+  }
 
   const s = String(v).trim().toLowerCase();
-  if (s === '' || s === 'wrap' || s === 'auto') return null;
+  if (s === '' || s === 'wrap' || s === 'auto') {
+    return null;
+  }
 
   // allow "300", "300px"
   if (s.endsWith('px')) {
@@ -151,11 +163,11 @@ export class ISectionTabContent {
       <span class="i-section-tab-title">{{ title }}</span>
 
       @if (_badgeEnabled) {
-        <span class="i-section-tab-badge" [class.has-number]="_badgeValue !== null">
-          @if (_badgeValue !== null) {
-            <span class="i-section-tab-badge-number">{{ _badgeValue }}</span>
-          }
-        </span>
+      <span class="i-section-tab-badge" [class.has-number]="_badgeValue !== null">
+        @if (_badgeValue !== null) {
+        <span class="i-section-tab-badge-number">{{ _badgeValue }}</span>
+        }
+      </span>
       }
     </ng-template>
 
@@ -165,7 +177,7 @@ export class ISectionTabContent {
   `,
 })
 export class ISectionTab implements AfterContentInit {
-  @Input() title: string = '';
+  @Input() title = '';
 
   @Input({ transform: (v: any) => v !== null && `${v}` !== 'false' }) opened = false;
 
@@ -175,20 +187,25 @@ export class ISectionTab implements AfterContentInit {
     this._badgeEnabled = parsed.enabled;
     this._badgeValue = parsed.value;
   }
+
   get badge(): any {
-    return this._badgeEnabled ? (this._badgeValue ?? true) : null;
+    return this._badgeEnabled ? this._badgeValue ?? true : null;
   }
 
   _badgeEnabled = false;
+
   _badgeValue: number | null = null;
 
   @ContentChild(ISectionTabHeader) headerCmp?: ISectionTabHeader;
+
   @ContentChild(ISectionTabContent) contentCmp?: ISectionTabContent;
 
   @ViewChild('defaultHeaderTpl', { static: true }) defaultHeaderTpl!: TemplateRef<unknown>;
+
   @ViewChild('defaultContentTpl', { static: true }) defaultContentTpl!: TemplateRef<unknown>;
 
   headerTpl!: TemplateRef<unknown>;
+
   contentTpl!: TemplateRef<unknown>;
 
   _active = false;
@@ -207,17 +224,17 @@ export class ISectionTab implements AfterContentInit {
   template: `
     <div class="i-section-tabs-headers" role="tablist">
       @for (tab of tabsArr; track tab) {
-        <button
-          type="button"
-          class="i-section-tabs-header"
-          role="tab"
-          [attr.aria-selected]="tab._active"
-          [attr.tabindex]="tab._active ? 0 : -1"
-          [class.active]="tab._active"
-          (click)="activateByTab(tab)"
-        >
-          <ng-container [ngTemplateOutlet]="tab.headerTpl"></ng-container>
-        </button>
+      <button
+        class="i-section-tabs-header"
+        role="tab"
+        type="button"
+        [attr.aria-selected]="tab._active"
+        [attr.tabindex]="tab._active ? 0 : -1"
+        [class.active]="tab._active"
+        (click)="activateByTab(tab)"
+      >
+        <ng-container [ngTemplateOutlet]="tab.headerTpl" />
+      </button>
       }
     </div>
 
@@ -228,7 +245,7 @@ export class ISectionTab implements AfterContentInit {
       [style.height.px]="contentHeightPx"
     >
       @if (activeTab; as tab) {
-        <ng-container [ngTemplateOutlet]="tab.contentTpl"></ng-container>
+      <ng-container [ngTemplateOutlet]="tab.contentTpl" />
       }
     </div>
   `,
@@ -238,7 +255,8 @@ export class ISectionTabs implements AfterContentInit {
 
   /** optional controlled mode */
   @Input() selectedIndex: number | null = null;
-  @Output() selectedIndexChange = new EventEmitter<number>();
+
+  @Output() readonly selectedIndexChange = new EventEmitter<number>();
 
   /**
    * height:
@@ -250,6 +268,7 @@ export class ISectionTabs implements AfterContentInit {
     this._contentHeightPx = parseTabsHeight(v);
     this.cdr.markForCheck();
   }
+
   get height(): any {
     return this._contentHeightPx ?? 'wrap';
   }
@@ -265,6 +284,7 @@ export class ISectionTabs implements AfterContentInit {
   }
 
   tabsArr: ISectionTab[] = [];
+
   activeIndex = 0;
 
   private readonly cdr = inject(ChangeDetectorRef);
@@ -274,7 +294,7 @@ export class ISectionTabs implements AfterContentInit {
   }
 
   ngAfterContentInit(): void {
-    const sync = () => {
+    const sync = (): void => {
       this.tabsArr = this.tabs?.toArray() ?? [];
 
       let nextIndex = 0;
@@ -305,7 +325,9 @@ export class ISectionTabs implements AfterContentInit {
   }
 
   private setActive(index: number, emit: boolean): void {
-    if (!this.isValidIndex(index)) return;
+    if (!this.isValidIndex(index)) {
+      return;
+    }
 
     this.activeIndex = index;
     this.tabsArr.forEach((t, i) => (t._active = i === index));
