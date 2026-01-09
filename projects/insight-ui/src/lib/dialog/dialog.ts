@@ -78,7 +78,7 @@ export class IDialogService {
 
   open<TComponent, TData = any, TResult = any>(
     component: Type<TComponent>,
-    config: IDialogConfig<TData> = {}
+    config: IDialogConfig<TData> = {},
   ): IDialogRef<TResult> {
     const id = config.id ?? `i-dialog-${++DIALOG_ID_COUNTER}`;
     const ref = new IDialogRef<TResult>();
@@ -128,7 +128,12 @@ export class IDialogService {
   selector: 'i-dialog-container',
   standalone: true,
   imports: [NgComponentOutlet, NgStyle],
-  templateUrl: './dialog-container.html',
+  template: `<div class="i-dialog-backdrop" (click)="onBackdropClick()"></div>
+    <div class="i-dialog-wrapper">
+      <div class="i-dialog-panel" [ngStyle]="panelStyles">
+        <ng-container *ngComponentOutlet="instance.component; injector: dialogInjector" />
+      </div>
+    </div> `,
 })
 export class IDialogContainer implements OnChanges {
   @Input({ required: true }) instance!: IDialogInstance;
@@ -189,7 +194,7 @@ export class IDialogContainer implements OnChanges {
   imports: [AsyncPipe, IDialogContainer],
   template: `
     @for (dialog of (dialogs$ | async) ?? []; track dialog.id; let last = $last) {
-    <i-dialog-container [instance]="dialog" [isTopMost]="last" />
+      <i-dialog-container [instance]="dialog" [isTopMost]="last" />
     }
   `,
 })
@@ -282,7 +287,64 @@ export type DialogAction = IDialogActionType | IDialogActionObject;
   selector: 'i-dialog',
   standalone: true,
   imports: [IButton, NgClass, IDialogCloseDirective],
-  templateUrl: './dialog.html',
+  template: `@if (title) {
+      <h4 class="i-dialog-title">{{ title }}</h4>
+    }
+    <div class="i-dialog-content">
+      <ng-content />
+    </div>
+    @if (actions.length > 0) {
+      <div class="i-dialog-actions" [align]="actionAlign">
+        @if (customActions.length > 0) {
+          @for (a of customActions; track $index) {
+            <i-button
+              [icon]="a.icon"
+              [ngClass]="a.className"
+              [variant]="a.variant || 'primary'"
+              (onClick)="onCustomActionClick(a)"
+              >{{ a.label }}</i-button
+            >
+          }
+        }
+        @if (
+          (okAction || confirmAction || saveAction || cancelAction) && customActions.length > 0
+        ) {
+          <span class="flex-fill"></span>
+        }
+        @if (okAction) {
+          <i-button
+            icon="check"
+            variant="primary"
+            [ngClass]="okAction.className"
+            (onClick)="onOkClick()"
+            >OK</i-button
+          >
+        }
+        @if (confirmAction) {
+          <i-button
+            icon="save"
+            variant="primary"
+            [ngClass]="confirmAction.className"
+            (onClick)="onConfirmClick()"
+            >Confirm</i-button
+          >
+        }
+        @if (saveAction) {
+          <i-button
+            icon="save"
+            variant="primary"
+            [ngClass]="saveAction.className"
+            (onClick)="onSaveClick()"
+            >Save</i-button
+          >
+        }
+        @if (cancelAction) {
+          <i-button i-dialog-close icon="cancel" variant="danger" [ngClass]="cancelAction.className"
+            >Cancel</i-button
+          >
+        }
+      </div>
+    } `,
 })
 export class IDialog {
   @Input() title: string | undefined;
@@ -302,7 +364,7 @@ export class IDialog {
 
   get normalizedActions(): IDialogActionObject[] {
     return (this.actions ?? []).map((a) =>
-      typeof a === 'string' ? ({ type: a } as IDialogActionObject) : a
+      typeof a === 'string' ? ({ type: a } as IDialogActionObject) : a,
     );
   }
 

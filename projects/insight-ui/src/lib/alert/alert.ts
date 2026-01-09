@@ -13,7 +13,33 @@ export type IAlertData = {
 @Component({
   selector: 'i-alert',
   imports: [NgClass, IIcon, IDialog],
-  templateUrl: './alert.html',
+  template: `
+    <i-dialog
+      [actions]="[
+        {
+          type: 'ok',
+          className: 'w-full',
+        },
+      ]"
+      [ngClass]="alertClass"
+      (onOk)="submit()"
+    >
+      @if (data.type === 'information') {
+        <i-icon icon="info" size="3xl" />
+      }
+      @if (data.type === 'success') {
+        <i-icon icon="check-circle" size="3xl" />
+      }
+      @if (data.type === 'warning') {
+        <i-icon icon="exclamation" size="3xl" />
+      }
+      @if (data.type === 'danger') {
+        <i-icon icon="x-circle" size="3xl" />
+      }
+      <h4>{{ data.title }}</h4>
+      <p [innerHtml]="data.description"></p>
+    </i-dialog>
+  `,
 })
 export class IAlert {
   data: IAlertData = inject(I_DIALOG_DATA);
