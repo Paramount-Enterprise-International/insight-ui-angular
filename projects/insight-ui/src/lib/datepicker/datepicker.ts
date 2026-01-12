@@ -70,7 +70,68 @@ const noop = (): void => {
   selector: 'i-datepicker',
   standalone: true,
   imports: [IInput, IButton, IInputMaskDirective, ISelect, NgClass],
-  templateUrl: './datepicker.html',
+  template: `
+    <!-- Core input: styled via i-input -->
+    <i-input
+      [append]="appendAddon"
+      [iInputMask]="{ type: 'date', format: format }"
+      [invalid]="invalid"
+      [placeholder]="placeholder"
+      [readonly]="disabled"
+      [value]="displayText"
+    />
+
+    <!-- Popup calendar -->
+    @if (isOpen) {
+      <div class="i-datepicker-panel" [ngClass]="panelPositionClass">
+        <div class="i-datepicker-header">
+          <i-button icon="prev" size="xs" (click)="prevMonth()" />
+
+          <!-- Month select -->
+          <i-select
+            class="i-date-picker-month-select"
+            [options]="months"
+            [value]="monthSelected"
+            (onOptionSelected)="onMonthChange($event)"
+          />
+
+          <!-- Year select -->
+          <i-select
+            class="i-date-picker-year-select"
+            [options]="years"
+            [value]="viewYear"
+            (onOptionSelected)="onYearChange($event)"
+          />
+
+          <i-button icon="next" size="xs" (click)="nextMonth()" />
+        </div>
+
+        <div class="i-datepicker-weekdays">
+          @for (w of weekdays; track w) {
+            <small>{{ w }}</small>
+          }
+        </div>
+
+        <div class="i-datepicker-weeks">
+          @for (week of weeks; track $index) {
+            <div class="i-datepicker-week">
+              @for (d of week; track d.date.getTime()) {
+                <div
+                  class="i-datepicker-day"
+                  [class.current-month]="d.inCurrentMonth"
+                  [class.selected]="d.isSelected"
+                  [class.today]="d.isToday && !d.isSelected"
+                  (click)="selectDay(d)"
+                >
+                  {{ d.date.getDate() }}
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -517,11 +578,12 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
   standalone: true,
   imports: [IDatepicker],
   template: `@if (label) {
-    <label class="i-fc-datepicker__label" (click)="focusInnerDatepicker()">
-      {{ label }} : @if (required) {
-      <span class="i-fc-datepicker__required">*</span>
-      }
-    </label>
+      <label class="i-fc-datepicker__label" (click)="focusInnerDatepicker()">
+        {{ label }} :
+        @if (required) {
+          <span class="i-fc-datepicker__required">*</span>
+        }
+      </label>
     }
 
     <i-datepicker
@@ -535,9 +597,9 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     />
 
     @if (controlInvalid && resolvedErrorText) {
-    <div class="i-fc-datepicker__error">
-      {{ resolvedErrorText }}
-    </div>
+      <div class="i-fc-datepicker__error">
+        {{ resolvedErrorText }}
+      </div>
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -622,7 +684,7 @@ export class IFCDatepicker implements ControlValueAccessor {
     if (this.isDisabled) return;
 
     const input = this.hostEl.nativeElement.querySelector(
-      'i-datepicker i-input input'
+      'i-datepicker i-input input',
     ) as HTMLInputElement | null;
 
     input?.focus();

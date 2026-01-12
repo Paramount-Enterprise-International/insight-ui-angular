@@ -24,7 +24,49 @@ export type IConfirmData = {
 @Component({
   selector: 'i-confirm',
   imports: [IDialog, NgClass, IIcon, IFCTextArea, ReactiveFormsModule, FormsModule],
-  templateUrl: './confirm.html',
+  template: `<i-dialog
+    actionAlign="center"
+    [actions]="[
+      {
+        type: 'confirm',
+        className: 'w-104',
+      },
+      {
+        type: 'cancel',
+        className: 'w-104',
+      },
+    ]"
+    [ngClass]="confirmClass"
+    (onConfirm)="submit()"
+  >
+    @if (data.type === 'information') {
+      <i-icon icon="info" size="3xl" />
+    }
+    @if (data.type === 'success') {
+      <i-icon icon="check-circle" size="3xl" />
+    }
+    @if (data.type === 'warning') {
+      <i-icon icon="exclamation" size="3xl" />
+    }
+    @if (data.type === 'danger') {
+      <i-icon icon="x-circle" size="3xl" />
+    }
+    <h4>{{ data.title }}</h4>
+    <p [innerHtml]="data.description"></p>
+    @if (data.reason) {
+      <form class="mt-xs" [formGroup]="formGroup" (ngSubmit)="onSubmit()">
+        <i-fc-textarea
+          formControlName="reason"
+          label="Reason"
+          placeholder="Fill your reason here.."
+          [errorMessage]="{
+            required: 'Please fill in the reason..',
+          }"
+        />
+        <button #submitButton class="hidden" type="submit">Submit</button>
+      </form>
+    }
+  </i-dialog>`,
 })
 export class IConfirm {
   data: IConfirmData = inject(I_DIALOG_DATA);
