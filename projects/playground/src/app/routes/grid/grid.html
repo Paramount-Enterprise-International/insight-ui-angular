@@ -3,7 +3,6 @@
   <i-section-body class="p-0">
     <i-grid
       selectionMode="multiple"
-      stickyHeader
       [dataSource]="dataSource"
       (expandedRowsChange)="onExpandedRowsChange($event)"
       (rowClick)="onRowClick($event)"
@@ -11,7 +10,7 @@
       (selectionChange)="onSelectionChange($event)"
     >
       <!-- Data column: Name (frozen) -->
-      <i-grid-column fieldName="name" title="Name" [freeze]="true" [width]="220">
+      <i-grid-column fieldName="name" title="Name" width="fill">
         <i-grid-cell *iCellDef="let row">
           <div class="font-semibold">{{ row.name }}</div>
         </i-grid-cell>
@@ -20,7 +19,7 @@
       <!-- Data column: Email -->
       <i-grid-column fieldName="email" title="Email" [width]="260">
         <i-grid-cell *iCellDef="let row">
-          <span class="text-muted">{{ row.email }}</span>
+          <span class="text-subtle truncate">{{ row.email }}</span>
         </i-grid-cell>
       </i-grid-column>
 
