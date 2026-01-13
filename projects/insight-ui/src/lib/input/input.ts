@@ -39,7 +39,7 @@ import { IInputMask, IInputMaskDirective } from './input-mask';
   standalone: true,
   imports: [IInputAddon, IInputMaskDirective],
   template: `@for (i of prepends; track $index) {
-    <i-input-addon [addon]="i" />
+      <i-input-addon [addon]="i" />
     }
     <input
       #inputRef
@@ -55,7 +55,7 @@ import { IInputMask, IInputMaskDirective } from './input-mask';
       (input)="handleInput($event)"
     />
     @for (i of appends; track $index) {
-    <i-input-addon [addon]="i" />
+      <i-input-addon [addon]="i" />
     } `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
@@ -188,11 +188,12 @@ export class IInput implements ControlValueAccessor {
   standalone: true,
   imports: [IInput],
   template: `@if (label) {
-    <label class="i-fc-input__label" (click)="focusInnerInput()">
-      {{ label }} : @if (required) {
-      <span class="i-fc-input__required">*</span>
-      }
-    </label>
+      <label class="i-fc-input__label" (click)="focusInnerInput()">
+        {{ label }} :
+        @if (required) {
+          <span class="i-fc-input__required">*</span>
+        }
+      </label>
     }
 
     <i-input
@@ -211,9 +212,9 @@ export class IInput implements ControlValueAccessor {
     />
 
     @if (controlInvalid && resolvedErrorText) {
-    <div class="i-fc-input__error">
-      {{ resolvedErrorText }}
-    </div>
+      <div class="i-fc-input__error">
+        {{ resolvedErrorText }}
+      </div>
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -262,7 +263,7 @@ export class IFCInput implements ControlValueAccessor {
   constructor(
     @Optional() @Self() public ngControl: NgControl | null,
     @Optional() private formDir: FormGroupDirective | null,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
   ) {
     if (this.ngControl) {
       this.ngControl.valueAccessor = this;
