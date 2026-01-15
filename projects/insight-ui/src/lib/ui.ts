@@ -14,6 +14,7 @@ import { IFCSelect, ISelect } from './select/select';
 import { ITextArea } from './textarea/textarea';
 import { IHContent } from './host/content/content';
 import { ICodeViewerModule } from './code-viewer/code-viewer';
+import { IHSidebar } from './host/sidebar/sidebar';
 
 @NgModule({
   imports: [
@@ -26,6 +27,8 @@ import { ICodeViewerModule } from './code-viewer/code-viewer';
     IFCDatepicker,
     IDialogModule,
     IGridModule,
+    IHContent,
+    IHSidebar,
     IIcon,
     IInputModule,
     ILoading,
@@ -33,7 +36,6 @@ import { ICodeViewerModule } from './code-viewer/code-viewer';
     ISelect,
     IFCSelect,
     ITextArea,
-    IHContent,
   ],
   exports: [
     IAlert,
@@ -45,6 +47,8 @@ import { ICodeViewerModule } from './code-viewer/code-viewer';
     IFCDatepicker,
     IDialogModule,
     IGridModule,
+    IHContent,
+    IHSidebar,
     IIcon,
     IInputModule,
     ILoading,
@@ -52,7 +56,6 @@ import { ICodeViewerModule } from './code-viewer/code-viewer';
     ISelect,
     IFCSelect,
     ITextArea,
-    IHContent,
   ],
 })
 export class IUI {}
