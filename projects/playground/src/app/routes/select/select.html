@@ -1,13 +1,31 @@
-<!-- <i-section>
-  <i-section-body>
-    <i-select
-      displayWith="name"
-      placeholder="Pick users"
-      [multiple]="true"
-      [options]="users"
-      [(ngModel)]="selectedUsers"
-    ></i-select>
-
-    <p>Selected: {{ selectedUserList }}</p>
-  </i-section-body>
-</i-section> -->
+<form [formGroup]="woFormGroup" (ngSubmit)="onSubmit()">
+  <i-fc-input formControlName="titleFormControl" label="Title" />
+  <div class="flex gap-md">
+    <i-fc-select class="flex-fill" formControlName="divisionFormControl" label="Division" />
+    <i-fc-input
+      class="flex-fill"
+      formControlName="locationFormControl"
+      label="Location"
+      [append]="[
+        {
+          type: 'button',
+          icon: 'edit',
+          onClick: inputAddonClick,
+        },
+      ]"
+    />
+  </div>
+  <i-fc-input
+    formControlName="descriptionFormControl"
+    label="Description"
+    placeholder="Enter your description here..."
+  />
+  <i-fc-textarea
+    formControlName="descriptionFormControl"
+    label="Description"
+    placeholder="Enter your description here..."
+  />
+  <i-button (onClick)="(inputAddonClick)">Add</i-button>
+  <i-fc-select formControlName="sendEmailFormControl" label="Send Email" />
+  <button #submit class="hidden" type="submit">Submit</button>
+</form>

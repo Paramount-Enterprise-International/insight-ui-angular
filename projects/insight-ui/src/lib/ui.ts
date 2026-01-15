@@ -1,20 +1,18 @@
 import { NgModule } from '@angular/core';
 
-import { IButton } from './button/button';
-import { ICardModule } from './card/card';
-
-import { IDatepicker, IFCDatepicker } from './datepicker/datepicker';
-import { IDialogModule } from './dialog/dialog';
-import { IGridModule } from './grid/grid';
-import { IIcon } from './icon/icon';
-import { IInputModule } from './input/input';
-import { ILoading } from './loading/loading';
-import { ISectionModule } from './section/section';
-import { IFCSelect, ISelect } from './select/select';
-import { ITextArea } from './textarea/textarea';
-import { IHContent } from './host/content';
-import { IHSidebar } from './host/sidebar';
-import { ICodeViewerModule } from './code-viewer/code-viewer';
+import { IButton } from './button';
+import { ICardModule } from './card';
+import { IDatepicker, IFCDatepicker } from './datepicker';
+import { IDialogModule } from './dialog';
+import { IGridModule } from './grid';
+import { IIcon } from './icon';
+import { IInputModule } from './input';
+import { ILoading } from './loading';
+import { ISectionModule } from './section';
+import { IFCSelect, ISelect } from './select';
+import { IFCTextArea, ITextArea } from './textarea';
+import { ICodeViewerModule } from './code-viewer';
+import { IHContent, IHSidebar } from './host';
 
 @NgModule({
   imports: [
@@ -34,6 +32,7 @@ import { ICodeViewerModule } from './code-viewer/code-viewer';
     ISelect,
     IFCSelect,
     ITextArea,
+    IFCTextArea,
   ],
   exports: [
     IButton,
@@ -52,6 +51,7 @@ import { ICodeViewerModule } from './code-viewer/code-viewer';
     ISelect,
     IFCSelect,
     ITextArea,
+    IFCTextArea,
   ],
 })
 export class IUI {}
