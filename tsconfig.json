@@ -8,6 +8,9 @@
     "paths": {
       "@insight-ui": [
         "./projects/insight-ui/src/public-api"
+      ],
+      "@insight/ui": [
+        "./projects/insight-ui/src/public-api"
       ]
     },
     "noPropertyAccessFromIndexSignature": true,

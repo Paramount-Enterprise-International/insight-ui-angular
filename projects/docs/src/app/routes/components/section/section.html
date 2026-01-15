@@ -1,0 +1,210 @@
+<i-section>
+  <i-section-body>
+    <div class="flex flex-col gap-md">
+      <h1>Section</h1>
+      <div><code>i-section</code> & Related Components</div>
+      <p>
+        The Section component system provides a structured layout container with header, body,
+        footer, filter, and tabbed content areas. It's designed for organizing content into logical
+        sections with consistent styling and behavior.
+      </p>
+
+      <br />
+      <h2>Components Overview</h2>
+      <p>The Section system consists of these components:</p>
+      <ul>
+        <li><code>i-section</code> - Main container component</li>
+        <li><code>i-section-header</code> - Section header area</li>
+        <li><code>i-section-sub-header</code> - Section sub-header area</li>
+        <li><code>i-section-filter</code> - Filter controls area</li>
+        <li><code>i-section-body</code> - Main content area</li>
+        <li><code>i-section-footer</code> - Footer area</li>
+        <li><code>i-section-tabs</code> - Tabbed content container</li>
+        <li><code>i-section-tab</code> - Individual tab</li>
+        <li><code>i-section-tab-header</code> - Custom tab header template</li>
+        <li><code>i-section-tab-content</code> - Custom tab content template</li>
+      </ul>
+
+      <br />
+
+      <h2>Component Properties</h2>
+
+      <h3>i-section-tab Properties</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Default Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>title</code></td>
+            <td><code>string</code></td>
+            <td>Required</td>
+            <td><code>''</code></td>
+            <td>Tab title displayed in the header</td>
+          </tr>
+          <tr>
+            <td><code>opened</code></td>
+            <td><code>boolean</code></td>
+            <td>Optional</td>
+            <td><code>false</code></td>
+            <td>If true, this tab will be active by default</td>
+          </tr>
+          <tr>
+            <td><code>badge</code></td>
+            <td><code>any</code></td>
+            <td>Optional</td>
+            <td><code>null</code></td>
+            <td>Badge indicator for the tab (see Badge Types below)</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h3>i-section-tabs Properties</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Default Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>selectedIndex</code></td>
+            <td><code>number | null</code></td>
+            <td>Optional</td>
+            <td><code>null</code></td>
+            <td>Controlled mode - active tab index</td>
+          </tr>
+          <tr>
+            <td><code>selectedIndexChange</code></td>
+            <td><code>EventEmitter&lt;number&gt;</code></td>
+            <td>Optional</td>
+            <td>-</td>
+            <td>Emitted when active tab changes</td>
+          </tr>
+          <tr>
+            <td><code>height</code></td>
+            <td><code>any</code></td>
+            <td>Optional</td>
+            <td><code>'wrap'</code></td>
+            <td>Tab content height (see Height Options below)</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <br />
+      <h2>Height Options</h2>
+      <p>The <code>height</code> property controls tab content height:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Value</th>
+            <th>Result</th>
+            <th>Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>null</code> or <code>"wrap"</code> or <code>"auto"</code></td>
+            <td>Content height wraps to content</td>
+            <td><code>height="wrap"</code></td>
+          </tr>
+          <tr>
+            <td><code>"300"</code> or <code>300</code></td>
+            <td>Fixed 300px height with scroll</td>
+            <td><code>height="300"</code></td>
+          </tr>
+          <tr>
+            <td><code>"500px"</code></td>
+            <td>Fixed 500px height with scroll</td>
+            <td><code>height="500px"</code></td>
+          </tr>
+          <tr>
+            <td><code>"80vh"</code></td>
+            <td>Fixed 80vh height with scroll</td>
+            <td><code>height="80vh"</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h2>Examples</h2>
+      <p>Basic Section</p>
+      <i-section>
+        <i-section-tabs height="300">
+          <i-section-tab title="Preview">
+            <i-section>
+              <i-section-header>Section Title</i-section-header>
+              <i-section-sub-header>Subtitle or description</i-section-sub-header>
+              <i-section-filter>
+                <div class="flex gap-md flex-fill pb-md">
+                  <i-input class="w-200" placeholder="Example filter.." />
+                </div>
+              </i-section-filter>
+              <i-section-body>
+                <p class="text-gray-700">
+                  This is the main content area. You can put any content here like text, images,
+                  cards, tables, forms, etc.
+                </p>
+                <p class="text-blue-800">Example content block with some information.</p>
+              </i-section-body>
+              <i-section-footer>
+                <div class="text-center text-sm text-gray-500">
+                  Footer content - Last updated: Today
+                </div>
+              </i-section-footer>
+            </i-section>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="basic-section.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="basic-section.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>Basic Section with Tabs</p>
+      <i-section>
+        <i-section-tabs height="300">
+          <i-section-tab title="Preview">
+            <i-section>
+              <i-section-tabs height="150">
+                <i-section-tab title="Messages">
+                  <div class="p-3">
+                    <p>You have 3 new messages</p>
+                  </div>
+                </i-section-tab>
+                <i-section-tab title="Notifications">
+                  <div class="p-3">
+                    <p>New notifications available</p>
+                  </div>
+                </i-section-tab>
+                <i-section-tab title="Settings">
+                  <div class="p-3">
+                    <p>Settings panel</p>
+                  </div>
+                </i-section-tab>
+              </i-section-tabs>
+            </i-section>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="basic-section-with-tabs.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="basic-section-with-tabs.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+    </div>
+  </i-section-body>
+</i-section>

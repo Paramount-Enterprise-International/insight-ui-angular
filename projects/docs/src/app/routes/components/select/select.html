@@ -1,0 +1,203 @@
+<i-section>
+  <i-section-body>
+    <div class="flex flex-col gap-md">
+      <h1>Select</h1>
+      <div><code>i-select</code> & <code>i-fc-select</code></div>
+      <p>
+        Dropdown select component with search features, custom templates, and form control
+        integration.
+      </p>
+      <br />
+      <h2>Components</h2>
+      <ul>
+        <li><code>i-select</code> - Basic select component</li>
+        <li><code>i-fc-select</code> - Form control wrapper with label and error message</li>
+        <li><code>[iSelectOption]</code> - Directive for custom option templates</li>
+      </ul>
+      <br />
+      <h2>Properties (i-select)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Default</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>options</code></td>
+            <td><code>T[] | null</code></td>
+            <td><code>[]</code></td>
+            <td>Array of options</td>
+          </tr>
+          <tr>
+            <td><code>options$</code></td>
+            <td><code>Observable&lt;T[]&gt; | null</code></td>
+            <td><code>null</code></td>
+            <td>Observable options for async loading</td>
+          </tr>
+          <tr>
+            <td><code>placeholder</code></td>
+            <td><code>string</code></td>
+            <td><code>''</code></td>
+            <td>Input placeholder text</td>
+          </tr>
+          <tr>
+            <td><code>displayWith</code></td>
+            <td><code>(row: T) => string | string</code></td>
+            <td><code>(row) => String(row)</code></td>
+            <td>Custom display text mapping</td>
+          </tr>
+          <tr>
+            <td><code>panelPosition</code></td>
+            <td><code>ISelectPanelPosition</code></td>
+            <td><code>'bottom left'</code></td>
+            <td>Dropdown panel position (top/bottom/left/right)</td>
+          </tr>
+          <tr>
+            <td><code>filterDelay</code></td>
+            <td><code>number</code></td>
+            <td><code>200</code></td>
+            <td>Debounce delay for search filter (ms)</td>
+          </tr>
+          <tr>
+            <td><code>disabled</code></td>
+            <td><code>boolean</code></td>
+            <td><code>false</code></td>
+            <td>Disable the select component</td>
+          </tr>
+          <tr>
+            <td><code>invalid</code></td>
+            <td><code>boolean</code></td>
+            <td><code>false</code></td>
+            <td>Show invalid/error state</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h2>Properties (i-fc-select)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>label</code></td>
+            <td><code>string</code></td>
+            <td>Label text</td>
+          </tr>
+          <tr>
+            <td><code>required</code></td>
+            <td><code>boolean</code></td>
+            <td>Show required indicator (*)</td>
+          </tr>
+          <tr>
+            <td><code>errorMessage</code></td>
+            <td><code>IFormControlErrorMessage</code></td>
+            <td>Custom error messages configuration</td>
+          </tr>
+          <tr>
+            <td><code>formControlName</code></td>
+            <td><code>string</code></td>
+            <td>Reactive forms control name</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h2>Events</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>onChanged</code></td>
+            <td><code>EventEmitter&lt;ISelectChange&lt;T&gt;&gt;</code></td>
+            <td>Emitted when selection changes</td>
+          </tr>
+          <tr>
+            <td><code>onOptionSelected</code></td>
+            <td><code>EventEmitter&lt;ISelectChange&lt;T&gt;&gt;</code></td>
+            <td>Emitted when user selects an option</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h2>Panel Positions</h2>
+
+      <code class="text-blue-600"
+        >'top' | 'bottom' | 'left' | 'right' | 'top left' | 'top right' | 'bottom left' | 'bottom
+        right'</code
+      >
+      <br />
+      <h2>Select Example</h2>
+      <p>Basic Select: <code>i-select</code></p>
+      <i-section>
+        <i-section-tabs height="300">
+          <i-section-tab title="Preview">
+            <i-section>
+              <i-section-header>Select Component</i-section-header>
+              <i-section-sub-header>Usage Example</i-section-sub-header>
+              <i-section-body>
+                <i-select
+                  [options$]="rows$"
+                  [value]="{ userId: 1, userName: 'Dylan', employeeCode: 'PL1378' }"
+                  (onOptionSelected)="onOptionSelected($event)"
+                />
+              </i-section-body>
+              <i-section-sub-header>HTML Code</i-section-sub-header>
+            </i-section>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="select.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="select.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>Select With Label and Error Message: <code>i-fc-select</code></p>
+      <i-section>
+        <i-section-tabs height="300">
+          <i-section-tab title="Preview">
+            <i-section>
+              <i-section-header>Select Component</i-section-header>
+              <i-section-sub-header>Usage Example</i-section-sub-header>
+              <i-section-body>
+                <form [formGroup]="basicFormGroup">
+                  <i-fc-select
+                    formControlName="basicFormControl1"
+                    label="Name"
+                    [options$]="rows$"
+                    [value]="{ userId: 1, userName: 'Dylan', employeeCode: 'PL1378' }"
+                    (onOptionSelected)="handleOptionSelected($event)"
+                  />
+                  <i-button icon="save" type="submit">Submit</i-button>
+                </form>
+              </i-section-body>
+              <i-section-sub-header>HTML Code</i-section-sub-header>
+            </i-section>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="fc-select.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="fc-select.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+    </div>
+  </i-section-body>
+</i-section>
