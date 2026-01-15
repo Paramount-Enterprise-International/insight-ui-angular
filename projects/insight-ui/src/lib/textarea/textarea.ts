@@ -1,7 +1,7 @@
 /* textarea.ts */
 /**
  * ITextarea
- * Version: 1.1.0
+ * Version: 1.1.1
  */
 
 import {
@@ -9,10 +9,11 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  forwardRef,
   HostListener,
+  inject,
   Input,
-  Optional,
-  Self,
+  OnDestroy,
   ViewChild,
 } from '@angular/core';
 import {
@@ -26,6 +27,11 @@ import {
   isControlRequired,
   resolveControlErrorMessage,
 } from '../interfaces';
+import { Subscription } from 'rxjs';
+
+/* =========================================
+ * ITextArea (CVA)
+ * ========================================= */
 
 @Component({
   selector: 'i-textarea',
@@ -37,7 +43,7 @@ import {
     [placeholder]="placeholder"
     [readonly]="readonly"
     [rows]="rows"
-    [value]="value ?? ''"
+    [value]="_value ?? ''"
     (blur)="handleBlur()"
     (input)="handleInput($event)"
   ></textarea>`,
@@ -45,34 +51,35 @@ import {
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
-      useExisting: ITextArea,
+      useExisting: forwardRef(() => ITextArea),
       multi: true,
     },
   ],
 })
 export class ITextArea implements ControlValueAccessor {
   @Input() placeholder = '';
-
   @Input() readonly = false;
-
   @Input() rows = 3;
 
   /** invalid state (controlled by form or wrapper) */
   @Input() invalid = false;
 
-  /** value usable both by CVA and by [value] binding */
+  /**
+   * NOTE:
+   * Keep [value] support for non-form usages.
+   * But CVA should be the main source of truth.
+   */
   @Input()
   get value(): string | null {
     return this._value;
   }
-
   set value(v: string | null) {
     this._value = v ?? '';
   }
 
   @ViewChild('textareaRef') textareaRef!: ElementRef<HTMLTextAreaElement>;
 
-  private _value: string | null = null;
+  protected _value: string | null = null;
 
   isDisabled = false;
 
@@ -80,7 +87,6 @@ export class ITextArea implements ControlValueAccessor {
   get disabled(): boolean {
     return this.isDisabled;
   }
-
   set disabled(value: boolean) {
     this.isDisabled = value;
   }
@@ -88,7 +94,6 @@ export class ITextArea implements ControlValueAccessor {
   private onChange: (value: any) => void = () => {
     /*  */
   };
-
   private onTouched: () => void = () => {
     /*  */
   };
@@ -134,25 +139,17 @@ export class ITextArea implements ControlValueAccessor {
   }
 }
 
-/**
- * IFcTextarea
- * Version: 1.0.0
- *
- * - Form control wrapper for ITextArea
- * - Provides label, required asterisk, error message
- * - Implements CVA so you can use formControlName on <i-fc-textarea>
- */
-
 @Component({
   selector: 'i-fc-textarea',
   standalone: true,
   imports: [ITextArea],
   template: `@if (label) {
-    <label class="i-fc-textarea__label" (click)="focusInnerTextarea()">
-      {{ label }} : @if (required) {
-      <span class="i-fc-textarea__required">*</span>
-      }
-    </label>
+      <label class="i-fc-textarea__label" (click)="focusInnerTextarea()">
+        {{ label }} :
+        @if (required) {
+          <span class="i-fc-textarea__required">*</span>
+        }
+      </label>
     }
 
     <i-textarea
@@ -161,72 +158,74 @@ export class ITextArea implements ControlValueAccessor {
       [placeholder]="placeholder"
       [readonly]="readonly"
       [rows]="rows"
-      [value]="value"
-      (blur)="handleInnerBlur()"
+      [value]="_value"
+      (focusout)="handleInnerFocusOut()"
       (input)="handleInnerInput($event)"
     />
 
     @if (controlInvalid && resolvedErrorText) {
-    <div class="i-fc-textarea__error">
-      {{ resolvedErrorText }}
-    </div>
+      <div class="i-fc-textarea__error">
+        {{ resolvedErrorText }}
+      </div>
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // ✅ NO NG_VALUE_ACCESSOR PROVIDER HERE (prevents circular dependency)
 })
-export class IFCTextArea implements ControlValueAccessor {
+export class IFCTextArea implements ControlValueAccessor, OnDestroy {
   @ViewChild(ITextArea) innerTextarea!: ITextArea;
+
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  // Optional injections (same as @Self() @Optional())
+  private readonly ngControl = inject(NgControl, { self: true, optional: true });
+  private readonly formDir = inject(FormGroupDirective, { optional: true });
+
+  private submitSub?: Subscription;
 
   // ---------- UI inputs ----------
   @Input() label = '';
-
   @Input() placeholder = '';
-
   @Input() readonly = false;
-
   @Input() rows = 3;
-
-  /** old-style custom error templates: { required: '{label} is xxx' } */
   @Input() errorMessage?: IFormControlErrorMessage;
 
-  /** non-form usage: [value] binding */
   @Input()
   get value(): string | null {
     return this._value;
   }
-
   set value(v: string | null) {
     this._value = v ?? '';
+    this.cdr.markForCheck();
   }
 
   // ---------- internal state ----------
-  private _value: string | null = null;
-
+  protected _value: string | null = null;
   isDisabled = false;
 
   private onChange: (v: any) => void = () => {};
-
   private onTouched: () => void = () => {};
 
-  constructor(
-    @Optional() @Self() public ngControl: NgControl | null,
-    @Optional() private formDir: FormGroupDirective | null,
-    private cdr: ChangeDetectorRef
-  ) {
+  constructor() {
+    // ✅ this is the "i-fc-input" pattern
     if (this.ngControl) {
       this.ngControl.valueAccessor = this;
     }
 
-    // when the form is submitted, re-check this OnPush component
     if (this.formDir) {
-      this.formDir.ngSubmit.subscribe(() => {
+      this.submitSub = this.formDir.ngSubmit.subscribe(() => {
         this.cdr.markForCheck();
       });
     }
   }
 
+  ngOnDestroy(): void {
+    this.submitSub?.unsubscribe();
+  }
+
   // ---------- CVA ----------
   writeValue(v: any): void {
     this._value = v ?? '';
+    this.cdr.markForCheck();
   }
 
   registerOnChange(fn: any): void {
@@ -239,6 +238,7 @@ export class IFCTextArea implements ControlValueAccessor {
 
   setDisabledState(isDisabled: boolean): void {
     this.isDisabled = isDisabled;
+    this.cdr.markForCheck();
   }
 
   // ---------- bridge from inner <i-textarea> ----------
@@ -247,10 +247,12 @@ export class IFCTextArea implements ControlValueAccessor {
     const v = target?.value ?? '';
     this._value = v;
     this.onChange(this._value);
+    this.cdr.markForCheck();
   }
 
-  handleInnerBlur(): void {
+  handleInnerFocusOut(): void {
     this.onTouched();
+    this.cdr.markForCheck();
   }
 
   // ---------- focus from label ----------
@@ -263,12 +265,8 @@ export class IFCTextArea implements ControlValueAccessor {
   // ---------- validation helpers ----------
   get controlInvalid(): boolean {
     const c = this.ngControl?.control;
-    if (!c) {
-      return false;
-    }
+    if (!c) return false;
 
-    // same behavior as i-fc-input:
-    // invalid + form submitted, otherwise fallback to dirty/touched
     if (this.formDir) {
       return c.invalid && !!this.formDir.submitted;
     }

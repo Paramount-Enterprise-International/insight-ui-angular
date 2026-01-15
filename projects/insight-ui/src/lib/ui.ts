@@ -10,7 +10,7 @@ import { IInputModule } from './input';
 import { ILoading } from './loading';
 import { ISectionModule } from './section';
 import { IFCSelect, ISelect } from './select';
-import { ITextArea } from './textarea';
+import { IFCTextArea, ITextArea } from './textarea';
 import { ICodeViewerModule } from './code-viewer';
 import { IHContent, IHSidebar } from './host';
 
@@ -32,6 +32,7 @@ import { IHContent, IHSidebar } from './host';
     ISelect,
     IFCSelect,
     ITextArea,
+    IFCTextArea,
   ],
   exports: [
     IButton,
@@ -50,6 +51,7 @@ import { IHContent, IHSidebar } from './host';
     ISelect,
     IFCSelect,
     ITextArea,
+    IFCTextArea,
   ],
 })
 export class IUI {}
