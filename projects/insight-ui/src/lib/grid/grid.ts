@@ -962,6 +962,16 @@ export class IGridHeaderCell {
   }
 }
 
+@Component({
+  selector: 'i-grid-viewport',
+  standalone: true,
+  template: `<ng-content />`,
+  host: {
+    class: 'i-grid-viewport',
+  },
+})
+export class IGridViewport {}
+
 /* ----------------------------------------------------
  * GRID COMPONENT
  * ---------------------------------------------------- */
@@ -979,14 +989,12 @@ export class IGridHeaderCell {
     IButton,
     IHighlightSearchPipe,
     ITruncatedTooltipDirective,
-    IGridRowDefDirective,
-    IGridExpandableRow,
-
     // NEW header group render tags
     IGridHeaderCellGroup,
     IGridHeaderCellGroupColumns,
+    IGridViewport,
   ],
-  template: `<div class="i-grid-viewport">
+  template: `<i-grid-viewport>
       <!-- HEADER -->
       @if (headerItems.length) {
         <i-grid-header-row>
@@ -1290,7 +1298,7 @@ export class IGridHeaderCell {
           />
         }
       }
-    </div>
+    </i-grid-viewport>
 
     @if (hasPagination) {
       <div class="i-grid-footer">
@@ -1342,14 +1350,14 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   /** Emits whenever selection changes */
-  @Output() selectionChange = new EventEmitter<IGridSelectionChange<T>>();
+  @Output() readonly selectionChange = new EventEmitter<IGridSelectionChange<T>>();
 
   /** Emits on row click (before selection logic) */
-  @Output() rowClick = new EventEmitter<T>();
+  @Output() readonly rowClick = new EventEmitter<T>();
 
   /** Expand events */
-  @Output() rowExpandChange = new EventEmitter<{ row: T; expanded: boolean }>();
-  @Output() expandedRowsChange = new EventEmitter<T[]>();
+  @Output() readonly rowExpandChange = new EventEmitter<{ row: T; expanded: boolean }>();
+  @Output() readonly expandedRowsChange = new EventEmitter<T[]>();
 
   @ContentChildren(IGridColumn)
   columnDefs!: QueryList<IGridColumn<T>>;
@@ -2625,6 +2633,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
 export const I_GRID_DECLARATIONS = [
   IGrid,
+  IGridViewport,
   IGridColumn,
   IGridCustomColumn,
   IGridColumnGroup, // NEW
