@@ -1,0 +1,367 @@
+<i-section>
+  <i-section-body>
+    <div class="flex flex-col gap-md">
+      <h1>Typography Variables</h1>
+
+      <p>
+        CSS custom properties for consistent typography styling across the application. Provides
+        predefined font families, sizes, weights, spacing, and semantic text colors.
+      </p>
+
+      <br />
+      <h2>Font Family Variables</h2>
+      <table class="equal-columns">
+        <thead>
+          <tr>
+            <th>Variable</th>
+            <th>Default Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>--i-font-heading</code></td>
+            <td>'Poppins', ui-sans-serif, system-ui, sans-serif</td>
+            <td>Primary font for all heading elements (h1-h6)</td>
+          </tr>
+          <tr>
+            <td><code>--i-font-body</code></td>
+            <td>'Source Sans 3', ui-sans-serif, system-ui, sans-serif</td>
+            <td>Primary font for body text and paragraph content</td>
+          </tr>
+          <tr>
+            <td><code>--i-font-sans</code></td>
+            <td>
+              ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+              'Noto Sans', sans-serif
+            </td>
+            <td>Comprehensive system font stack for interface elements</td>
+          </tr>
+          <tr>
+            <td><code>--i-font-mono</code></td>
+            <td>
+              ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier
+              New', monospace
+            </td>
+            <td>Font stack for code, technical content, and data displays</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <br />
+      <h2>Font Size Variables</h2>
+      <table class="equal-columns">
+        <thead>
+          <tr>
+            <th>Variable</th>
+            <th>Default Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>--i-text-2xs</code></td>
+            <td>8px</td>
+            <td>Extremely small text for labels and captions</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-xs</code></td>
+            <td>10px</td>
+            <td>Small text for secondary information and footnotes</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-sm</code></td>
+            <td>12px</td>
+            <td>Standard small text for forms and tables</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-md</code></td>
+            <td>14px</td>
+            <td>Default body text size for most content</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-lg</code></td>
+            <td>16px</td>
+            <td>Enhanced readability size for important content</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-xl</code></td>
+            <td>20px</td>
+            <td>Sub-headings and prominent text elements</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-2xl</code></td>
+            <td>24px</td>
+            <td>Medium headings and feature titles</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-3xl</code></td>
+            <td>32px</td>
+            <td>Major headings and prominent titles</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-4xl</code></td>
+            <td>48px</td>
+            <td>Hero headings and large display text</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-5xl</code></td>
+            <td>56px</td>
+            <td>Maximum display size for dramatic impact</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <br />
+      <h2>Font Weight Variables</h2>
+      <table class="equal-columns">
+        <thead>
+          <tr>
+            <th>Variable</th>
+            <th>Default Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>--i-font-weight-thin</code></td>
+            <td>100px</td>
+            <td>Ultra-light weight for delicate text</td>
+          </tr>
+          <tr>
+            <td><code>--i-font-weight-extra-light</code></td>
+            <td>200px</td>
+            <td>Very light weight for subtle emphasis</td>
+          </tr>
+          <tr>
+            <td><code>--i-font-weight-light</code></td>
+            <td>300px</td>
+            <td>Light weight for airy, modern interfaces</td>
+          </tr>
+          <tr>
+            <td><code>--i-font-weight-regular</code></td>
+            <td>400px</td>
+            <td>Standard weight for most text content</td>
+          </tr>
+          <tr>
+            <td><code>--i-font-weight-medium</code></td>
+            <td>500px</td>
+            <td>Slightly bold for emphasis without heaviness</td>
+          </tr>
+          <tr>
+            <td><code>--i-font-weight-semi-bold</code></td>
+            <td>600px</td>
+            <td>Prominent weight for strong emphasis</td>
+          </tr>
+          <tr>
+            <td><code>--i-font-weight-bold</code></td>
+            <td>700px</td>
+            <td>Strong weight for maximum emphasis</td>
+          </tr>
+          <tr>
+            <td><code>--i-font-weight-extra-bold</code></td>
+            <td>800px</td>
+            <td>Very heavy weight for dramatic impact</td>
+          </tr>
+          <tr>
+            <td><code>--i-font-weight-black</code></td>
+            <td>900px</td>
+            <td>Maximum weight for ultimate emphasis</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <br />
+      <h2>Letter Spacing Variables</h2>
+      <table class="equal-columns">
+        <thead>
+          <tr>
+            <th>Variable</th>
+            <th>Default Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>--i-tracking-tighter</code></td>
+            <td>-0.05em</td>
+            <td>Reduced letter spacing for compact text</td>
+          </tr>
+          <tr>
+            <td><code>--i-tracking-tight</code></td>
+            <td>-0.025em</td>
+            <td>Slightly reduced letter spacing</td>
+          </tr>
+          <tr>
+            <td><code>--i-tracking-normal</code></td>
+            <td>0</td>
+            <td>Default letter spacing for body text</td>
+          </tr>
+          <tr>
+            <td><code>--i-tracking-wide</code></td>
+            <td>0.025em</td>
+            <td>Slightly increased letter spacing</td>
+          </tr>
+          <tr>
+            <td><code>--i-tracking-wider</code></td>
+            <td>0.05em</td>
+            <td>Noticeably increased letter spacing</td>
+          </tr>
+          <tr>
+            <td><code>--i-tracking-widest</code></td>
+            <td>0.1em</td>
+            <td>Maximum letter spacing for special effects</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <br />
+      <h2>Line Height Variables</h2>
+      <table class="equal-columns">
+        <thead>
+          <tr>
+            <th>Variable</th>
+            <th>Default Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>--i-leading-none</code></td>
+            <td>1</td>
+            <td>Single line height for tight text blocks</td>
+          </tr>
+          <tr>
+            <td><code>--i-leading-tight</code></td>
+            <td>1.1</td>
+            <td>Compact line height for space efficiency</td>
+          </tr>
+          <tr>
+            <td><code>--i-leading-snug</code></td>
+            <td>1.25</td>
+            <td>Balanced tight line height</td>
+          </tr>
+          <tr>
+            <td><code>--i-leading-normal</code></td>
+            <td>1.5</td>
+            <td>Standard line height for body text</td>
+          </tr>
+          <tr>
+            <td><code>--i-leading-relaxed</code></td>
+            <td>1.75</td>
+            <td>Increased line height for comfortable reading</td>
+          </tr>
+          <tr>
+            <td><code>--i-leading-loose</code></td>
+            <td>2</td>
+            <td>Maximum line height for airy text</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <br />
+      <h2>Heading Line Height Variables</h2>
+      <table class="equal-columns">
+        <thead>
+          <tr>
+            <th>Variable</th>
+            <th>Default Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>--i-heading-leading-1</code></td>
+            <td>1.1</td>
+            <td>Line height for largest headings</td>
+          </tr>
+          <tr>
+            <td><code>--i-heading-leading-2</code></td>
+            <td>1.15</td>
+            <td>Line height for h2 level headings</td>
+          </tr>
+          <tr>
+            <td><code>--i-heading-leading-3</code></td>
+            <td>1.2</td>
+            <td>Line height for h3 level headings</td>
+          </tr>
+          <tr>
+            <td><code>--i-heading-leading-4</code></td>
+            <td>1.25</td>
+            <td>Line height for h4 level headings</td>
+          </tr>
+          <tr>
+            <td><code>--i-heading-leading-5</code></td>
+            <td>1.3</td>
+            <td>Line height for h5 level headings</td>
+          </tr>
+          <tr>
+            <td><code>--i-heading-leading-6</code></td>
+            <td>1.35</td>
+            <td>Line height for h6 level headings</td>
+          </tr>
+          <tr>
+            <td><code>--i-heading-leading-7</code></td>
+            <td>1.4</td>
+            <td>Line height for smallest headings</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <br />
+      <h2>Semantic Text Color Variables</h2>
+      <table class="equal-columns">
+        <thead>
+          <tr>
+            <th>Variable</th>
+            <th>Default Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>--i-text-color</code></td>
+            <td>var(--i-color-gray-700)</td>
+            <td>Default text color for body content</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-subtle-color</code></td>
+            <td>var(--i-color-gray-500)</td>
+            <td>Secondary text for less important content</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-inverted-color</code></td>
+            <td>var(--i-color-gray-50)</td>
+            <td>Light text for dark backgrounds</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-link-color</code></td>
+            <td>var(--i-color-blue-600)</td>
+            <td>Standard color for hyperlinks</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-info-color</code></td>
+            <td>var(--i-color-blue-500)</td>
+            <td>Color for informational messages and alerts</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-warning-color</code></td>
+            <td>var(--i-color-amber-400)</td>
+            <td>Color for warning messages and alerts</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-danger-color</code></td>
+            <td>var(--i-color-red-500)</td>
+            <td>Color for error messages and critical alerts</td>
+          </tr>
+          <tr>
+            <td><code>--i-text-success-color</code></td>
+            <td>var(--i-color-green-400)</td>
+            <td>Color for success messages and confirmations</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+    </div>
+  </i-section-body>
+</i-section>

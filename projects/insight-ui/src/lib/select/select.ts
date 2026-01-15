@@ -90,34 +90,35 @@ export type ISelectPanelPosition =
     />
 
     @if (hasOptionsList) {
-    <div class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
-      @for (row of filteredOptions; track row; let idx = $index) {
-      <div
-        class="i-option"
-        [class.active]="highlightIndex === idx"
-        [class.selected]="isRowSelected(row)"
-        (mousedown)="selectRow(row)"
-        (mouseenter)="setActiveIndex(idx)"
-      >
-        @if (optionDef?.template) {
-        <div class="i-option-label">
-          <ng-container
-            *ngTemplateOutlet="optionDef!.template; context: { $implicit: row, row: row }"
-          />
-        </div>
-        } @else {
-        <div
-          class="i-option-label"
-          [innerHTML]="resolveDisplayText(row) | highlightSearch : filterText"
-        ></div>
-        } @if (isRowSelected(row)) {
-        <span class="i-option-check">
-          <i-icon icon="check" />
-        </span>
+      <div class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
+        @for (row of filteredOptions; track row; let idx = $index) {
+          <div
+            class="i-option"
+            [class.active]="highlightIndex === idx"
+            [class.selected]="isRowSelected(row)"
+            (mousedown)="selectRow(row)"
+            (mouseenter)="setActiveIndex(idx)"
+          >
+            @if (optionDef?.template) {
+              <div class="i-option-label">
+                <ng-container
+                  *ngTemplateOutlet="optionDef!.template; context: { $implicit: row, row: row }"
+                />
+              </div>
+            } @else {
+              <div
+                class="i-option-label"
+                [innerHTML]="resolveDisplayText(row) | highlightSearch: filterText"
+              ></div>
+            }
+            @if (isRowSelected(row)) {
+              <span class="i-option-check">
+                <i-icon icon="check" />
+              </span>
+            }
+          </div>
         }
       </div>
-      }
-    </div>
     } `,
   providers: [
     {
@@ -293,7 +294,7 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   constructor(
     private hostEl: ElementRef<HTMLElement>,
     private cdr: ChangeDetectorRef,
-    private zone: NgZone
+    private zone: NgZone,
   ) {}
 
   // ---------- Lifecycle ----------
@@ -678,7 +679,7 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
       return;
     }
     const input = this.hostEl.nativeElement.querySelector(
-      'i-input input'
+      'i-input input',
     ) as HTMLInputElement | null;
     input?.focus();
   }
@@ -798,11 +799,12 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   standalone: true,
   imports: [ISelect],
   template: `@if (label) {
-    <label class="i-fc-select__label" (click)="focusInnerSelect()">
-      {{ label }} : @if (required) {
-      <span class="i-fc-select__required">*</span>
-      }
-    </label>
+      <label class="i-fc-select__label" (click)="focusInnerSelect()">
+        {{ label }} :
+        @if (required) {
+          <span class="i-fc-select__required">*</span>
+        }
+      </label>
     }
 
     <i-select
@@ -822,9 +824,9 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     </i-select>
 
     @if (controlInvalid && resolvedErrorText) {
-    <div class="i-fc-select__error">
-      {{ resolvedErrorText }}
-    </div>
+      <div class="i-fc-select__error">
+        {{ resolvedErrorText }}
+      </div>
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -874,7 +876,7 @@ export class IFCSelect<T = any> implements ControlValueAccessor {
   constructor(
     @Optional() @Self() public ngControl: NgControl | null,
     @Optional() private formDir: FormGroupDirective | null,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
   ) {
     if (this.ngControl) {
       this.ngControl.valueAccessor = this;

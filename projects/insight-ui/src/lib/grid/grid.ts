@@ -1,25 +1,32 @@
 /* grid.ts */
 /**
  * IGrid
- * Version: 1.23.2
+ * Version: 1.24.0
  *
- * CHANGES (1.23.2):
- * - Tree mode now renders:
- *    - indent
- *    - toggle
- *    - checkbox (multiple) / radio (single)
- *   inside a "tree host column" (default: first data column)
+ * CHANGES (1.24.0):
+ * - Column Group support (header grouping):
+ *   Consumer API:
+ *     <i-grid-column-group title="Group Title">
+ *       <i-grid-column ... />
+ *       <i-grid-column ... />
+ *     </i-grid-column-group>
  *
- * - Dedicated tree column + dedicated tree selection column are removed in tree mode.
- * - This fixes width/alignment issues because indentation no longer changes column widths.
+ *   Rendered header DOM:
+ *     <i-grid-header-row>
+ *       <i-grid-header-cell>Column 1</i-grid-header-cell>
+ *       <i-grid-header-cell-group>
+ *         <i-grid-header-cell>Group Title</i-grid-header-cell>
+ *         <i-grid-header-cell-group-columns>
+ *           <i-grid-header-cell>Column 2</i-grid-header-cell>
+ *           <i-grid-header-cell>Column 3</i-grid-header-cell>
+ *         </i-grid-header-cell-group-columns>
+ *       </i-grid-header-cell-group>
+ *       <i-grid-header-cell>Column 4</i-grid-header-cell>
+ *     </i-grid-header-row>
  *
- * Existing features kept:
- * - Observable-based data source via IGridDataSource.data$
- * - Tree selection with cascade + indeterminate
- * - Tree initial auto-expansion via [treeInitialExpandLevel]
- * - Recursive filter support
- * - HighlightSearchPipe for default cells
- * - Expandable detail rows (non-tree expand column remains)
+ * Notes:
+ * - Group is header-only. Body cells are still rendered per actual columns.
+ * - Group has no resize handle for now (layout only).
  */
 
 import { NgTemplateOutlet } from '@angular/common';
@@ -142,6 +149,14 @@ export type IGridColumnLike<T = any> = {
   /** true for auto-generated columns from datasource keys */
   isAuto?: boolean;
 };
+
+/* ----------------------------------------------------
+ * COLUMN GROUP MODEL (header-only wrapper)
+ * ---------------------------------------------------- */
+
+export type IGridHeaderItem<T = any> =
+  | { kind: 'col'; col: IGridColumnLike<T> }
+  | { kind: 'group'; title: string; columns: IGridColumnLike<T>[] };
 
 /* ----------------------------------------------------
  * DATASOURCE
@@ -571,6 +586,32 @@ export class IGridHeaderRowDirective {}
 export class IGridRowDirective {}
 
 /* ----------------------------------------------------
+ * HEADER GROUP TAGS (internal render tags)
+ * ---------------------------------------------------- */
+
+@Component({
+  selector: 'i-grid-header-cell-group',
+  standalone: true,
+  template: `<ng-content />`,
+  host: {
+    class: 'i-grid-header-cell-group',
+    role: 'presentation',
+  },
+})
+export class IGridHeaderCellGroup {}
+
+@Component({
+  selector: 'i-grid-header-cell-group-columns',
+  standalone: true,
+  template: `<ng-content />`,
+  host: {
+    class: 'i-grid-header-cell-group-columns',
+    role: 'presentation',
+  },
+})
+export class IGridHeaderCellGroupColumns {}
+
+/* ----------------------------------------------------
  * COLUMN (i-grid-column) – data-backed only
  * ---------------------------------------------------- */
 
@@ -621,6 +662,25 @@ export class IGridCustomColumn<T = any> implements IGridColumnLike<T> {
   cellDef?: TemplateRef<any>;
 
   isAuto?: boolean | undefined;
+}
+
+/* ----------------------------------------------------
+ * COLUMN GROUP (public consumer API)
+ * ---------------------------------------------------- */
+
+@Component({
+  selector: 'i-grid-column-group',
+  standalone: true,
+  template: '',
+})
+export class IGridColumnGroup<T = any> {
+  @Input() title = '';
+
+  @ContentChildren(IGridColumn)
+  columns!: QueryList<IGridColumn<T>>;
+
+  @ContentChildren(IGridCustomColumn)
+  customColumns!: QueryList<IGridCustomColumn<T>>;
 }
 
 /* ----------------------------------------------------
@@ -902,6 +962,16 @@ export class IGridHeaderCell {
   }
 }
 
+@Component({
+  selector: 'i-grid-viewport',
+  standalone: true,
+  template: `<ng-content />`,
+  host: {
+    class: 'i-grid-viewport',
+  },
+})
+export class IGridViewport {}
+
 /* ----------------------------------------------------
  * GRID COMPONENT
  * ---------------------------------------------------- */
@@ -919,12 +989,14 @@ export class IGridHeaderCell {
     IButton,
     IHighlightSearchPipe,
     ITruncatedTooltipDirective,
-    IGridRowDefDirective,
-    IGridExpandableRow,
+    // NEW header group render tags
+    IGridHeaderCellGroup,
+    IGridHeaderCellGroupColumns,
+    IGridViewport,
   ],
-  template: `<div class="i-grid-viewport">
+  template: `<i-grid-viewport>
       <!-- HEADER -->
-      @if (columns.length) {
+      @if (headerItems.length) {
         <i-grid-header-row>
           <!-- FLAT MODE: Expand-all for detail rows (if expandableRow present and not single) -->
           @if (!treeEnabled && hasExpandableRow && !expandableRowDef?.iRowDefExpandSingle) {
@@ -982,42 +1054,72 @@ export class IGridHeaderCell {
             </i-grid-header-cell>
           }
 
-          <!-- Data & custom headers -->
-          @for (col of columns; track col; let colIndex = $index) {
-            @if (treeEnabled && isTreeHostColumn(col)) {
-              <!-- TREE MODE: tree UI is inside this header cell -->
-              <i-grid-header-cell [class.i-grid-header-cell--auto]="col.isAuto" [column]="col">
-                <span class="i-grid-tree-head">
-                  <i-button
-                    class="i-grid-tree-expand-all"
-                    size="2xs"
-                    variant="outline"
-                    [icon]="anyTreeExpanded ? 'down' : 'next'"
-                    (onClick)="onToggleAllTree(); $event.stopPropagation()"
-                  />
+          <!-- Header items (columns OR groups) -->
+          @for (item of headerItems; track item; let i = $index) {
+            @if (item.kind === 'col') {
+              @let col = item.col;
 
-                  @if (selectionMode === 'multiple') {
-                    <input
-                      class="i-grid-tree-header-checkbox"
-                      type="checkbox"
-                      [checked]="allVisibleSelected"
-                      [indeterminate]="someVisibleSelected"
-                      (change)="onToggleAllVisible()"
-                      (click)="$event.stopPropagation()"
-                    />
-                  }
-
-                  <span class="i-grid-tree-head__title">{{ col.title || col.fieldName }}</span>
-                </span>
-              </i-grid-header-cell>
-            } @else {
-              @if (col.headerDef; as tmpl) {
-                <ng-container [ngTemplateOutlet]="tmpl" />
-              } @else {
+              @if (treeEnabled && isTreeHostColumn(col)) {
+                <!-- TREE MODE: tree UI is inside this header cell -->
                 <i-grid-header-cell [class.i-grid-header-cell--auto]="col.isAuto" [column]="col">
-                  {{ col.title || col.fieldName }}
+                  <span class="i-grid-tree-head">
+                    <i-button
+                      class="i-grid-tree-expand-all"
+                      size="2xs"
+                      variant="outline"
+                      [icon]="anyTreeExpanded ? 'down' : 'next'"
+                      (onClick)="onToggleAllTree(); $event.stopPropagation()"
+                    />
+
+                    @if (selectionMode === 'multiple') {
+                      <input
+                        class="i-grid-tree-header-checkbox"
+                        type="checkbox"
+                        [checked]="allVisibleSelected"
+                        [indeterminate]="someVisibleSelected"
+                        (change)="onToggleAllVisible()"
+                        (click)="$event.stopPropagation()"
+                      />
+                    }
+
+                    <span class="i-grid-tree-head__title">{{ col.title || col.fieldName }}</span>
+                  </span>
                 </i-grid-header-cell>
+              } @else {
+                @if (col.headerDef; as tmpl) {
+                  <ng-container [ngTemplateOutlet]="tmpl" />
+                } @else {
+                  <i-grid-header-cell [class.i-grid-header-cell--auto]="col.isAuto" [column]="col">
+                    {{ col.title || col.fieldName }}
+                  </i-grid-header-cell>
+                }
               }
+            } @else {
+              <!-- GROUP HEADER -->
+              @let g = item;
+
+              <i-grid-header-cell-group>
+                <!-- Group title cell (top row) -->
+                <i-grid-header-cell>
+                  {{ g.title }}
+                </i-grid-header-cell>
+
+                <!-- Group columns row -->
+                <i-grid-header-cell-group-columns>
+                  @for (col of g.columns; track col) {
+                    @if (col.headerDef; as tmpl) {
+                      <ng-container [ngTemplateOutlet]="tmpl" />
+                    } @else {
+                      <i-grid-header-cell
+                        [class.i-grid-header-cell--auto]="col.isAuto"
+                        [column]="col"
+                      >
+                        {{ col.title || col.fieldName }}
+                      </i-grid-header-cell>
+                    }
+                  }
+                </i-grid-header-cell-group-columns>
+              </i-grid-header-cell-group>
             }
           }
         </i-grid-header-row>
@@ -1091,7 +1193,7 @@ export class IGridHeaderCell {
             </i-grid-cell>
           }
 
-          <!-- Data/custom cells -->
+          <!-- Data/custom cells (FLATTENED columns) -->
           @for (col of columns; track col; let colIndex = $index) {
             @if (treeEnabled && isTreeHostColumn(col)) {
               <!-- TREE MODE: tree UI is inside this cell -->
@@ -1196,7 +1298,7 @@ export class IGridHeaderCell {
           />
         }
       }
-    </div>
+    </i-grid-viewport>
 
     @if (hasPagination) {
       <div class="i-grid-footer">
@@ -1248,20 +1350,24 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   /** Emits whenever selection changes */
-  @Output() selectionChange = new EventEmitter<IGridSelectionChange<T>>();
+  @Output() readonly selectionChange = new EventEmitter<IGridSelectionChange<T>>();
 
   /** Emits on row click (before selection logic) */
-  @Output() rowClick = new EventEmitter<T>();
+  @Output() readonly rowClick = new EventEmitter<T>();
 
   /** Expand events */
-  @Output() rowExpandChange = new EventEmitter<{ row: T; expanded: boolean }>();
-  @Output() expandedRowsChange = new EventEmitter<T[]>();
+  @Output() readonly rowExpandChange = new EventEmitter<{ row: T; expanded: boolean }>();
+  @Output() readonly expandedRowsChange = new EventEmitter<T[]>();
 
   @ContentChildren(IGridColumn)
   columnDefs!: QueryList<IGridColumn<T>>;
 
   @ContentChildren(IGridCustomColumn)
   customColumnDefs!: QueryList<IGridCustomColumn<T>>;
+
+  // NEW: group defs
+  @ContentChildren(IGridColumnGroup)
+  columnGroupDefs!: QueryList<IGridColumnGroup<T>>;
 
   @ContentChild(IGridRowDefDirective)
   expandableRowDef?: IGridRowDefDirective<T>;
@@ -1270,7 +1376,12 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     return !!this.expandableRowDef?.template;
   }
 
+  /** flattened columns used by body rendering + width/freeze logic */
   columns: IGridColumnLike<T>[] = [];
+
+  /** header structure */
+  headerItems: IGridHeaderItem<T>[] = [];
+
   renderedData: T[] = [];
   currentFilterText = '';
   sortStates: ISortState[] = [];
@@ -1284,7 +1395,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   private readonly _id = Math.random().toString(36).slice(2);
   private readonly _defaultColumnWidth = 200;
 
-  readonly selectionColumnWidth = 20;
+  readonly selectionColumnWidth = 32;
   readonly numberColumnWidth = 60;
   readonly expandColumnWidth = 32;
 
@@ -1577,13 +1688,10 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     if (!this.treeEnabled) {
       return 0;
     }
-    // NOTE: your old code returned 1 default; that breaks indent math.
-    // Level 0 means root.
     return this._treeMeta.get(row)?.level ?? 0;
   }
 
   getTreeIndentPx(row: T): number {
-    // base padding handled in CSS; here only level * indent
     return this.getRowLevel(row) * this.treeIndent;
   }
 
@@ -1620,8 +1728,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       return false;
     }
 
-    // "first child" in your wording = first level roots (level 0)
-    // Only consider nodes that actually have children.
     return this._treeRoots.some((r) => {
       const meta = this._treeMeta.get(r);
       return !!meta?.hasChildren && !!meta?.expanded;
@@ -1867,7 +1973,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     const shouldSelect = !this.allVisibleSelected;
 
     if (this.treeEnabled) {
-      // use roots from meta, not renderedData (renderedData is flattened visible)
       const roots = [...this._treeRoots];
 
       roots.forEach((row) => {
@@ -2142,9 +2247,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       if (includeExpand && this.hasExpandableRow) {
         left += this.expandColumnWidth;
       }
-    } else {
-      // tree mode: only expand column is disabled (still allowed detail rows template, but no expand column in tree mode)
-      // keep left = 0 here (no special columns)
     }
 
     if (includeNumber && this.showNumberColumnEffective) {
@@ -2228,9 +2330,10 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   /* ------- lifecycle ------- */
 
   ngAfterContentInit(): void {
-    this._rebuildColumns();
-    this.columnDefs.changes.subscribe(() => this._rebuildColumns());
-    this.customColumnDefs.changes.subscribe(() => this._rebuildColumns());
+    this._rebuildColumnsAndHeader();
+    this.columnDefs.changes.subscribe(() => this._rebuildColumnsAndHeader());
+    this.customColumnDefs.changes.subscribe(() => this._rebuildColumnsAndHeader());
+    this.columnGroupDefs.changes.subscribe(() => this._rebuildColumnsAndHeader());
 
     this._connectData();
     this._applyExistingDataSourceSort();
@@ -2285,24 +2388,101 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     this.sortStates = sort.map((s) => ({ active: s.active, direction: s.direction }));
   }
 
-  private _rebuildColumns(fromDataChange = false): void {
-    const projectedDataCols = this.columnDefs?.toArray?.() ?? [];
-    const customCols = this.customColumnDefs?.toArray?.() ?? [];
+  /**
+   * Build:
+   * - headerItems (columns + groups)
+   * - columns (flattened, for body)
+   */
+  private _rebuildColumnsAndHeader(fromDataChange = false): void {
+    // 1) if user provided explicit columns/groups, use them
+    const directCols = this.columnDefs?.toArray?.() ?? [];
+    const directCustom = this.customColumnDefs?.toArray?.() ?? [];
+    const groups = this.columnGroupDefs?.toArray?.() ?? [];
 
-    let dataCols: IGridColumnLike<T>[] = [];
+    const hasAnyGrouping = groups.length > 0;
 
-    if (projectedDataCols.length > 0) {
-      dataCols = projectedDataCols;
-    } else {
-      if (fromDataChange || !this.columns.length) {
-        dataCols = this._buildAutoColumnsFromData();
-      } else {
-        dataCols = this.columns.filter((c) => !(c instanceof IGridCustomColumn));
-      }
+    // If groups exist, we will NOT also take "directCols" as top-level,
+    // because the user should place columns inside group OR as direct siblings.
+    // However, QueryList includes nested components too.
+    // So we must detect "top-level direct cols" by excluding columns that belong to a group.
+    const groupedColsSet = new Set<IGridColumnLike<T>>();
+    const groupedCustomSet = new Set<IGridColumnLike<T>>();
+
+    for (const g of groups) {
+      (g.columns?.toArray?.() ?? []).forEach((c) => groupedColsSet.add(c));
+      (g.customColumns?.toArray?.() ?? []).forEach((c) => groupedCustomSet.add(c));
     }
 
-    this.columns = [...dataCols, ...customCols];
+    const topLevelCols = directCols.filter((c) => !groupedColsSet.has(c));
+    const topLevelCustom = directCustom.filter((c) => !groupedCustomSet.has(c));
 
+    // If user provides anything explicit (top-level or groups), prefer explicit.
+    const hasExplicit =
+      hasAnyGrouping ||
+      topLevelCols.length > 0 ||
+      topLevelCustom.length > 0 ||
+      directCols.length > 0;
+
+    if (hasExplicit) {
+      const headerItems: IGridHeaderItem<T>[] = [];
+
+      // top-level columns first (in DOM order this will be based on content projection order;
+      // QueryList is usually in DOM order, good enough for now)
+      for (const c of topLevelCols) {
+        headerItems.push({ kind: 'col', col: c });
+      }
+
+      // groups
+      for (const g of groups) {
+        const gCols: IGridColumnLike<T>[] = [
+          ...(g.columns?.toArray?.() ?? []),
+          ...(g.customColumns?.toArray?.() ?? []),
+        ];
+
+        headerItems.push({
+          kind: 'group',
+          title: g.title || '',
+          columns: gCols,
+        });
+      }
+
+      // top-level custom columns after groups (or you can keep them in DOM order later)
+      for (const c of topLevelCustom) {
+        headerItems.push({ kind: 'col', col: c });
+      }
+
+      // Flatten for body: columns are all cols in header order (groups expanded)
+      const flat: IGridColumnLike<T>[] = [];
+      for (const item of headerItems) {
+        if (item.kind === 'col') {
+          flat.push(item.col);
+        } else {
+          flat.push(...item.columns);
+        }
+      }
+
+      this.headerItems = headerItems;
+      this.columns = flat;
+
+      this._seedColumnWidths();
+      return;
+    }
+
+    // 2) Auto columns fallback (no explicit columns/groups)
+    if (fromDataChange || !this.columns.length) {
+      const autoCols = this._buildAutoColumnsFromData();
+      this.columns = autoCols;
+      this.headerItems = autoCols.map((c) => ({ kind: 'col', col: c }));
+      this._seedColumnWidths();
+      return;
+    }
+
+    // 3) Keep existing columns if no changes
+    this.headerItems = this.columns.map((c) => ({ kind: 'col', col: c }));
+    this._seedColumnWidths();
+  }
+
+  private _seedColumnWidths(): void {
     this.columns.forEach((col) => {
       if (!this._columnWidths.has(col)) {
         const px = this.getColumnWidth(col);
@@ -2363,7 +2543,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
           const roots = data || [];
           this._buildTreeMeta(roots);
           this._rebuildTreeRendered();
-          this._rebuildColumns(true);
+          this._rebuildColumnsAndHeader(true);
         });
         return;
       }
@@ -2372,14 +2552,14 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
         const roots = this.dataSource;
         this._buildTreeMeta(roots);
         this._rebuildTreeRendered();
-        this._rebuildColumns(true);
+        this._rebuildColumnsAndHeader(true);
         return;
       }
 
       this.renderedData = [];
       this._reconcileSelectionWithData();
       this._reconcileExpandedWithData();
-      this._rebuildColumns(true);
+      this._rebuildColumnsAndHeader(true);
       this._updateCurrentFilterText();
       return;
     }
@@ -2389,7 +2569,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
         this.renderedData = data || [];
         this._reconcileSelectionWithData();
         this._reconcileExpandedWithData();
-        this._rebuildColumns(true);
+        this._rebuildColumnsAndHeader(true);
         this._updateCurrentFilterText();
       });
       return;
@@ -2399,7 +2579,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       this.renderedData = this.dataSource;
       this._reconcileSelectionWithData();
       this._reconcileExpandedWithData();
-      this._rebuildColumns(true);
+      this._rebuildColumnsAndHeader(true);
       this._updateCurrentFilterText();
       return;
     }
@@ -2407,7 +2587,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     this.renderedData = [];
     this._reconcileSelectionWithData();
     this._reconcileExpandedWithData();
-    this._rebuildColumns(true);
+    this._rebuildColumnsAndHeader(true);
     this._updateCurrentFilterText();
   }
 
@@ -2453,8 +2633,11 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
 export const I_GRID_DECLARATIONS = [
   IGrid,
+  IGridViewport,
   IGridColumn,
   IGridCustomColumn,
+  IGridColumnGroup, // NEW
+
   IGridHeaderCellDefDirective,
   IGridCellDefDirective,
   IGridRowDefDirective,
@@ -2463,36 +2646,14 @@ export const I_GRID_DECLARATIONS = [
   IGridCell,
   IGridHeaderRowDirective,
   IGridRowDirective,
+
+  // NEW internal header render tags
+  IGridHeaderCellGroup,
+  IGridHeaderCellGroupColumns,
 ];
 
 @NgModule({
-  imports: [
-    IGrid,
-    IGridColumn,
-    IGridCustomColumn,
-    IGridHeaderCellDefDirective,
-    IGridCellDefDirective,
-    IGridRowDefDirective,
-    IGridExpandableRow,
-    IGridHeaderCell,
-    IGridCell,
-    IGridHeaderRowDirective,
-    IGridRowDirective,
-    IPaginator,
-  ],
-  exports: [
-    IGrid,
-    IGridColumn,
-    IGridCustomColumn,
-    IGridHeaderCellDefDirective,
-    IGridCellDefDirective,
-    IGridRowDefDirective,
-    IGridExpandableRow,
-    IGridHeaderCell,
-    IGridCell,
-    IGridHeaderRowDirective,
-    IGridRowDirective,
-    IPaginator,
-  ],
+  imports: [...I_GRID_DECLARATIONS, IPaginator],
+  exports: [...I_GRID_DECLARATIONS, IPaginator],
 })
 export class IGridModule {}

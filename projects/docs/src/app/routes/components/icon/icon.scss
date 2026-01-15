@@ -1,0 +1,16 @@
+ul {
+  list-style: disc;
+  padding-left: 15px;
+
+  li {
+    span {
+      width: 200px;
+    }
+  }
+}
+
+th {
+  &:first-child {
+    width: 160px;
+  }
+}

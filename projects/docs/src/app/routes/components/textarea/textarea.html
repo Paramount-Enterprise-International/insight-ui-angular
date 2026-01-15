@@ -1,0 +1,176 @@
+<i-section>
+  <i-section-body>
+    <div class="flex flex-col gap-md">
+      <h1>Textarea</h1>
+      <div><code>i-textarea</code> & <code>i-fc-textarea</code></div>
+      <p>
+        Textarea component with form control integration, validation support, and customizable error
+        messages.
+      </p>
+      <br />
+      <h2>Components</h2>
+      <ul>
+        <li>
+          <code>i-textarea</code> - Basic textarea component implementing ControlValueAccessor
+        </li>
+        <li><code>i-fc-textarea</code> - Form control wrapper with label and error message</li>
+      </ul>
+      <br />
+      <h2>Properties (i-textarea)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Default</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>placeholder</code></td>
+            <td><code>string</code></td>
+            <td><code>''</code></td>
+            <td>Placeholder text for the textarea</td>
+          </tr>
+          <tr>
+            <td><code>readonly</code></td>
+            <td><code>boolean</code></td>
+            <td><code>false</code></td>
+            <td>Makes the textarea read-only</td>
+          </tr>
+          <tr>
+            <td><code>rows</code></td>
+            <td><code>number</code></td>
+            <td><code>3</code></td>
+            <td>Number of visible text lines</td>
+          </tr>
+          <tr>
+            <td><code>invalid</code></td>
+            <td><code>boolean</code></td>
+            <td><code>false</code></td>
+            <td>Visual invalid state indicator</td>
+          </tr>
+          <tr>
+            <td><code>value</code></td>
+            <td><code>string | null</code></td>
+            <td><code>null</code></td>
+            <td>Current value of the textarea</td>
+          </tr>
+          <tr>
+            <td><code>disabled</code></td>
+            <td><code>boolean</code></td>
+            <td><code>false</code></td>
+            <td>Disables the textarea input</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h2>Properties (i-fc-textarea)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>label</code></td>
+            <td><code>string</code></td>
+            <td>Label text displayed above textarea</td>
+          </tr>
+          <tr>
+            <td><code>placeholder</code></td>
+            <td><code>string</code></td>
+            <td>Placeholder text for the textarea</td>
+          </tr>
+          <tr>
+            <td><code>readonly</code></td>
+            <td><code>boolean</code></td>
+            <td>Makes the textarea read-only</td>
+          </tr>
+          <tr>
+            <td><code>rows</code></td>
+            <td><code>number</code></td>
+            <td>Number of visible text lines (default: 3)</td>
+          </tr>
+          <tr>
+            <td><code>errorMessage</code></td>
+            <td><code>IFormControlErrorMessage</code></td>
+            <td>Custom error message templates</td>
+          </tr>
+          <tr>
+            <td><code>value</code></td>
+            <td><code>string | null</code></td>
+            <td>Current value (non-reactive binding)</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h2>Form Integration Properties</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>formControlName</code></td>
+            <td><code>string</code></td>
+            <td>Reactive forms control name</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <!-- <h2>Error Message Templates</h2>
+      <code class="text-blue-600"
+        >{{ '{' }} required: string, minlength: string, maxlength: string, pattern: string, email:
+        string, ...custom {{ '}' }}</code
+      > -->
+      <br /><br />
+      <h2>Example</h2>
+      <p>Basic Textarea <code>i-textarea</code></p>
+      <i-section>
+        <i-section-tabs height="200">
+          <i-section-tab title="Preview">
+            <i-textarea label="Description" placeholder="Enter your description here..." />
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="textarea.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="textarea.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>Textarea Example With Error Messages and Lable <code>i-fc-textarea</code></p>
+      <i-section>
+        <i-section-tabs height="300">
+          <i-section-tab title="Preview">
+            <form [formGroup]="basicFormGroup">
+              <i-fc-textarea
+                formControlName="basicFormControl1"
+                label="Description"
+                placeholder="Enter your description here..."
+              />
+              <i-button class="mt-lg" icon="save" type="submit">Submit</i-button>
+            </form>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="fc-textarea.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="fc-textarea.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+    </div>
+  </i-section-body>
+</i-section>

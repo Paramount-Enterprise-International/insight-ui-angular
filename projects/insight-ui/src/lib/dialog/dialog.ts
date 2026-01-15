@@ -14,10 +14,21 @@ import {
   Output,
   SimpleChanges,
   Type,
+  ViewChild,
 } from '@angular/core';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, map, Observable, Subject } from 'rxjs';
 import { IButton, IButtonVariant } from '../button/button';
-import { IIconName } from '../icon/icon';
+import { IIcon, IIconName } from '../icon/icon';
+import {
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  FormGroupDirective,
+  FormsModule,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
+import { IFCTextArea } from '../textarea/textarea';
 
 /**
  * CONFIG + TOKENS
@@ -409,8 +420,224 @@ export class IDialog {
   }
 }
 
+export type IAlertData = {
+  title: string;
+  description: string;
+  type: 'information' | 'success' | 'warning' | 'danger';
+};
+
+@Component({
+  selector: 'i-alert',
+  imports: [NgClass, IIcon, IDialog],
+  template: `
+    <i-dialog
+      [actions]="[
+        {
+          type: 'ok',
+          className: 'w-full',
+        },
+      ]"
+      [ngClass]="alertClass"
+      (onOk)="submit()"
+    >
+      @if (data.type === 'information') {
+        <i-icon icon="info" size="3xl" />
+      }
+      @if (data.type === 'success') {
+        <i-icon icon="check-circle" size="3xl" />
+      }
+      @if (data.type === 'warning') {
+        <i-icon icon="exclamation" size="3xl" />
+      }
+      @if (data.type === 'danger') {
+        <i-icon icon="x-circle" size="3xl" />
+      }
+      <h4>{{ data.title }}</h4>
+      <p [innerHtml]="data.description"></p>
+    </i-dialog>
+  `,
+})
+export class IAlert {
+  data: IAlertData = inject(I_DIALOG_DATA);
+
+  dialog: IDialogRef<IAlert> = inject(IDialogRef);
+
+  get alertClass(): string {
+    return `i-alert i-alert-${this.data.type}`;
+  }
+
+  submit(): void {
+    this.dialog.close();
+  }
+}
+
+@Injectable({
+  providedIn: 'root',
+})
+export class IAlertService {
+  dialog: IDialogService = inject(IDialogService);
+
+  show({ title, description, type }: IAlertData): Observable<boolean> {
+    return this.dialog
+      .open(IAlert, {
+        width: '',
+        data: {
+          title,
+          description,
+          type,
+        },
+        disableClose: true,
+      })
+      .afterClosed()
+      .pipe(map((result) => !!result));
+  }
+
+  information(title: string, description: string): Observable<boolean> {
+    return this.show({ title, description, type: 'information' });
+  }
+
+  success(title: string, description: string): Observable<boolean> {
+    return this.show({ title, description, type: 'success' });
+  }
+
+  warning(title: string, description: string): Observable<boolean> {
+    return this.show({ title, description, type: 'warning' });
+  }
+
+  danger(title: string, description: string): Observable<boolean> {
+    return this.show({ title, description, type: 'danger' });
+  }
+}
+
+export type IConfirmData = {
+  title: string;
+  description: string;
+  type: 'information' | 'success' | 'warning' | 'danger';
+  reason?: boolean;
+};
+
+@Component({
+  selector: 'i-confirm',
+  imports: [IDialog, NgClass, IIcon, IFCTextArea, ReactiveFormsModule, FormsModule],
+  template: `<i-dialog
+    actionAlign="center"
+    [actions]="[
+      {
+        type: 'confirm',
+        className: 'w-104',
+      },
+      {
+        type: 'cancel',
+        className: 'w-104',
+      },
+    ]"
+    [ngClass]="confirmClass"
+    (onConfirm)="submit()"
+  >
+    @if (data.type === 'information') {
+      <i-icon icon="info" size="3xl" />
+    }
+    @if (data.type === 'success') {
+      <i-icon icon="check-circle" size="3xl" />
+    }
+    @if (data.type === 'warning') {
+      <i-icon icon="exclamation" size="3xl" />
+    }
+    @if (data.type === 'danger') {
+      <i-icon icon="x-circle" size="3xl" />
+    }
+    <h4>{{ data.title }}</h4>
+    <p [innerHtml]="data.description"></p>
+    @if (data.reason) {
+      <form class="mt-xs" [formGroup]="formGroup" (ngSubmit)="onSubmit()">
+        <i-fc-textarea
+          formControlName="reason"
+          label="Reason"
+          placeholder="Fill your reason here.."
+          [errorMessage]="{
+            required: 'Please fill in the reason..',
+          }"
+        />
+        <button #submitButton class="hidden" type="submit">Submit</button>
+      </form>
+    }
+  </i-dialog>`,
+})
+export class IConfirm {
+  data: IConfirmData = inject(I_DIALOG_DATA);
+
+  dialog: IDialogRef<IConfirm> = inject(IDialogRef);
+
+  formBuilder: FormBuilder = inject(FormBuilder);
+
+  reason: FormControl = new FormControl('', [Validators.required]);
+
+  formGroup: FormGroup = this.formBuilder.group({
+    reason: this.reason,
+  });
+
+  @ViewChild(FormGroupDirective) formGroupDir!: FormGroupDirective;
+  // @ViewChild('submitButton') submitButton!: ElementRef<HTMLButtonElement>;
+
+  get confirmClass(): string {
+    return `i-confirm i-confirm-${this.data.type}`;
+  }
+
+  submit(): void {
+    if (this.data.reason) {
+      this.formGroupDir.onSubmit(new Event('submit'));
+      return;
+    }
+    this.dialog.close(true);
+  }
+
+  onSubmit(): void {
+    if (this.formGroup.invalid) {
+      return;
+    }
+    this.dialog.close(this.reason.value);
+  }
+}
+
+@Injectable({
+  providedIn: 'root',
+})
+export class IConfirmService {
+  dialog: IDialogService = inject(IDialogService);
+
+  show({ title, description, type, reason }: IConfirmData): Observable<any> {
+    return this.dialog
+      .open(IConfirm, {
+        width: '',
+        data: {
+          title,
+          description,
+          type,
+          reason,
+        },
+      })
+      .afterClosed();
+  }
+
+  information(title: string, description: string): Observable<boolean> {
+    return this.show({ title, description, type: 'information' });
+  }
+
+  success(title: string, description: string): Observable<boolean> {
+    return this.show({ title, description, type: 'success' });
+  }
+
+  warning(title: string, description: string, reason?: boolean): Observable<boolean> {
+    return this.show({ title, description, type: 'warning', reason });
+  }
+
+  danger(title: string, description: string, reason?: boolean): Observable<boolean> {
+    return this.show({ title, description, type: 'danger', reason });
+  }
+}
+
 @NgModule({
-  imports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog],
-  exports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog],
+  imports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm],
+  exports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm],
 })
 export class IDialogModule {}

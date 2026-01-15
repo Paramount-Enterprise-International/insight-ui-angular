@@ -1,0 +1,547 @@
+<i-section>
+  <i-section-body>
+    <div class="flex flex-col gap-md">
+      <h1>Input</h1>
+      <div><code>i-input</code>, <code>i-fc-input</code></div>
+      <p>
+        Textbox component,
+        <code>i-input</code> is a wrapper for input component, with several added functionality,
+        <code>i-fc-input</code> is a wrapper of <code>i-input</code> that includes label and error
+        message
+      </p>
+      <br />
+      <p>Properties :</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Data Type</th>
+            <th>Required</th>
+            <th>Default Value</th>
+            <th>Remark</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>type</code></td>
+            <td><code>string</code></td>
+            <td>Optional</td>
+            <td><code>text</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>placeholder</code></td>
+            <td><code>string</code></td>
+            <td>Optional</td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>readonly</code></td>
+            <td><code>boolean</code></td>
+            <td>Optional</td>
+            <td><code>false</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>invalid</code></td>
+            <td><code>boolean</code></td>
+            <td>Optional</td>
+            <td><code>false</code></td>
+            <td>Controlled by form or wrapper</td>
+          </tr>
+          <tr>
+            <td><code>value</code></td>
+            <td><code>string</code></td>
+            <td>Optional</td>
+            <td><code>''</code></td>
+            <td>value usable both by CVA and by [value] binding</td>
+          </tr>
+          <tr>
+            <td><code>disabled</code></td>
+            <td><code>boolean</code></td>
+            <td>Optional</td>
+            <td><code>false</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>prepend</code></td>
+            <td><code>IInputAddons</code> | <code>IInputAddons[]</code></td>
+            <td>Optional</td>
+            <td><code>null</code></td>
+            <td>
+              IInputAddonLoading | IInputAddonIcon | IInputAddonText | IInputAddonButton |
+              IInputAddonLink | IInputAddons[]
+            </td>
+          </tr>
+          <tr>
+            <td><code>append</code></td>
+            <td><code>IInputAddons</code> | <code>IInputAddons[]</code></td>
+            <td>Optional</td>
+            <td><code>null</code></td>
+            <td>
+              <code>IInputAddonLoading</code> | <code>IInputAddonIcon</code> |
+              <code>IInputAddonText</code> | <code>IInputAddonButton</code> |
+              <code>IInputAddonLink</code> | <code>IInputAddons[]</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>mask</code></td>
+            <td><code>IInputMask</code></td>
+            <td>Optional</td>
+            <td><code>null</code></td>
+            <td>Optional mask passed through to inner input's directive</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <p>Event :</p>
+      <table>
+        <tr>
+          <th>Event</th>
+          <th>Description</th>
+          <th>Required</th>
+          <th>Default Value</th>
+        </tr>
+        <tr>
+          <td><code>onChange</code></td>
+          <td><code>Function</code></td>
+          <td>Optional</td>
+          <td><code>(value: any) => void</code></td>
+        </tr>
+        <tr>
+          <td><code>onTouched</code></td>
+          <td><code>Function</code></td>
+          <td>Optional</td>
+          <td><code>() => void</code></td>
+        </tr>
+      </table>
+      <br />
+
+      <h2 id="input-addons">IInputAddons</h2>
+      <p>
+        You can insert certain elements as an addon for i-input, these addon inserted through
+        attributes <code>prepend</code> and <code>append</code>, the object that being inserted
+        called <code>IInputAddon</code>, <code>IInputAddon</code> can be one of the following type :
+      </p>
+      <ul>
+        <li>
+          <pre><a fragment="i-input-addon-button" [routerLink]="[]">IInputAddonButton</a></pre>
+        </li>
+        <li>
+          <pre><a fragment="i-input-addon-link" [routerLink]="[]">IInputAddonLink</a></pre>
+        </li>
+        <li>
+          <pre><a fragment="i-input-addon-icon" [routerLink]="[]">IInputAddonIcon</a></pre>
+        </li>
+        <li>
+          <pre><a fragment="i-input-addon-text" [routerLink]="[]">IInputAddonText</a></pre>
+        </li>
+        <li>
+          <pre><a fragment="i-input-addon-loading" [routerLink]="[]">IInputAddonLoading</a></pre>
+        </li>
+      </ul>
+      <br />
+      <h3 id="i-input-addon-button">IInputAddonButton</h3>
+      <p>Properties :</p>
+      <table>
+        <tr>
+          <th>Property</th>
+          <th>Description</th>
+          <th>Required</th>
+          <th>Default Value</th>
+        </tr>
+        <tr>
+          <td><code>type</code></td>
+          <td>'button'</td>
+          <td>Required</td>
+          <td>'button'</td>
+        </tr>
+        <tr>
+          <td><code>icon</code></td>
+          <td>string</td>
+          <td>Required</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><code>visible</code></td>
+          <td>boolean</td>
+          <td>Optional</td>
+          <td>true</td>
+        </tr>
+        <tr>
+          <td><code>variant</code></td>
+          <td>IButtonVariant</td>
+          <td>Optional</td>
+          <td>'primary'</td>
+        </tr>
+      </table>
+      <br />
+      <p>Event :</p>
+      <table>
+        <tr>
+          <th>Event</th>
+          <th>Description</th>
+          <th>Required</th>
+          <th>Default Value</th>
+        </tr>
+        <tr>
+          <td><code>onClick</code></td>
+          <td><code>Function</code></td>
+          <td>Required</td>
+          <td></td>
+        </tr>
+      </table>
+      <br />
+      <h3 id="i-input-addon-link">IInputAddonLink</h3>
+      <p>Properties :</p>
+      <table>
+        <tr>
+          <th>Property</th>
+          <th>Description</th>
+          <th>Required</th>
+          <th>Default Value</th>
+        </tr>
+        <tr>
+          <td><code>type</code></td>
+          <td>'link'</td>
+          <td>Required</td>
+          <td>'link'</td>
+        </tr>
+        <tr>
+          <td><code>icon</code></td>
+          <td>string</td>
+          <td>Required</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><code>href</code></td>
+          <td>string</td>
+          <td>Required</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><code>visible</code></td>
+          <td>boolean</td>
+          <td>Optional</td>
+          <td>true</td>
+        </tr>
+        <tr>
+          <td><code>variant</code></td>
+          <td>IButtonVariant</td>
+          <td>Optional</td>
+          <td>'primary'</td>
+        </tr>
+      </table>
+      <br />
+      <h3 id="i-input-addon-icon">IInputAddonIcon</h3>
+      <p>Properties :</p>
+      <table>
+        <tr>
+          <th>Property</th>
+          <th>Description</th>
+          <th>Required</th>
+          <th>Default Value</th>
+        </tr>
+        <tr>
+          <td><code>type</code></td>
+          <td>'icon'</td>
+          <td>Required</td>
+          <td>'icon'</td>
+        </tr>
+        <tr>
+          <td><code>icon</code></td>
+          <td>string</td>
+          <td>Required</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><code>visible</code></td>
+          <td>boolean</td>
+          <td>Optional</td>
+          <td>true</td>
+        </tr>
+      </table>
+      <br />
+      <h3 id="i-input-addon-text">IInputAddonText</h3>
+      <p>Properties :</p>
+      <table>
+        <tr>
+          <th>Property</th>
+          <th>Description</th>
+          <th>Required</th>
+          <th>Default Value</th>
+        </tr>
+        <tr>
+          <td><code>type</code></td>
+          <td>'text'</td>
+          <td>Required</td>
+          <td>'text'</td>
+        </tr>
+        <tr>
+          <td><code>text</code></td>
+          <td>string</td>
+          <td>Required</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><code>visible</code></td>
+          <td>boolean</td>
+          <td>Optional</td>
+          <td>true</td>
+        </tr>
+      </table>
+      <br />
+      <h3 id="i-input-addon-loading">IInputAddonLoading</h3>
+      <p>Properties :</p>
+      <table>
+        <tr>
+          <th>Property</th>
+          <th>Description</th>
+          <th>Required</th>
+          <th>Default Value</th>
+        </tr>
+        <tr>
+          <td><code>type</code></td>
+          <td>'loading'</td>
+          <td>Required</td>
+          <td>'loading'</td>
+        </tr>
+        <tr>
+          <td><code>visible</code></td>
+          <td>boolean</td>
+          <td>Optional</td>
+          <td>true</td>
+        </tr>
+      </table>
+      <br />
+      <h2>IInputMaskDirective</h2>
+      <p>Reusable input mask directive, for now it only support date and time</p>
+      <p>Properties :</p>
+      <table>
+        <tr>
+          <th>Property</th>
+          <th>Description</th>
+          <th>Required</th>
+          <th>Default Value</th>
+        </tr>
+        <tr>
+          <td><code>mask</code></td>
+          <td>IInputMask</td>
+          <td>Required</td>
+          <td></td>
+        </tr>
+      </table>
+      <br />
+      <h3>IInputMask</h3>
+      <p>An object that passed as IInputMaskDirective mask parameter</p>
+      <p>Properties :</p>
+      <table>
+        <tr>
+          <th>Property</th>
+          <th>Description</th>
+          <th>Required</th>
+          <th>Default Value</th>
+        </tr>
+        <tr>
+          <td><code>type</code></td>
+          <td>IInputMaskType</td>
+          <td>Required</td>
+          <td>'date', 'time'</td>
+        </tr>
+        <tr>
+          <td><code>format</code></td>
+          <td>string</td>
+          <td>Required</td>
+          <td>
+            <ul>
+              <li>'date' → e.g. 'dd/MM/yyyy', 'yyyy-MM-dd'</li>
+              <li>'time' → e.g. 'HH:mm', 'HH:mm:ss'</li>
+            </ul>
+          </td>
+        </tr>
+      </table>
+      <br />
+      <h2>Examples</h2>
+      <p>Basic <code>i-input</code></p>
+      <i-section>
+        <i-section-tabs height="300">
+          <i-section-tab title="Preview">
+            <div class="flex gap-md justify-center align-center flex-fill">
+              <i-input class="w-200" placeholder="Insert here.." />
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="input.html"></i-code-viewer>
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="input.ts"></i-code-viewer>
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>Input with <code>prepend</code> and <code>append</code></p>
+      <i-section>
+        <i-section-tabs height="300">
+          <i-section-tab title="Preview">
+            <div class="flex gap-md justify-center align-center flex-fill">
+              <i-input
+                class="w-200"
+                placeholder="Insert here.."
+                [append]="{
+                  type: 'button',
+                  icon: 'edit',
+                  onClick: inputAddonClick,
+                }"
+              />
+              <i-input
+                class="w-200"
+                placeholder="Insert here.."
+                [prepend]="{
+                  type: 'icon',
+                  icon: 'user',
+                }"
+              />
+              <i-input
+                class="w-300"
+                placeholder="Insert here.."
+                [append]="[
+                  {
+                    type: 'button',
+                    icon: 'edit',
+                    onClick: inputAddonClick,
+                  },
+                  {
+                    type: 'button',
+                    icon: 'delete',
+                    variant: 'danger',
+                    onClick: inputAddonClick,
+                  },
+                ]"
+                [prepend]="[
+                  {
+                    type: 'link',
+                    icon: 'users',
+                    href: 'https://insight.paramount-land.com',
+                  },
+                  {
+                    type: 'button',
+                    icon: 'edit',
+                    onClick: inputAddonClick,
+                  },
+                  {
+                    type: 'icon',
+                    icon: 'user',
+                  },
+                ]"
+              />
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="input-addon.html"></i-code-viewer>
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="input-addon.ts"></i-code-viewer>
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>Input with IInputMask</p>
+      <i-section>
+        <i-section-tabs height="300">
+          <i-section-tab title="Preview">
+            <div class="flex gap-md justify-center align-center flex-fill">
+              <i-input
+                class="w-200"
+                placeholder="dd-MM-yyyy"
+                [mask]="{
+                  type: 'date',
+                  format: 'dd-MM-yyyy',
+                }"
+              />
+              <i-input
+                class="w-200"
+                placeholder="HH:mm"
+                [mask]="{
+                  type: 'time',
+                  format: 'HH:mm',
+                }"
+              />
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="input-mask.html"></i-code-viewer>
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="input.ts"></i-code-viewer>
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>Basic <code>i-fc-input</code></p>
+      <i-section>
+        <i-section-tabs height="300">
+          <i-section-tab title="Preview">
+            <div class="flex gap-md justify-center align-center flex-fill">
+              <form [formGroup]="basicFormGroup">
+                <i-fc-input
+                  class="w-200"
+                  formControlName="basicFormControl1"
+                  label="First Name"
+                  placeholder="Insert your name here.."
+                />
+                <i-fc-input
+                  class="w-200"
+                  formControlName="basicFormControl2"
+                  label="Last Name"
+                  placeholder="Insert your name here.."
+                />
+                <i-button icon="save" type="submit">Submit</i-button>
+              </form>
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="fc-input.html"></i-code-viewer>
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="fc-input.ts"></i-code-viewer>
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>Basic <code>i-fc-input</code> with custom error message</p>
+      <i-section>
+        <i-section-tabs height="300">
+          <i-section-tab title="Preview">
+            <div class="flex gap-md justify-center align-center flex-fill">
+              <form [formGroup]="basicFormGroup">
+                <i-fc-input
+                  class="w-200"
+                  formControlName="basicFormControl1"
+                  label="First Name"
+                  placeholder="Insert your name here.."
+                  [errorMessage]="{
+                    required: 'Custom your error message..',
+                  }"
+                />
+                <i-fc-input
+                  class="w-200"
+                  formControlName="basicFormControl2"
+                  label="Last Name"
+                  placeholder="Insert your name here.."
+                />
+                <i-button icon="save" type="submit">Submit</i-button>
+              </form>
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="fc-input.html"></i-code-viewer>
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="fc-input.ts"></i-code-viewer>
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+    </div>
+  </i-section-body>
+</i-section>

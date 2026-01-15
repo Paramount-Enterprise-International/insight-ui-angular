@@ -1,0 +1,240 @@
+<i-section>
+  <i-section-body>
+    <div class="flex flex-col gap-md">
+      <h1>Card</h1>
+      <div>
+        <code>i-card</code>
+      </div>
+      <p>
+        The <code>i-card</code> component is a versatile container that can function as a clickable
+        card, a navigation element, or a regular content wrapper. It supports three distinct
+        interaction modes: traditional hyperlinks, Angular Router navigation, and click event
+        handling.
+      </p>
+      <br />
+      <h2>Properties</h2>
+      <table>
+        <tr>
+          <th>Property</th>
+          <th>Type</th>
+          <th>Required</th>
+          <th>Default</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td><code>disabled</code></td>
+          <td><code>boolean</code></td>
+          <td>Optional</td>
+          <td><code>false</code></td>
+          <td>
+            Disables all interactions and navigation. When true, sets appropriate ARIA attributes
+            and prevents clicks.
+          </td>
+        </tr>
+        <tr>
+          <td><code>href</code></td>
+          <td><code>string | null</code></td>
+          <td>Optional</td>
+          <td><code>null</code></td>
+          <td>Traditional anchor URL. Cannot be combined with <code>routerLink</code>.</td>
+        </tr>
+        <tr>
+          <td><code>routerLink</code></td>
+          <td><code>string | any[] | undefined</code></td>
+          <td>Optional</td>
+          <td><code>undefined</code></td>
+          <td>Angular Router navigation destination. Cannot be combined with <code>href</code>.</td>
+        </tr>
+        <tr>
+          <td><code>queryParams</code></td>
+          <td><code>Record&lt;string, any&gt; | null</code></td>
+          <td>Optional</td>
+          <td><code>null</code></td>
+          <td>Query parameters for router navigation.</td>
+        </tr>
+        <tr>
+          <td><code>fragment</code></td>
+          <td><code>string</code></td>
+          <td>Optional</td>
+          <td>-</td>
+          <td>URL fragment (hash) for navigation.</td>
+        </tr>
+        <tr>
+          <td><code>replaceUrl</code></td>
+          <td><code>boolean</code></td>
+          <td>Optional</td>
+          <td><code>false</code></td>
+          <td>Replaces browser history instead of adding new entry.</td>
+        </tr>
+        <tr>
+          <td><code>skipLocationChange</code></td>
+          <td><code>boolean</code></td>
+          <td>Optional</td>
+          <td><code>false</code></td>
+          <td>Navigates without changing browser URL.</td>
+        </tr>
+        <tr>
+          <td><code>state</code></td>
+          <td><code>Record&lt;string, any&gt;</code></td>
+          <td>Optional</td>
+          <td>-</td>
+          <td>Additional state data for router navigation.</td>
+        </tr>
+        <tr>
+          <td><code>target</code></td>
+          <td><code>'_self' | '_blank' | '_parent' | '_top' | string</code></td>
+          <td>Optional</td>
+          <td>-</td>
+          <td>Link target attribute. Auto-adds security attributes for <code>_blank</code>.</td>
+        </tr>
+        <tr>
+          <td><code>rel</code></td>
+          <td><code>string | null</code></td>
+          <td>Optional</td>
+          <td><code>null</code></td>
+          <td>Link relationship attribute.</td>
+        </tr>
+      </table>
+      <br />
+      <h2>Events</h2>
+      <table>
+        <tr>
+          <th>Event</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td><code>cardClick</code></td>
+          <td><code>MouseEvent</code></td>
+          <td>Emitted when card is clicked in click-only mode.</td>
+        </tr>
+      </table>
+      <br />
+      <h2>Child Components</h2>
+      <h3><code>i-card-image</code></h3>
+      <p>Displays an image within the card. Requires <code>src</code> attribute.</p>
+      <h3><code>i-card-body</code></h3>
+      <p>Main content container. No additional properties required.</p>
+      <h3><code>i-card-footer</code></h3>
+      <p>Footer content container. No additional properties required.</p>
+      <br />
+      <h2>Examples</h2>
+      <p>Basic Clickable Card: <code>&lt;i-card (cardClick)="onCardClick()"&gt;</code></p>
+      <i-section>
+        <i-section-tabs height="250">
+          <i-section-tab title="Preview">
+            <div class="flex gap-md justify-center align-center h-full">
+              <i-card (cardClick)="onCardClick()">
+                <i-card-body class="p-16">
+                  <h3 class="mb-sm text-[18px] font-semibold">Basic Card</h3>
+                  <p class="m-0 text-gray-500">Click this card to trigger an event</p>
+                </i-card-body>
+              </i-card>
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="card-basic.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="card-basic.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>
+        Basic Disabled Card:
+        <code>&lt;i-card (cardClick)="onCardClick()" [disabled]="true"&gt;</code>
+      </p>
+      <i-section>
+        <i-section-tabs height="250">
+          <i-section-tab title="Preview">
+            <div class="flex gap-md justify-center align-center h-full">
+              <i-card [disabled]="true" (cardClick)="onCardClick()">
+                <i-card-body class="p-md">
+                  <h3 class="mb-sm">Basic Card</h3>
+                  <p class="m-0">Click this card to trigger an event</p>
+                </i-card-body>
+              </i-card>
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="card-disabled.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="card-disabled.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>Card with Image: <code>i-card-image</code>, Body: <code>i-card-body</code></p>
+      <i-section>
+        <i-section-tabs height="500">
+          <i-section-tab title="Preview">
+            <div class="flex gap-md justify-center align-center h-full">
+              <i-card href="/developer-guide/components/card" target="_blank">
+                <i-card-image
+                  class="w-full h-220px object-cover"
+                  src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e"
+                />
+                <i-card-body class="p-md">
+                  <h3 class="mb-sm">Image Card</h3>
+                  <p class="m-0 text-gray-500">This card has an image and acts as a link</p>
+                  <span class="text-blue-600 text-md font-bold">Learn more →</span>
+                </i-card-body>
+              </i-card>
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="card-image.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="card-image.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>
+        Complete Card Structure With Image:<code>i-card-image</code>, Body:
+        <code>i-card-body</code>, Footer: <code>i-card-footer</code>
+      </p>
+      <i-section>
+        <i-section-tabs height="500">
+          <i-section-tab title="Preview">
+            <div class="flex gap-md justify-center align-center h-full">
+              <i-card href="/developer-guide/components/card" target="_blank">
+                <i-card-image
+                  class="w-full h-220px object-cover display:flex align-center justify-center;"
+                  src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e"
+                />
+                <i-card-body class="p-20">
+                  <div class="flex align-center gap-8 mb-12">
+                    <span class="bg-blue-300 text-blue-600 px-2 py-1 rounded text-xs font-medium">
+                      Tutorial
+                    </span>
+                    <span class="text-sm text-gray-500">• 5 min read</span>
+                  </div>
+                  <h3 class="mb-sm font-semibold text-xl">Card Component Guide</h3>
+                  <p class="mb-sm text-gray-500">
+                    Learn how to use card components in your projects.
+                  </p>
+                </i-card-body>
+                <i-card-footer class="flex justify-between items-center">
+                  <div class="flex justify-between items-center w-full">
+                    <p class="text-sm font-medium">Design Team</p>
+                    <span class="text-blue-600 font-bold">Read →</span>
+                  </div>
+                </i-card-footer>
+              </i-card>
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="complate-card.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="complate-card.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+    </div>
+  </i-section-body>
+</i-section>
