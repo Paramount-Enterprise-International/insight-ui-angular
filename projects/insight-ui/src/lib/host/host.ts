@@ -1,25 +1,302 @@
-// sidebar.ts
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, NgClass } from '@angular/common';
 import {
   Component,
+  ElementRef,
+  EventEmitter,
   HostBinding,
   inject,
   Input,
   OnChanges,
   OnInit,
+  Output,
+  QueryList,
   signal,
   SimpleChanges,
+  ViewChild,
+  ViewChildren,
 } from '@angular/core';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { combineLatest, filter, map, Observable, shareReplay, startWith, tap } from 'rxjs';
+import { IHighlightSearchPipe } from '../highlight-search.pipe';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { combineLatest, map, Observable, shareReplay, startWith, tap } from 'rxjs';
-import { IHMenu, Menu } from './menu';
+
+export type BreadcrumbItem = {
+  label: string;
+  url: string;
+};
+
+export type Menu = {
+  menuId: number;
+  menuName: string;
+  route?: string | null;
+  menuTypeId: number;
+  parentId: number;
+  sequence: number;
+  icon?: string | null;
+  child?: Menu[];
+  level: number;
+  visibility?: string;
+  selected?: boolean;
+  openInId?: number;
+  versionCode?: string;
+  applicationCode?: string;
+  applicationUrl?: string;
+};
 
 export type User = {
   employeeCode: string;
   fullName: string;
   userImagePath: string;
 };
+
+@Component({
+  selector: 'ih-content',
+  imports: [RouterOutlet, AsyncPipe, RouterLink],
+  template: `<div class="ih-content-header">
+      <a class="i-clickable" (click)="toggleSidebar()">
+        @if (sidebarVisibility) {
+          <img alt="sidebar-left" src="svgs/sidebar-left.svg" />
+        } @else {
+          <img alt="sidebar-right" src="svgs/sidebar-right.svg" />
+        }
+      </a>
+      <h1>{{ (pageTitle$ | async) || 'Insight' }}</h1>
+    </div>
+    <div class="ih-content-breadcrumbs">
+      @if (breadcrumb$ | async; as breadcrumbs) {
+        @if (breadcrumbs.length > 0) {
+          @for (
+            breadcrumb of breadcrumbs;
+            track breadcrumb.url;
+            let first = $first;
+            let last = $last
+          ) {
+            @if (!last) {
+              @if (!first) {
+                <a
+                  class="ih-content-breadcrumb ih-content-breadcrumb__link"
+                  [routerLink]="breadcrumb.url"
+                >
+                  {{ breadcrumb.label }}
+                </a>
+              } @else {
+                <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
+                  {{ breadcrumb.label }}
+                </span>
+              }
+              <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
+            } @else {
+              <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
+                {{ breadcrumb.label }}
+              </span>
+            }
+          }
+        } @else {
+          <span class="ih-content-breadcrumb ih-content-breadcrumb__first"> Home </span>
+        }
+      }
+    </div>
+    <div class="ih-content-body scroll scroll-y">
+      <router-outlet />
+    </div> `,
+})
+export class IHContent {
+  private readonly router = inject(Router);
+
+  private readonly activatedRoute = inject(ActivatedRoute);
+
+  sidebarVisibility = true;
+
+  @Output() readonly onSidebarToggled = new EventEmitter<boolean>();
+
+  /** Stream of breadcrumb items built from the activated route tree */
+  readonly breadcrumb$: Observable<BreadcrumbItem[]> = this.router.events.pipe(
+    filter((e) => e instanceof NavigationEnd),
+    startWith(null), // emit once on init
+    map(() => this.buildBreadcrumb(this.activatedRoute.root)),
+    shareReplay(1),
+  );
+
+  /** Last breadcrumb label = current page title */
+  readonly pageTitle$: Observable<string | null> = this.breadcrumb$.pipe(
+    map((breadcrumbs) =>
+      breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null,
+    ),
+    shareReplay(1),
+  );
+
+  private buildBreadcrumb(
+    route: ActivatedRoute,
+    url = '',
+    breadcrumbs: BreadcrumbItem[] = [],
+  ): BreadcrumbItem[] {
+    const routeConfig = route.routeConfig;
+
+    if (routeConfig) {
+      const path = routeConfig.path ?? '';
+
+      // Resolve path segments, including route params
+      const segments = path
+        .split('/')
+        .filter(Boolean)
+        .map((segment) => {
+          if (segment.startsWith(':')) {
+            const paramName = segment.substring(1);
+            return route.snapshot.params[paramName] ?? segment;
+          }
+          return segment;
+        });
+
+      const nextUrlPart = segments.join('/');
+
+      // Always advance the URL, even if we don't render a breadcrumb for this level
+      const nextUrl = nextUrlPart.length > 0 ? `${url}/${nextUrlPart}` : url || '/';
+
+      // 🔑 Use *route config* data, not snapshot (avoid inherited data)
+      const data = routeConfig.data as { title?: string } | undefined;
+      const label = data?.title;
+
+      if (label) {
+        breadcrumbs.push({
+          label,
+          url: nextUrl,
+        });
+      }
+
+      url = nextUrl;
+    }
+
+    if (route.firstChild) {
+      return this.buildBreadcrumb(route.firstChild, url, breadcrumbs);
+    }
+
+    return breadcrumbs;
+  }
+
+  toggleSidebar(): void {
+    this.sidebarVisibility = !this.sidebarVisibility;
+    this.onSidebarToggled.emit(this.sidebarVisibility);
+  }
+}
+
+@Component({
+  selector: 'ih-menu',
+  imports: [NgClass, RouterLink, IHighlightSearchPipe],
+  template: `
+    @if (menu) {
+      @let hasChild = !!menu.child?.length;
+      <li
+        [class.is-module]="menu.menuTypeId === 2"
+        [ngClass]="+menu.menuTypeId === 2 ? menu.visibility : ''"
+      >
+        @if (+menu.menuTypeId === 2) {
+          <small [innerHTML]="menu.menuName | highlightSearch: filter"></small>
+        } @else if (+menu.menuTypeId === 3) {
+          @if (hasChild) {
+            <!-- group with children -->
+            <div (click)="click()">
+              @if (menu.level > 0) {
+                @for (i of [].constructor(menu.level); track i) {
+                  <span></span>
+                }
+              }
+              <i [class]="menu.icon"></i>
+              <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
+              <i
+                [ngClass]="menu.visibility === 'expanded' ? 'fas fa-angle-up' : 'fas fa-angle-down'"
+              ></i>
+            </div>
+          } @else {
+            <!-- leaf items: add #menuItem and is-selected -->
+            @if (menu.applicationCode === 'INS5') {
+              <a #menuItem [class.is-selected]="isSelected" [routerLink]="menu.route">
+                @if (menu.level > 0) {
+                  @for (i of [].constructor(menu.level); track i) {
+                    <span></span>
+                  }
+                }
+                <i [class]="menu.icon"></i>
+                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
+              </a>
+            } @else {
+              <a #menuItem [class.is-selected]="isSelected" [href]="menu.applicationUrl">
+                @if (menu.level > 0) {
+                  @for (i of [].constructor(menu.level); track i) {
+                    <span></span>
+                  }
+                }
+                <i [class]="menu.icon"></i>
+                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
+              </a>
+            }
+          }
+        }
+
+        @if (hasChild) {
+          <ul [ngClass]="menu.menuTypeId === 3 ? menu.visibility : ''">
+            @for (m of menu.child; track m.menuId) {
+              <ih-menu [filter]="filter" [menu]="m" [selectedMenuId]="selectedMenuId" />
+            }
+          </ul>
+        }
+      </li>
+    }
+  `,
+})
+export class IHMenu implements OnChanges {
+  @Input() menu: Menu | undefined;
+  @Input() selectedMenuId: number | null = null;
+  @Input() filter = '';
+
+  @Output() readonly clicked = new EventEmitter<any>();
+  @ViewChildren(IHMenu) menus!: QueryList<IHMenu>;
+
+  // the actual clickable DOM element (only on leaf items)
+  @ViewChild('menuItem', { static: false })
+  menuItemRef!: ElementRef<HTMLElement>;
+
+  @HostBinding('class.hidden') isHidden = false;
+
+  /** only true for the *leaf* menu that matches selectedMenuId */
+  get isSelected(): boolean {
+    if (!this.menu) return false;
+
+    const matchesId = this.menu.menuId === this.selectedMenuId;
+    if (!matchesId) return false;
+
+    const children = this.menu.child ?? [];
+    const hasChildren = children.length > 0;
+
+    // keep selection only on "leaf" items (same rule as flattenNavigableMenus)
+    const isLeaf =
+      +this.menu.menuTypeId === 3 && (!hasChildren || this.menu.visibility === 'no-child');
+
+    return isLeaf;
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // whenever selectedMenuId changes, scroll the selected item into view
+    if (changes['selectedMenuId'] && this.isSelected && this.menuItemRef) {
+      this.menuItemRef.nativeElement.scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth',
+      });
+    }
+  }
+
+  click(): void {
+    if (!this.menu) return;
+    if (this.menu.visibility !== 'no-child') {
+      if (this.menu.visibility === 'expanded') {
+        this.menu.visibility = 'collapsed';
+      } else {
+        this.menu.visibility = 'expanded';
+      }
+    } else {
+      this.clicked.emit(this.menu);
+    }
+  }
+}
 
 @Component({
   selector: 'ih-sidebar',

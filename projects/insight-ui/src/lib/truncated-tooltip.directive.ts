@@ -3,6 +3,7 @@ import {
   booleanAttribute,
   Directive,
   ElementRef,
+  inject,
   Input,
   OnDestroy,
 } from '@angular/core';
@@ -15,8 +16,7 @@ export class ITruncatedTooltipDirective implements AfterViewInit, OnDestroy {
   @Input({ alias: 'truncatedTooltip', transform: booleanAttribute }) enabled = true;
 
   private observer?: ResizeObserver;
-
-  constructor(private el: ElementRef<HTMLElement>) {}
+  private el: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
 
   ngAfterViewInit(): void {
     if (!this.enabled) return;
