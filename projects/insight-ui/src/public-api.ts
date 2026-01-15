@@ -2,17 +2,17 @@
  * Public API Surface of insight-ui
  */
 
-export * from './lib/alert/alert';
 export * from './lib/button/button';
 export * from './lib/card/card';
-export * from './lib/confirm/confirm';
 export * from './lib/code-viewer/code-viewer';
 export * from './lib/datepicker/datepicker';
 export * from './lib/dialog/dialog';
 export * from './lib/grid/grid';
 export * from './lib/grid/paginator';
 export * from './lib/highlight-search.pipe';
-export * from './lib/host/content/content';
+export * from './lib/host/content';
+export * from './lib/host/sidebar';
+export * from './lib/host/menu';
 export * from './lib/icon/icon';
 export * from './lib/input/input';
 export * from './lib/input/input-addon';

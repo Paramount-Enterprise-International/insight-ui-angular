@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { IHighlightSearchPipe } from '@insight/ui';
+import { IHighlightSearchPipe } from '../highlight-search.pipe';
 
 export type Menu = {
   menuId: number;

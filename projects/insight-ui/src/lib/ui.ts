@@ -1,8 +1,8 @@
 import { NgModule } from '@angular/core';
-import { IAlert } from './alert/alert';
+
 import { IButton } from './button/button';
 import { ICardModule } from './card/card';
-import { IConfirm } from './confirm/confirm';
+
 import { IDatepicker, IFCDatepicker } from './datepicker/datepicker';
 import { IDialogModule } from './dialog/dialog';
 import { IGridModule } from './grid/grid';
@@ -12,17 +12,15 @@ import { ILoading } from './loading/loading';
 import { ISectionModule } from './section/section';
 import { IFCSelect, ISelect } from './select/select';
 import { ITextArea } from './textarea/textarea';
-import { IHContent } from './host/content/content';
+import { IHContent } from './host/content';
+import { IHSidebar } from './host/sidebar';
 import { ICodeViewerModule } from './code-viewer/code-viewer';
-import { IHSidebar } from './host/sidebar/sidebar';
 
 @NgModule({
   imports: [
-    IAlert,
     IButton,
     ICardModule,
     ICodeViewerModule,
-    IConfirm,
     IDatepicker,
     IFCDatepicker,
     IDialogModule,
@@ -38,11 +36,9 @@ import { IHSidebar } from './host/sidebar/sidebar';
     ITextArea,
   ],
   exports: [
-    IAlert,
     IButton,
     ICardModule,
     ICodeViewerModule,
-    IConfirm,
     IDatepicker,
     IFCDatepicker,
     IDialogModule,

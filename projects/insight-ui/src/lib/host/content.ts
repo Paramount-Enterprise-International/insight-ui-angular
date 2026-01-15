@@ -11,7 +11,53 @@ export type BreadcrumbItem = {
 @Component({
   selector: 'ih-content',
   imports: [RouterOutlet, AsyncPipe, RouterLink],
-  templateUrl: './content.html',
+  template: `<div class="ih-content-header">
+      <a class="i-clickable" (click)="toggleSidebar()">
+        @if (sidebarVisibility) {
+          <img alt="sidebar-left" src="svgs/sidebar-left.svg" />
+        } @else {
+          <img alt="sidebar-right" src="svgs/sidebar-right.svg" />
+        }
+      </a>
+      <h1>{{ (pageTitle$ | async) || 'Insight' }}</h1>
+    </div>
+    <div class="ih-content-breadcrumbs">
+      @if (breadcrumb$ | async; as breadcrumbs) {
+        @if (breadcrumbs.length > 0) {
+          @for (
+            breadcrumb of breadcrumbs;
+            track breadcrumb.url;
+            let first = $first;
+            let last = $last
+          ) {
+            @if (!last) {
+              @if (!first) {
+                <a
+                  class="ih-content-breadcrumb ih-content-breadcrumb__link"
+                  [routerLink]="breadcrumb.url"
+                >
+                  {{ breadcrumb.label }}
+                </a>
+              } @else {
+                <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
+                  {{ breadcrumb.label }}
+                </span>
+              }
+              <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
+            } @else {
+              <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
+                {{ breadcrumb.label }}
+              </span>
+            }
+          }
+        } @else {
+          <span class="ih-content-breadcrumb ih-content-breadcrumb__first"> Home </span>
+        }
+      }
+    </div>
+    <div class="ih-content-body scroll scroll-y">
+      <router-outlet />
+    </div> `,
 })
 export class IHContent {
   private readonly router = inject(Router);
@@ -27,21 +73,21 @@ export class IHContent {
     filter((e) => e instanceof NavigationEnd),
     startWith(null), // emit once on init
     map(() => this.buildBreadcrumb(this.activatedRoute.root)),
-    shareReplay(1)
+    shareReplay(1),
   );
 
   /** Last breadcrumb label = current page title */
   readonly pageTitle$: Observable<string | null> = this.breadcrumb$.pipe(
     map((breadcrumbs) =>
-      breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null
+      breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null,
     ),
-    shareReplay(1)
+    shareReplay(1),
   );
 
   private buildBreadcrumb(
     route: ActivatedRoute,
     url = '',
-    breadcrumbs: BreadcrumbItem[] = []
+    breadcrumbs: BreadcrumbItem[] = [],
   ): BreadcrumbItem[] {
     const routeConfig = route.routeConfig;
 
