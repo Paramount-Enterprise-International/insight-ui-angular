@@ -1,3 +1,6 @@
+// host.ts (insight-ui-angular)
+// ✅ Now includes: ih-shell-bridge types + service + IHContent override support
+
 import { AsyncPipe, NgClass } from '@angular/common';
 import {
   Component,
@@ -5,6 +8,7 @@ import {
   EventEmitter,
   HostBinding,
   inject,
+  Injectable,
   Input,
   OnChanges,
   OnInit,
@@ -19,6 +23,51 @@ import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from 
 import { combineLatest, filter, map, Observable, shareReplay, startWith, tap } from 'rxjs';
 import { IHighlightSearchPipe } from '../highlight-search.pipe';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+
+/* =========================================================
+ * IH Shell Bridge (types + service)
+ * - host (insight-host-web) can inject this via @insight/ui
+ * - IHContent reads overrides from here
+ * ========================================================= */
+
+export type IHBreadcrumbItem = {
+  label: string;
+  url?: string; // optional; host can decide if clickable
+};
+
+export type IHNavigationSnapshot = {
+  fullUrl: string;
+  basePath: string;
+  params: Record<string, any>;
+  query: Record<string, any>;
+};
+
+@Injectable({ providedIn: 'root' })
+export class IHTitleBreadcrumbService {
+  /**
+   * null = use normal (route-based) title/breadcrumbs
+   * non-null = override (e.g. React remote controls shell display)
+   */
+  readonly titleOverride = signal<string | null>(null);
+  readonly breadcrumbsOverride = signal<IHBreadcrumbItem[] | null>(null);
+
+  setTitle(title: string | null): void {
+    this.titleOverride.set(title ?? null);
+  }
+
+  setBreadcrumbs(items: IHBreadcrumbItem[] | null): void {
+    this.breadcrumbsOverride.set(items ?? null);
+  }
+
+  clear(): void {
+    this.titleOverride.set(null);
+    this.breadcrumbsOverride.set(null);
+  }
+}
+
+/* =========================================================
+ * Existing types
+ * ========================================================= */
 
 export type BreadcrumbItem = {
   label: string;
@@ -48,6 +97,11 @@ export type User = {
   fullName: string;
   userImagePath: string;
 };
+
+/* =========================================================
+ * IHContent (updated)
+ * - supports title + breadcrumb overrides via IHShellBridgeService
+ * ========================================================= */
 
 @Component({
   selector: 'ih-content',
@@ -102,28 +156,61 @@ export type User = {
 })
 export class IHContent {
   private readonly router = inject(Router);
-
   private readonly activatedRoute = inject(ActivatedRoute);
+
+  // ✅ bridge (set by host / React remotes)
+  private readonly shell = inject(IHTitleBreadcrumbService);
 
   sidebarVisibility = true;
 
   @Output() readonly onSidebarToggled = new EventEmitter<boolean>();
 
-  /** Stream of breadcrumb items built from the activated route tree */
-  readonly breadcrumb$: Observable<BreadcrumbItem[]> = this.router.events.pipe(
+  /** route-based breadcrumbs */
+  private readonly routeBreadcrumb$: Observable<BreadcrumbItem[]> = this.router.events.pipe(
     filter((e) => e instanceof NavigationEnd),
     startWith(null), // emit once on init
     map(() => this.buildBreadcrumb(this.activatedRoute.root)),
     shareReplay(1),
   );
 
-  /** Last breadcrumb label = current page title */
-  readonly pageTitle$: Observable<string | null> = this.breadcrumb$.pipe(
-    map((breadcrumbs) =>
-      breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null,
-    ),
+  /** override breadcrumbs (read from signals) */
+  private readonly overrideBreadcrumb$: Observable<BreadcrumbItem[] | null> =
+    this.router.events.pipe(
+      filter((e) => e instanceof NavigationEnd),
+      startWith(null),
+      map(() => this.toBreadcrumbItems(this.shell.breadcrumbsOverride())),
+      shareReplay(1),
+    );
+
+  /** final breadcrumbs: override wins */
+  readonly breadcrumb$: Observable<BreadcrumbItem[]> = combineLatest([
+    this.routeBreadcrumb$,
+    this.overrideBreadcrumb$,
+  ]).pipe(
+    map(([routeCrumbs, override]) => override ?? routeCrumbs),
     shareReplay(1),
   );
+
+  /** title: override wins, else last breadcrumb label */
+  readonly pageTitle$: Observable<string | null> = this.breadcrumb$.pipe(
+    map((breadcrumbs) => {
+      const titleOverride = this.shell.titleOverride();
+      if (titleOverride) return titleOverride;
+
+      return breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null;
+    }),
+    shareReplay(1),
+  );
+
+  private toBreadcrumbItems(items: IHBreadcrumbItem[] | null): BreadcrumbItem[] | null {
+    if (!items) return null;
+
+    // if url omitted, generate stable dummy url so template tracking is stable
+    return items.map((b, i) => ({
+      label: b.label,
+      url: b.url ?? `#ih-override-${i}`,
+    }));
+  }
 
   private buildBreadcrumb(
     route: ActivatedRoute,
@@ -178,6 +265,10 @@ export class IHContent {
     this.onSidebarToggled.emit(this.sidebarVisibility);
   }
 }
+
+/* =========================================================
+ * IHMenu (unchanged)
+ * ========================================================= */
 
 @Component({
   selector: 'ih-menu',
@@ -297,6 +388,10 @@ export class IHMenu implements OnChanges {
     }
   }
 }
+
+/* =========================================================
+ * IHSidebar (unchanged)
+ * ========================================================= */
 
 @Component({
   selector: 'ih-sidebar',
