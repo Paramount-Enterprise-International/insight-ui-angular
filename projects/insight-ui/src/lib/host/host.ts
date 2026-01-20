@@ -1,5 +1,12 @@
-// host.ts (insight-ui-angular)
-// ✅ Now includes: ih-shell-bridge types + service + IHContent override support
+/* =========================================================
+ * host.ts (insight-ui-angular)
+ * ✅ Includes:
+ * - IHBreadcrumbItem
+ * - IHNavigationSnapshot
+ * - IHTitleBreadcrumbService (signals)
+ * - IHContent that reacts to overrides IMMEDIATELY (no NavigationEnd needed)
+ * - IHMenu / IHSidebar kept as you had them
+ * ========================================================= */
 
 import { AsyncPipe, NgClass } from '@angular/common';
 import {
@@ -26,8 +33,6 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
 /* =========================================================
  * IH Shell Bridge (types + service)
- * - host (insight-host-web) can inject this via @insight/ui
- * - IHContent reads overrides from here
  * ========================================================= */
 
 export type IHBreadcrumbItem = {
@@ -99,8 +104,9 @@ export type User = {
 };
 
 /* =========================================================
- * IHContent (updated)
- * - supports title + breadcrumb overrides via IHShellBridgeService
+ * IHContent (UPDATED)
+ * - Route breadcrumbs/title still supported
+ * - Override breadcrumbs/title update immediately (signals)
  * ========================================================= */
 
 @Component({
@@ -114,42 +120,77 @@ export type User = {
           <img alt="sidebar-right" src="svgs/sidebar-right.svg" />
         }
       </a>
-      <h1>{{ (pageTitle$ | async) || 'Insight' }}</h1>
+
+      <!-- ✅ title override reacts immediately -->
+      <h1>{{ shell.titleOverride() || (pageTitle$ | async) || 'Insight' }}</h1>
     </div>
+
     <div class="ih-content-breadcrumbs">
-      @if (breadcrumb$ | async; as breadcrumbs) {
-        @if (breadcrumbs.length > 0) {
-          @for (
-            breadcrumb of breadcrumbs;
-            track breadcrumb.url;
-            let first = $first;
-            let last = $last
-          ) {
+      <!-- ✅ If override breadcrumbs exist, render them immediately -->
+      @if (shell.breadcrumbsOverride(); as override) {
+        @if (override && override.length > 0) {
+          @for (b of override; track $index; let first = $first; let last = $last) {
             @if (!last) {
               @if (!first) {
-                <a
-                  class="ih-content-breadcrumb ih-content-breadcrumb__link"
-                  [routerLink]="breadcrumb.url"
-                >
-                  {{ breadcrumb.label }}
-                </a>
+                @if (b.url) {
+                  <a class="ih-content-breadcrumb ih-content-breadcrumb__link" [routerLink]="b.url">
+                    {{ b.label }}
+                  </a>
+                } @else {
+                  <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
+                    {{ b.label }}
+                  </span>
+                }
               } @else {
                 <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
-                  {{ breadcrumb.label }}
+                  {{ b.label }}
                 </span>
               }
               <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
             } @else {
               <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
-                {{ breadcrumb.label }}
+                {{ b.label }}
               </span>
             }
           }
         } @else {
-          <span class="ih-content-breadcrumb ih-content-breadcrumb__first"> Home </span>
+          <!-- fallback to route breadcrumbs -->
+          @if (breadcrumb$ | async; as breadcrumbs) {
+            @if (breadcrumbs.length > 0) {
+              @for (
+                breadcrumb of breadcrumbs;
+                track breadcrumb.url;
+                let first = $first;
+                let last = $last
+              ) {
+                @if (!last) {
+                  @if (!first) {
+                    <a
+                      class="ih-content-breadcrumb ih-content-breadcrumb__link"
+                      [routerLink]="breadcrumb.url"
+                    >
+                      {{ breadcrumb.label }}
+                    </a>
+                  } @else {
+                    <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
+                      {{ breadcrumb.label }}
+                    </span>
+                  }
+                  <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
+                } @else {
+                  <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
+                    {{ breadcrumb.label }}
+                  </span>
+                }
+              }
+            } @else {
+              <span class="ih-content-breadcrumb ih-content-breadcrumb__first"> Home </span>
+            }
+          }
         }
       }
     </div>
+
     <div class="ih-content-body scroll scroll-y">
       <router-outlet />
     </div> `,
@@ -159,58 +200,27 @@ export class IHContent {
   private readonly activatedRoute = inject(ActivatedRoute);
 
   // ✅ bridge (set by host / React remotes)
-  private readonly shell = inject(IHTitleBreadcrumbService);
+  readonly shell = inject(IHTitleBreadcrumbService);
 
   sidebarVisibility = true;
 
   @Output() readonly onSidebarToggled = new EventEmitter<boolean>();
 
   /** route-based breadcrumbs */
-  private readonly routeBreadcrumb$: Observable<BreadcrumbItem[]> = this.router.events.pipe(
+  readonly breadcrumb$: Observable<BreadcrumbItem[]> = this.router.events.pipe(
     filter((e) => e instanceof NavigationEnd),
     startWith(null), // emit once on init
     map(() => this.buildBreadcrumb(this.activatedRoute.root)),
     shareReplay(1),
   );
 
-  /** override breadcrumbs (read from signals) */
-  private readonly overrideBreadcrumb$: Observable<BreadcrumbItem[] | null> =
-    this.router.events.pipe(
-      filter((e) => e instanceof NavigationEnd),
-      startWith(null),
-      map(() => this.toBreadcrumbItems(this.shell.breadcrumbsOverride())),
-      shareReplay(1),
-    );
-
-  /** final breadcrumbs: override wins */
-  readonly breadcrumb$: Observable<BreadcrumbItem[]> = combineLatest([
-    this.routeBreadcrumb$,
-    this.overrideBreadcrumb$,
-  ]).pipe(
-    map(([routeCrumbs, override]) => override ?? routeCrumbs),
-    shareReplay(1),
-  );
-
-  /** title: override wins, else last breadcrumb label */
+  /** last breadcrumb label = route-based page title */
   readonly pageTitle$: Observable<string | null> = this.breadcrumb$.pipe(
-    map((breadcrumbs) => {
-      const titleOverride = this.shell.titleOverride();
-      if (titleOverride) return titleOverride;
-
-      return breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null;
-    }),
+    map((breadcrumbs) =>
+      breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null,
+    ),
     shareReplay(1),
   );
-
-  private toBreadcrumbItems(items: IHBreadcrumbItem[] | null): BreadcrumbItem[] | null {
-    if (!items) return null;
-
-    // if url omitted, generate stable dummy url so template tracking is stable
-    return items.map((b, i) => ({
-      label: b.label,
-      url: b.url ?? `#ih-override-${i}`,
-    }));
-  }
 
   private buildBreadcrumb(
     route: ActivatedRoute,
