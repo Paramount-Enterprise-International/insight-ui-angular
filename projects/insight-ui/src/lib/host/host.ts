@@ -5,10 +5,12 @@
  * - IHNavigationSnapshot
  * - IHTitleBreadcrumbService (signals)
  * - IHContent that reacts to overrides IMMEDIATELY (no NavigationEnd needed)
+ * - Override breadcrumbs support routerLink + correct href with baseHref "/-/" (NO "/-/-/" bug)
+ * - Override breadcrumb click also notifies React Router (popstate) so React pages update
  * - IHMenu / IHSidebar kept as you had them
  * ========================================================= */
 
-import { AsyncPipe, NgClass } from '@angular/common';
+import { APP_BASE_HREF, AsyncPipe, NgClass } from '@angular/common';
 import {
   Component,
   ElementRef,
@@ -28,8 +30,8 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { combineLatest, filter, map, Observable, shareReplay, startWith, tap } from 'rxjs';
-import { IHighlightSearchPipe } from '../highlight-search.pipe';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { IHighlightSearchPipe } from '@insight/ui';
 
 /* =========================================================
  * IH Shell Bridge (types + service)
@@ -37,7 +39,12 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 
 export type IHBreadcrumbItem = {
   label: string;
-  url?: string; // optional; host can decide if clickable
+  /**
+   * IMPORTANT (baseHref is "/-/"):
+   * - Recommended: "/dashboard", "/dashboard/reports", "/"
+   * - Also accepted: "/-/dashboard" (will be normalized)
+   */
+  url?: string;
 };
 
 export type IHNavigationSnapshot = {
@@ -56,11 +63,19 @@ export class IHTitleBreadcrumbService {
   readonly titleOverride = signal<string | null>(null);
   readonly breadcrumbsOverride = signal<IHBreadcrumbItem[] | null>(null);
 
+  // debug
+  private readonly __instanceId = Math.random().toString(36).slice(2);
+
+  constructor() {
+    console.log('[IHTitleBreadcrumbService] instance', this.__instanceId);
+  }
+
   setTitle(title: string | null): void {
     this.titleOverride.set(title ?? null);
   }
 
   setBreadcrumbs(items: IHBreadcrumbItem[] | null): void {
+    console.log('[IHTitleBreadcrumbService] setBreadcrumbs on instance', this.__instanceId, items);
     this.breadcrumbsOverride.set(items ?? null);
   }
 
@@ -104,12 +119,13 @@ export type User = {
 };
 
 /* =========================================================
- * IHContent (FIXED)
+ * IHContent
  * - Route breadcrumbs/title still supported
  * - Override breadcrumbs/title update immediately (signals)
- * - IMPORTANT FIX:
- *   use @let override = shell.breadcrumbsOverride()
- *   so fallback renders when override is null
+ * - IMPORTANT: baseHref is "/-/" (intentional)
+ *   - routerLink must receive URL WITHOUT "/-/" prefix
+ *   - href must INCLUDE "/-/" prefix for right click open-new-tab
+ * - NEW: clicking override crumbs triggers popstate so React Router updates
  * ========================================================= */
 
 @Component({
@@ -132,13 +148,17 @@ export type User = {
     <div class="ih-content-breadcrumbs">
       @let override = shell.breadcrumbsOverride();
 
-      <!-- ✅ Override breadcrumbs (React remote controls this) -->
       @if (override && override.length > 0) {
         @for (b of override; track $index; let first = $first; let last = $last) {
           @if (!last) {
             @if (!first) {
               @if (b.url) {
-                <a class="ih-content-breadcrumb ih-content-breadcrumb__link" [routerLink]="b.url">
+                <a
+                  class="ih-content-breadcrumb ih-content-breadcrumb__link"
+                  [attr.href]="overrideHref(b.url)"
+                  [routerLink]="overrideRouterLink(b.url)"
+                  (click)="onOverrideBreadcrumbClick($event)"
+                >
                   {{ b.label }}
                 </a>
               } @else {
@@ -205,6 +225,9 @@ export type User = {
 export class IHContent {
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
+
+  // IMPORTANT: your app base href is intentionally "/-/"
+  private readonly baseHref = inject(APP_BASE_HREF);
 
   // ✅ bridge (set by host / React remotes)
   readonly shell = inject(IHTitleBreadcrumbService);
@@ -280,6 +303,103 @@ export class IHContent {
   toggleSidebar(): void {
     this.sidebarVisibility = !this.sidebarVisibility;
     this.onSidebarToggled.emit(this.sidebarVisibility);
+  }
+
+  /* =========================================================
+   * IMPORTANT: React Router sync when Angular changes URL
+   * ========================================================= */
+
+  onOverrideBreadcrumbClick(e: MouseEvent): void {
+    // Only for normal left-click navigation.
+    // Let browser handle right-click, ctrl/cmd-click, middle click, etc.
+    if (e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+    // Angular routerLink will update the URL via pushState.
+    // React Router (BrowserRouter) won't notice unless popstate is fired.
+    queueMicrotask(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+  }
+
+  /* =========================================================
+   * Override breadcrumb link helpers (baseHref aware)
+   * ========================================================= */
+
+  private normalizeBaseHref(): string {
+    let b = (this.baseHref ?? '/').trim();
+
+    // ensure leading slash
+    if (!b.startsWith('/')) b = `/${b}`;
+
+    // ensure trailing slash
+    if (!b.endsWith('/')) b = `${b}/`;
+
+    // collapse repeated slashes
+    b = b.replace(/\/{2,}/g, '/');
+
+    return b;
+  }
+
+  private normalizePath(url: string): string {
+    let u = (url ?? '').trim();
+    if (!u) return '/';
+
+    // support only path-like urls here; if ever full origin is passed, keep it
+    if (/^https?:\/\//i.test(u)) return u;
+
+    if (!u.startsWith('/')) u = `/${u}`;
+    u = u.replace(/\/{2,}/g, '/');
+
+    // fix common mistake: "/-/-/dashboard" -> "/-/dashboard"
+    u = u.replace(/^\/-\/-\/+/, '/-/');
+
+    return u;
+  }
+
+  /**
+   * RouterLink will prefix baseHref automatically.
+   * So we must NOT include baseHref in the value passed to [routerLink].
+   *
+   * baseHref "/-/" examples:
+   * - "/-/dashboard" -> "/dashboard"
+   * - "/dashboard"   -> "/dashboard"
+   * - "/"            -> "/"
+   */
+  overrideRouterLink(url: string): string {
+    const base = this.normalizeBaseHref(); // "/-/"
+    const abs = this.normalizePath(url); // "/-/dashboard" or "/dashboard"
+
+    // if already includes baseHref, strip it
+    if (abs.startsWith(base)) {
+      // base ends with "/" so slice base.length - 1 keeps leading "/"
+      const stripped = abs.slice(base.length - 1);
+      return stripped.length ? stripped : '/';
+    }
+
+    return abs;
+  }
+
+  /**
+   * Browser href must include baseHref so "open in new tab" goes to the correct URL.
+   *
+   * baseHref "/-/" examples:
+   * - "/dashboard"   -> "/-/dashboard"
+   * - "/-/dashboard" -> "/-/dashboard"
+   * - "/"            -> "/-/"
+   */
+  overrideHref(url: string): string {
+    const base = this.normalizeBaseHref(); // "/-/"
+    const abs = this.normalizePath(url);
+
+    // already includes baseHref
+    if (abs.startsWith(base)) return abs;
+
+    // home
+    if (abs === '/') return base;
+
+    // join
+    return `${base}${abs.slice(1)}`.replace(/\/{2,}/g, '/');
   }
 }
 
@@ -457,45 +577,25 @@ export class IHSidebar implements OnInit, OnChanges {
    * INPUTS (from parent)
    * --------------------------- */
 
-  /** parent passes user stream (or you can change to plain User) */
   @Input() user$!: Observable<User>;
-
-  /** parent passes the ORIGINAL (unfiltered) menus stream */
   @Input() menusInput$!: Observable<Menu[]>;
-
-  /** visibility toggle */
   @Input() visible = true;
-
   @Input() footerText = 'Insight Local';
 
   /* ---------------------------
    * INTERNAL STREAMS / STATE
    * --------------------------- */
 
-  /** filtered menus for template usage */
   menus$!: Observable<Menu[]>;
-
-  /** last known query params (so we preserve other params when updating URL) */
   queryParams: any = {};
 
   menuSearch: FormControl<string | null> = new FormControl<string | null>('');
-
-  /** current filter text (used for filtering + URL) */
   menuFilter = signal('');
-
-  /** whether keyboard navigation is active (user pressed arrow) */
   keyboardNavActive = signal(false);
-
-  /** index into flattened navigable menus */
   selectedIndex = signal<number | null>(null);
-
-  /** menuId of selected leaf item (for highlight/scroll) */
   selectedMenuId = signal<number | null>(null);
 
-  /** flat list of leaf menus that can be navigated with arrows */
   private navigableMenus: Menu[] = [];
-
-  /** keep latest input menus$ (replay) */
   private originalMenus$!: Observable<Menu[]>;
 
   @HostBinding('class.hidden')
@@ -503,12 +603,7 @@ export class IHSidebar implements OnInit, OnChanges {
     return !this.visible;
   }
 
-  /* ---------------------------
-   * LIFECYCLE
-   * --------------------------- */
-
   ngOnInit(): void {
-    // 1) Read query params directly from the browser URL
     const searchParams = new URLSearchParams(window.location.search);
     const initialQueryParams: any = {};
     searchParams.forEach((value, key) => {
@@ -518,21 +613,14 @@ export class IHSidebar implements OnInit, OnChanges {
     this.queryParams = initialQueryParams;
     const initialFilter = (this.queryParams['menu-filter'] as string) ?? '';
 
-    // 2) Seed signal + form control BEFORE building streams
     this.menuFilter.set(initialFilter);
     this.menuSearch.setValue(initialFilter, { emitEvent: false });
 
-    // 3) Prepare originalMenus$ from input (must exist)
-    // If the parent binds it normally, it will exist by ngOnInit.
     this.originalMenus$ = (this.menusInput$ ?? new Observable<Menu[]>()).pipe(shareReplay(1));
-
-    // 4) Build menus stream
     this.buildMenusStream();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    // If parent swaps the observable instance after init,
-    // rebuild the pipeline safely.
     if (changes['menusInput$'] && !changes['menusInput$'].firstChange) {
       this.originalMenus$ = (this.menusInput$ ?? new Observable<Menu[]>()).pipe(shareReplay(1));
       this.buildMenusStream();
@@ -548,7 +636,6 @@ export class IHSidebar implements OnInit, OnChanges {
       tap((term) => {
         this.menuFilter.set(term);
 
-        // first emission is initial state -> don't rewrite URL
         if (firstEmission) {
           firstEmission = false;
           return;
@@ -565,59 +652,36 @@ export class IHSidebar implements OnInit, OnChanges {
     );
   }
 
-  /* ---------------------------
-   * MENU FILTER LOGIC
-   * --------------------------- */
-
   private filterMenuTree(menus: Menu[], rawTerm: string): Menu[] {
     const term = (rawTerm ?? '').trim().toLowerCase();
-
-    // no filter → full tree
-    if (!term) {
-      return menus;
-    }
+    if (!term) return menus;
 
     const filtered: Menu[] = [];
-
     for (const menu of menus) {
       const result = this.filterMenuBranch(menu, term);
       if (result) filtered.push(result);
     }
-
     return filtered;
   }
 
-  /**
-   * Rules:
-   * - If THIS node matches → keep it and ALL of its original children.
-   * - Else, if any CHILD matches → keep this node but ONLY the matching branches.
-   * - Else → return null.
-   */
   private filterMenuBranch(menu: Menu, term: string): Menu | null {
     const name = (menu.menuName ?? '').toLowerCase();
     const selfMatches = name.includes(term);
 
     const originalChildren = menu.child ?? [];
 
-    // First, filter children recursively
     const filteredChildren: Menu[] = [];
     for (const child of originalChildren) {
       const childResult = this.filterMenuBranch(child, term);
-      if (childResult) {
-        filteredChildren.push(childResult);
-      }
+      if (childResult) filteredChildren.push(childResult);
     }
 
     const childMatches = filteredChildren.length > 0;
 
-    // If neither this node nor any descendants match → drop this branch
     if (!selfMatches && !childMatches) {
       return null;
     }
 
-    // Decide which children to keep:
-    // - If THIS node matches → keep ALL original children
-    // - Else → keep only filteredChildren (the matching branches)
     const childrenToUse = selfMatches ? originalChildren : filteredChildren;
 
     const cloned: Menu = {
@@ -625,7 +689,6 @@ export class IHSidebar implements OnInit, OnChanges {
       child: childrenToUse,
     };
 
-    // Expand groups that either match themselves or contain matches
     if (+cloned.menuTypeId === 3 && (selfMatches || childMatches)) {
       cloned.visibility = 'expanded';
     }
@@ -633,17 +696,12 @@ export class IHSidebar implements OnInit, OnChanges {
     return cloned;
   }
 
-  /* ---------------------------
-   * FLATTEN FOR KEYBOARD NAV
-   * --------------------------- */
-
   private updateNavigableMenus(filteredMenus: Menu[]): void {
     this.navigableMenus = this.flattenNavigableMenus(filteredMenus);
 
     const hasFilter = !!this.menuFilter().trim();
 
     if (!this.navigableMenus.length || !hasFilter) {
-      // no items or no filter → no highlight
       this.keyboardNavActive.set(false);
       this.selectedIndex.set(null);
       this.selectedMenuId.set(null);
@@ -651,14 +709,12 @@ export class IHSidebar implements OnInit, OnChanges {
     }
 
     if (this.keyboardNavActive()) {
-      // keep selection in bounds
       const maxIndex = this.navigableMenus.length - 1;
       let idx = this.selectedIndex();
       if (idx === null || idx < 0 || idx > maxIndex) idx = 0;
       this.selectedIndex.set(idx);
       this.selectedMenuId.set(this.navigableMenus[idx].menuId);
     } else {
-      // arrows not pressed yet → still no highlight
       this.selectedIndex.set(null);
       this.selectedMenuId.set(null);
     }
@@ -673,9 +729,7 @@ export class IHSidebar implements OnInit, OnChanges {
 
       const isLeafMenu = +menu.menuTypeId === 3 && (!hasChildren || menu.visibility === 'no-child');
 
-      if (isLeafMenu) {
-        result.push(menu);
-      }
+      if (isLeafMenu) result.push(menu);
 
       for (const child of children) visit(child);
     };
@@ -684,10 +738,6 @@ export class IHSidebar implements OnInit, OnChanges {
 
     return result;
   }
-
-  /* ---------------------------
-   * KEYBOARD HANDLING
-   * --------------------------- */
 
   onSearchKeyDown(event: KeyboardEvent): void {
     if (!this.navigableMenus.length) return;
@@ -712,7 +762,6 @@ export class IHSidebar implements OnInit, OnChanges {
     if (!this.navigableMenus.length) return;
 
     if (!this.keyboardNavActive()) {
-      // first arrow → activate and select first/last
       this.keyboardNavActive.set(true);
 
       if (delta >= 0) {
@@ -760,19 +809,12 @@ export class IHSidebar implements OnInit, OnChanges {
     }
   }
 
-  /* ---------------------------
-   * URL SYNC
-   * --------------------------- */
-
   updateUrl(): void {
     const queryParams = { ...this.queryParams };
     const currentFilter = this.menuFilter().trim();
 
-    if (currentFilter) {
-      queryParams['menu-filter'] = currentFilter;
-    } else {
-      delete queryParams['menu-filter'];
-    }
+    if (currentFilter) queryParams['menu-filter'] = currentFilter;
+    else delete queryParams['menu-filter'];
 
     this.router.navigate([], {
       queryParams,
