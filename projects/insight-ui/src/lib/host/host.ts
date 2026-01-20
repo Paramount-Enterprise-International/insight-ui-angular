@@ -31,7 +31,7 @@ import {
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { combineLatest, filter, map, Observable, shareReplay, startWith, tap } from 'rxjs';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { IHighlightSearchPipe } from '@insight/ui';
+import { IHighlightSearchPipe } from '../highlight-search.pipe';
 
 /* =========================================================
  * IH Shell Bridge (types + service)
