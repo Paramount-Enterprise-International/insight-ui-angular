@@ -104,15 +104,19 @@ export type User = {
 };
 
 /* =========================================================
- * IHContent (UPDATED)
+ * IHContent (FIXED)
  * - Route breadcrumbs/title still supported
  * - Override breadcrumbs/title update immediately (signals)
+ * - IMPORTANT FIX:
+ *   use @let override = shell.breadcrumbsOverride()
+ *   so fallback renders when override is null
  * ========================================================= */
 
 @Component({
   selector: 'ih-content',
   imports: [RouterOutlet, AsyncPipe, RouterLink],
-  template: `<div class="ih-content-header">
+  template: `
+    <div class="ih-content-header">
       <a class="i-clickable" (click)="toggleSidebar()">
         @if (sidebarVisibility) {
           <img alt="sidebar-left" src="svgs/sidebar-left.svg" />
@@ -126,74 +130,77 @@ export type User = {
     </div>
 
     <div class="ih-content-breadcrumbs">
-      <!-- ✅ If override breadcrumbs exist, render them immediately -->
-      @if (shell.breadcrumbsOverride(); as override) {
-        @if (override && override.length > 0) {
-          @for (b of override; track $index; let first = $first; let last = $last) {
-            @if (!last) {
-              @if (!first) {
-                @if (b.url) {
-                  <a class="ih-content-breadcrumb ih-content-breadcrumb__link" [routerLink]="b.url">
-                    {{ b.label }}
-                  </a>
-                } @else {
-                  <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
-                    {{ b.label }}
-                  </span>
-                }
+      @let override = shell.breadcrumbsOverride();
+
+      <!-- ✅ Override breadcrumbs (React remote controls this) -->
+      @if (override && override.length > 0) {
+        @for (b of override; track $index; let first = $first; let last = $last) {
+          @if (!last) {
+            @if (!first) {
+              @if (b.url) {
+                <a class="ih-content-breadcrumb ih-content-breadcrumb__link" [routerLink]="b.url">
+                  {{ b.label }}
+                </a>
               } @else {
-                <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
+                <span class="ih-content-breadcrumb ih-content-breadcrumb__link">
                   {{ b.label }}
                 </span>
               }
-              <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
             } @else {
-              <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
+              <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
                 {{ b.label }}
               </span>
             }
+            <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
+          } @else {
+            <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
+              {{ b.label }}
+            </span>
           }
-        } @else {
-          <!-- fallback to route breadcrumbs -->
-          @if (breadcrumb$ | async; as breadcrumbs) {
-            @if (breadcrumbs.length > 0) {
-              @for (
-                breadcrumb of breadcrumbs;
-                track breadcrumb.url;
-                let first = $first;
-                let last = $last
-              ) {
-                @if (!last) {
-                  @if (!first) {
-                    <a
-                      class="ih-content-breadcrumb ih-content-breadcrumb__link"
-                      [routerLink]="breadcrumb.url"
-                    >
-                      {{ breadcrumb.label }}
-                    </a>
-                  } @else {
-                    <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
-                      {{ breadcrumb.label }}
-                    </span>
-                  }
-                  <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
+        }
+      } @else {
+        <!-- ✅ Fallback to route-based breadcrumbs (Angular routes) -->
+        @if (breadcrumb$ | async; as breadcrumbs) {
+          @if (breadcrumbs.length > 0) {
+            @for (
+              breadcrumb of breadcrumbs;
+              track breadcrumb.url;
+              let first = $first;
+              let last = $last
+            ) {
+              @if (!last) {
+                @if (!first) {
+                  <a
+                    class="ih-content-breadcrumb ih-content-breadcrumb__link"
+                    [routerLink]="breadcrumb.url"
+                  >
+                    {{ breadcrumb.label }}
+                  </a>
                 } @else {
-                  <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
+                  <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
                     {{ breadcrumb.label }}
                   </span>
                 }
+                <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
+              } @else {
+                <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
+                  {{ breadcrumb.label }}
+                </span>
               }
-            } @else {
-              <span class="ih-content-breadcrumb ih-content-breadcrumb__first"> Home </span>
             }
+          } @else {
+            <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
           }
+        } @else {
+          <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
         }
       }
     </div>
 
     <div class="ih-content-body scroll scroll-y">
       <router-outlet />
-    </div> `,
+    </div>
+  `,
 })
 export class IHContent {
   private readonly router = inject(Router);
