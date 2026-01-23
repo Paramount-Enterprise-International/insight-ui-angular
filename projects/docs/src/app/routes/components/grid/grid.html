@@ -137,7 +137,7 @@
         </thead>
         <tbody>
           <tr>
-            <td><code>(rowClick)</code></td>
+            <td><code>(onRowClick)</code></td>
             <td>Emitted when a row is clicked.</td>
             <td>Optional</td>
             <td><code>row: any</code></td>
@@ -153,13 +153,13 @@
             </td>
           </tr>
           <tr>
-            <td><code>(rowExpandChange)</code></td>
+            <td><code>(onRowExpandChange)</code></td>
             <td>Emitted when a row's detail section is expanded or collapsed.</td>
             <td>Optional</td>
             <td><code>row: any; expanded: boolean</code></td>
           </tr>
           <tr>
-            <td><code>(expandedRowsChange)</code></td>
+            <td><code>(onExpandedRowsChange)</code></td>
             <td>Emitted whenever the set of expanded rows changes.</td>
             <td>Optional</td>
             <td><code>any[]</code></td>
@@ -589,9 +589,9 @@
                   [showNumberColumn]="false"
                   [tree]="'children'"
                   [treeInitialExpandLevel]="2"
-                  (expandedRowsChange)="onExpandedRowsChange($event)"
-                  (rowClick)="onRowClick($event)"
-                  (rowExpandChange)="onRowExpandChange($event)"
+                  (onExpandedRowsChange)="onExpandedRowsChange($event)"
+                  (onRowClick)="onRowClick($event)"
+                  (onRowExpandChange)="onRowExpandChange($event)"
                 >
                   <!-- Name column (frozen + fill width) -->
                   <i-grid-column fieldName="name" label="Name" width="fill" [freeze]="true" />
@@ -623,10 +623,10 @@
                 <i-grid
                   selectionMode="multiple"
                   [dataSource]="dataSource"
-                  (expandedRowsChange)="onExpandedRowsChange($event)"
-                  (rowClick)="onRowClick($event)"
-                  (rowExpandChange)="onRowExpandChange($event)"
-                  (selectionChange)="onSelectionChange($event)"
+                  (onExpandedRowsChange)="onExpandedRowsChange($event)"
+                  (onRowClick)="onRowClick($event)"
+                  (onRowExpandChange)="onRowExpandChange($event)"
+                  (onSelectionChange)="onSelectionChange($event)"
                 >
                   <!-- Data column: Name (frozen) -->
                   <i-grid-column fieldName="name" title="Name" [freeze]="true" [width]="320">
