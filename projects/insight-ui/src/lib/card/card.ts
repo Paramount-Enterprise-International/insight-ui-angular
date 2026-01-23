@@ -2,6 +2,10 @@
  * ICard
  * Version: 1.0.0
  * <i-card></i-card>
+ *
+ * Standardized:
+ * - @Output() onClick (was cardClick)
+ * - internal handler renamed to handleClick (was onClick) to avoid name collision
  */
 
 import { NgTemplateOutlet } from '@angular/common';
@@ -30,34 +34,34 @@ type RouterLinkInput = string | any[] | undefined;
     </ng-template>
 
     @if (useRouterLink) {
-    <a
-      class="i-card"
-      [attr.aria-disabled]="disabled ? 'true' : null"
-      [attr.rel]="relAttr"
-      [attr.tabindex]="disabled ? -1 : null"
-      [attr.target]="target ?? null"
-      [fragment]="fragment"
-      [queryParams]="queryParams"
-      [replaceUrl]="replaceUrl"
-      [routerLink]="routerLink!"
-      [skipLocationChange]="skipLocationChange"
-      [state]="state"
-      (click)="onClick($event)"
-    >
-      <ng-container [ngTemplateOutlet]="content" />
-    </a>
+      <a
+        class="i-card"
+        [attr.aria-disabled]="disabled ? 'true' : null"
+        [attr.rel]="relAttr"
+        [attr.tabindex]="disabled ? -1 : null"
+        [attr.target]="target ?? null"
+        [fragment]="fragment"
+        [queryParams]="queryParams"
+        [replaceUrl]="replaceUrl"
+        [routerLink]="routerLink!"
+        [skipLocationChange]="skipLocationChange"
+        [state]="state"
+        (click)="handleClick($event)"
+      >
+        <ng-container [ngTemplateOutlet]="content" />
+      </a>
     } @else {
-    <a
-      class="i-card"
-      [attr.aria-disabled]="disabled ? 'true' : null"
-      [attr.href]="hrefAttr"
-      [attr.rel]="relAttr"
-      [attr.tabindex]="disabled ? -1 : null"
-      [attr.target]="target ?? null"
-      (click)="onClick($event)"
-    >
-      <ng-container [ngTemplateOutlet]="content" />
-    </a>
+      <a
+        class="i-card"
+        [attr.aria-disabled]="disabled ? 'true' : null"
+        [attr.href]="hrefAttr"
+        [attr.rel]="relAttr"
+        [attr.tabindex]="disabled ? -1 : null"
+        [attr.target]="target ?? null"
+        (click)="handleClick($event)"
+      >
+        <ng-container [ngTemplateOutlet]="content" />
+      </a>
     }
   `,
 })
@@ -84,8 +88,12 @@ export class ICard implements OnInit {
 
   @Input() disabled = false;
 
-  // Click-only usage
-  @Output() readonly cardClick = new EventEmitter<MouseEvent>();
+  /* ======================
+   * Outputs (standardized)
+   * ====================== */
+
+  /** Standard event name for Angular + React parity */
+  @Output() readonly onClick = new EventEmitter<MouseEvent>();
 
   /* ======================
    * Derived flags
@@ -107,7 +115,7 @@ export class ICard implements OnInit {
     const hasRouter =
       this.routerLink !== undefined && this.routerLink !== null && this.routerLink !== '';
 
-    const hasClick = this.cardClick.observed;
+    const hasClick = this.onClick.observed;
 
     if (hasHref && hasRouter) {
       console.warn('[i-card] Do not use `href` and `routerLink` together. Choose one.', this);
@@ -115,16 +123,13 @@ export class ICard implements OnInit {
 
     if (hasClick && (hasHref || hasRouter)) {
       console.warn(
-        '[i-card] `(cardClick)` should not be combined with `href` or `routerLink`.',
-        this
+        '[i-card] `(onClick)` should not be combined with `href` or `routerLink`.',
+        this,
       );
     }
 
     if (!hasHref && !hasRouter && !hasClick) {
-      console.warn(
-        '[i-card] No action provided. Add `href`, `routerLink`, or `(cardClick)`.',
-        this
-      );
+      console.warn('[i-card] No action provided. Add `href`, `routerLink`, or `(onClick)`.', this);
     }
   }
 
@@ -148,7 +153,7 @@ export class ICard implements OnInit {
    * Click handling
    * ====================== */
 
-  onClick(ev: MouseEvent): void {
+  handleClick(ev: MouseEvent): void {
     if (this.disabled) {
       ev.preventDefault();
       ev.stopPropagation();
@@ -156,9 +161,9 @@ export class ICard implements OnInit {
     }
 
     // Button-like behavior
-    if (this.cardClick.observed) {
+    if (this.onClick.observed) {
       ev.preventDefault();
-      this.cardClick.emit(ev);
+      this.onClick.emit(ev);
       return;
     }
 

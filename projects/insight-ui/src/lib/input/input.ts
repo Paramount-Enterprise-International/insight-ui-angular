@@ -14,10 +14,10 @@ import {
   ElementRef,
   forwardRef,
   HostListener,
+  inject,
   Input,
   NgModule,
-  Optional,
-  Self,
+  OnDestroy,
   ViewChild,
 } from '@angular/core';
 import {
@@ -26,6 +26,7 @@ import {
   NG_VALUE_ACCESSOR,
   NgControl,
 } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import {
   IFormControlErrorMessage,
   isControlRequired,
@@ -33,6 +34,10 @@ import {
 } from '../interfaces';
 import { IInputAddon, IInputAddonLoading, IInputAddons } from './input-addon';
 import { IInputMask, IInputMaskDirective } from './input-mask';
+
+/* =========================================
+ * IInput (CVA)
+ * ========================================= */
 
 @Component({
   selector: 'i-input',
@@ -56,7 +61,7 @@ import { IInputMask, IInputMaskDirective } from './input-mask';
     />
     @for (i of appends; track $index) {
       <i-input-addon [addon]="i" />
-    } `,
+    }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -78,7 +83,6 @@ export class IInput implements ControlValueAccessor {
   /** invalid state (controlled by form or wrapper) */
   @Input() invalid = false;
 
-  /** Optional mask passed through to inner input's directive */
   @Input() mask: IInputMask | undefined;
 
   /** value usable both by CVA and by [value] binding */
@@ -86,7 +90,6 @@ export class IInput implements ControlValueAccessor {
   get value(): string | null {
     return this._value;
   }
-
   set value(v: string | null) {
     this._value = v ?? '';
   }
@@ -105,7 +108,6 @@ export class IInput implements ControlValueAccessor {
   get disabled(): boolean {
     return this.isDisabled;
   }
-
   set disabled(value: boolean) {
     this.isDisabled = value;
   }
@@ -142,7 +144,7 @@ export class IInput implements ControlValueAccessor {
   // -----------------------------
   handleInput(event: Event): void {
     const target = event.target as HTMLInputElement;
-    this._value = target.value ?? '';
+    this._value = target.value;
     this.onChange(this._value);
   }
 
@@ -150,9 +152,7 @@ export class IInput implements ControlValueAccessor {
     this.onTouched();
   }
 
-  /** Click anywhere on <i-input> focuses the inner input,
-   *  EXCEPT when clicking on an addon (button/link/etc).
-   */
+  /** Click anywhere on <i-input> focuses the inner input, except clicks on addons */
   @HostListener('click', ['$event'])
   handleHostClick(event: MouseEvent): void {
     if (this.isDisabled || !this.inputRef) {
@@ -175,13 +175,17 @@ export class IInput implements ControlValueAccessor {
     return Array.isArray(this.prepend) ? this.prepend : [this.prepend];
   }
 
-  get appends(): IInputAddons[] {
+  get appends(): (IInputAddons | IInputAddonLoading)[] {
     if (!this.append) {
       return [];
     }
     return Array.isArray(this.append) ? this.append : [this.append];
   }
 }
+
+/* =========================================
+ * IFCInput (CVA wrapper)
+ * ========================================= */
 
 @Component({
   selector: 'i-fc-input',
@@ -217,9 +221,18 @@ export class IInput implements ControlValueAccessor {
       </div>
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // ✅ NO NG_VALUE_ACCESSOR PROVIDER HERE (prevents circular dependency)
 })
-export class IFCInput implements ControlValueAccessor {
+export class IFCInput implements ControlValueAccessor, OnDestroy {
   @ViewChild(IInput) innerInput!: IInput;
+
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  // Optional injections (equivalent to @Optional() @Self())
+  private readonly ngControl = inject(NgControl, { self: true, optional: true });
+  private readonly formDir = inject(FormGroupDirective, { optional: true });
+
+  private submitSub?: Subscription;
 
   // ---------- UI inputs ----------
   @Input() label = '';
@@ -246,9 +259,9 @@ export class IFCInput implements ControlValueAccessor {
   get value(): string | null {
     return this._value;
   }
-
   set value(v: string | null) {
     this._value = v ?? '';
+    this.cdr.markForCheck();
   }
 
   // ---------- internal state ----------
@@ -256,30 +269,36 @@ export class IFCInput implements ControlValueAccessor {
 
   isDisabled = false;
 
-  private onChange: (v: any) => void = () => {};
+  private onChange: (v: any) => void = () => {
+    /*  */
+  };
 
-  private onTouched: () => void = () => {};
+  private onTouched: () => void = () => {
+    /*  */
+  };
 
-  constructor(
-    @Optional() @Self() public ngControl: NgControl | null,
-    @Optional() private formDir: FormGroupDirective | null,
-    private cdr: ChangeDetectorRef,
-  ) {
+  constructor() {
+    // ✅ same pattern you use in other fc components
     if (this.ngControl) {
       this.ngControl.valueAccessor = this;
     }
 
     // 🔁 when the form is submitted, re-check this OnPush component
     if (this.formDir) {
-      this.formDir.ngSubmit.subscribe(() => {
+      this.submitSub = this.formDir.ngSubmit.subscribe(() => {
         this.cdr.markForCheck();
       });
     }
   }
 
+  ngOnDestroy(): void {
+    this.submitSub?.unsubscribe();
+  }
+
   // ---------- CVA ----------
   writeValue(v: any): void {
     this._value = v ?? '';
+    this.cdr.markForCheck();
   }
 
   registerOnChange(fn: any): void {
@@ -292,6 +311,7 @@ export class IFCInput implements ControlValueAccessor {
 
   setDisabledState(isDisabled: boolean): void {
     this.isDisabled = isDisabled;
+    this.cdr.markForCheck();
   }
 
   // ---------- bridge from inner <i-input> ----------
@@ -300,10 +320,12 @@ export class IFCInput implements ControlValueAccessor {
     const v = target?.value ?? '';
     this._value = v;
     this.onChange(this._value);
+    this.cdr.markForCheck();
   }
 
   handleInnerBlur(): void {
     this.onTouched();
+    this.cdr.markForCheck();
   }
 
   // ---------- focus from label ----------
@@ -316,16 +338,12 @@ export class IFCInput implements ControlValueAccessor {
   // ---------- validation helpers ----------
   get controlInvalid(): boolean {
     const c = this.ngControl?.control;
-    if (!c) {
-      return false;
-    }
+    if (!c) return false;
 
-    // 🧠 mimic old IInput.isInvalid: invalid && form submitted
     if (this.formDir) {
       return c.invalid && !!this.formDir.submitted;
     }
 
-    // fallback when not inside a FormGroupDirective
     return c.invalid && (c.dirty || c.touched);
   }
 

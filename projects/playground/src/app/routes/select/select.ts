@@ -9,6 +9,8 @@ import {
 } from '@angular/forms';
 import { IUI } from '@insight-ui';
 
+type City = { id: number; name: string };
+
 @Component({
   selector: 'app-select',
   imports: [IUI, ReactiveFormsModule, FormsModule],
@@ -16,6 +18,16 @@ import { IUI } from '@insight-ui';
   styleUrl: './select.css',
 })
 export class Select {
+  options: City[] = [
+    { id: 1, name: 'Jakarta' },
+    { id: 2, name: 'Bandung' },
+    { id: 3, name: 'Surabaya' },
+  ];
+
+  selected: City | City[] | null = this.options[0];
+
+  displayWith = (row: City | null): string => row?.name ?? '';
+
   FormBuilder: FormBuilder = inject(FormBuilder);
 
   titleFormControl = new FormControl('', [Validators.required]);
@@ -32,7 +44,19 @@ export class Select {
     descriptionFormControl: this.descriptionFormControl,
   });
 
-  onSubmit(): void {}
+  onSubmit(): void {
+    /*  */
+  }
 
-  inputAddonClick(): void {}
+  inputAddonClick(): void {
+    /*  */
+  }
+
+  onOptionSelected(e: any): void {
+    console.log('selected:', e);
+  }
+
+  remove(): void {
+    /*  */
+  }
 }

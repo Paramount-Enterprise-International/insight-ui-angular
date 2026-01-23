@@ -1,32 +1,19 @@
 /* grid.ts */
 /**
  * IGrid
- * Version: 1.24.0
+ * Version: 1.25.0
  *
- * CHANGES (1.24.0):
- * - Column Group support (header grouping):
- *   Consumer API:
- *     <i-grid-column-group title="Group Title">
- *       <i-grid-column ... />
- *       <i-grid-column ... />
- *     </i-grid-column-group>
+ * CHANGES (1.25.0):
+ * - Standardize events to on* prefix:
+ *   selectionChange       -> onSelectionChange
+ *   rowClick              -> onRowClick
+ *   rowExpandChange       -> onRowExpandChange
+ *   expandedRowsChange    -> onExpandedRowsChange
+ * - Prefer inject() instead of constructor injection
+ * - Paginator event binding updated:
+ *   (pageChange) -> (onPageChange)
  *
- *   Rendered header DOM:
- *     <i-grid-header-row>
- *       <i-grid-header-cell>Column 1</i-grid-header-cell>
- *       <i-grid-header-cell-group>
- *         <i-grid-header-cell>Group Title</i-grid-header-cell>
- *         <i-grid-header-cell-group-columns>
- *           <i-grid-header-cell>Column 2</i-grid-header-cell>
- *           <i-grid-header-cell>Column 3</i-grid-header-cell>
- *         </i-grid-header-cell-group-columns>
- *       </i-grid-header-cell-group>
- *       <i-grid-header-cell>Column 4</i-grid-header-cell>
- *     </i-grid-header-row>
- *
- * Notes:
- * - Group is header-only. Body cells are still rendered per actual columns.
- * - Group has no resize handle for now (layout only).
+ * (Other behavior unchanged; Angular remains source of truth.)
  */
 
 import { NgTemplateOutlet } from '@angular/common';
@@ -39,15 +26,14 @@ import {
   Directive,
   ElementRef,
   EventEmitter,
-  Host,
+  forwardRef,
   HostBinding,
   HostListener,
+  inject,
   Input,
   NgModule,
   OnChanges,
   OnDestroy,
-  OnInit,
-  Optional,
   Output,
   QueryList,
   SimpleChanges,
@@ -511,7 +497,7 @@ export class IGridDataSource<T = any> {
   standalone: true,
 })
 export class IGridHeaderCellDefDirective {
-  constructor(readonly template: TemplateRef<any>) {}
+  readonly template = inject(TemplateRef<any>);
 }
 
 @Directive({
@@ -519,7 +505,7 @@ export class IGridHeaderCellDefDirective {
   standalone: true,
 })
 export class IGridCellDefDirective {
-  constructor(readonly template: TemplateRef<any>) {}
+  readonly template = inject(TemplateRef<any>);
 }
 
 /* ----------------------------------------------------
@@ -533,10 +519,8 @@ export class IGridCellDefDirective {
 export class IGridRowDefDirective<T = any> implements OnInit {
   @Input() iRowDefExpandSingle = false;
 
-  constructor(
-    readonly template: TemplateRef<any>,
-    private readonly vcr: ViewContainerRef,
-  ) {}
+  readonly template = inject(TemplateRef<any>);
+  private readonly vcr = inject(ViewContainerRef);
 
   ngOnInit(): void {
     this.vcr.clear();
@@ -549,6 +533,8 @@ export class IGridRowDefDirective<T = any> implements OnInit {
     return true;
   }
 }
+
+import { OnInit } from '@angular/core';
 
 @Component({
   selector: 'i-grid-expandable-row',
@@ -700,11 +686,14 @@ export class IGridCell {
   @Input() column?: IGridColumnLike<any>;
   @Input() fixedWidth?: number;
 
-  constructor(
-    @Optional() @Host() private hostDataColumn: IGridColumn<any> | null,
-    @Optional() @Host() private hostCustomColumn: IGridCustomColumn<any> | null,
-    @Optional() private grid: IGrid<any> | null,
-  ) {}
+  private readonly hostDataColumn = inject(IGridColumn<any>, { optional: true, host: true });
+  private readonly hostCustomColumn = inject(IGridCustomColumn<any>, {
+    optional: true,
+    host: true,
+  });
+  private readonly grid = inject(forwardRef(() => IGrid) as any, {
+    optional: true,
+  }) as IGrid<any> | null;
 
   private get _column(): IGridColumnLike<any> | null {
     return this.column ?? this.hostDataColumn ?? this.hostCustomColumn ?? null;
@@ -787,12 +776,15 @@ export class IGridHeaderCell {
   private _startWidth = 0;
   private readonly _minWidth = 50;
 
-  constructor(
-    private el: ElementRef<HTMLElement>,
-    @Optional() private grid: IGrid<any> | null,
-    @Optional() @Host() private hostDataColumn: IGridColumn<any> | null,
-    @Optional() @Host() private hostCustomColumn: IGridCustomColumn<any> | null,
-  ) {}
+  private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly grid = inject(forwardRef(() => IGrid) as any, {
+    optional: true,
+  }) as IGrid<any> | null;
+  private readonly hostDataColumn = inject(IGridColumn<any>, { optional: true, host: true });
+  private readonly hostCustomColumn = inject(IGridCustomColumn<any>, {
+    optional: true,
+    host: true,
+  });
 
   private get _column(): IGridColumnLike<any> | null {
     return this.column ?? this.hostDataColumn ?? this.hostCustomColumn ?? null;
@@ -989,7 +981,6 @@ export class IGridViewport {}
     IButton,
     IHighlightSearchPipe,
     ITruncatedTooltipDirective,
-    // NEW header group render tags
     IGridHeaderCellGroup,
     IGridHeaderCellGroupColumns,
     IGridViewport,
@@ -1307,7 +1298,7 @@ export class IGridViewport {}
           [pageIndex]="pageIndex"
           [pageSize]="pageSize"
           [pageSizeOptions]="pageSizeOptions"
-          (pageChange)="onPageChange($event)"
+          (onPageChange)="onPageChange($event)"
         />
       </div>
     }`,
@@ -1350,14 +1341,14 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   /** Emits whenever selection changes */
-  @Output() readonly selectionChange = new EventEmitter<IGridSelectionChange<T>>();
+  @Output() readonly onSelectionChange = new EventEmitter<IGridSelectionChange<T>>();
 
   /** Emits on row click (before selection logic) */
-  @Output() readonly rowClick = new EventEmitter<T>();
+  @Output() readonly onRowClick = new EventEmitter<T>();
 
   /** Expand events */
-  @Output() readonly rowExpandChange = new EventEmitter<{ row: T; expanded: boolean }>();
-  @Output() readonly expandedRowsChange = new EventEmitter<T[]>();
+  @Output() readonly onRowExpandChange = new EventEmitter<{ row: T; expanded: boolean }>();
+  @Output() readonly onExpandedRowsChange = new EventEmitter<T[]>();
 
   @ContentChildren(IGridColumn)
   columnDefs!: QueryList<IGridColumn<T>>;
@@ -1365,7 +1356,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   @ContentChildren(IGridCustomColumn)
   customColumnDefs!: QueryList<IGridCustomColumn<T>>;
 
-  // NEW: group defs
   @ContentChildren(IGridColumnGroup)
   columnGroupDefs!: QueryList<IGridColumnGroup<T>>;
 
@@ -1376,10 +1366,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     return !!this.expandableRowDef?.template;
   }
 
-  /** flattened columns used by body rendering + width/freeze logic */
   columns: IGridColumnLike<T>[] = [];
-
-  /** header structure */
   headerItems: IGridHeaderItem<T>[] = [];
 
   renderedData: T[] = [];
@@ -1401,7 +1388,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   private _numberColumnInternal?: IGridColumnLike<T>;
 
-  // ---------- TREE ----------
   private _treeMeta = new Map<
     T,
     { level: number; parent: T | null; hasChildren: boolean; expanded: boolean }
@@ -1427,7 +1413,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   /* ----------------------------------------------------
-   * EXPANDABLE ROW API (UNCHANGED)
+   * EXPANDABLE ROW API
    * ---------------------------------------------------- */
 
   expandRow(row: T): void {
@@ -1461,13 +1447,13 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       const first = this.renderedData[0];
       const prev = Array.from(this._expanded);
       this._expanded.clear();
-      prev.forEach((r) => this.rowExpandChange.emit({ row: r, expanded: false }));
+      prev.forEach((r) => this.onRowExpandChange.emit({ row: r, expanded: false }));
 
       if (first) {
         this._expanded.add(first);
-        this.rowExpandChange.emit({ row: first, expanded: true });
+        this.onRowExpandChange.emit({ row: first, expanded: true });
       }
-      this.expandedRowsChange.emit(this.getExpandedRows());
+      this.onExpandedRowsChange.emit(this.getExpandedRows());
       return;
     }
 
@@ -1478,10 +1464,10 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
     for (const row of this.renderedData) {
       if (!before.has(row)) {
-        this.rowExpandChange.emit({ row, expanded: true });
+        this.onRowExpandChange.emit({ row, expanded: true });
       }
     }
-    this.expandedRowsChange.emit(this.getExpandedRows());
+    this.onExpandedRowsChange.emit(this.getExpandedRows());
   }
 
   collapseAll(): void {
@@ -1492,8 +1478,8 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     const prev = Array.from(this._expanded);
     this._expanded.clear();
 
-    prev.forEach((row) => this.rowExpandChange.emit({ row, expanded: false }));
-    this.expandedRowsChange.emit(this.getExpandedRows());
+    prev.forEach((row) => this.onRowExpandChange.emit({ row, expanded: false }));
+    this.onExpandedRowsChange.emit(this.getExpandedRows());
   }
 
   get allVisibleExpanded(): boolean {
@@ -1544,17 +1530,17 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       if (expandSingle) {
         const prev = Array.from(this._expanded).filter((r) => r !== row);
         this._expanded.clear();
-        prev.forEach((r) => this.rowExpandChange.emit({ row: r, expanded: false }));
+        prev.forEach((r) => this.onRowExpandChange.emit({ row: r, expanded: false }));
       }
 
       this._expanded.add(row);
-      this.rowExpandChange.emit({ row, expanded: true });
+      this.onRowExpandChange.emit({ row, expanded: true });
     } else {
       this._expanded.delete(row);
-      this.rowExpandChange.emit({ row, expanded: false });
+      this.onRowExpandChange.emit({ row, expanded: false });
     }
 
-    this.expandedRowsChange.emit(this.getExpandedRows());
+    this.onExpandedRowsChange.emit(this.getExpandedRows());
   }
 
   /* ------- TREE helpers (config) ------- */
@@ -1869,7 +1855,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     if (!this.selectionMode) {
       return;
     }
-    this.selectionChange.emit({ selected: this.selectedRows, lastChanged });
+    this.onSelectionChange.emit({ selected: this.selectedRows, lastChanged });
   }
 
   private _selectSingle(row: T): void {
@@ -2033,8 +2019,8 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       if (this._expanded.size) {
         const prev = Array.from(this._expanded);
         this._expanded.clear();
-        prev.forEach((r) => this.rowExpandChange.emit({ row: r, expanded: false }));
-        this.expandedRowsChange.emit(this.getExpandedRows());
+        prev.forEach((r) => this.onRowExpandChange.emit({ row: r, expanded: false }));
+        this.onExpandedRowsChange.emit(this.getExpandedRows());
       }
       return;
     }
@@ -2051,13 +2037,13 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
     prev.forEach((row) => {
       if (!next.has(row)) {
-        this.rowExpandChange.emit({ row, expanded: false });
+        this.onRowExpandChange.emit({ row, expanded: false });
       }
     });
 
     if (next.size !== this._expanded.size) {
       this._expanded = next;
-      this.expandedRowsChange.emit(this.getExpandedRows());
+      this.onExpandedRowsChange.emit(this.getExpandedRows());
     }
   }
 
@@ -2388,23 +2374,13 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     this.sortStates = sort.map((s) => ({ active: s.active, direction: s.direction }));
   }
 
-  /**
-   * Build:
-   * - headerItems (columns + groups)
-   * - columns (flattened, for body)
-   */
   private _rebuildColumnsAndHeader(fromDataChange = false): void {
-    // 1) if user provided explicit columns/groups, use them
     const directCols = this.columnDefs?.toArray?.() ?? [];
     const directCustom = this.customColumnDefs?.toArray?.() ?? [];
     const groups = this.columnGroupDefs?.toArray?.() ?? [];
 
     const hasAnyGrouping = groups.length > 0;
 
-    // If groups exist, we will NOT also take "directCols" as top-level,
-    // because the user should place columns inside group OR as direct siblings.
-    // However, QueryList includes nested components too.
-    // So we must detect "top-level direct cols" by excluding columns that belong to a group.
     const groupedColsSet = new Set<IGridColumnLike<T>>();
     const groupedCustomSet = new Set<IGridColumnLike<T>>();
 
@@ -2416,7 +2392,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     const topLevelCols = directCols.filter((c) => !groupedColsSet.has(c));
     const topLevelCustom = directCustom.filter((c) => !groupedCustomSet.has(c));
 
-    // If user provides anything explicit (top-level or groups), prefer explicit.
     const hasExplicit =
       hasAnyGrouping ||
       topLevelCols.length > 0 ||
@@ -2426,13 +2401,10 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     if (hasExplicit) {
       const headerItems: IGridHeaderItem<T>[] = [];
 
-      // top-level columns first (in DOM order this will be based on content projection order;
-      // QueryList is usually in DOM order, good enough for now)
       for (const c of topLevelCols) {
         headerItems.push({ kind: 'col', col: c });
       }
 
-      // groups
       for (const g of groups) {
         const gCols: IGridColumnLike<T>[] = [
           ...(g.columns?.toArray?.() ?? []),
@@ -2446,12 +2418,10 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
         });
       }
 
-      // top-level custom columns after groups (or you can keep them in DOM order later)
       for (const c of topLevelCustom) {
         headerItems.push({ kind: 'col', col: c });
       }
 
-      // Flatten for body: columns are all cols in header order (groups expanded)
       const flat: IGridColumnLike<T>[] = [];
       for (const item of headerItems) {
         if (item.kind === 'col') {
@@ -2468,7 +2438,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       return;
     }
 
-    // 2) Auto columns fallback (no explicit columns/groups)
     if (fromDataChange || !this.columns.length) {
       const autoCols = this._buildAutoColumnsFromData();
       this.columns = autoCols;
@@ -2477,7 +2446,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       return;
     }
 
-    // 3) Keep existing columns if no changes
     this.headerItems = this.columns.map((c) => ({ kind: 'col', col: c }));
     this._seedColumnWidths();
   }
@@ -2594,7 +2562,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   /* ------- row click ------- */
 
   onRowClicked(row: T): void {
-    this.rowClick.emit(row);
+    this.onRowClick.emit(row);
     // selection via explicit checkbox/radio only
   }
 
@@ -2636,7 +2604,7 @@ export const I_GRID_DECLARATIONS = [
   IGridViewport,
   IGridColumn,
   IGridCustomColumn,
-  IGridColumnGroup, // NEW
+  IGridColumnGroup,
 
   IGridHeaderCellDefDirective,
   IGridCellDefDirective,
@@ -2647,7 +2615,6 @@ export const I_GRID_DECLARATIONS = [
   IGridHeaderRowDirective,
   IGridRowDirective,
 
-  // NEW internal header render tags
   IGridHeaderCellGroup,
   IGridHeaderCellGroupColumns,
 ];
