@@ -1,17 +1,10 @@
 /* paginator.ts */
-
 /**
  * IPaginator
  * Version: 1.2.0
  *
- * - Page size buttons (left)
- * - Numeric pagination with ellipsis (right)
- * - DevExtreme-like behavior:
- *   <= 6 pages: 1 2 3 4 5 6
- *   > 6 pages:
- *     - near start: 1 2 3 4 5 ... 10
- *     - middle:     1 ... 3 4 [5] 6 ... 10
- *     - near end:   1 ... 6 7 8 9 10
+ * ✅ CHANGES:
+ * - Standardized event name to `onPageChange` (on* prefix parity with React)
  */
 
 import { Component, EventEmitter, Input, Output } from '@angular/core';
@@ -70,7 +63,8 @@ export class IPaginator {
   @Input() pageSize = 10;
   @Input() pageSizeOptions = [10, 50, 100];
 
-  @Output() readonly pageChange = new EventEmitter<IPaginatorState>();
+  /** ✅ on* prefix parity with React */
+  @Output() readonly onPageChange = new EventEmitter<IPaginatorState>();
 
   /** Max numeric pages shown (not counting ellipsis). Matches your examples. */
   private readonly _maxVisiblePages = 6;
@@ -90,7 +84,6 @@ export class IPaginator {
     }
 
     // total > 6
-    // Behavior:
     // - Near start (current <= 4): 1 2 3 4 5 ... last
     // - Near end (current >= last - 3): 1 ... last-4 last-3 last-2 last-1 last
     // - Middle: 1 ... (current-2 current-1 current current+1) ... last
@@ -156,7 +149,7 @@ export class IPaginator {
     if (this.pageIndex < 0) this.pageIndex = 0;
     if (this.pageIndex > maxIndex) this.pageIndex = maxIndex;
 
-    this.pageChange.emit({
+    this.onPageChange.emit({
       pageIndex: this.pageIndex,
       pageSize: this.pageSize,
     });

@@ -22,7 +22,7 @@ function coerceBool(v: any): boolean {
 }
 
 function escapeHtml(s: string): string {
-  return s
+  return (s ?? '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
@@ -132,9 +132,10 @@ function normalizeHljsLanguage(lang: string): string {
 
     <div class="i-code-viewer" [class.compact]="compact" [class.wrap]="wrap">
       @if (loading) {
-      <div class="i-code-viewer-loading">Loading…</div>
-      } @if (error) {
-      <div class="i-code-viewer-error">{{ error }}</div>
+        <div class="i-code-viewer-loading">Loading…</div>
+      }
+      @if (error) {
+        <div class="i-code-viewer-error">{{ error }}</div>
       }
 
       <div
@@ -145,38 +146,39 @@ function normalizeHljsLanguage(lang: string): string {
         [style.height.px]="heightPx"
       >
         @if (showOverlay) {
-        <div class="i-code-viewer-overlay hljs">
-          @if (showFileType) {
-          <span class="i-code-viewer-filetype">{{ fileTypeLabel }}</span>
-          } @if (copy) {
-          <i-button
-            class="i-code-viewer-copy"
-            size="xs"
-            variant="outline"
-            [disabled]="loading"
-            (click)="onCopy()"
-          >
-            {{ copied ? 'Copied' : 'Copy' }}
-          </i-button>
-          }
-        </div>
+          <div class="i-code-viewer-overlay hljs">
+            @if (showFileType) {
+              <span class="i-code-viewer-filetype">{{ fileTypeLabel }}</span>
+            }
+            @if (copy) {
+              <i-button
+                class="i-code-viewer-copy"
+                size="xs"
+                variant="outline"
+                [disabled]="loading"
+                (onClick)="onCopy()"
+              >
+                {{ copied ? 'Copied' : 'Copy' }}
+              </i-button>
+            }
+          </div>
         }
 
         <!-- content row -->
         <div class="i-code-viewer-content hljs scroll scroll-y">
           @if (lineNumbers) {
-          <div aria-hidden="true" class="i-code-viewer-gutter">
-            @for (n of lineNumberList; track n) {
-            <div class="i-code-viewer-line">{{ n }}</div>
-            }
-          </div>
+            <div aria-hidden="true" class="i-code-viewer-gutter">
+              @for (n of lineNumberList; track n) {
+                <div class="i-code-viewer-line">{{ n }}</div>
+              }
+            </div>
           }
 
           <pre class="i-code-viewer-pre">
             <code
-            class="i-code-viewer-code hljs"
-            [attr.data-language]="effectiveLanguage"
-            [innerHTML]="renderedHtml"
+              class="i-code-viewer-code hljs"
+              [attr.data-language]="effectiveLanguage"
+              [innerHTML]="renderedHtml"
             ></code>
           </pre>
         </div>
@@ -186,7 +188,6 @@ function normalizeHljsLanguage(lang: string): string {
 })
 export class ICodeViewer {
   private readonly cdr = inject(ChangeDetectorRef);
-
   private readonly http = inject(HttpClient);
 
   @ViewChild('projected', { static: true }) private projectedTpl!: TemplateRef<unknown>;
@@ -200,7 +201,6 @@ export class ICodeViewer {
     this._languageOverride = s ? s : null;
     this.recompute();
   }
-
   get language(): string | null {
     return this._languageOverride;
   }
@@ -224,7 +224,6 @@ export class ICodeViewer {
       this.recompute();
     }
   }
-
   get file(): string {
     return this._file;
   }
@@ -236,23 +235,19 @@ export class ICodeViewer {
     this._code = v ?? '';
     this.recompute();
   }
-
   get code(): string {
     return this._code;
   }
 
   @Input({ transform: coerceBool }) wrap = false;
-
   @Input({ transform: coerceBool }) compact = false;
 
-  /** default true */
+  /** default false */
   @Input({ transform: coerceBool }) lineNumbers = false;
 
   /** overlay controls */
   @Input({ transform: coerceBool }) overlay = true;
-
   @Input({ transform: coerceBool }) showFileType = true;
-
   @Input({ transform: coerceBool }) copy = true;
 
   @Input({ transform: coerceBool }) scroll = false;
@@ -264,32 +259,26 @@ export class ICodeViewer {
     this._heightPx = parseHeight(v);
     this.cdr.markForCheck();
   }
-
   get height(): any {
     return this._heightPx ?? 'wrap';
   }
 
   @Input() highlighter: ICodeHighlighter = 'auto';
 
-  @Output() readonly fileLoaded = new EventEmitter<{ file: string; language: string }>();
+  // ✅ standardize to on*
+  @Output() readonly onFileLoaded = new EventEmitter<{ file: string; language: string }>();
 
   // ===== State =====
   loading = false;
-
   error = '';
-
   renderedHtml = '';
-
   copied = false;
-
   lineNumberList: number[] = [];
 
   private requestSeq = 0;
-
   private _fileLanguage = 'text';
 
   private hljsPromise: Promise<any> | null = null;
-
   private hljs: any | null = null;
 
   // ===== Derived =====
@@ -461,7 +450,9 @@ export class ICodeViewer {
       this.error = '';
 
       this.recompute();
-      this.fileLoaded.emit({ file: url, language: this.effectiveLanguage });
+
+      // ✅ standardize to on*
+      this.onFileLoaded.emit({ file: url, language: this.effectiveLanguage });
     } catch {
       if (seq !== this.requestSeq) {
         return;

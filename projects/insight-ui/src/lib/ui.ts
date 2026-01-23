@@ -13,6 +13,8 @@ import { IFCSelect, ISelect } from './select';
 import { IFCTextArea, ITextArea } from './textarea';
 import { ICodeViewerModule } from './code-viewer';
 import { IHContent, IHSidebar } from './host';
+import { IToggle } from './toggle';
+import { IPill } from './pill/pill';
 
 @NgModule({
   imports: [
@@ -33,6 +35,8 @@ import { IHContent, IHSidebar } from './host';
     IFCSelect,
     ITextArea,
     IFCTextArea,
+    IToggle,
+    IPill,
   ],
   exports: [
     IButton,
@@ -52,6 +56,8 @@ import { IHContent, IHSidebar } from './host';
     IFCSelect,
     ITextArea,
     IFCTextArea,
+    IToggle,
+    IPill,
   ],
 })
 export class IUI {}

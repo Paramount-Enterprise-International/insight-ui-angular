@@ -37,7 +37,7 @@ import { IHighlightSearchPipe } from '../highlight-search.pipe';
  * IH Shell Bridge (types + service)
  * ========================================================= */
 
-export type IHBreadcrumbItem = {
+export type IBreadcrumbItem = {
   label: string;
   /**
    * IMPORTANT (baseHref is "/-/"):
@@ -45,6 +45,34 @@ export type IHBreadcrumbItem = {
    * - Also accepted: "/-/dashboard" (will be normalized)
    */
   url?: string;
+};
+
+/* =========================================================
+ * Existing types
+ * ========================================================= */
+
+export type IMenu = {
+  menuId: number;
+  menuName: string;
+  route?: string | null;
+  menuTypeId: number;
+  parentId: number;
+  sequence: number;
+  icon?: string | null;
+  child?: IMenu[];
+  level: number;
+  visibility?: string;
+  selected?: boolean;
+  openInId?: number;
+  versionCode?: string;
+  applicationCode?: string;
+  applicationUrl?: string;
+};
+
+export type IUser = {
+  employeeCode: string;
+  fullName: string;
+  userImagePath: string;
 };
 
 export type IHNavigationSnapshot = {
@@ -61,21 +89,13 @@ export class IHTitleBreadcrumbService {
    * non-null = override (e.g. React remote controls shell display)
    */
   readonly titleOverride = signal<string | null>(null);
-  readonly breadcrumbsOverride = signal<IHBreadcrumbItem[] | null>(null);
-
-  // debug
-  private readonly __instanceId = Math.random().toString(36).slice(2);
-
-  constructor() {
-    console.log('[IHTitleBreadcrumbService] instance', this.__instanceId);
-  }
+  readonly breadcrumbsOverride = signal<IBreadcrumbItem[] | null>(null);
 
   setTitle(title: string | null): void {
     this.titleOverride.set(title ?? null);
   }
 
-  setBreadcrumbs(items: IHBreadcrumbItem[] | null): void {
-    console.log('[IHTitleBreadcrumbService] setBreadcrumbs on instance', this.__instanceId, items);
+  setBreadcrumbs(items: IBreadcrumbItem[] | null): void {
     this.breadcrumbsOverride.set(items ?? null);
   }
 
@@ -84,39 +104,6 @@ export class IHTitleBreadcrumbService {
     this.breadcrumbsOverride.set(null);
   }
 }
-
-/* =========================================================
- * Existing types
- * ========================================================= */
-
-export type BreadcrumbItem = {
-  label: string;
-  url: string;
-};
-
-export type Menu = {
-  menuId: number;
-  menuName: string;
-  route?: string | null;
-  menuTypeId: number;
-  parentId: number;
-  sequence: number;
-  icon?: string | null;
-  child?: Menu[];
-  level: number;
-  visibility?: string;
-  selected?: boolean;
-  openInId?: number;
-  versionCode?: string;
-  applicationCode?: string;
-  applicationUrl?: string;
-};
-
-export type User = {
-  employeeCode: string;
-  fullName: string;
-  userImagePath: string;
-};
 
 /* =========================================================
  * IHContent
@@ -237,7 +224,7 @@ export class IHContent {
   @Output() readonly onSidebarToggled = new EventEmitter<boolean>();
 
   /** route-based breadcrumbs */
-  readonly breadcrumb$: Observable<BreadcrumbItem[]> = this.router.events.pipe(
+  readonly breadcrumb$: Observable<IBreadcrumbItem[]> = this.router.events.pipe(
     filter((e) => e instanceof NavigationEnd),
     startWith(null), // emit once on init
     map(() => this.buildBreadcrumb(this.activatedRoute.root)),
@@ -255,8 +242,8 @@ export class IHContent {
   private buildBreadcrumb(
     route: ActivatedRoute,
     url = '',
-    breadcrumbs: BreadcrumbItem[] = [],
-  ): BreadcrumbItem[] {
+    breadcrumbs: IBreadcrumbItem[] = [],
+  ): IBreadcrumbItem[] {
     const routeConfig = route.routeConfig;
 
     if (routeConfig) {
@@ -472,7 +459,7 @@ export class IHContent {
   `,
 })
 export class IHMenu implements OnChanges {
-  @Input() menu: Menu | undefined;
+  @Input() menu: IMenu | undefined;
   @Input() selectedMenuId: number | null = null;
   @Input() filter = '';
 
@@ -577,8 +564,8 @@ export class IHSidebar implements OnInit, OnChanges {
    * INPUTS (from parent)
    * --------------------------- */
 
-  @Input() user$!: Observable<User>;
-  @Input() menusInput$!: Observable<Menu[]>;
+  @Input() user$!: Observable<IUser>;
+  @Input() menusInput$!: Observable<IMenu[]>;
   @Input() visible = true;
   @Input() footerText = 'Insight Local';
 
@@ -586,7 +573,7 @@ export class IHSidebar implements OnInit, OnChanges {
    * INTERNAL STREAMS / STATE
    * --------------------------- */
 
-  menus$!: Observable<Menu[]>;
+  menus$!: Observable<IMenu[]>;
   queryParams: any = {};
 
   menuSearch: FormControl<string | null> = new FormControl<string | null>('');
@@ -595,8 +582,8 @@ export class IHSidebar implements OnInit, OnChanges {
   selectedIndex = signal<number | null>(null);
   selectedMenuId = signal<number | null>(null);
 
-  private navigableMenus: Menu[] = [];
-  private originalMenus$!: Observable<Menu[]>;
+  private navigableMenus: IMenu[] = [];
+  private originalMenus$!: Observable<IMenu[]>;
 
   @HostBinding('class.hidden')
   get sidebarVisibility(): boolean {
@@ -616,13 +603,13 @@ export class IHSidebar implements OnInit, OnChanges {
     this.menuFilter.set(initialFilter);
     this.menuSearch.setValue(initialFilter, { emitEvent: false });
 
-    this.originalMenus$ = (this.menusInput$ ?? new Observable<Menu[]>()).pipe(shareReplay(1));
+    this.originalMenus$ = (this.menusInput$ ?? new Observable<IMenu[]>()).pipe(shareReplay(1));
     this.buildMenusStream();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['menusInput$'] && !changes['menusInput$'].firstChange) {
-      this.originalMenus$ = (this.menusInput$ ?? new Observable<Menu[]>()).pipe(shareReplay(1));
+      this.originalMenus$ = (this.menusInput$ ?? new Observable<IMenu[]>()).pipe(shareReplay(1));
       this.buildMenusStream();
     }
   }
@@ -652,11 +639,11 @@ export class IHSidebar implements OnInit, OnChanges {
     );
   }
 
-  private filterMenuTree(menus: Menu[], rawTerm: string): Menu[] {
+  private filterMenuTree(menus: IMenu[], rawTerm: string): IMenu[] {
     const term = (rawTerm ?? '').trim().toLowerCase();
     if (!term) return menus;
 
-    const filtered: Menu[] = [];
+    const filtered: IMenu[] = [];
     for (const menu of menus) {
       const result = this.filterMenuBranch(menu, term);
       if (result) filtered.push(result);
@@ -664,13 +651,13 @@ export class IHSidebar implements OnInit, OnChanges {
     return filtered;
   }
 
-  private filterMenuBranch(menu: Menu, term: string): Menu | null {
+  private filterMenuBranch(menu: IMenu, term: string): IMenu | null {
     const name = (menu.menuName ?? '').toLowerCase();
     const selfMatches = name.includes(term);
 
     const originalChildren = menu.child ?? [];
 
-    const filteredChildren: Menu[] = [];
+    const filteredChildren: IMenu[] = [];
     for (const child of originalChildren) {
       const childResult = this.filterMenuBranch(child, term);
       if (childResult) filteredChildren.push(childResult);
@@ -684,7 +671,7 @@ export class IHSidebar implements OnInit, OnChanges {
 
     const childrenToUse = selfMatches ? originalChildren : filteredChildren;
 
-    const cloned: Menu = {
+    const cloned: IMenu = {
       ...menu,
       child: childrenToUse,
     };
@@ -696,7 +683,7 @@ export class IHSidebar implements OnInit, OnChanges {
     return cloned;
   }
 
-  private updateNavigableMenus(filteredMenus: Menu[]): void {
+  private updateNavigableMenus(filteredMenus: IMenu[]): void {
     this.navigableMenus = this.flattenNavigableMenus(filteredMenus);
 
     const hasFilter = !!this.menuFilter().trim();
@@ -720,10 +707,10 @@ export class IHSidebar implements OnInit, OnChanges {
     }
   }
 
-  private flattenNavigableMenus(menus: Menu[]): Menu[] {
-    const result: Menu[] = [];
+  private flattenNavigableMenus(menus: IMenu[]): IMenu[] {
+    const result: IMenu[] = [];
 
-    const visit = (menu: Menu): void => {
+    const visit = (menu: IMenu): void => {
       const children = menu.child ?? [];
       const hasChildren = children.length > 0;
 
@@ -801,7 +788,7 @@ export class IHSidebar implements OnInit, OnChanges {
     this.navigateToMenu(menu);
   }
 
-  private navigateToMenu(menu: Menu): void {
+  private navigateToMenu(menu: IMenu): void {
     if (menu.applicationCode === 'INS5' && menu.route) {
       this.router.navigate([menu.route]);
     } else if (menu.applicationUrl) {

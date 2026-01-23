@@ -202,8 +202,12 @@ export class IFCTextArea implements ControlValueAccessor, OnDestroy {
   protected _value: string | null = null;
   isDisabled = false;
 
-  private onChange: (v: any) => void = () => {};
-  private onTouched: () => void = () => {};
+  private onChange: (v: any) => void = () => {
+    /*  */
+  };
+  private onTouched: () => void = () => {
+    /*  */
+  };
 
   constructor() {
     // ✅ this is the "i-fc-input" pattern

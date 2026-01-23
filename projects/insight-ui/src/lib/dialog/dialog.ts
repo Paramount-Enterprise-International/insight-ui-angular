@@ -1,3 +1,4 @@
+// i-dialog.ts (Angular) — full updated file (visible removed from action types)
 import { AsyncPipe, NgClass, NgComponentOutlet, NgStyle } from '@angular/common';
 import {
   Component,
@@ -47,8 +48,7 @@ export const I_DIALOG_DATA = new InjectionToken<any>('I_DIALOG_DATA');
 
 /**
  * REF
- * TComponent = dialog component type
- * TResult   = result type of close()
+ * TResult = result type of close()
  */
 
 export class IDialogRef<TResult = any> {
@@ -177,18 +177,14 @@ export class IDialogContainer implements OnChanges {
 
   @HostListener('document:keydown.escape')
   onEscKey(): void {
-    if (!this.isTopMost) {
-      return;
-    } // only the topmost dialog reacts
+    if (!this.isTopMost) return; // only the topmost dialog reacts
     if (!this.instance?.config.disableClose) {
       this.instance.ref.close();
     }
   }
 
   onBackdropClick(): void {
-    if (!this.isTopMost) {
-      return;
-    } // only topmost backdrop closes
+    if (!this.isTopMost) return; // only topmost backdrop closes
     if (!this.instance?.config.disableClose && this.instance?.config.backdropClose) {
       this.instance.ref.close();
     }
@@ -254,30 +250,25 @@ export type IDialogActionType = IDialogActionTypes['type'];
 export type IDialogActionCancel = {
   type: 'cancel';
   className?: string;
-  visible?: boolean;
 };
 
 export type IDialogActionSave = {
   type: 'save';
   className?: string;
-  visible?: boolean;
 };
 
 export type IDialogActionOK = {
   type: 'ok';
   className?: string;
-  visible?: boolean;
 };
 
 export type IDialogActionConfirm = {
   type: 'confirm';
   className?: string;
-  visible?: boolean;
 };
 
 export type IDialogActionCustom = {
   type: 'custom';
-  visible?: boolean;
   label: string;
   variant?: IButtonVariant;
   icon?: IIconName | string;
@@ -305,7 +296,7 @@ export type DialogAction = IDialogActionType | IDialogActionObject;
       <ng-content />
     </div>
     @if (actions.length > 0) {
-      <div class="i-dialog-actions" [align]="actionAlign">
+      <div class="i-dialog-actions">
         @if (customActions.length > 0) {
           @for (a of customActions; track $index) {
             <i-button
@@ -361,8 +352,6 @@ export class IDialog {
   @Input() title: string | undefined;
 
   @Input() actions: DialogAction[] = ['save', 'cancel'];
-
-  @Input() actionAlign?: 'start' | 'center' | 'end' = 'end';
 
   @Output() readonly onOk: EventEmitter<any> = new EventEmitter<any>();
 
@@ -520,7 +509,6 @@ export type IConfirmData = {
   selector: 'i-confirm',
   imports: [IDialog, NgClass, IIcon, IFCTextArea, ReactiveFormsModule, FormsModule],
   template: `<i-dialog
-    actionAlign="center"
     [actions]="[
       {
         type: 'confirm',
@@ -577,7 +565,6 @@ export class IConfirm {
   });
 
   @ViewChild(FormGroupDirective) formGroupDir!: FormGroupDirective;
-  // @ViewChild('submitButton') submitButton!: ElementRef<HTMLButtonElement>;
 
   get confirmClass(): string {
     return `i-confirm i-confirm-${this.data.type}`;
