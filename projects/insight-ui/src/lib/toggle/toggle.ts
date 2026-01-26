@@ -12,6 +12,22 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
+const INTERACTIVE_SELECTOR_PARTS = [
+  'a',
+  'button',
+  'input',
+  'textarea',
+  'select',
+  'label',
+  '[role="button"]',
+  '[role="link"]',
+  '[role="switch"]',
+  '[contenteditable="true"]',
+  '[tabindex]:not([tabindex="-1"])',
+];
+
+const INTERACTIVE_SELECTOR = INTERACTIVE_SELECTOR_PARTS.join(',');
+
 @Component({
   selector: 'i-toggle',
   standalone: true,
@@ -80,6 +96,7 @@ export class IToggle implements ControlValueAccessor {
 
   writeValue(value: boolean | null): void {
     this.checked = !!value;
+
     // keep native input in sync if already available
     if (this.inputRef) this.inputRef.nativeElement.checked = this.checked;
   }
@@ -114,6 +131,32 @@ export class IToggle implements ControlValueAccessor {
     this.onTouched.emit();
   }
 
+  private isInteractiveElement(el: HTMLElement | null): boolean {
+    if (!el) return false;
+
+    const tag = el.tagName.toLowerCase();
+
+    if (
+      tag === 'a' ||
+      tag === 'button' ||
+      tag === 'input' ||
+      tag === 'textarea' ||
+      tag === 'select' ||
+      tag === 'label'
+    )
+      return true;
+
+    const role = el.getAttribute('role');
+    if (role === 'button' || role === 'link' || role === 'switch') return true;
+
+    if (el.isContentEditable) return true;
+
+    const tabindex = el.getAttribute('tabindex');
+    if (tabindex !== null && tabindex !== '-1') return true;
+
+    return false;
+  }
+
   @HostListener('click', ['$event'])
   onHostClick(e: MouseEvent): void {
     if (this.disabled) return;
@@ -122,6 +165,12 @@ export class IToggle implements ControlValueAccessor {
 
     // clicking input: let native handle
     if (target?.tagName.toLowerCase() === 'input') return;
+
+    // If user clicks an interactive element inside projected content (label),
+    // do not toggle the switch.
+    if (target && (this.isInteractiveElement(target) || target.closest(INTERACTIVE_SELECTOR))) {
+      return;
+    }
 
     // click anywhere else (thumb/label/host) toggles input
     this.inputRef.nativeElement.click();
