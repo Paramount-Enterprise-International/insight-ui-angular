@@ -28,10 +28,27 @@ import {
   ViewChild,
   ViewChildren,
 } from '@angular/core';
-import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import {
+  ActivatedRoute,
+  NavigationEnd,
+  Route,
+  Router,
+  RouterLink,
+  RouterOutlet,
+} from '@angular/router';
 import { combineLatest, filter, map, Observable, shareReplay, startWith, tap } from 'rxjs';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { IHighlightSearchPipe } from '../highlight-search.pipe';
+
+export type IRoute = Omit<Route, 'data' | 'children'> & {
+  data: {
+    title: string; // 👈 required
+    [key: string]: any;
+  };
+  children?: IRoutes; // 👈 recursive
+};
+
+export type IRoutes = IRoute[];
 
 /* =========================================================
  * IH Shell Bridge (types + service)
