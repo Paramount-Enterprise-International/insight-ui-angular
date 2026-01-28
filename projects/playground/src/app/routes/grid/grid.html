@@ -5,10 +5,10 @@
       selectionMode="multiple"
       showFilter
       [dataSource]="dataSource"
-      (expandedRowsChange)="onExpandedRowsChange($event)"
-      (rowClick)="onRowClick($event)"
-      (rowExpandChange)="onRowExpandChange($event)"
-      (selectionChange)="onSelectionChange($event)"
+      (onExpandedRowsChange)="onExpandedRowsChange($event)"
+      (onRowClick)="onRowClick($event)"
+      (onRowExpandChange)="onRowExpandChange($event)"
+      (onSelectionChange)="onSelectionChange($event)"
     >
       <i-grid-column fieldName="name" filterMode="search" title="Name" width="fill">
         <i-grid-cell *iCellDef="let row">
@@ -41,10 +41,10 @@
       selectionMode="multiple"
       showFilter
       [dataSource]="dataSource"
-      (expandedRowsChange)="onExpandedRowsChange($event)"
-      (rowClick)="onRowClick($event)"
-      (rowExpandChange)="onRowExpandChange($event)"
-      (selectionChange)="onSelectionChange($event)"
+      (onExpandedRowsChange)="onExpandedRowsChange($event)"
+      (onRowClick)="onRowClick($event)"
+      (onRowExpandChange)="onRowExpandChange($event)"
+      (onSelectionChange)="onSelectionChange($event)"
     >
       <i-grid-column fieldName="name" filterMode="search" title="Name" width="fill">
         <i-grid-cell *iCellDef="let row">
