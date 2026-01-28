@@ -776,21 +776,28 @@ export class ISelect<T = any>
     const rect = this.getAnchorRect();
     if (!panel || !rect) return;
 
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    const gap = 8; // viewport padding
+    const pos = (this.panelPosition || 'bottom left').trim().toLowerCase();
+
     panel.style.position = 'fixed';
     panel.style.zIndex = '2000';
-    panel.style.boxSizing = 'border-box'; // ✅ width matches visual box
+    panel.style.boxSizing = 'border-box';
 
+    // width matches control width
     if (this.matchTriggerWidth) {
       panel.style.width = `${Math.round(rect.width)}px`;
     } else {
       panel.style.width = '';
     }
 
-    const panelRect = panel.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    // ensure panel can scroll instead of forcing top clamp
+    panel.style.overflowY = 'auto';
 
-    const pos = (this.panelPosition || 'bottom left').trim().toLowerCase();
+    // measure after width
+    const panelRect = panel.getBoundingClientRect();
 
     const wantTop = pos.startsWith('top');
     const wantBottom =
@@ -801,40 +808,62 @@ export class ISelect<T = any>
     const wantRight = pos.includes('right') || pos === 'right';
     const alignRight = wantRight && !wantLeft;
 
+    // Horizontal: clamp is OK
     let left = alignRight ? rect.right - panelRect.width : rect.left;
-    let top: number;
+    const maxLeft = Math.max(gap, vw - panelRect.width - gap);
+    left = Math.min(Math.max(gap, left), maxLeft);
 
+    // Side positions (left/right) keep your original behavior (top aligned)
     if (pos === 'left') {
       left = rect.left - panelRect.width - this.panelOffset;
-      top = rect.top;
-    } else if (pos === 'right') {
+      left = Math.min(Math.max(gap, left), maxLeft);
+
+      const top = Math.min(Math.max(gap, rect.top), Math.max(gap, vh - panelRect.height - gap));
+      panel.style.left = `${Math.round(left)}px`;
+      panel.style.top = `${Math.round(top)}px`;
+
+      // fit in viewport for side mode
+      const maxH = Math.max(60, vh - top - gap);
+      panel.style.maxHeight = `${Math.floor(maxH)}px`;
+      return;
+    }
+
+    if (pos === 'right') {
       left = rect.right + this.panelOffset;
-      top = rect.top;
-    } else if (wantTop && !wantBottom) {
-      top = rect.top - panelRect.height - this.panelOffset;
-    } else {
-      top = rect.bottom + this.panelOffset;
+      left = Math.min(Math.max(gap, left), maxLeft);
+
+      const top = Math.min(Math.max(gap, rect.top), Math.max(gap, vh - panelRect.height - gap));
+      panel.style.left = `${Math.round(left)}px`;
+      panel.style.top = `${Math.round(top)}px`;
+
+      const maxH = Math.max(60, vh - top - gap);
+      panel.style.maxHeight = `${Math.floor(maxH)}px`;
+      return;
     }
 
-    // Flip if needed
-    const offBottom = top + panelRect.height > vh - 8;
-    const offTop = top < 8;
+    // For top/bottom: choose side and constrain height instead of clamping top
+    const spaceBelow = vh - rect.bottom - this.panelOffset - gap;
+    const spaceAbove = rect.top - this.panelOffset - gap;
 
-    if (!wantTop && offBottom) {
-      const above = rect.top - panelRect.height - this.panelOffset;
-      if (above >= 8) top = above;
+    // start with requested preference
+    let side: 'top' | 'bottom' = wantTop && !wantBottom ? 'top' : 'bottom';
+
+    // flip if it doesn't fit and the other side is better
+    if (side === 'bottom' && panelRect.height > spaceBelow && spaceAbove > spaceBelow) {
+      side = 'top';
+    } else if (side === 'top' && panelRect.height > spaceAbove && spaceBelow > spaceAbove) {
+      side = 'bottom';
     }
-    if (wantTop && offTop) {
-      const below = rect.bottom + this.panelOffset;
-      if (below + panelRect.height <= vh - 8) top = below;
-    }
 
-    // Clamp
-    const maxLeft = Math.max(8, vw - panelRect.width - 8);
-    left = Math.min(Math.max(8, left), maxLeft);
+    // constrain height to available space on chosen side
+    const maxH = Math.max(60, side === 'bottom' ? spaceBelow : spaceAbove);
+    panel.style.maxHeight = `${Math.floor(maxH)}px`;
 
-    const maxTop = Math.max(8, vh - panelRect.height - 8);
-    top = Math.min(Math.max(8, top), maxTop);
+    // ✅ IMPORTANT: keep attached to trigger edge (no vertical clamp)
+    const top =
+      side === 'bottom'
+        ? rect.bottom + this.panelOffset
+        : rect.top - panelRect.height - this.panelOffset;
 
     panel.style.left = `${Math.round(left)}px`;
     panel.style.top = `${Math.round(top)}px`;
