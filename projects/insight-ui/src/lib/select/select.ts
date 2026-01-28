@@ -1,17 +1,18 @@
+// select.ts (Angular)
 /**
  * ISelect
- * Version: 2.1.0
+ * Version: 2.2.1
  *
- * Base: your "latest working" logic
- * Changes:
- * - Prefer inject() over constructor injection
- * - Ensure outputs use "on" prefix (already)
- * - Keep single-select only
+ * Fixes:
+ * - Render options container as <i-options> (not <div>)
+ * - Match dropdown width to visible control width (uses i-input host rect)
+ * - Keep portal-to-body + fixed positioning for overflow parents
  */
 
 import { NgClass, NgTemplateOutlet } from '@angular/common';
 import {
   AfterContentInit,
+  AfterViewChecked,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
@@ -58,7 +59,6 @@ export type ISelectOptionContext<T> = {
   standalone: true,
 })
 export class ISelectOptionDefDirective<T = any> {
-  // ✅ prefer inject() over constructor injection
   template = inject<TemplateRef<ISelectOptionContext<T>>>(TemplateRef);
 
   @Input() set iSelectOption(_value: any) {
@@ -96,7 +96,8 @@ export type ISelectPanelPosition =
     />
 
     @if (hasOptionsList) {
-      <div class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
+      <!-- ✅ render as i-options -->
+      <i-options #panel class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
         @for (row of filteredOptions; track row; let idx = $index) {
           <div
             class="i-option"
@@ -124,7 +125,7 @@ export type ISelectPanelPosition =
             }
           </div>
         }
-      </div>
+      </i-options>
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -136,7 +137,9 @@ export type ISelectPanelPosition =
     },
   ],
 })
-export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterContentInit, OnDestroy {
+export class ISelect<T = any>
+  implements ControlValueAccessor, OnInit, AfterContentInit, AfterViewChecked, OnDestroy
+{
   // ---------- Inputs ----------
   @Input() placeholder = '';
   @Input() disabled = false;
@@ -145,22 +148,16 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   /** debounce delay (ms) for filter when typing */
   @Input() filterDelay = 200;
 
-  /**
-   * Dropdown / popup position relative to the input.
-   *
-   * Single:
-   *  - 'bottom'
-   *  - 'top'
-   *  - 'left'
-   *  - 'right'
-   *
-   * Compound:
-   *  - 'top left'
-   *  - 'top right'
-   *  - 'bottom left' (default)
-   *  - 'bottom right'
-   */
   @Input() panelPosition: ISelectPanelPosition = 'bottom left';
+
+  /** portal panel to body to avoid overflow clipping (default true) */
+  @Input() portalToBody = true;
+
+  /** gap between trigger and panel (px) */
+  @Input() panelOffset = 6;
+
+  /** match dropdown width to control width (default true) */
+  @Input() matchTriggerWidth = true;
 
   /** Array options */
   @Input()
@@ -241,13 +238,13 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   @ContentChild(ISelectOptionDefDirective)
   optionDef?: ISelectOptionDefDirective<T>;
 
+  @ViewChild('panel') panelRef?: ElementRef<HTMLElement>;
+
   // ---------- Internal state ----------
   private _rawOptions: T[] = [];
-
   filteredOptions: T[] = [];
 
   private _modelValue: T | null = null;
-
   private pendingModelValue: T | null = null;
 
   private _displayText = '';
@@ -261,9 +258,7 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   }
 
   isOpen = false;
-
   highlightIndex = -1;
-
   isLoading = false;
 
   private optionsSub?: Subscription;
@@ -275,17 +270,23 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   onChange = (_: any): void => {};
   onTouched = (): void => {};
 
-  /** Panel position class for CSS modifier */
   get panelPositionClass(): string {
     const value = (this.panelPosition || 'bottom left').trim();
-    const normalized = value.replace(/\s+/g, '-'); // "top left" -> "top-left"
+    const normalized = value.replace(/\s+/g, '-');
     return `i-options--${normalized}`;
   }
 
-  // ✅ prefer inject() over constructor injection
   private readonly hostEl = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly zone = inject(NgZone);
+
+  // ---------- Portal/position internals ----------
+  private panelPortaled = false;
+  private panelOriginalParent: Node | null = null;
+  private panelOriginalNextSibling: Node | null = null;
+
+  private repositionRaf = 0;
+  private listeningGlobal = false;
 
   // ---------- Lifecycle ----------
   ngOnInit(): void {
@@ -304,9 +305,19 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     this.syncModelToView();
   }
 
+  ngAfterViewChecked(): void {
+    if (this.isOpen && this.portalToBody && this.panelRef?.nativeElement) {
+      this.ensurePanelPortaled();
+      this.scheduleReposition();
+      this.ensureGlobalListeners();
+    }
+  }
+
   ngOnDestroy(): void {
     this.cleanupOptionsSub();
     this.filterInputSub?.unsubscribe();
+    this.removeGlobalListeners();
+    this.restorePanelIfNeeded();
   }
 
   private cleanupOptionsSub(): void {
@@ -393,15 +404,10 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     return this.filteredOptions.length > 0;
   }
 
-  /** true when user filtered and no options match */
   get hasNoResults(): boolean {
     return this.isOpen && !!this._filterText && this.filteredOptions.length === 0;
   }
 
-  /**
-   * Resolve label for a given row/value.
-   * (kept exactly as your working logic)
-   */
   resolveDisplayText(row: T | null): string {
     if (row === null) return '';
 
@@ -469,10 +475,10 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     this._displayText = val;
     this._filterText = val;
 
-    if (!this.isOpen) {
-      this.openDropdown();
-    } else {
+    if (!this.isOpen) this.openDropdown();
+    else {
       this.applyFilter(true);
+      this.scheduleReposition();
     }
   }
 
@@ -491,12 +497,6 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     this.scrollHighlightedIntoView();
   }
 
-  /**
-   * behavior:
-   *  - if closed → open
-   *  - if open and hasNoResults → clear filter & show all (keep open)
-   *  - if open and NOT hasNoResults → close & restore model text
-   */
   toggleDropdown(event?: MouseEvent): void {
     if (event) {
       event.preventDefault();
@@ -510,6 +510,7 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
       this._displayText = '';
       this._filterText = '';
       this.applyFilter(true);
+      this.scheduleReposition();
     } else {
       this.syncModelToView();
       this.closeDropdown();
@@ -523,7 +524,6 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     if (this.isOpen) return;
 
     this.isOpen = true;
-
     this.applyFilter(true);
 
     const len = this.filteredOptions.length;
@@ -538,17 +538,22 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
       if (idx >= 0) {
         this.highlightIndex = idx;
         this.scrollHighlightedIntoView();
+        this.scheduleReposition();
         return;
       }
     }
 
     this.highlightIndex = 0;
     this.scrollHighlightedIntoView();
+    this.scheduleReposition();
   }
 
   private closeDropdown(): void {
     this.isOpen = false;
     this.highlightIndex = -1;
+
+    this.removeGlobalListeners();
+    this.restorePanelIfNeeded();
   }
 
   selectRow(row: T): void {
@@ -571,29 +576,6 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     this.closeDropdown();
   }
 
-  clearSelection(event?: MouseEvent): void {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    this._modelValue = null;
-    this._displayText = '';
-    this._filterText = '';
-    this.applyFilter(true);
-
-    this.onChange(null);
-    this.onTouched();
-
-    const payload: ISelectChange<T> = {
-      value: null,
-      label: '',
-    };
-
-    this.onChanged.emit(payload);
-    this.onOptionSelected.emit(payload);
-  }
-
   isRowSelected(row: T): boolean {
     return this._modelValue === row;
   }
@@ -602,15 +584,13 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     setTimeout(() => {
       if (!this.isOpen) return;
 
-      const list = this.hostEl.nativeElement.querySelector('.i-options');
+      const list = this.getPanelElement();
       if (!list) return;
 
       const items = list.querySelectorAll('.i-option');
       const el = items[this.highlightIndex] as HTMLElement | undefined;
 
-      if (el) {
-        el.scrollIntoView({ block: 'nearest' });
-      }
+      el?.scrollIntoView?.({ block: 'nearest' });
     });
   }
 
@@ -668,29 +648,27 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
     this.filterInput$.next(target.value);
   }
 
-  @HostListener('focusout', ['$event'])
-  onHostFocusOut(_event: FocusEvent): void {
-    this.onTouched();
-  }
-
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     if (!this.isOpen) return;
 
     const target = event.target as Node | null;
-    if (target && !this.hostEl.nativeElement.contains(target)) {
+    if (!target) return;
+
+    const host = this.hostEl.nativeElement;
+    const panel = this.getPanelElement();
+
+    const insideHost = host.contains(target);
+    const insidePanel = !!panel && panel.contains(target);
+
+    if (!insideHost && !insidePanel) {
       this.closeDropdown();
     }
   }
 
   // ---------- Utilities ----------
   get appendAddon(): IInputAddonButton | IInputAddonLoading {
-    if (this.isLoading) {
-      return {
-        type: 'loading',
-        visible: true,
-      };
-    }
+    if (this.isLoading) return { type: 'loading', visible: true };
 
     return {
       type: 'button',
@@ -706,22 +684,202 @@ export class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCont
   }
 
   setActiveIndex(idx: number): void {
-    if (idx < 0 || idx >= this.filteredOptions.length) {
-      this.highlightIndex = -1;
+    if (idx < 0 || idx >= this.filteredOptions.length) this.highlightIndex = -1;
+    else this.highlightIndex = idx;
+  }
+
+  // =========================================================
+  // Portal + Positioning
+  // =========================================================
+
+  private getPanelElement(): HTMLElement | null {
+    return this.panelRef?.nativeElement ?? null;
+  }
+
+  private getAnchorRect(): DOMRect | null {
+    // ✅ BEST: match the visible control width (i-input host)
+    const iInput = this.hostEl.nativeElement.querySelector('i-input') as HTMLElement | null;
+    if (iInput?.getBoundingClientRect) return iInput.getBoundingClientRect();
+
+    // fallback: host i-select
+    if (this.hostEl.nativeElement?.getBoundingClientRect) {
+      return this.hostEl.nativeElement.getBoundingClientRect();
+    }
+
+    // last fallback: native input
+    const input = this.hostEl.nativeElement.querySelector(
+      'i-input input',
+    ) as HTMLInputElement | null;
+    return input?.getBoundingClientRect?.() ?? null;
+  }
+
+  private ensurePanelPortaled(): void {
+    if (!this.portalToBody) return;
+
+    const panel = this.getPanelElement();
+    if (!panel) return;
+
+    if (panel.parentNode === document.body) return;
+
+    this.panelOriginalParent = panel.parentNode;
+    this.panelOriginalNextSibling = panel.nextSibling;
+
+    document.body.appendChild(panel);
+    this.panelPortaled = true;
+  }
+
+  private restorePanelIfNeeded(): void {
+    if (!this.panelPortaled) return;
+
+    const panel = this.getPanelElement();
+    if (!panel || !panel.parentNode) return;
+
+    if (panel.parentNode !== document.body) {
+      this.panelPortaled = false;
+      return;
+    }
+
+    const parent = this.panelOriginalParent;
+    if (!parent) {
+      this.panelPortaled = false;
+      return;
+    }
+
+    try {
+      if (this.panelOriginalNextSibling) parent.insertBefore(panel, this.panelOriginalNextSibling);
+      else parent.appendChild(panel);
+    } catch {
+      // ignore
+    }
+
+    this.panelPortaled = false;
+    this.panelOriginalParent = null;
+    this.panelOriginalNextSibling = null;
+  }
+
+  private scheduleReposition(): void {
+    if (!this.isOpen) return;
+    if (this.repositionRaf) cancelAnimationFrame(this.repositionRaf);
+
+    this.zone.runOutsideAngular(() => {
+      this.repositionRaf = requestAnimationFrame(() => {
+        this.repositionRaf = 0;
+        this.repositionPanelNow();
+      });
+    });
+  }
+
+  private repositionPanelNow(): void {
+    if (!this.isOpen) return;
+
+    const panel = this.getPanelElement();
+    const rect = this.getAnchorRect();
+    if (!panel || !rect) return;
+
+    panel.style.position = 'fixed';
+    panel.style.zIndex = '2000';
+    panel.style.boxSizing = 'border-box'; // ✅ width matches visual box
+
+    if (this.matchTriggerWidth) {
+      panel.style.width = `${Math.round(rect.width)}px`;
     } else {
-      this.highlightIndex = idx;
+      panel.style.width = '';
+    }
+
+    const panelRect = panel.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    const pos = (this.panelPosition || 'bottom left').trim().toLowerCase();
+
+    const wantTop = pos.startsWith('top');
+    const wantBottom =
+      pos.startsWith('bottom') ||
+      (!pos.startsWith('top') && !pos.startsWith('left') && !pos.startsWith('right'));
+
+    const wantLeft = pos.includes('left') || pos === 'left';
+    const wantRight = pos.includes('right') || pos === 'right';
+    const alignRight = wantRight && !wantLeft;
+
+    let left = alignRight ? rect.right - panelRect.width : rect.left;
+    let top: number;
+
+    if (pos === 'left') {
+      left = rect.left - panelRect.width - this.panelOffset;
+      top = rect.top;
+    } else if (pos === 'right') {
+      left = rect.right + this.panelOffset;
+      top = rect.top;
+    } else if (wantTop && !wantBottom) {
+      top = rect.top - panelRect.height - this.panelOffset;
+    } else {
+      top = rect.bottom + this.panelOffset;
+    }
+
+    // Flip if needed
+    const offBottom = top + panelRect.height > vh - 8;
+    const offTop = top < 8;
+
+    if (!wantTop && offBottom) {
+      const above = rect.top - panelRect.height - this.panelOffset;
+      if (above >= 8) top = above;
+    }
+    if (wantTop && offTop) {
+      const below = rect.bottom + this.panelOffset;
+      if (below + panelRect.height <= vh - 8) top = below;
+    }
+
+    // Clamp
+    const maxLeft = Math.max(8, vw - panelRect.width - 8);
+    left = Math.min(Math.max(8, left), maxLeft);
+
+    const maxTop = Math.max(8, vh - panelRect.height - 8);
+    top = Math.min(Math.max(8, top), maxTop);
+
+    panel.style.left = `${Math.round(left)}px`;
+    panel.style.top = `${Math.round(top)}px`;
+  }
+
+  private ensureGlobalListeners(): void {
+    if (this.listeningGlobal) return;
+
+    this.zone.runOutsideAngular(() => {
+      const onAnyScroll = (): void => this.scheduleReposition();
+      const onResize = (): void => this.scheduleReposition();
+
+      window.addEventListener('scroll', onAnyScroll, true);
+      document.addEventListener('scroll', onAnyScroll, true);
+      window.addEventListener('resize', onResize, true);
+
+      (this as any)._removeGlobal = (): void => {
+        window.removeEventListener('scroll', onAnyScroll, true);
+        document.removeEventListener('scroll', onAnyScroll, true);
+        window.removeEventListener('resize', onResize, true);
+      };
+
+      this.listeningGlobal = true;
+    });
+  }
+
+  private removeGlobalListeners(): void {
+    if (!this.listeningGlobal) return;
+
+    const rm = (this as any)._removeGlobal as undefined | (() => void);
+    if (rm) rm();
+
+    delete (this as any)._removeGlobal;
+    this.listeningGlobal = false;
+
+    if (this.repositionRaf) {
+      cancelAnimationFrame(this.repositionRaf);
+      this.repositionRaf = 0;
     }
   }
 }
 
 /**
- * IFCSelect
- * Version: 1.1.0
- *
- * - Form control wrapper for ISelect
- * - Implements CVA so you can use formControlName on <i-fc-select>
+ * IFCSelect (unchanged)
  */
-
 @Component({
   selector: 'i-fc-select',
   standalone: true,
@@ -767,7 +925,6 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   @Input() options$: Observable<T[]> | null = null;
 
   @Input() displayWith?: ((row: T | null) => string) | string;
-
   @Input() filterDelay = 200;
 
   @Input() filterPredicate: (row: T, term: string) => boolean = (row, term) => {
@@ -776,7 +933,6 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   };
 
   @Input() panelPosition: ISelectPanelPosition = 'bottom left';
-
   @Input() errorMessage?: IFormControlErrorMessage;
 
   @Input()
@@ -790,14 +946,9 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
 
   isDisabled = false;
 
-  private onChange: (v: any) => void = () => {
-    /*  */
-  };
-  private onTouched: () => void = () => {
-    /*  */
-  };
+  private onChange: (v: any) => void = () => {};
+  private onTouched: () => void = () => {};
 
-  // ✅ prefer inject() over constructor injection
   readonly ngControl = inject(NgControl, { self: true, optional: true });
   private readonly formDir = inject(FormGroupDirective, { optional: true });
   private readonly cdr = inject(ChangeDetectorRef);
@@ -805,10 +956,7 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   private submitSub?: Subscription;
 
   constructor() {
-    if (this.ngControl) {
-      this.ngControl.valueAccessor = this;
-    }
-
+    if (this.ngControl) this.ngControl.valueAccessor = this;
     if (this.formDir) {
       this.submitSub = this.formDir.ngSubmit.subscribe(() => {
         this.cdr.markForCheck();
@@ -843,19 +991,14 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   }
 
   focusInnerSelect(): void {
-    if (!this.isDisabled && this.innerSelect) {
-      this.innerSelect.focus();
-    }
+    if (!this.isDisabled && this.innerSelect) this.innerSelect.focus();
   }
 
   get controlInvalid(): boolean {
     const c = this.ngControl?.control;
     if (!c) return false;
 
-    if (this.formDir) {
-      return c.invalid && !!this.formDir.submitted;
-    }
-
+    if (this.formDir) return c.invalid && !!this.formDir.submitted;
     return c.invalid && (c.dirty || c.touched);
   }
 

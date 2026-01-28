@@ -7,9 +7,9 @@
       [showNumberColumn]="false"
       [tree]="'children'"
       [treeInitialExpandLevel]="2"
-      (expandedRowsChange)="onExpandedRowsChange($event)"
-      (rowClick)="onRowClick($event)"
-      (rowExpandChange)="onRowExpandChange($event)"
+      (onExpandedRowsChange)="onExpandedRowsChange($event)"
+      (onRowClick)="onRowClick($event)"
+      (onRowExpandChange)="onRowExpandChange($event)"
     >
       <!-- Name column (frozen + fill width) -->
       <i-grid-column fieldName="name" label="Name" width="fill" [freeze]="true" />
