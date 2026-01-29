@@ -1,12 +1,13 @@
 // select.ts (Angular)
 /**
  * ISelect
- * Version: 2.2.1
+ * Version: 2.2.2
  *
  * Fixes:
  * - Render options container as <i-options> (not <div>)
  * - Match dropdown width to visible control width (uses i-input host rect)
  * - Keep portal-to-body + fixed positioning for overflow parents
+ * - ✅ Fix flicker: portal + measure + position BEFORE showing panel
  */
 
 import { NgClass, NgTemplateOutlet } from '@angular/common';
@@ -306,9 +307,10 @@ export class ISelect<T = any>
   }
 
   ngAfterViewChecked(): void {
+    // Safety: if someone toggles portalToBody while open, ensure it's applied.
+    // (But the "first open" work is now done in openDropdown to avoid flicker)
     if (this.isOpen && this.portalToBody && this.panelRef?.nativeElement) {
       this.ensurePanelPortaled();
-      this.scheduleReposition();
       this.ensureGlobalListeners();
     }
   }
@@ -526,6 +528,30 @@ export class ISelect<T = any>
     this.isOpen = true;
     this.applyFilter(true);
 
+    // ✅ Ensure panel exists right now
+    this.cdr.detectChanges();
+
+    // ✅ Portal immediately (not waiting for ngAfterViewChecked)
+    if (this.portalToBody) this.ensurePanelPortaled();
+
+    // ✅ Hide until positioned to prevent "top then bottom" flicker
+    const panel = this.getPanelElement();
+    if (panel) {
+      panel.style.visibility = 'hidden';
+      panel.style.pointerEvents = 'none';
+    }
+
+    this.ensureGlobalListeners();
+
+    // schedule position on next frame (after layout is stable)
+    this.scheduleReposition(() => {
+      const p = this.getPanelElement();
+      if (p) {
+        p.style.visibility = 'visible';
+        p.style.pointerEvents = '';
+      }
+    });
+
     const len = this.filteredOptions.length;
     if (len === 0) {
       this.highlightIndex = -1;
@@ -538,14 +564,12 @@ export class ISelect<T = any>
       if (idx >= 0) {
         this.highlightIndex = idx;
         this.scrollHighlightedIntoView();
-        this.scheduleReposition();
         return;
       }
     }
 
     this.highlightIndex = 0;
     this.scrollHighlightedIntoView();
-    this.scheduleReposition();
   }
 
   private closeDropdown(): void {
@@ -697,16 +721,13 @@ export class ISelect<T = any>
   }
 
   private getAnchorRect(): DOMRect | null {
-    // ✅ BEST: match the visible control width (i-input host)
     const iInput = this.hostEl.nativeElement.querySelector('i-input') as HTMLElement | null;
     if (iInput?.getBoundingClientRect) return iInput.getBoundingClientRect();
 
-    // fallback: host i-select
     if (this.hostEl.nativeElement?.getBoundingClientRect) {
       return this.hostEl.nativeElement.getBoundingClientRect();
     }
 
-    // last fallback: native input
     const input = this.hostEl.nativeElement.querySelector(
       'i-input input',
     ) as HTMLInputElement | null;
@@ -719,10 +740,16 @@ export class ISelect<T = any>
     const panel = this.getPanelElement();
     if (!panel) return;
 
-    if (panel.parentNode === document.body) return;
+    if (panel.parentNode === document.body) {
+      this.panelPortaled = true;
+      panel.classList.add('i-options--portaled');
+      return;
+    }
 
     this.panelOriginalParent = panel.parentNode;
     this.panelOriginalNextSibling = panel.nextSibling;
+
+    panel.classList.add('i-options--portaled');
 
     document.body.appendChild(panel);
     this.panelPortaled = true;
@@ -746,6 +773,8 @@ export class ISelect<T = any>
     }
 
     try {
+      panel.classList.remove('i-options--portaled');
+
       if (this.panelOriginalNextSibling) parent.insertBefore(panel, this.panelOriginalNextSibling);
       else parent.appendChild(panel);
     } catch {
@@ -757,7 +786,7 @@ export class ISelect<T = any>
     this.panelOriginalNextSibling = null;
   }
 
-  private scheduleReposition(): void {
+  private scheduleReposition(after?: () => void): void {
     if (!this.isOpen) return;
     if (this.repositionRaf) cancelAnimationFrame(this.repositionRaf);
 
@@ -765,6 +794,7 @@ export class ISelect<T = any>
       this.repositionRaf = requestAnimationFrame(() => {
         this.repositionRaf = 0;
         this.repositionPanelNow();
+        after?.();
       });
     });
   }
@@ -779,24 +809,20 @@ export class ISelect<T = any>
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
-    const gap = 8; // viewport padding
+    const gap = 8;
     const pos = (this.panelPosition || 'bottom left').trim().toLowerCase();
 
     panel.style.position = 'fixed';
     panel.style.zIndex = '2000';
     panel.style.boxSizing = 'border-box';
+    panel.style.overflowY = 'auto';
 
-    // width matches control width
     if (this.matchTriggerWidth) {
       panel.style.width = `${Math.round(rect.width)}px`;
     } else {
       panel.style.width = '';
     }
 
-    // ensure panel can scroll instead of forcing top clamp
-    panel.style.overflowY = 'auto';
-
-    // measure after width
     const panelRect = panel.getBoundingClientRect();
 
     const wantTop = pos.startsWith('top');
@@ -808,12 +834,10 @@ export class ISelect<T = any>
     const wantRight = pos.includes('right') || pos === 'right';
     const alignRight = wantRight && !wantLeft;
 
-    // Horizontal: clamp is OK
     let left = alignRight ? rect.right - panelRect.width : rect.left;
     const maxLeft = Math.max(gap, vw - panelRect.width - gap);
     left = Math.min(Math.max(gap, left), maxLeft);
 
-    // Side positions (left/right) keep your original behavior (top aligned)
     if (pos === 'left') {
       left = rect.left - panelRect.width - this.panelOffset;
       left = Math.min(Math.max(gap, left), maxLeft);
@@ -822,7 +846,6 @@ export class ISelect<T = any>
       panel.style.left = `${Math.round(left)}px`;
       panel.style.top = `${Math.round(top)}px`;
 
-      // fit in viewport for side mode
       const maxH = Math.max(60, vh - top - gap);
       panel.style.maxHeight = `${Math.floor(maxH)}px`;
       return;
@@ -841,25 +864,20 @@ export class ISelect<T = any>
       return;
     }
 
-    // For top/bottom: choose side and constrain height instead of clamping top
     const spaceBelow = vh - rect.bottom - this.panelOffset - gap;
     const spaceAbove = rect.top - this.panelOffset - gap;
 
-    // start with requested preference
     let side: 'top' | 'bottom' = wantTop && !wantBottom ? 'top' : 'bottom';
 
-    // flip if it doesn't fit and the other side is better
     if (side === 'bottom' && panelRect.height > spaceBelow && spaceAbove > spaceBelow) {
       side = 'top';
     } else if (side === 'top' && panelRect.height > spaceAbove && spaceBelow > spaceAbove) {
       side = 'bottom';
     }
 
-    // constrain height to available space on chosen side
     const maxH = Math.max(60, side === 'bottom' ? spaceBelow : spaceAbove);
     panel.style.maxHeight = `${Math.floor(maxH)}px`;
 
-    // ✅ IMPORTANT: keep attached to trigger edge (no vertical clamp)
     const top =
       side === 'bottom'
         ? rect.bottom + this.panelOffset

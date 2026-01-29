@@ -7,6 +7,9 @@ import { IUI } from '@insight-ui';
   imports: [RouterOutlet, IUI],
   templateUrl: './app.html',
   styleUrl: './app.css',
+  host: {
+    class: 'scroll scroll-y',
+  },
 })
 export class App {
   protected readonly title = signal('playground');

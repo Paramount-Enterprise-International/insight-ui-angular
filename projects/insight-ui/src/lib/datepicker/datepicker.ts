@@ -1,12 +1,13 @@
 /**
  * IDatepicker
- * Version: 1.4.1
+ * Version: 1.5.3
  *
- * - Wraps <i-input>
- * - ControlValueAccessor: value is Date | null
- * - Uses IInputMaskDirective for date typing / normalization
- * - Shows calendar popup, select day to set value
- * - Month & year selection via i-select
+ * Fixes:
+ * - ✅ IMPORTANT: prevent value from being wiped due to bubbled "input" events
+ *   from inner month/year i-select inputs.
+ *   -> Only handle input when event.target is the date input itself.
+ * - Keep portal + positioning + flicker guard for portaled i-options.
+ * - IFCDatepicker included in same file
  */
 
 import { formatDate, NgClass } from '@angular/common';
@@ -20,8 +21,11 @@ import {
   HostListener,
   inject,
   Input,
+  NgZone,
+  OnDestroy,
   OnInit,
   Output,
+  Renderer2,
   ViewChild,
 } from '@angular/core';
 import {
@@ -34,14 +38,13 @@ import { IButton } from '../button/button';
 import { IInput } from '../input/input';
 import { IInputAddonButton } from '../input/input-addon';
 import { IInputMaskDirective } from '../input/input-mask';
+import { ISelect, ISelectChange } from '../select/select';
 import {
   IFormControlErrorMessage,
   isControlRequired,
   resolveControlErrorMessage,
 } from '../interfaces';
-import { ISelect, ISelectChange } from '../select/select';
 
-/** Internal structure for datepicker days */
 type IDatepickerDay = {
   date: Date;
   inCurrentMonth: boolean;
@@ -51,7 +54,6 @@ type IDatepickerDay = {
 
 type IMonthOption = { value: number; label: string };
 
-/** Position of popup panel relative to input */
 export type IDatepickerPanelPosition =
   | 'top'
   | 'bottom'
@@ -71,7 +73,6 @@ const noop = (): void => {
   standalone: true,
   imports: [IInput, IButton, IInputMaskDirective, ISelect, NgClass],
   template: `
-    <!-- Core input: styled via i-input -->
     <i-input
       [append]="appendAddon"
       [iInputMask]="{ type: 'date', format: format }"
@@ -81,56 +82,58 @@ const noop = (): void => {
       [value]="displayText"
     />
 
-    <!-- Popup calendar -->
-    @if (isOpen) {
-      <div class="i-datepicker-panel" [ngClass]="panelPositionClass">
-        <div class="i-datepicker-header">
-          <i-button icon="prev" size="xs" (click)="prevMonth()" />
+    <span #portalHome style="display:none"></span>
 
-          <!-- Month select -->
-          <i-select
-            class="i-date-picker-month-select"
-            [options]="months"
-            [value]="monthSelected"
-            (onOptionSelected)="onMonthChange($event)"
-          />
+    <i-datepicker-panel
+      #panel
+      class="i-datepicker-panel"
+      [ngClass]="panelPositionClass"
+      [style.display]="isOpen ? '' : 'none'"
+    >
+      <div class="i-datepicker-header">
+        <i-button icon="prev" size="xs" (click)="prevMonth()" />
 
-          <!-- Year select -->
-          <i-select
-            class="i-date-picker-year-select"
-            [options]="years"
-            [value]="viewYear"
-            (onOptionSelected)="onYearChange($event)"
-          />
+        <i-select
+          class="i-date-picker-month-select"
+          [options]="months"
+          [value]="monthSelected"
+          (onOptionSelected)="onMonthChange($event)"
+        />
 
-          <i-button icon="next" size="xs" (click)="nextMonth()" />
-        </div>
+        <i-select
+          class="i-date-picker-year-select"
+          [options]="years"
+          [value]="viewYear"
+          (onOptionSelected)="onYearChange($event)"
+        />
 
-        <div class="i-datepicker-weekdays">
-          @for (w of weekdays; track w) {
-            <small>{{ w }}</small>
-          }
-        </div>
-
-        <div class="i-datepicker-weeks">
-          @for (week of weeks; track $index) {
-            <div class="i-datepicker-week">
-              @for (d of week; track d.date.getTime()) {
-                <div
-                  class="i-datepicker-day"
-                  [class.current-month]="d.inCurrentMonth"
-                  [class.selected]="d.isSelected"
-                  [class.today]="d.isToday && !d.isSelected"
-                  (click)="selectDay(d)"
-                >
-                  {{ d.date.getDate() }}
-                </div>
-              }
-            </div>
-          }
-        </div>
+        <i-button icon="next" size="xs" (click)="nextMonth()" />
       </div>
-    }
+
+      <div class="i-datepicker-weekdays">
+        @for (w of weekdays; track w) {
+          <small>{{ w }}</small>
+        }
+      </div>
+
+      <div class="i-datepicker-weeks">
+        @for (week of weeks; track $index) {
+          <div class="i-datepicker-week">
+            @for (d of week; track d.date.getTime()) {
+              <div
+                class="i-datepicker-day"
+                [class.current-month]="d.inCurrentMonth"
+                [class.selected]="d.isSelected"
+                [class.today]="d.isToday && !d.isSelected"
+                (click)="selectDay(d)"
+              >
+                {{ d.date.getDate() }}
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </i-datepicker-panel>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
@@ -141,73 +144,52 @@ const noop = (): void => {
     },
   ],
 })
-export class IDatepicker implements ControlValueAccessor, OnInit {
-  // Prefer inject() over constructor injection
+export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   private readonly hostEl = inject(ElementRef<HTMLElement>);
-
-  // ------------- Inputs -------------
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly zone = inject(NgZone);
+  private readonly renderer = inject(Renderer2);
 
   @Input() placeholder = '';
-
   @Input() disabled = false;
-
-  /** visual invalid state (from i-fc-datepicker or manual) */
   @Input() invalid = false;
 
-  /**
-   * Display / parse format.
-   * Supported tokens: yyyy, MM, dd
-   */
   @Input() format = 'dd/MM/yyyy';
-
   @Input() panelPosition: IDatepickerPanelPosition = 'bottom left';
 
-  /**
-   * Allow [value]="..." when not using reactive forms.
-   * Accepts Date or string, normalizes via writeValue.
-   */
+  @Input() portalToBody = true;
+  @Input() matchTriggerWidth = true;
+  @Input() panelOffset = 6;
+
   @Input()
   set value(v: Date | string | null) {
     this.writeValue(v);
   }
-
   get value(): Date | string | null {
     return this._modelValue;
   }
 
   @Output() readonly onChanged = new EventEmitter<Date | null>();
 
-  // ------------- CVA state -------------
+  @ViewChild('panel', { read: ElementRef }) private panelRef?: ElementRef<HTMLElement>;
+  @ViewChild('portalHome', { read: ElementRef }) private portalHomeRef?: ElementRef<HTMLElement>;
 
-  /** Internal model value (Date | null) */
   private _modelValue: Date | null = null;
 
-  /** Displayed text in the input */
   private _displayText = '';
-
   get displayText(): string {
     return this._displayText;
   }
 
-  // Use noop to avoid “unexpected empty method”
   private onChange: (value: Date | null) => void = noop;
-
   private onTouched: () => void = noop;
 
-  // ------------- Datepicker state -------------
-
-  /** Is popup open */
   isOpen = false;
-
-  /** Calendar view year/month (0-11) */
   viewYear = 0;
-
   viewMonth = 0;
 
-  /** Calendar weeks (6 rows x 7 cols) */
   weeks: IDatepickerDay[][] = [];
 
-  /** Month options for <i-select> */
   readonly months: IMonthOption[] = [
     { value: 0, label: 'January' },
     { value: 1, label: 'February' },
@@ -223,43 +205,32 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     { value: 11, label: 'December' },
   ];
 
-  /** Static weekday labels (Mon–Sun) */
   readonly weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  /** Year options for the year <i-select> */
   private _years: number[] = [];
-
   get years(): number[] {
     return this._years;
   }
 
-  /** Currently selected month option object for i-select */
   get monthSelected(): IMonthOption | null {
     return this.months.find((m) => m.value === this.viewMonth) ?? null;
   }
 
-  /** Panel position class for CSS modifier */
   get panelPositionClass(): string {
     const value = (this.panelPosition || 'bottom left').trim();
-    const normalized = value.replace(/\s+/g, '-'); // "top left" -> "top-left"
+    const normalized = value.replace(/\s+/g, '-');
     return `i-datepicker-panel--${normalized}`;
   }
 
-  // ------------- Helpers -------------
+  private panelPortaled = false;
+  private originalParent: Node | null = null;
+  private originalNextSibling: Node | null = null;
 
-  /** Always read the REAL inner <input> value, ignore event.target type */
-  private getInnerInput(): HTMLInputElement | null {
-    return this.hostEl.nativeElement.querySelector('i-input input') as HTMLInputElement | null;
-  }
-
-  private focusInput(): void {
-    this.getInnerInput()?.focus();
-  }
-
-  // ------------- Lifecycle -------------
+  private repositionRaf = 0;
+  private listeningGlobal = false;
 
   ngOnInit(): void {
-    // If nothing is set from outside, default to today visually
+    // Default visual: today (only if consumer doesn't provide value)
     if (!this._modelValue && !this._displayText) {
       const today = this.startOfDay(new Date());
       this._modelValue = today;
@@ -268,7 +239,9 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     }
   }
 
-  // ------------- CVA implementation -------------
+  ngOnDestroy(): void {
+    this.closePanel(true);
+  }
 
   writeValue(value: Date | string | null): void {
     let date: Date | null = null;
@@ -281,18 +254,15 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
       date = null;
     }
 
+    // If parent writes null, keep display empty (don’t re-default)
     this._modelValue = date;
-
-    if (date) {
-      this._displayText = this.formatDate(date);
-    } else {
-      this._displayText = '';
-    }
+    this._displayText = date ? this.formatDate(date) : '';
 
     const baseDate =
       this._modelValue ?? this.parseInputDate(this._displayText) ?? this.startOfDay(new Date());
 
     this.updateView(baseDate);
+    this.cdr.markForCheck();
   }
 
   registerOnChange(fn: (value: Date | null) => void): void {
@@ -305,9 +275,8 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
 
   setDisabledState(isDisabled: boolean): void {
     this.disabled = isDisabled;
+    this.cdr.markForCheck();
   }
-
-  // ------------- Append addon (fixed calendar button) -------------
 
   get appendAddon(): IInputAddonButton {
     return {
@@ -315,15 +284,39 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
       icon: 'calendar',
       visible: true,
       variant: 'primary',
-      // add explicit return type to satisfy lint
       onClick: (): void => {
         this.toggleOpen();
-        this.focusInput(); // keep behavior same as i-select
+        this.getInnerInput()?.focus();
       },
     };
   }
 
-  // ------------- Input & typing -------------
+  private getPanelEl(): HTMLElement | null {
+    return this.panelRef?.nativeElement ?? null;
+  }
+
+  private getInnerInput(): HTMLInputElement | null {
+    return this.hostEl.nativeElement.querySelector('i-input input') as HTMLInputElement | null;
+  }
+
+  private getAnchorRect(): DOMRect | null {
+    const iInput = this.hostEl.nativeElement.querySelector('i-input') as HTMLElement | null;
+    return iInput?.getBoundingClientRect?.() ?? this.hostEl.nativeElement.getBoundingClientRect();
+  }
+
+  private syncFromInnerInputSafely(): void {
+    const input = this.getInnerInput();
+    if (!input) return;
+
+    const raw = (input.value ?? '').trim();
+    if (!raw) return; // ✅ never wipe current display/model
+
+    const parsed = this.parseInputDate(raw);
+    if (!parsed) return; // ✅ partial/invalid typing shouldn't wipe display/model
+
+    this._modelValue = parsed;
+    this._displayText = this.formatDate(parsed);
+  }
 
   private handleInput(raw: string): void {
     this._displayText = raw;
@@ -331,37 +324,276 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     const parsed = this.parseInputDate(raw);
     this._modelValue = parsed;
 
-    if (parsed) {
-      this.updateView(parsed);
-    }
+    if (parsed) this.updateView(parsed);
 
     this.onChange(parsed);
     this.onChanged.emit(parsed);
+
+    if (this.isOpen) this.scheduleReposition();
+    this.cdr.markForCheck();
   }
 
   private handleBlur(): void {
     this.onTouched();
   }
 
-  // ------------- Datepicker UI actions -------------
-
   toggleOpen(): void {
     if (this.disabled) return;
 
     if (!this.isOpen) {
-      // when opening, sync calendar from current input text if any
-      const input = this.getInnerInput();
-      if (input?.value) {
-        const parsed = this.parseInputDate(input.value);
-        if (parsed) {
-          this._modelValue = parsed;
-          this._displayText = this.formatDate(parsed);
-        }
-      }
+      this.syncFromInnerInputSafely();
       this.initViewFromModel();
+      this.openPanel();
+    } else {
+      this.closePanel();
     }
 
-    this.isOpen = !this.isOpen;
+    this.cdr.markForCheck();
+  }
+
+  private openPanel(): void {
+    if (this.isOpen) return;
+    this.isOpen = true;
+
+    this.cdr.detectChanges();
+
+    if (this.portalToBody) this.ensurePanelPortaled();
+
+    const panel = this.getPanelEl();
+    if (panel) {
+      panel.style.visibility = 'hidden';
+      panel.style.pointerEvents = 'none';
+    }
+
+    this.ensureGlobalListeners();
+
+    this.zone.runOutsideAngular(() => {
+      if (this.repositionRaf) cancelAnimationFrame(this.repositionRaf);
+      this.repositionRaf = requestAnimationFrame(() => {
+        this.repositionRaf = 0;
+
+        this.repositionPanelNow();
+
+        const p = this.getPanelEl();
+        if (p) {
+          p.style.visibility = 'visible';
+          p.style.pointerEvents = '';
+        }
+      });
+    });
+  }
+
+  private closePanel(skipMark = false): void {
+    if (!this.isOpen && !this.panelPortaled) return;
+
+    this.isOpen = false;
+
+    this.removeGlobalListeners();
+    this.restorePanelIfNeeded();
+
+    const panel = this.getPanelEl();
+    if (panel) {
+      panel.style.position = '';
+      panel.style.zIndex = '';
+      panel.style.left = '';
+      panel.style.top = '';
+      panel.style.width = '';
+      panel.style.maxHeight = '';
+      panel.style.overflowY = '';
+      panel.style.boxSizing = '';
+      panel.style.visibility = '';
+      panel.style.pointerEvents = '';
+    }
+
+    if (!skipMark) this.cdr.markForCheck();
+  }
+
+  private ensurePanelPortaled(): void {
+    const panel = this.getPanelEl();
+    if (!panel) return;
+
+    if (panel.parentNode === document.body) {
+      this.panelPortaled = true;
+      return;
+    }
+
+    this.originalParent = panel.parentNode;
+    this.originalNextSibling = panel.nextSibling;
+
+    panel.classList.add('i-datepicker-panel--portaled');
+    document.body.appendChild(panel);
+    this.panelPortaled = true;
+  }
+
+  private restorePanelIfNeeded(): void {
+    if (!this.panelPortaled) return;
+
+    const panel = this.getPanelEl();
+    if (!panel) {
+      this.panelPortaled = false;
+      return;
+    }
+
+    if (panel.parentNode !== document.body) {
+      this.panelPortaled = false;
+      return;
+    }
+
+    const home = this.portalHomeRef?.nativeElement;
+    if (home?.parentNode) {
+      panel.classList.remove('i-datepicker-panel--portaled');
+      this.renderer.insertBefore(home.parentNode, panel, home.nextSibling);
+    } else if (this.originalParent) {
+      panel.classList.remove('i-datepicker-panel--portaled');
+      try {
+        if (this.originalNextSibling) {
+          (this.originalParent as any).insertBefore(panel, this.originalNextSibling);
+        } else {
+          (this.originalParent as any).appendChild(panel);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    this.panelPortaled = false;
+    this.originalParent = null;
+    this.originalNextSibling = null;
+  }
+
+  private scheduleReposition(): void {
+    if (!this.isOpen) return;
+    if (this.repositionRaf) cancelAnimationFrame(this.repositionRaf);
+
+    this.zone.runOutsideAngular(() => {
+      this.repositionRaf = requestAnimationFrame(() => {
+        this.repositionRaf = 0;
+        this.repositionPanelNow();
+      });
+    });
+  }
+
+  private repositionPanelNow(): void {
+    if (!this.isOpen) return;
+
+    const panel = this.getPanelEl();
+    const rect = this.getAnchorRect();
+    if (!panel || !rect) return;
+
+    panel.style.position = 'fixed';
+    panel.style.zIndex = '2000';
+    panel.style.boxSizing = 'border-box';
+    panel.style.overflowY = 'auto';
+
+    if (this.matchTriggerWidth) {
+      panel.style.width = `${Math.round(rect.width)}px`;
+    } else {
+      panel.style.width = '';
+    }
+
+    const panelRect = panel.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const gap = 8;
+
+    const pos = (this.panelPosition || 'bottom left').trim().toLowerCase();
+
+    const wantTop = pos.startsWith('top');
+    const wantBottom =
+      pos.startsWith('bottom') ||
+      (!pos.startsWith('top') && !pos.startsWith('left') && !pos.startsWith('right'));
+
+    const wantLeft = pos.includes('left') || pos === 'left';
+    const wantRight = pos.includes('right') || pos === 'right';
+    const alignRight = wantRight && !wantLeft;
+
+    let left = alignRight ? rect.right - panelRect.width : rect.left;
+    const maxLeft = Math.max(gap, vw - panelRect.width - gap);
+    left = Math.min(Math.max(gap, left), maxLeft);
+
+    if (pos === 'left') {
+      left = rect.left - panelRect.width - this.panelOffset;
+      left = Math.min(Math.max(gap, left), maxLeft);
+
+      const top = Math.min(Math.max(gap, rect.top), Math.max(gap, vh - panelRect.height - gap));
+      panel.style.left = `${Math.round(left)}px`;
+      panel.style.top = `${Math.round(top)}px`;
+
+      const maxH = Math.max(120, vh - top - gap);
+      panel.style.maxHeight = `${Math.floor(maxH)}px`;
+      return;
+    }
+
+    if (pos === 'right') {
+      left = rect.right + this.panelOffset;
+      left = Math.min(Math.max(gap, left), maxLeft);
+
+      const top = Math.min(Math.max(gap, rect.top), Math.max(gap, vh - panelRect.height - gap));
+      panel.style.left = `${Math.round(left)}px`;
+      panel.style.top = `${Math.round(top)}px`;
+
+      const maxH = Math.max(120, vh - top - gap);
+      panel.style.maxHeight = `${Math.floor(maxH)}px`;
+      return;
+    }
+
+    const spaceBelow = vh - rect.bottom - this.panelOffset - gap;
+    const spaceAbove = rect.top - this.panelOffset - gap;
+
+    let side: 'top' | 'bottom' = wantTop && !wantBottom ? 'top' : 'bottom';
+
+    if (side === 'bottom' && panelRect.height > spaceBelow && spaceAbove > spaceBelow) {
+      side = 'top';
+    } else if (side === 'top' && panelRect.height > spaceAbove && spaceBelow > spaceAbove) {
+      side = 'bottom';
+    }
+
+    const maxH = Math.max(120, side === 'bottom' ? spaceBelow : spaceAbove);
+    panel.style.maxHeight = `${Math.floor(maxH)}px`;
+
+    const top =
+      side === 'bottom'
+        ? rect.bottom + this.panelOffset
+        : rect.top - panelRect.height - this.panelOffset;
+
+    panel.style.left = `${Math.round(left)}px`;
+    panel.style.top = `${Math.round(top)}px`;
+  }
+
+  private ensureGlobalListeners(): void {
+    if (this.listeningGlobal) return;
+
+    this.zone.runOutsideAngular(() => {
+      const onAnyScroll = (): void => this.scheduleReposition();
+      const onResize = (): void => this.scheduleReposition();
+
+      window.addEventListener('scroll', onAnyScroll, true);
+      document.addEventListener('scroll', onAnyScroll, true);
+      window.addEventListener('resize', onResize, true);
+
+      (this as any)._removeGlobal = (): void => {
+        window.removeEventListener('scroll', onAnyScroll, true);
+        document.removeEventListener('scroll', onAnyScroll, true);
+        window.removeEventListener('resize', onResize, true);
+      };
+
+      this.listeningGlobal = true;
+    });
+  }
+
+  private removeGlobalListeners(): void {
+    if (!this.listeningGlobal) return;
+
+    const rm = (this as any)._removeGlobal as undefined | (() => void);
+    if (rm) rm();
+
+    delete (this as any)._removeGlobal;
+    this.listeningGlobal = false;
+
+    if (this.repositionRaf) {
+      cancelAnimationFrame(this.repositionRaf);
+      this.repositionRaf = 0;
+    }
   }
 
   prevMonth(): void {
@@ -373,6 +605,8 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     }
     this.ensureYearRange(this.viewYear);
     this.buildCalendar();
+    if (this.isOpen) this.scheduleReposition();
+    this.cdr.markForCheck();
   }
 
   nextMonth(): void {
@@ -384,6 +618,8 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     }
     this.ensureYearRange(this.viewYear);
     this.buildCalendar();
+    if (this.isOpen) this.scheduleReposition();
+    this.cdr.markForCheck();
   }
 
   onMonthChange(change: ISelectChange<any>): void {
@@ -391,12 +627,12 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     if (!row) return;
 
     const month = typeof row === 'object' && 'value' in row ? (row as IMonthOption).value : row;
-
-    if (typeof month !== 'number') return;
-    if (month < 0 || month > 11) return;
+    if (typeof month !== 'number' || month < 0 || month > 11) return;
 
     this.viewMonth = month;
     this.buildCalendar();
+    if (this.isOpen) this.scheduleReposition();
+    this.cdr.markForCheck();
   }
 
   onYearChange(change: ISelectChange<number>): void {
@@ -406,6 +642,8 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     this.viewYear = year;
     this.ensureYearRange(this.viewYear);
     this.buildCalendar();
+    if (this.isOpen) this.scheduleReposition();
+    this.cdr.markForCheck();
   }
 
   selectDay(day: IDatepickerDay): void {
@@ -420,10 +658,9 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     this.onChanged.emit(selected);
 
     this.updateView(selected);
-    this.isOpen = false;
+    this.closePanel();
+    this.cdr.markForCheck();
   }
-
-  // ------------- Date view helpers -------------
 
   private initViewFromModel(): void {
     let base: Date;
@@ -465,8 +702,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     const month = this.viewMonth;
 
     const firstOfMonth = new Date(year, month, 1);
-    // Make Monday = 0
-    const startDay = (firstOfMonth.getDay() + 6) % 7;
+    const startDay = (firstOfMonth.getDay() + 6) % 7; // Monday=0
     const startDate = new Date(year, month, 1 - startDay);
 
     const weeks: IDatepickerDay[][] = [];
@@ -512,7 +748,6 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     if (!value) return null;
 
     const fmt = this.format || 'yyyy-MM-dd';
-
     const parts = value.match(/\d+/g);
     if (!parts || parts.length < 3) return null;
 
@@ -547,32 +782,68 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     return formatDate(date, fmt, 'en');
   }
 
-  // ------------- Host listeners -------------
+  // =========================================================
+  // Host listeners
+  // =========================================================
 
-  @HostListener('input')
-  onHostInput(): void {
-    const input = this.getInnerInput();
-    if (!input) return;
-    this.handleInput(input.value);
+  /**
+   * ✅ CRITICAL:
+   * "input" events bubble.
+   * Month/year i-select (and other inner inputs) will trigger "input" too.
+   * If we react to those, we'll read the date input at the wrong moment and wipe display.
+   */
+  @HostListener('input', ['$event'])
+  onHostInput(event: Event): void {
+    const target = event.target as HTMLElement | null;
+    const dateInput = this.getInnerInput();
+    if (!dateInput) return;
+
+    // only react if THIS input event is from the date input itself
+    if (target !== dateInput) return;
+
+    this.handleInput(dateInput.value);
   }
 
-  /** Blur anywhere inside → mark touched */
   @HostListener('focusout')
   onHostFocusOut(): void {
     this.handleBlur();
   }
 
-  /** Close popup when clicking outside i-datepicker */
+  /**
+   * Flicker guard (for portaled inner i-select options)
+   */
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     if (!this.isOpen) return;
-    const target = event.target as Node | null;
-    if (target && !this.hostEl.nativeElement.contains(target)) {
-      this.isOpen = false;
-    }
+
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+
+    const host = this.hostEl.nativeElement;
+    const panel = this.getPanelEl();
+
+    const insideHost = host.contains(target);
+    const insidePanel = !!panel && panel.contains(target);
+
+    if (insideHost || insidePanel) return;
+
+    const active = document.activeElement as HTMLElement | null;
+    const activeInsidePanel = !!panel && !!active && panel.contains(active);
+
+    const clickedInAnySelectOptions =
+      !!target.closest('i-options') || !!target.closest('.i-options');
+
+    if (activeInsidePanel && clickedInAnySelectOptions) return;
+
+    this.closePanel();
+    this.cdr.markForCheck();
   }
 }
 
+/**
+ * IFCDatepicker
+ * Version: 1.5.3
+ */
 @Component({
   selector: 'i-fc-datepicker',
   standalone: true,
@@ -603,7 +874,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit {
     }`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class IFCDatepicker implements ControlValueAccessor {
+export class IFCDatepicker implements ControlValueAccessor, OnDestroy {
   @ViewChild(IDatepicker) innerDatepicker!: IDatepicker;
 
   @Input() label = '';
@@ -611,13 +882,6 @@ export class IFCDatepicker implements ControlValueAccessor {
   @Input() format = 'dd/MM/yyyy';
   @Input() panelPosition: IDatepickerPanelPosition = 'bottom left';
   @Input() errorMessage?: IFormControlErrorMessage;
-
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly hostEl = inject(ElementRef<HTMLElement>);
-
-  // optional injections (keep your existing behavior)
-  readonly ngControl = inject(NgControl, { self: true, optional: true });
-  private readonly formDir = inject(FormGroupDirective, { optional: true });
 
   @Input()
   get value(): Date | null {
@@ -633,19 +897,26 @@ export class IFCDatepicker implements ControlValueAccessor {
   private onChange: (v: any) => void = noop;
   private onTouched: () => void = noop;
 
-  constructor() {
-    // preserve “if ngControl then set valueAccessor”
-    if (this.ngControl) {
-      this.ngControl.valueAccessor = this;
-    }
+  readonly ngControl = inject(NgControl, { self: true, optional: true });
+  private readonly formDir = inject(FormGroupDirective, { optional: true });
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly hostEl = inject(ElementRef<HTMLElement>);
 
-    // preserve submit markForCheck behavior
-    this.formDir?.ngSubmit.subscribe(() => {
-      this.cdr.markForCheck();
-    });
+  private submitSub?: any;
+
+  constructor() {
+    if (this.ngControl) this.ngControl.valueAccessor = this;
+
+    if (this.formDir) {
+      this.submitSub = this.formDir.ngSubmit.subscribe(() => {
+        this.cdr.markForCheck();
+      });
+    }
   }
 
-  // ---- CVA ----
+  ngOnDestroy(): void {
+    this.submitSub?.unsubscribe?.();
+  }
 
   writeValue(v: any): void {
     if (v instanceof Date || v === null) {
@@ -670,15 +941,11 @@ export class IFCDatepicker implements ControlValueAccessor {
     this.isDisabled = isDisabled;
   }
 
-  // ---- Bridge IDatepicker → outer form control ----
-
   handleDateChange(date: Date | null): void {
     this._value = date ?? null;
     this.onChange(this._value);
     this.onTouched();
   }
-
-  // ---- Label click → focus inner input ----
 
   focusInnerDatepicker(): void {
     if (this.isDisabled) return;
@@ -690,15 +957,11 @@ export class IFCDatepicker implements ControlValueAccessor {
     input?.focus();
   }
 
-  // ---- Validation helpers ----
-
   get controlInvalid(): boolean {
     const c = this.ngControl?.control;
     if (!c) return false;
 
-    if (this.formDir) {
-      return c.invalid && !!this.formDir.submitted;
-    }
+    if (this.formDir) return c.invalid && !!this.formDir.submitted;
     return c.invalid && (c.dirty || c.touched);
   }
 
