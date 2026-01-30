@@ -97,6 +97,32 @@
       <i-pill size="lg" variant="danger">Danger LG</i-pill>
       <i-pill closable size="lg" variant="danger" (onClose)="remove()">Danger LG</i-pill>
     </div>
+    <div class="flex flex-row gap-md mt-md">
+      <i-pill icon="fa-solid fa-house" size="2xs" variant="primary">Home</i-pill>
+      <i-pill
+        closable
+        icon="fa-brands fa-web-awesome"
+        size="2xs"
+        variant="primary"
+        (onClose)="remove()"
+        >Crown</i-pill
+      >
+      <i-pill icon="fa-solid fa-image" size="xs" variant="success">Image</i-pill>
+      <i-pill closable icon="check" size="xs" variant="success" (onClose)="remove()">Check</i-pill>
+      <i-pill icon="fa-solid fa-location-dot" size="sm" variant="warning">Location</i-pill>
+      <i-pill
+        closable
+        icon="fa-solid fa-cart-shopping"
+        size="sm"
+        variant="warning"
+        (onClose)="remove()"
+        >Shopping Cart</i-pill
+      >
+      <i-pill icon="fa-solid fa-heart" size="md" variant="danger">Heart</i-pill>
+      <i-pill closable icon="fa-solid fa-music" size="md" variant="danger" (onClose)="remove()"
+        >Music</i-pill
+      >
+    </div>
   </i-section-body>
 </i-section>
 <i-section>

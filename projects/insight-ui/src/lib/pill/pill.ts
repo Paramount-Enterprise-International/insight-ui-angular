@@ -8,15 +8,29 @@ import {
   Input,
   Output,
 } from '@angular/core';
+import { IIcon, IIconName } from '../icon';
 
 export type IPillSize = '2xs' | 'xs' | 'sm' | 'md' | 'lg';
+
+export const I_PILL_ICON_SIZES = {
+  '2xs': '3xs',
+  xs: '2xs',
+  sm: 'xs',
+  md: 'sm',
+  lg: 'md',
+};
+export type IPillIconSize = keyof typeof I_PILL_ICON_SIZES;
 export type IPillVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger';
 
 @Component({
   selector: 'i-pill',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [IIcon],
   template: `
+    @if (icon) {
+      <i-icon [icon]="icon" [size]="size" />
+    }
     <span class="i-pill__content">
       <ng-content />
     </span>
@@ -35,6 +49,7 @@ export type IPillVariant = 'default' | 'primary' | 'success' | 'warning' | 'dang
   `,
 })
 export class IPill {
+  @Input() icon: IIconName | (string & {}) | undefined;
   @Input() size: IPillSize = 'md';
   @Input() variant: IPillVariant = 'default';
 
@@ -45,6 +60,10 @@ export class IPill {
 
   @Output() readonly onClose = new EventEmitter<MouseEvent>();
   @Output() readonly onClick = new EventEmitter<MouseEvent>();
+
+  get iconSize(): any {
+    return I_PILL_ICON_SIZES[this.size] || 'sm';
+  }
 
   // base class for the "i-pill, .i-pill" selector group
   @HostBinding('class.i-pill') baseClass = true;
