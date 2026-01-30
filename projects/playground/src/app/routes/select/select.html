@@ -196,6 +196,25 @@
       ></i-select>
 
       <i-datepicker class="w-50"></i-datepicker>
+      <form
+        class="flex gap-md flex-fill align-center"
+        [formGroup]="basicFormGroup"
+        (ngSubmit)="onSubmit()"
+      >
+        <i-fc-datepicker
+          class="w-full"
+          formControlName="dateFromControl"
+          label="Request Date From a"
+        />
+        <!-- <i-fc-datepicker
+                class="w-full"
+                formControlName="dateFromControl"
+                label="Request Date From"
+                [value]="null"
+              /> -->
+        <i-fc-datepicker class="w-full" formControlName="dateToControl" label="Request Date To" />
+        <i-button icon="fa-solid fa-magnifying-glass" type="submit" />
+      </form>
       <!-- <p>Selected: {{ selected?.name ?? '-' }}</p> -->
     </div>
   </i-section-body>

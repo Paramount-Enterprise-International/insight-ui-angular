@@ -28,7 +28,7 @@ export class Select {
 
   displayWith = (row: City | null): string => row?.name ?? '';
 
-  FormBuilder: FormBuilder = inject(FormBuilder);
+  formBuilder: FormBuilder = inject(FormBuilder);
 
   titleFormControl = new FormControl('', [Validators.required]);
   divisionFormControl = new FormControl('', [Validators.required]);
@@ -36,12 +36,19 @@ export class Select {
   sendEmailFormControl = new FormControl('', [Validators.required]);
   descriptionFormControl = new FormControl('', [Validators.required]);
 
-  woFormGroup: FormGroup = this.FormBuilder.group({
+  woFormGroup: FormGroup = this.formBuilder.group({
     titleFormControl: this.titleFormControl,
     divisionFormControl: this.divisionFormControl,
     locationFormControl: this.locationFormControl,
     sendEmailFormControl: this.sendEmailFormControl,
     descriptionFormControl: this.descriptionFormControl,
+  });
+
+  dateFromControl: FormControl = new FormControl(null, [Validators.required]);
+  dateToControl: FormControl = new FormControl(null, [Validators.required]);
+  basicFormGroup: FormGroup = this.formBuilder.group({
+    dateFromControl: this.dateFromControl,
+    dateToControl: this.dateToControl,
   });
 
   onSubmit(): void {

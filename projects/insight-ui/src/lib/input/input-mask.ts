@@ -983,6 +983,388 @@ export class IInputMaskDirective implements OnInit, OnChanges {
   }
 
   // ----------------------------------------------------
+  // CARET ↔ DIGIT helpers (used for smart keydown typing)
+  // ----------------------------------------------------
+
+  private countDigitsBeforePos(value: string, pos: number): number {
+    let n = 0;
+    for (let i = 0; i < Math.min(pos, value.length); i++) {
+      if (/\d/.test(value[i])) n++;
+    }
+    return n;
+  }
+
+  /** caret index in formatted string after `digitCount` digits */
+  private caretPosAfterDigits(value: string, digitCount: number): number {
+    if (digitCount <= 0) return 0;
+
+    let seen = 0;
+    for (let i = 0; i < value.length; i++) {
+      if (/\d/.test(value[i])) {
+        seen++;
+        if (seen === digitCount) {
+          // caret should sit AFTER this digit
+          return i + 1;
+        }
+      }
+    }
+    return value.length;
+  }
+
+  private clamp(n: number, min: number, max: number): number {
+    if (n < min) return min;
+    if (n > max) return max;
+    return n;
+  }
+
+  private clampMonth2(raw2: string): string {
+    // raw2 must be 2 digits
+    let m = Number(raw2);
+    if (Number.isNaN(m)) m = 1;
+    m = this.clamp(m, 1, 12);
+    return String(m).padStart(2, '0');
+  }
+
+  private clampDay2(raw2: string, month2?: string, year4?: string): string {
+    let d = Number(raw2);
+    if (Number.isNaN(d)) d = 1;
+
+    let m = month2 ? Number(month2) : 1;
+    if (Number.isNaN(m)) m = 1;
+    m = this.clamp(m, 1, 12);
+
+    let y = year4 ? Number(year4) : 2000;
+    if (Number.isNaN(y) || y <= 0) y = 2000;
+
+    const maxDay = this.daysInMonth(y, m);
+    d = this.clamp(d, 1, maxDay);
+    return String(d).padStart(2, '0');
+  }
+
+  /**
+   * Smart digit typing for DATE:
+   * - never allows 3-digit day/month or 5-digit year
+   * - when caret is at end of a full segment, typing "rolls" that segment:
+   *   month "01" + '2' => "12" (shift + append)
+   *   year "2026" + '1' => "0261" (keeps last 4)
+   */
+  private handleDateDigitKey(el: HTMLInputElement | HTMLTextAreaElement, digit: string): void {
+    const format = this.mask?.format || 'dd/MM/yyyy';
+
+    // Ensure we work from a masked baseline (important for stable caret mapping)
+    const baseline = this.applyDateMask(el.value ?? '', format);
+    if (baseline !== el.value) {
+      el.value = baseline;
+    }
+
+    const tokens = this.splitDateFormat(format).tokens;
+    const lens = tokens.map((t) => t.length); // usually [2,2,4]
+    const totalLen = lens.reduce((a, b) => a + b, 0);
+
+    // digits-only
+    const digitsOnly = (el.value ?? '').replace(/\D/g, '').slice(0, totalLen);
+
+    const caret = el.selectionStart ?? (el.value ?? '').length;
+    const digitCursor = this.countDigitsBeforePos(el.value ?? '', caret);
+
+    // Build ranges for each token in digitsOnly
+    const ranges: { start: number; end: number; kind: 'day' | 'month' | 'year' }[] = [];
+    let acc = 0;
+    for (const tok of tokens) {
+      const kind = tok[0] === 'd' ? 'day' : tok[0] === 'M' ? 'month' : 'year';
+      const len = tok.length;
+      ranges.push({ start: acc, end: acc + len, kind });
+      acc += len;
+    }
+
+    // Find active token index.
+    // If caret is exactly at a token boundary, prefer the previous token (so month-end rolling works).
+    let idx = ranges.findIndex((r) => digitCursor < r.end);
+    if (idx === -1) idx = ranges.length - 1;
+
+    // boundary case: digitCursor equals start of this token -> maybe user is at previous token end
+    if (idx > 0 && digitCursor === ranges[idx].start) {
+      idx = idx - 1;
+    }
+
+    const r = ranges[idx];
+    const tokenLen = r.end - r.start;
+
+    const tokenDigits = digitsOnly.slice(r.start, r.end); // may be shorter than tokenLen
+    const isFull = tokenDigits.length >= tokenLen;
+
+    // Position inside token (0..tokenLen)
+    let rel = digitCursor - r.start;
+    rel = this.clamp(rel, 0, tokenLen);
+
+    let newToken = tokenDigits;
+
+    if (!isFull) {
+      // insert into token until full
+      // (but still cap at tokenLen)
+      newToken = (tokenDigits.slice(0, rel) + digit + tokenDigits.slice(rel)).slice(0, tokenLen);
+    } else {
+      // token is full
+      if (digitCursor >= r.end) {
+        // caret at token end -> rolling shift (fixes your "01" => "12" behavior)
+        newToken = tokenDigits.slice(1) + digit;
+      } else {
+        // overwrite at position
+        newToken =
+          tokenDigits.slice(0, rel) +
+          digit +
+          tokenDigits.slice(Math.min(rel + 1, tokenDigits.length));
+        newToken = newToken.slice(0, tokenLen);
+      }
+    }
+
+    // Apply clamp rules when token becomes complete
+    // We need current month/year to clamp day correctly
+    const monthRange = ranges.find((x) => x.kind === 'month');
+    const yearRange = ranges.find((x) => x.kind === 'year');
+
+    // Prepare a working digits string with replaced token first (before clamp)
+    const before = digitsOnly.slice(0, r.start);
+    const after = digitsOnly.slice(r.end);
+    let nextDigits = (before + newToken + after).slice(0, totalLen);
+
+    const month2 = monthRange
+      ? nextDigits.slice(monthRange.start, monthRange.end).padEnd(2, '')
+      : '';
+    const year4 = yearRange ? nextDigits.slice(yearRange.start, yearRange.end).padEnd(4, '') : '';
+
+    if (r.kind === 'month' && newToken.length === 2) {
+      const clamped = this.clampMonth2(newToken);
+      nextDigits = (before + clamped + after).slice(0, totalLen);
+    }
+
+    if (r.kind === 'day' && newToken.length === 2) {
+      const clamped = this.clampDay2(
+        newToken,
+        month2.length === 2 ? month2 : undefined,
+        year4.length === 4 ? year4 : undefined,
+      );
+      nextDigits = (before + clamped + after).slice(0, totalLen);
+    }
+
+    // Year: never exceed 4 digits; rolling already enforces.
+    if (r.kind === 'year') {
+      // Ensure year segment is max 4
+      if (yearRange) {
+        const y = nextDigits.slice(yearRange.start, yearRange.end);
+        const yFixed = y.slice(0, 4);
+        nextDigits =
+          nextDigits.slice(0, yearRange.start) + yFixed + nextDigits.slice(yearRange.end);
+        nextDigits = nextDigits.slice(0, totalLen);
+      }
+    }
+
+    const masked = this.applyDateMaskDigitsOnly(nextDigits, format);
+
+    // compute caret: if we rolled at token end, keep caret at token end (don’t jump into next token)
+    const didRollAtEnd = isFull && digitCursor >= r.end;
+    const nextDigitCursor = didRollAtEnd ? r.end : Math.min(totalLen, digitCursor + 1);
+
+    el.value = masked;
+    this.dispatchInputEvent();
+
+    const nextCaret = this.caretPosAfterDigits(masked, nextDigitCursor);
+    this.safeSetSelectionRange(el, nextCaret, nextCaret);
+  }
+
+  /**
+   * Smart digit typing for TIME (similar behavior, keeps segments fixed-length).
+   * - HH:mm       => keeps hour/min 2 digits
+   * - HH:mm:ss    => keeps hour/min/sec 2 digits
+   */
+  private handleTimeDigitKey(el: HTMLInputElement | HTMLTextAreaElement, digit: string): void {
+    const format = this.mask?.format || 'HH:mm';
+
+    const baseline = this.applyTimeMask(el.value ?? '', format);
+    if (baseline !== el.value) el.value = baseline;
+
+    const tokens = this.splitTimeFormat(format).tokens; // e.g. ['HH','mm'] or ['HH','mm','ss']
+    const lens = tokens.map((t) => t.length); // usually [2,2,(2)]
+    const totalLen = lens.reduce((a, b) => a + b, 0);
+
+    const digitsOnly = (el.value ?? '').replace(/\D/g, '').slice(0, totalLen);
+
+    const caret = el.selectionStart ?? (el.value ?? '').length;
+    const digitCursor = this.countDigitsBeforePos(el.value ?? '', caret);
+
+    const ranges: { start: number; end: number; kind: 'hour' | 'minute' | 'second' }[] = [];
+    let acc = 0;
+    for (const tok of tokens) {
+      const kind = tok[0] === 'H' ? 'hour' : tok[0] === 'm' ? 'minute' : 'second';
+      const len = tok.length;
+      ranges.push({ start: acc, end: acc + len, kind });
+      acc += len;
+    }
+
+    let idx = ranges.findIndex((r) => digitCursor < r.end);
+    if (idx === -1) idx = ranges.length - 1;
+    if (idx > 0 && digitCursor === ranges[idx].start) idx = idx - 1;
+
+    const r = ranges[idx];
+    const tokenLen = r.end - r.start;
+
+    const tokenDigits = digitsOnly.slice(r.start, r.end);
+    const isFull = tokenDigits.length >= tokenLen;
+
+    let rel = digitCursor - r.start;
+    rel = this.clamp(rel, 0, tokenLen);
+
+    let newToken = tokenDigits;
+
+    if (!isFull) {
+      newToken = (tokenDigits.slice(0, rel) + digit + tokenDigits.slice(rel)).slice(0, tokenLen);
+    } else {
+      if (digitCursor >= r.end) {
+        newToken = tokenDigits.slice(1) + digit; // rolling shift
+      } else {
+        newToken =
+          tokenDigits.slice(0, rel) +
+          digit +
+          tokenDigits.slice(Math.min(rel + 1, tokenDigits.length));
+        newToken = newToken.slice(0, tokenLen);
+      }
+    }
+
+    // clamp segment when complete
+    const clamp2 = (v2: string, max: number): string => {
+      let n = Number(v2);
+      if (Number.isNaN(n)) n = 0;
+      n = this.clamp(n, 0, max);
+      return String(n).padStart(2, '0');
+    };
+
+    const before = digitsOnly.slice(0, r.start);
+    const after = digitsOnly.slice(r.end);
+
+    if (newToken.length === 2) {
+      if (r.kind === 'hour') newToken = clamp2(newToken, 23);
+      else newToken = clamp2(newToken, 59);
+    }
+
+    const nextDigits = (before + newToken + after).slice(0, totalLen);
+    const masked = this.applyTimeMaskDigitsOnly(nextDigits, format);
+
+    const didRollAtEnd = isFull && digitCursor >= r.end;
+    const nextDigitCursor = didRollAtEnd ? r.end : Math.min(totalLen, digitCursor + 1);
+
+    el.value = masked;
+    this.dispatchInputEvent();
+
+    const nextCaret = this.caretPosAfterDigits(masked, nextDigitCursor);
+    this.safeSetSelectionRange(el, nextCaret, nextCaret);
+  }
+
+  private normalizePastedDate(raw: string, format: string): string {
+    if (!raw) return '';
+
+    const nums = raw.match(/\d+/g) ?? [];
+    if (!nums.length) return '';
+
+    const { tokens } = this.splitDateFormat(format);
+
+    let day = 1;
+    let month = 1;
+    let year = 2000;
+
+    if (nums.length >= 3) {
+      // ✅ make TS happy
+      const a = nums[0] ?? '';
+      const b = nums[1] ?? '';
+      const c = nums[2] ?? '';
+
+      const aNum = Number(a);
+      const bNum = Number(b);
+      const cNum = Number(c);
+
+      if (a.length === 4) {
+        // yyyy MM dd
+        year = aNum;
+        month = bNum;
+        day = cNum;
+      } else if (c.length === 4) {
+        // dd MM yyyy
+        day = aNum;
+        month = bNum;
+        year = cNum;
+      } else {
+        // fallback: map by format order
+        const parts = [a, b, c];
+        const map: Record<'d' | 'M' | 'y', number | undefined> = {
+          d: undefined,
+          M: undefined,
+          y: undefined,
+        };
+
+        tokens.forEach((t, i) => {
+          const v = Number(parts[i] ?? '');
+          if (!Number.isNaN(v)) map[t[0] as 'd' | 'M' | 'y'] = v;
+        });
+
+        if (map.d !== undefined) day = map.d;
+        if (map.M !== undefined) month = map.M;
+        if (map.y !== undefined) year = map.y;
+      }
+    } else {
+      // digits-only fallback: 31122026, 20260131, etc.
+      const digits = nums.join('').slice(0, 8);
+
+      if (digits.length >= 8) {
+        if (format.trim().startsWith('yyyy')) {
+          year = Number(digits.slice(0, 4));
+          month = Number(digits.slice(4, 6));
+          day = Number(digits.slice(6, 8));
+        } else {
+          day = Number(digits.slice(0, 2));
+          month = Number(digits.slice(2, 4));
+          year = Number(digits.slice(4, 8));
+        }
+      } else {
+        // if user pastes something too short, just let the normal mask handle it
+        return this.applyDateMask(nums.join(''), format);
+      }
+    }
+
+    // Clamp + sanitize
+    if (!Number.isFinite(year) || year <= 0) year = 2000;
+    year = Math.min(year, 9999); // ✅ never 5 digits
+
+    month = this.clamp(month, 1, 12);
+
+    const maxDay = this.daysInMonth(year, month);
+    day = this.clamp(day, 1, maxDay);
+
+    return this.formatDateFromParts(day, month, year, format);
+  }
+
+  private normalizePastedTime(raw: string, format: string): string {
+    if (!raw) return '';
+
+    const nums = raw.match(/\d+/g) ?? [];
+    if (!nums.length) return '';
+
+    const digits = nums.join('');
+
+    let hour = 0;
+    let minute = 0;
+    let second = 0;
+
+    if (digits.length >= 2) hour = Number(digits.slice(0, 2));
+    if (digits.length >= 4) minute = Number(digits.slice(2, 4));
+    if (digits.length >= 6) second = Number(digits.slice(4, 6));
+
+    hour = this.clamp(hour, 0, 23);
+    minute = this.clamp(minute, 0, 59);
+    second = this.clamp(second, 0, 59);
+
+    return this.formatTimeFromParts(hour, minute, second, format);
+  }
+
+  // ----------------------------------------------------
   // HOST LISTENERS
   // ----------------------------------------------------
 
@@ -1109,7 +1491,7 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
     if (this.isControlKey(event)) return;
 
-    // Date/time: allow digits + separators
+    // Date/time: smart digit typing + allow separators
     if (type === 'date' || type === 'time') {
       const format = this.mask.format || '';
       const allowedSeps = new Set<string>();
@@ -1118,7 +1500,17 @@ export class IInputMaskDirective implements OnInit, OnChanges {
         if (!/[dMyHms]/.test(c)) allowedSeps.add(c);
       }
 
-      if (/\d/.test(key)) return;
+      // ✅ handle digits ourselves to prevent "31/012/2026" type inserts
+      if (/\d/.test(key)) {
+        event.preventDefault();
+
+        if (type === 'date') this.handleDateDigitKey(el, key);
+        else this.handleTimeDigitKey(el, key);
+
+        return;
+      }
+
+      // allow separators as typed (optional; mask will normalize anyway)
       if (allowedSeps.has(key)) return;
 
       event.preventDefault();
@@ -1145,6 +1537,41 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
       event.preventDefault();
       return;
+    }
+  }
+
+  @HostListener('paste', ['$event'])
+  onPaste(event: ClipboardEvent): void {
+    if (!this.hasMask || !this.mask) return;
+
+    const el = this.nativeInput;
+    if (!el) return;
+
+    const text = event.clipboardData?.getData('text');
+    if (!text) return;
+
+    event.preventDefault();
+
+    const type = this.mask.type;
+    const format = this.mask.format;
+
+    let next = '';
+
+    if (type === 'date' && format) {
+      next = this.normalizePastedDate(text, format);
+    } else if (type === 'time' && format) {
+      next = this.normalizePastedTime(text, format);
+    } else if (type === 'integer') {
+      next = text.replace(/\D/g, '');
+    } else if (type === 'number' || type === 'currency') {
+      next = this.applyNumericMask(text, true);
+    }
+
+    if (next !== undefined) {
+      el.value = next;
+      this.dispatchInputEvent();
+      // caret at end after paste = expected UX
+      this.safeSetSelectionRange(el, next.length, next.length);
     }
   }
 }
