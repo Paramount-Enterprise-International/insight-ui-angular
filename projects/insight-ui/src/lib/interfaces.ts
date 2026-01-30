@@ -10,7 +10,7 @@ export type IFormControlErrorMessage = {
   [key: string]: string | undefined; // custom validators welcome (e.g., usernameTaken)
 };
 
-export type IUISize = '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+export type IUISize = '3xs' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type IUIVariant = 'primary' | 'info' | 'warning' | 'danger' | 'success' | 'outline';
 
 import { AbstractControl, NgControl, Validators } from '@angular/forms';
@@ -42,7 +42,7 @@ export function resolveControlErrorMessage(
   ngControl: NgControl | null,
   label: string | undefined,
   errorMessage?: IFormControlErrorMessage,
-  extraFactories: Record<string, (ctx: IErrorContext) => string> = {}
+  extraFactories: Record<string, (ctx: IErrorContext) => string> = {},
 ): string | null {
   const control = ngControl?.control ?? null;
   const errors = control?.errors ?? null;
@@ -84,7 +84,7 @@ export function resolveControlErrorMessage(
 
 export function isControlRequired(
   ngControl: NgControl | null,
-  errorMessage?: IFormControlErrorMessage
+  errorMessage?: IFormControlErrorMessage,
 ): boolean {
   const control = ngControl?.control ?? null;
   const hasCustomRequired = !!errorMessage?.['required'];
@@ -116,6 +116,6 @@ function interpolate(tpl: string, ctx: IErrorContext): string {
   };
 
   return tpl.replace(/\{(\w+)\}/g, (_match, key) =>
-    map[key] !== null ? String(map[key]) : `{${key}}`
+    map[key] !== null ? String(map[key]) : `{${key}}`,
   );
 }

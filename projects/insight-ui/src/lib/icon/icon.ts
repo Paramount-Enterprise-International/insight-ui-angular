@@ -58,6 +58,7 @@ export const I_ICON_NAMES = {
 } as const;
 
 export const I_ICON_SIZES = {
+  '3xs': 'i-icon-3xs',
   '2xs': 'i-icon-2xs',
   xs: 'i-icon-xs',
   sm: 'i-icon-sm',

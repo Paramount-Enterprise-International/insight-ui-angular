@@ -13,7 +13,7 @@ import { IUISize, IUIVariant } from '../interfaces';
 import { ILoading } from '../loading/loading';
 
 export type IButtonType = 'button' | 'submit' | 'reset';
-export type IButtonSize = Extract<IUISize, '2xs' | 'xs' | 'sm' | 'md' | 'lg'>;
+export type IButtonSize = Extract<IUISize, '3xs' | '2xs' | 'xs' | 'sm' | 'md' | 'lg'>;
 export type IButtonVariant = Extract<
   IUIVariant,
   'primary' | 'warning' | 'danger' | 'success' | 'outline'
@@ -23,11 +23,12 @@ export type IButtonVariant = Extract<
   selector: 'i-button',
   standalone: true,
   template: `@if (loading) {
-    <i-loading [label]="loadingText" [light]="variant !== 'outline'" />
-    } @else { @if (icon) {
-    <i-icon [icon]="icon" [size]="size" />
-    }
-    <ng-content />
+      <i-loading [label]="loadingText" [light]="variant !== 'outline'" />
+    } @else {
+      @if (icon) {
+        <i-icon [icon]="icon" [size]="size" />
+      }
+      <ng-content />
     } `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
