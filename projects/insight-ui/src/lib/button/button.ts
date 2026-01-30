@@ -8,7 +8,7 @@ import {
   Input,
   Output,
 } from '@angular/core';
-import { IIcon } from '../icon/icon';
+import { IIcon, IIconName } from '../icon/icon';
 import { IUISize, IUIVariant } from '../interfaces';
 import { ILoading } from '../loading/loading';
 
@@ -50,7 +50,7 @@ export class IButton {
 
   @Input() size: IButtonSize = 'md';
 
-  @Input() icon: string | undefined;
+  @Input() icon: IIconName | (string & {}) | undefined;
 
   /** Public click output if you want to use (onClick) */
   @Output() readonly onClick = new EventEmitter<MouseEvent>();
