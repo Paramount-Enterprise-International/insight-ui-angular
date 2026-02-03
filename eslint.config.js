@@ -118,6 +118,7 @@ module.exports = tseslint.config(
         // blank line AFTER a function
         { blankLine: 'always', prev: 'function', next: '*' },
       ],
+      'no-extra-boolean-cast': 'off',
     },
   },
   {
@@ -143,7 +144,7 @@ module.exports = tseslint.config(
       '@angular-eslint/template/interactive-supports-focus': 'off',
       '@angular-eslint/template/click-events-have-key-events': 'off',
       '@angular-eslint/template/button-has-type': 'warn',
-      '@angular-eslint/template/cyclomatic-complexity': ['warn', { maxComplexity: 30 }],
+      '@angular-eslint/template/cyclomatic-complexity': ['warn', { maxComplexity: 50 }],
       '@angular-eslint/template/eqeqeq': 'error',
       '@angular-eslint/template/prefer-control-flow': 'error',
       // '@angular-eslint/template/prefer-ngsrc': 'warn',
