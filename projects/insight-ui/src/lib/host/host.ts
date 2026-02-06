@@ -414,6 +414,7 @@ export class IHContent {
 @Component({
   selector: 'ih-menu',
   imports: [NgClass, RouterLink, IHighlightSearchPipe],
+  host: { 'data-ih-menu': '' },
   template: `
     @if (menu) {
       @let hasChild = !!menu.child?.length;
@@ -428,7 +429,7 @@ export class IHContent {
             <!-- group with children -->
             <div (click)="click()">
               @if (menu.level > 0) {
-                @for (i of [].constructor(menu.level); track i) {
+                @for (i of indent(menu.level); track i) {
                   <span></span>
                 }
               }
@@ -443,7 +444,7 @@ export class IHContent {
             @if (menu.applicationCode === 'INS5') {
               <a #menuItem [class.is-selected]="isSelected" [routerLink]="menu.route">
                 @if (menu.level > 0) {
-                  @for (i of [].constructor(menu.level); track i) {
+                  @for (i of indent(menu.level); track i) {
                     <span></span>
                   }
                 }
@@ -453,7 +454,7 @@ export class IHContent {
             } @else {
               <a #menuItem [class.is-selected]="isSelected" [href]="menu.applicationUrl">
                 @if (menu.level > 0) {
-                  @for (i of [].constructor(menu.level); track i) {
+                  @for (i of indent(menu.level); track i) {
                     <span></span>
                   }
                 }
@@ -514,6 +515,12 @@ export class IHMenu implements OnChanges {
         behavior: 'smooth',
       });
     }
+  }
+
+  indent(level: number): number[] {
+    const n = Math.max(0, Number(level) || 0);
+    // return [0,1,2,...] so each item is stable and unique
+    return Array.from({ length: n }, (_, i) => i);
   }
 
   click(): void {
