@@ -128,9 +128,9 @@ export class ICard implements OnInit {
       );
     }
 
-    if (!hasHref && !hasRouter && !hasClick) {
-      console.warn('[i-card] No action provided. Add `href`, `routerLink`, or `(onClick)`.', this);
-    }
+    // if (!hasHref && !hasRouter && !hasClick) {
+    //   console.warn('[i-card] No action provided. Add `href`, `routerLink`, or `(onClick)`.', this);
+    // }
   }
 
   /* ======================
