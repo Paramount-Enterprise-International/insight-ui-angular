@@ -1,0 +1,33 @@
+<i-dialog title="Create Requst" (onOk)="onSave()" (onSave)="onSave()">
+  <form #myForm="ngForm" class="w-450" [formGroup]="woFormGroup">
+    <i-fc-input formControlName="titleFormControl" label="Title" />
+    <i-select
+      label="Division"
+      [options$]="divisions$"
+      (onOptionSelected)="onOptionSelectedDivision($event)"
+    />
+    <i-fc-input
+      formControlName="locationFormControl"
+      label="Location"
+      [append]="[
+        {
+          type: 'button',
+          icon: 'edit',
+          onClick: inputAddonClick,
+        },
+      ]"
+    />
+
+    <i-select
+      label="Send Email"
+      [options$]="rows$"
+      [value]="{ userId: 1, userName: 'Tajrin', employeeCode: 'PL1378' }"
+      (onOptionSelected)="onOptionSelected($event)"
+    />
+    <!-- <i-fc-textarea
+      formControlName="descriptionFormControl"
+      label="Description"
+      placeholder="Enter your description here..."
+    /> -->
+  </form>
+</i-dialog>

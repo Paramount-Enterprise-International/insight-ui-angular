@@ -1,0 +1,326 @@
+<i-section>
+  <i-section-body>
+    <div class="flex flex-col gap-md">
+      <h1>Dialog</h1>
+      <div>
+        <code>i-dialog</code>
+      </div>
+      <p>
+        <code>i-dialog</code> is a reusable dialog/modal component for Angular applications. It
+        supports custom content, actions, and various configurations with a flexible API.
+      </p>
+
+      <br />
+      <h2>Dialog Configuration (IDialogConfig)</h2>
+      <p>
+        Configuration options when opening a dialog via
+        <code>IDialogService.open()</code>:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Default Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>id</code></td>
+            <td><code>string</code></td>
+            <td>Optional</td>
+            <td>Auto-generated</td>
+            <td>Unique identifier for the dialog instance</td>
+          </tr>
+          <tr>
+            <td><code>data</code></td>
+            <td><code>any</code></td>
+            <td>Optional</td>
+            <td><code>undefined</code></td>
+            <td>Data passed to dialog component via <code>I_DIALOG_DATA</code></td>
+          </tr>
+          <tr>
+            <td><code>width</code></td>
+            <td><code>string</code></td>
+            <td>Optional</td>
+            <td><code>'auto'</code></td>
+            <td>Dialog width (e.g., '500px', '80%')</td>
+          </tr>
+          <tr>
+            <td><code>height</code></td>
+            <td><code>string</code></td>
+            <td>Optional</td>
+            <td><code>'auto'</code></td>
+            <td>Dialog height (e.g., '400px', '60vh')</td>
+          </tr>
+          <tr>
+            <td><code>disableClose</code></td>
+            <td><code>boolean</code></td>
+            <td>Optional</td>
+            <td><code>false</code></td>
+            <td>If true, users cannot close with ESC key</td>
+          </tr>
+          <tr>
+            <td><code>backdropClose</code></td>
+            <td><code>boolean</code></td>
+            <td>Optional</td>
+            <td><code>true</code></td>
+            <td>If true, users can close by clicking backdrop</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <br />
+      <h2>Events</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>onOk</code></td>
+            <td><code>EventEmitter&lt;any&gt;</code></td>
+            <td>Emitted when the OK button is clicked</td>
+          </tr>
+          <tr>
+            <td><code>onConfirm</code></td>
+            <td><code>EventEmitter&lt;any&gt;</code></td>
+            <td>Emitted when the Confirm button is clicked</td>
+          </tr>
+          <tr>
+            <td><code>onSave</code></td>
+            <td><code>EventEmitter&lt;any&gt;</code></td>
+            <td>Emitted when the Save button is clicked</td>
+          </tr>
+          <tr>
+            <td><code>onCustomAction</code></td>
+            <td><code>EventEmitter&lt;IDialogActionObject&gt;</code></td>
+            <td>Emitted when a custom action button is clicked</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <br />
+      <h2>DialogRef Methods</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Return Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>afterClosed()</code></td>
+            <td><code>Observable&lt;any&gt;</code></td>
+            <td>Returns an observable that emits when dialog is closed</td>
+          </tr>
+          <tr>
+            <td><code>close(result?: any)</code></td>
+            <td><code>void</code></td>
+            <td>Programmatically closes the dialog with optional result</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h2>DialogAction Types</h2>
+      <p>There are 5 predefined action types:</p>
+      <ul>
+        <li><code>'cancel'</code> - Cancel button</li>
+        <li><code>'save'</code> - Save button</li>
+        <li><code>'ok'</code> - OK button</li>
+        <li><code>'confirm'</code> - Confirm button</li>
+        <li><code>'custom'</code> - Custom button with additional configuration</li>
+      </ul>
+      <p>Custom action configuration includes:</p>
+      <ul>
+        <li><code>label: string</code> - Button text</li>
+        <li><code>variant: IButtonVariant</code> - Button style variant</li>
+        <li><code>icon: string</code> - Icon name</li>
+        <li><code>onClick: () => void</code> - Custom click handler</li>
+        <li><code>className: string</code> - Additional CSS classes</li>
+        <li><code>visible: boolean</code> - Visibility toggle</li>
+      </ul>
+      <br />
+      <h2>IButtonVariant</h2>
+      <p>There are 5 button variants :</p>
+      <ul>
+        <li><code>primary</code></li>
+        <li><code>success</code></li>
+        <li><code>warning</code></li>
+        <li><code>danger</code></li>
+        <li><code>outline</code></li>
+      </ul>
+      <br />
+      <h2>Directives</h2>
+      <h3>i-dialog-close</h3>
+      <p>Directive for creating close buttons inside dialog content:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Attribute</th>
+            <th>Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>i-dialog-close</code></td>
+            <td><code>string (optional)</code></td>
+            <td>Value returned when dialog is closed</td>
+          </tr>
+          <tr>
+            <td><code>[iDialogClose]</code></td>
+            <td><code>any</code></td>
+            <td>Binding for result value</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h2>Service Methods</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Parameters</th>
+            <th>Return Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>open()</code></td>
+            <td>
+              <code>component: Type&lt;TComponent&gt;, config?: IDialogConfig</code>
+            </td>
+            <td><code>IDialogRef&lt;TResult&gt;</code></td>
+            <td>Opens a new dialog with specified component</td>
+          </tr>
+          <tr>
+            <td><code>closeById()</code></td>
+            <td><code>id: string, result?: any</code></td>
+            <td><code>void</code></td>
+            <td>Closes dialog by ID</td>
+          </tr>
+          <tr>
+            <td><code>closeAll()</code></td>
+            <td>None</td>
+            <td><code>void</code></td>
+            <td>Closes all active dialogs</td>
+          </tr>
+          <tr>
+            <td><code>dialogs$</code></td>
+            <td>None</td>
+            <td><code>Observable&lt;IDialogInstance[]&gt;</code></td>
+            <td>Stream tracking all active dialogs</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h2>Examples</h2>
+      <p>Alert</p>
+      <i-section>
+        <i-section-tabs height="300">
+          <i-section-tab title="Preview">
+            <div class="flex gap-md justify-center align-center h-full">
+              <i-button class="w-fill" icon="maximize" (onClick)="showInformationAlert()"
+                >Information Alert</i-button
+              >
+              <i-button
+                class="w-fill"
+                icon="maximize"
+                variant="success"
+                (onClick)="showSuccessAlert()"
+                >Success Alert</i-button
+              >
+              <i-button
+                class="w-fill"
+                icon="maximize"
+                variant="warning"
+                (onClick)="showWarningAlert()"
+                >Warning Alert</i-button
+              >
+              <i-button
+                class="w-fill"
+                icon="maximize"
+                variant="danger"
+                (onClick)="showDangerAlert()"
+                >Danger Alert</i-button
+              >
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="docs/alert.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="docs/alert.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>Confirms</p>
+      <i-section>
+        <i-section-tabs height="350">
+          <i-section-tab title="Preview">
+            <div class="flex gap-md justify-center align-center h-full">
+              <i-button class="w-fill" icon="maximize" (onClick)="showInformationConfirm()"
+                >Information Confirm</i-button
+              >
+              <i-button
+                class="w-fill"
+                icon="maximize"
+                variant="success"
+                (onClick)="showSuccessConfirm()"
+                >Success Confirm</i-button
+              >
+              <i-button
+                class="w-fill"
+                icon="maximize"
+                variant="warning"
+                (onClick)="showWarningConfirm()"
+                >Warning Confirm</i-button
+              >
+              <i-button
+                class="w-fill"
+                icon="maximize"
+                variant="danger"
+                (onClick)="showDangerConfirm()"
+                >Danger Confirm</i-button
+              >
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="docs/alert.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="docs/alert.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>Dialog Using Component</p>
+      <i-section>
+        <i-section-tabs height="400">
+          <i-section-tab title="Preview">
+            <div class="flex gap-md justify-center align-center h-full">
+              <i-button (onClick)="createData()">Open Dialog</i-button>
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="docs/form-dialog.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="docs/form-dialog.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+    </div>
+  </i-section-body>
+</i-section>

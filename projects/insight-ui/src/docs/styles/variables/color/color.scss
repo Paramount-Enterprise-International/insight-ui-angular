@@ -1,0 +1,42 @@
+.color-sample {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  vertical-align: middle;
+}
+
+ul {
+  list-style: disc;
+  padding-left: 15px;
+
+  li {
+    span {
+      width: 200px;
+    }
+  }
+}
+
+th {
+  &:first-child {
+    width: 200px;
+  }
+}
+
+td code {
+  --i-background-color: initial;
+  padding: 0px;
+}
+
+.color-cell {
+  width: 20px;
+  /* Atur lebar td */
+  padding: 5px;
+}
+
+.value-cell {
+  width: 350px;
+  /* Atur lebar td */
+  padding: 5px;
+}

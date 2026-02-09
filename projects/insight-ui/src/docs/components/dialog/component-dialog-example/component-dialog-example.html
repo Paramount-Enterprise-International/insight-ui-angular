@@ -1,0 +1,9 @@
+<i-dialog title="Example Dialog Using Components" (onSave)="onSave()">
+  <form #myForm="ngForm" [formGroup]="woFormGroup">
+    <i-fc-input formControlName="firstNameFormControl" label="First Name" />
+
+    <i-fc-input formControlName="lastNameFormControl" label="Last Name" />
+
+    <i-fc-input formControlName="emailFormControl" label="email" />
+  </form>
+</i-dialog>
