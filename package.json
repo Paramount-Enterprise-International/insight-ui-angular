@@ -1,6 +1,6 @@
 {
   "name": "@insight/ui",
-  "version": "1.13.6",
+  "version": "1.13.7",
   "peerDependencies": {
     "@angular/common": "^20.3.0",
     "@angular/core": "^20.3.0"
@@ -20,9 +20,9 @@
       "types": "./index.d.ts",
       "default": "./fesm2022/insight-ui.mjs"
     },
-    "./src/lib/docs": {
-      "types": "./src/lib/docs/index.d.ts",
-      "default": "./fesm2022/insight-ui-src-lib-docs.mjs"
+    "./docs": {
+      "types": "./docs/index.d.ts",
+      "default": "./fesm2022/insight-ui-docs.mjs"
     }
   }
 }
