@@ -788,6 +788,158 @@ declare class IDialogModule {
     static ɵinj: i0.ɵɵInjectorDeclaration<IDialogModule>;
 }
 
+declare class IRDocs {
+    static ɵfac: i0.ɵɵFactoryDeclaration<IRDocs, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IRDocs, "ir-docs", never, {}, {}, never, never, true, never>;
+}
+
+type IRoute = Omit<Route, 'data' | 'children'> & {
+    data: {
+        title: string;
+        [key: string]: any;
+    };
+    children?: IRoutes;
+};
+type IRoutes = IRoute[];
+type IBreadcrumbItem = {
+    label: string;
+    /**
+     * IMPORTANT (baseHref is "/-/"):
+     * - Recommended: "/dashboard", "/dashboard/reports", "/"
+     * - Also accepted: "/-/dashboard" (will be normalized)
+     */
+    url?: string;
+};
+type IMenu = {
+    menuId: number;
+    menuName: string;
+    route?: string | null;
+    menuTypeId: number;
+    parentId: number;
+    sequence: number;
+    icon?: string | null;
+    child?: IMenu[];
+    level: number;
+    visibility?: string;
+    selected?: boolean;
+    openInId?: number;
+    versionCode?: string;
+    applicationCode?: string;
+    applicationUrl?: string;
+};
+type IUser = {
+    employeeCode: string;
+    fullName: string;
+    userImagePath: string;
+};
+type IHNavigationSnapshot = {
+    fullUrl: string;
+    basePath: string;
+    params: Record<string, any>;
+    query: Record<string, any>;
+};
+declare class IHTitleBreadcrumbService {
+    /**
+     * null = use normal (route-based) title/breadcrumbs
+     * non-null = override (e.g. React remote controls shell display)
+     */
+    readonly titleOverride: i0.WritableSignal<string | null>;
+    readonly breadcrumbsOverride: i0.WritableSignal<IBreadcrumbItem[] | null>;
+    setTitle(title: string | null): void;
+    setBreadcrumbs(items: IBreadcrumbItem[] | null): void;
+    clear(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHTitleBreadcrumbService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IHTitleBreadcrumbService>;
+}
+declare class IHContent {
+    private readonly router;
+    private readonly activatedRoute;
+    private readonly baseHref;
+    readonly shell: IHTitleBreadcrumbService;
+    sidebarVisibility: boolean;
+    readonly onSidebarToggled: EventEmitter<boolean>;
+    /** route-based breadcrumbs */
+    readonly breadcrumb$: Observable<IBreadcrumbItem[]>;
+    /** last breadcrumb label = route-based page title */
+    readonly pageTitle$: Observable<string | null>;
+    private buildBreadcrumb;
+    toggleSidebar(): void;
+    onOverrideBreadcrumbClick(e: MouseEvent): void;
+    private normalizeBaseHref;
+    private normalizePath;
+    /**
+     * RouterLink will prefix baseHref automatically.
+     * So we must NOT include baseHref in the value passed to [routerLink].
+     *
+     * baseHref "/-/" examples:
+     * - "/-/dashboard" -> "/dashboard"
+     * - "/dashboard"   -> "/dashboard"
+     * - "/"            -> "/"
+     */
+    overrideRouterLink(url: string): string;
+    /**
+     * Browser href must include baseHref so "open in new tab" goes to the correct URL.
+     *
+     * baseHref "/-/" examples:
+     * - "/dashboard"   -> "/-/dashboard"
+     * - "/-/dashboard" -> "/-/dashboard"
+     * - "/"            -> "/-/"
+     */
+    overrideHref(url: string): string;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHContent, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHContent, "ih-content", never, {}, { "onSidebarToggled": "onSidebarToggled"; }, never, never, true, never>;
+}
+declare class IHMenu implements OnChanges {
+    menu: IMenu | undefined;
+    selectedMenuId: number | null;
+    filter: string;
+    readonly clicked: EventEmitter<any>;
+    menus: QueryList<IHMenu>;
+    menuItemRef: ElementRef<HTMLElement>;
+    isHidden: boolean;
+    /** only true for the *leaf* menu that matches selectedMenuId */
+    get isSelected(): boolean;
+    ngOnChanges(changes: SimpleChanges): void;
+    indent(level: number): number[];
+    click(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHMenu, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; }, { "clicked": "clicked"; }, never, never, true, never>;
+}
+declare class IHSidebar implements OnInit, OnChanges {
+    private router;
+    user$: Observable<IUser>;
+    menusInput$: Observable<IMenu[]>;
+    visible: boolean;
+    footerText: string;
+    menus$: Observable<IMenu[]>;
+    queryParams: any;
+    menuSearch: FormControl<string | null>;
+    menuFilter: i0.WritableSignal<string>;
+    keyboardNavActive: i0.WritableSignal<boolean>;
+    selectedIndex: i0.WritableSignal<number | null>;
+    selectedMenuId: i0.WritableSignal<number | null>;
+    private navigableMenus;
+    private originalMenus$;
+    get sidebarVisibility(): boolean;
+    ngOnInit(): void;
+    ngOnChanges(changes: SimpleChanges): void;
+    private buildMenusStream;
+    private filterMenuTree;
+    private filterMenuBranch;
+    private updateNavigableMenus;
+    private flattenNavigableMenus;
+    onSearchKeyDown(event: KeyboardEvent): void;
+    private ensureKeyboardNavActive;
+    private moveSelection;
+    private activateSelected;
+    private navigateToMenu;
+    updateUrl(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHSidebar, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; }, {}, never, never, true, never>;
+}
+
+declare const DOCS_ROUTES: IRoutes;
+
 /**
  * IPaginator
  * Version: 1.2.0
@@ -1234,151 +1386,6 @@ declare class IHighlightSearchPipe implements PipeTransform {
     static ɵpipe: i0.ɵɵPipeDeclaration<IHighlightSearchPipe, "highlightSearch", true>;
 }
 
-type IRoute = Omit<Route, 'data' | 'children'> & {
-    data: {
-        title: string;
-        [key: string]: any;
-    };
-    children?: IRoutes;
-};
-type IRoutes = IRoute[];
-type IBreadcrumbItem = {
-    label: string;
-    /**
-     * IMPORTANT (baseHref is "/-/"):
-     * - Recommended: "/dashboard", "/dashboard/reports", "/"
-     * - Also accepted: "/-/dashboard" (will be normalized)
-     */
-    url?: string;
-};
-type IMenu = {
-    menuId: number;
-    menuName: string;
-    route?: string | null;
-    menuTypeId: number;
-    parentId: number;
-    sequence: number;
-    icon?: string | null;
-    child?: IMenu[];
-    level: number;
-    visibility?: string;
-    selected?: boolean;
-    openInId?: number;
-    versionCode?: string;
-    applicationCode?: string;
-    applicationUrl?: string;
-};
-type IUser = {
-    employeeCode: string;
-    fullName: string;
-    userImagePath: string;
-};
-type IHNavigationSnapshot = {
-    fullUrl: string;
-    basePath: string;
-    params: Record<string, any>;
-    query: Record<string, any>;
-};
-declare class IHTitleBreadcrumbService {
-    /**
-     * null = use normal (route-based) title/breadcrumbs
-     * non-null = override (e.g. React remote controls shell display)
-     */
-    readonly titleOverride: i0.WritableSignal<string | null>;
-    readonly breadcrumbsOverride: i0.WritableSignal<IBreadcrumbItem[] | null>;
-    setTitle(title: string | null): void;
-    setBreadcrumbs(items: IBreadcrumbItem[] | null): void;
-    clear(): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IHTitleBreadcrumbService, never>;
-    static ɵprov: i0.ɵɵInjectableDeclaration<IHTitleBreadcrumbService>;
-}
-declare class IHContent {
-    private readonly router;
-    private readonly activatedRoute;
-    private readonly baseHref;
-    readonly shell: IHTitleBreadcrumbService;
-    sidebarVisibility: boolean;
-    readonly onSidebarToggled: EventEmitter<boolean>;
-    /** route-based breadcrumbs */
-    readonly breadcrumb$: Observable<IBreadcrumbItem[]>;
-    /** last breadcrumb label = route-based page title */
-    readonly pageTitle$: Observable<string | null>;
-    private buildBreadcrumb;
-    toggleSidebar(): void;
-    onOverrideBreadcrumbClick(e: MouseEvent): void;
-    private normalizeBaseHref;
-    private normalizePath;
-    /**
-     * RouterLink will prefix baseHref automatically.
-     * So we must NOT include baseHref in the value passed to [routerLink].
-     *
-     * baseHref "/-/" examples:
-     * - "/-/dashboard" -> "/dashboard"
-     * - "/dashboard"   -> "/dashboard"
-     * - "/"            -> "/"
-     */
-    overrideRouterLink(url: string): string;
-    /**
-     * Browser href must include baseHref so "open in new tab" goes to the correct URL.
-     *
-     * baseHref "/-/" examples:
-     * - "/dashboard"   -> "/-/dashboard"
-     * - "/-/dashboard" -> "/-/dashboard"
-     * - "/"            -> "/-/"
-     */
-    overrideHref(url: string): string;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IHContent, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHContent, "ih-content", never, {}, { "onSidebarToggled": "onSidebarToggled"; }, never, never, true, never>;
-}
-declare class IHMenu implements OnChanges {
-    menu: IMenu | undefined;
-    selectedMenuId: number | null;
-    filter: string;
-    readonly clicked: EventEmitter<any>;
-    menus: QueryList<IHMenu>;
-    menuItemRef: ElementRef<HTMLElement>;
-    isHidden: boolean;
-    /** only true for the *leaf* menu that matches selectedMenuId */
-    get isSelected(): boolean;
-    ngOnChanges(changes: SimpleChanges): void;
-    indent(level: number): number[];
-    click(): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IHMenu, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; }, { "clicked": "clicked"; }, never, never, true, never>;
-}
-declare class IHSidebar implements OnInit, OnChanges {
-    private router;
-    user$: Observable<IUser>;
-    menusInput$: Observable<IMenu[]>;
-    visible: boolean;
-    footerText: string;
-    menus$: Observable<IMenu[]>;
-    queryParams: any;
-    menuSearch: FormControl<string | null>;
-    menuFilter: i0.WritableSignal<string>;
-    keyboardNavActive: i0.WritableSignal<boolean>;
-    selectedIndex: i0.WritableSignal<number | null>;
-    selectedMenuId: i0.WritableSignal<number | null>;
-    private navigableMenus;
-    private originalMenus$;
-    get sidebarVisibility(): boolean;
-    ngOnInit(): void;
-    ngOnChanges(changes: SimpleChanges): void;
-    private buildMenusStream;
-    private filterMenuTree;
-    private filterMenuBranch;
-    private updateNavigableMenus;
-    private flattenNavigableMenus;
-    onSearchKeyDown(event: KeyboardEvent): void;
-    private ensureKeyboardNavActive;
-    private moveSelection;
-    private activateSelected;
-    private navigateToMenu;
-    updateUrl(): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IHSidebar, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; }, {}, never, never, true, never>;
-}
-
 type IInputMaskType = 'date' | 'integer' | 'number' | 'currency' | 'time';
 type IInputMask = {
     type: IInputMaskType;
@@ -1781,5 +1788,5 @@ declare class IUI {
     static ɵinj: i0.ɵɵInjectorDeclaration<IUI>;
 }
 
-export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, isControlRequired, resolveControlErrorMessage };
+export { DOCS_ROUTES, IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, IRDocs, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, isControlRequired, resolveControlErrorMessage };
 export type { DialogAction, IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IPaginatorState, IPillSize, IPillVariant, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IUISize, IUIVariant, IUser };
