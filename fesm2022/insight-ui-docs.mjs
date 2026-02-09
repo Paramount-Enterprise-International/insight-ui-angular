@@ -363,23 +363,15 @@ const stylesRoutes = [
 const docsRoutes = [
     {
         path: '',
+        loadComponent: () => import('./insight-ui-docs-docs-BP1HmleD.mjs').then((c) => c.IRDocs),
         data: {
-            title: 'Docs',
+            title: '',
         },
-        children: [
-            {
-                path: '',
-                loadComponent: () => import('./insight-ui-docs-docs-BP1HmleD.mjs').then((c) => c.IRDocs),
-                data: {
-                    title: '',
-                },
-            },
-            ...componentsRoutes,
-            ...demosRoutes,
-            ...guideRoutes,
-            ...stylesRoutes,
-        ],
     },
+    ...componentsRoutes,
+    ...demosRoutes,
+    ...guideRoutes,
+    ...stylesRoutes,
 ];
 
 /**
