@@ -52,7 +52,7 @@ jobs:
           rm -rf node_modules package-lock.json
           npm install
 
-      # 5) Sync library version to tag (build artifact only)
+      # 5) Sync library version to tag (source metadata only; dist will be patched too)
       - name: Sync library version to tag
         shell: bash
         run: |
@@ -62,6 +62,7 @@ jobs:
           jq ".version = \"${VERSION}\"" "projects/${LIB_NAME}/package.json" > "projects/${LIB_NAME}/package.tmp"
           mv "projects/${LIB_NAME}/package.tmp" "projects/${LIB_NAME}/package.json"
 
+          echo "Updated projects/${LIB_NAME}/package.json:"
           cat "projects/${LIB_NAME}/package.json"
 
       # 6) Build Angular library
@@ -69,6 +70,76 @@ jobs:
         shell: bash
         run: |
           npx --yes @angular/cli@20 build "$LIB_NAME" --configuration=production
+
+      # 6.5) Inspect the generated dist package metadata (helps debug NF bundler issues)
+      - name: Inspect built package metadata
+        shell: bash
+        run: |
+          echo "=== dist/${LIB_NAME} tree (top) ==="
+          ls -la "dist/${LIB_NAME}" || true
+          echo
+          echo "=== dist/${LIB_NAME}/package.json ==="
+          cat "dist/${LIB_NAME}/package.json" || true
+          echo
+          echo "=== dist/${LIB_NAME}/fesm2022 (if exists) ==="
+          ls -la "dist/${LIB_NAME}/fesm2022" || true
+
+      # 6.6) Patch dist package.json to be Native-Federation-friendly
+      # - sets version to release tag (guarantees dist metadata matches)
+      # - ensures ESM-first ("type": "module")
+      # - removes wildcard exports ("./*") which often triggers esbuild recursion
+      # - keeps "." and any explicit secondary exports that are NOT wildcards
+      - name: Patch dist package.json for Native Federation
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PKG="dist/${LIB_NAME}/package.json"
+
+          if [ ! -f "$PKG" ]; then
+            echo "ERROR: $PKG not found"
+            exit 1
+          fi
+
+          node - <<'NODE'
+          const fs = require('fs');
+
+          const pkgPath = process.env.PKG_PATH;
+          const version = process.env.VERSION;
+
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+
+          // Ensure dist version matches the release tag
+          pkg.version = version;
+
+          // Ensure it's treated as ESM by tooling (helps esbuild/native federation)
+          pkg.type = 'module';
+
+          // Remove wildcard exports that can cause resolver recursion / stack overflow
+          if (pkg.exports && pkg.exports['./*']) {
+            delete pkg.exports['./*'];
+          }
+
+          // If exports exists, keep "." plus any explicit (non-wildcard) entries
+          if (pkg.exports && typeof pkg.exports === 'object') {
+            const safe = {};
+            if (pkg.exports['.']) safe['.'] = pkg.exports['.'];
+
+            for (const k of Object.keys(pkg.exports)) {
+              if (k === '.') continue;
+              if (k.includes('*')) continue;          // no wildcards
+              safe[k] = pkg.exports[k];               // keep explicit secondaries
+            }
+
+            pkg.exports = safe;
+          }
+
+          fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+          console.log('✅ Patched', pkgPath);
+          console.log(fs.readFileSync(pkgPath, 'utf8'));
+          NODE
+        env:
+          PKG_PATH: dist/${{ env.LIB_NAME }}/package.json
+          VERSION: ${{ steps.version.outputs.version }}
 
       # 7) Stash dist output OUTSIDE the repo (so cleaning can't delete it)
       - name: Stash build artifacts to runner temp
@@ -91,7 +162,7 @@ jobs:
           echo "Artifacts stashed to $ART_DIR:"
           ls -la "$ART_DIR"
 
-      # ✅ 7.5) RESET repo so we can switch branches (fixes your error)
+      # ✅ 7.5) RESET repo so we can switch branches
       - name: Reset workspace to allow branch switch
         shell: bash
         run: |
@@ -139,6 +210,12 @@ jobs:
 
           # Safety: ensure we did not publish source folders
           rm -rf node_modules release-tmp dist projects src || true
+
+          # Safety: make sure package.json exists at root of build branch
+          if [ ! -f "package.json" ]; then
+            echo "ERROR: package.json missing in published artifact root (expected from dist output)."
+            exit 1
+          fi
 
       # 11) Commit & push build branch
       - name: Commit and push build branch
