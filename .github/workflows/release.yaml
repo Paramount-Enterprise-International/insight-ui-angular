@@ -44,7 +44,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # cache: npm
 
       # 4) Install deps
       - name: Install dependencies
@@ -88,18 +87,24 @@ jobs:
             git switch -c "$BUILD_BRANCH"
           fi
 
-      # 9) Replace build branch contents with artifacts
+      # 9) Replace build branch contents with artifacts (tracked + untracked)
       - name: Replace build branch contents with artifacts
+        shell: bash
         run: |
-          # Remove everything tracked in this branch
+          echo "Cleaning build branch workspace..."
+
+          # Remove tracked files
           git rm -rf . || true
 
-          # Copy built files from temp into root
+          # Remove untracked files/dirs (this is what fixes stray src/, release-tmp/, etc.)
+          git clean -fdx
+
+          echo "Copying artifacts into branch root..."
           cp -R release-tmp/* .
 
           # Safety: remove any node_modules if they ended up here
           rm -rf node_modules
-          find . -type d -name "node_modules" -prune -exec rm -rf {} \;
+          find . -type d -name "node_modules" -prune -exec rm -rf {} \; || true
 
           # Optional: remove stray .ts (non-declaration) if any
           find . -type f -name '*.ts' ! -name '*.d.ts' -delete || true
@@ -142,10 +147,6 @@ jobs:
           git push origin latest --force
 
       # 12) Merge release source branch back into main
-      #
-      # This merges the branch you chose when creating the Release
-      # (github.event.release.target_commitish) back into MAIN_BRANCH.
-      # If you always release from main, this will basically be a no-op merge.
       - name: Merge release source branch back into main
         run: |
           SRC_REF="${{ github.event.release.target_commitish }}"
