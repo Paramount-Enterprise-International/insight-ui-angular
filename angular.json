@@ -40,9 +40,7 @@
           "builder": "@angular/build:application",
           "options": {
             "browser": "projects/playground/src/main.ts",
-            "polyfills": [
-              "zone.js"
-            ],
+            "polyfills": ["zone.js"],
             "tsConfig": "projects/playground/tsconfig.app.json",
             "assets": [
               {
@@ -50,9 +48,7 @@
                 "input": "projects/playground/public"
               }
             ],
-            "styles": [
-              "projects/playground/src/styles.css"
-            ]
+            "styles": ["projects/playground/src/styles.css"]
           },
           "configurations": {
             "production": {
@@ -96,10 +92,7 @@
         "test": {
           "builder": "@angular/build:karma",
           "options": {
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ],
+            "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "projects/playground/tsconfig.spec.json",
             "assets": [
               {
@@ -107,94 +100,7 @@
                 "input": "projects/playground/public"
               }
             ],
-            "styles": [
-              "projects/playground/src/styles.css"
-            ]
-          }
-        }
-      }
-    },
-    "docs": {
-      "projectType": "application",
-      "schematics": {},
-      "root": "projects/docs",
-      "sourceRoot": "projects/docs/src",
-      "prefix": "app",
-      "architect": {
-        "build": {
-          "builder": "@angular/build:application",
-          "options": {
-            "browser": "projects/docs/src/main.ts",
-            "polyfills": [
-              "zone.js"
-            ],
-            "tsConfig": "projects/docs/tsconfig.app.json",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "projects/docs/public"
-              }
-            ],
-            "styles": [
-              "projects/docs/src/styles.css"
-            ]
-          },
-          "configurations": {
-            "production": {
-              "budgets": [
-                {
-                  "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "1MB"
-                },
-                {
-                  "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
-                }
-              ],
-              "outputHashing": "all"
-            },
-            "development": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true
-            }
-          },
-          "defaultConfiguration": "production"
-        },
-        "serve": {
-          "builder": "@angular/build:dev-server",
-          "configurations": {
-            "production": {
-              "buildTarget": "docs:build:production"
-            },
-            "development": {
-              "buildTarget": "docs:build:development"
-            }
-          },
-          "defaultConfiguration": "development"
-        },
-        "extract-i18n": {
-          "builder": "@angular/build:extract-i18n"
-        },
-        "test": {
-          "builder": "@angular/build:karma",
-          "options": {
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ],
-            "tsConfig": "projects/docs/tsconfig.spec.json",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "projects/docs/public"
-              }
-            ],
-            "styles": [
-              "projects/docs/src/styles.css"
-            ]
+            "styles": ["projects/playground/src/styles.css"]
           }
         }
       }

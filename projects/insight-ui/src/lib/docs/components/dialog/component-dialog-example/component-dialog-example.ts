@@ -8,7 +8,8 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { IDialogRef, IDialogService, IUI } from '@insight/ui';
+import { IUI } from '../../../../ui';
+import { IDialogRef, IDialogService } from '../../../../dialog';
 
 @Component({
   selector: 'ir-component-dialog-example',

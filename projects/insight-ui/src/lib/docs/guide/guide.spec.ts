@@ -1,18 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Guide } from './guide';
+import { IRGuide } from './guide';
 
-describe('Guide', () => {
-  let component: Guide;
-  let fixture: ComponentFixture<Guide>;
+describe('IRGuide', () => {
+  let component: IRGuide;
+  let fixture: ComponentFixture<IRGuide>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Guide]
-    })
-    .compileComponents();
+      imports: [IRGuide],
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(Guide);
+    fixture = TestBed.createComponent(IRGuide);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

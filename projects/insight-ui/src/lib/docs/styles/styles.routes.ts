@@ -1,4 +1,4 @@
-import { IRoutes } from '@insight/ui';
+import { IRoutes } from '../../host';
 import { utilitiesRoutes } from './utilities/utilities.routes';
 import { variablesRoutes } from './variables/variables.routes';
 

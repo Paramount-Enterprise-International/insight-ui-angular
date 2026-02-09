@@ -8,9 +8,11 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { IDialogRef, IDialogService, ISelectChange, IUI } from '@insight/ui';
 import { of } from 'rxjs';
 import { LocationTable } from './location-table/location-table';
+import { IUI } from '../../../../ui';
+import { IDialogRef, IDialogService } from '../../../../dialog';
+import { ISelectChange } from '../../../../select';
 type RequestData = {
   id: number;
   requestCode: string;
@@ -90,9 +92,7 @@ export class CreateRequest {
   openDialog = (): void => {
     const currentValue = this.locationFormControl.value;
 
-    const selectedNames = currentValue
-      ? currentValue.split(',').map((name) => name.trim())
-      : [];
+    const selectedNames = currentValue ? currentValue.split(',').map((name) => name.trim()) : [];
     const locationDialogRef = this.dialog.open(LocationTable, {
       width: '850px',
       data: selectedNames,
@@ -102,9 +102,7 @@ export class CreateRequest {
       if (result) {
         console.log('Selected array:', result.data.selected);
 
-        const firstItem = result.data.selected
-          .map((x: any) => x.name)
-          .join(', ');
+        const firstItem = result.data.selected.map((x: any) => x.name).join(', ');
         console.log(firstItem, 'firstItem');
         this.locationFormControl.setValue(firstItem);
       }
@@ -137,10 +135,7 @@ export class CreateRequest {
 
       const saveDatatoLocalStorage = [...existingData, createData];
 
-      localStorage.setItem(
-        'request_data',
-        JSON.stringify(saveDatatoLocalStorage)
-      );
+      localStorage.setItem('request_data', JSON.stringify(saveDatatoLocalStorage));
     } catch (error) {
       console.error(error);
     }
@@ -149,9 +144,7 @@ export class CreateRequest {
   private createNewRequest(): RequestData {
     const existingData = this.getExistingDataFromLocalStorage();
     const newId =
-      existingData.length > 0
-        ? Math.max(...existingData.map((item: any) => item.id)) + 1
-        : 1;
+      existingData.length > 0 ? Math.max(...existingData.map((item: any) => item.id)) + 1 : 1;
 
     const requestCode = this.generateRequestCode(existingData.length + 1);
 
@@ -166,10 +159,7 @@ export class CreateRequest {
 
       if (typeof divisionName === 'string') {
         try {
-          if (
-            divisionName.trim().startsWith('{') &&
-            divisionName.trim().endsWith('}')
-          ) {
+          if (divisionName.trim().startsWith('{') && divisionName.trim().endsWith('}')) {
             parsedValue = JSON.parse(divisionName);
             console.log('Parsed JSON:', parsedValue);
           } else {

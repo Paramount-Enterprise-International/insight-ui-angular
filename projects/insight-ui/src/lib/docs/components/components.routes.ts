@@ -1,4 +1,4 @@
-import { IRoutes } from '@insight/ui';
+import { IRoutes } from '../../host';
 
 export const componentsRoutes: IRoutes = [
   {
@@ -30,8 +30,7 @@ export const componentsRoutes: IRoutes = [
       },
       {
         path: 'datepicker',
-        loadComponent: () =>
-          import('./datepicker/datepicker').then((c) => c.Datepicker),
+        loadComponent: () => import('./datepicker/datepicker').then((c) => c.Datepicker),
         data: {
           title: 'Pill',
         },
@@ -66,16 +65,14 @@ export const componentsRoutes: IRoutes = [
       },
       {
         path: 'loading',
-        loadComponent: () =>
-          import('./loading/loading').then((c) => c.IRLoading),
+        loadComponent: () => import('./loading/loading').then((c) => c.IRLoading),
         data: {
           title: 'Loading',
         },
       },
       {
         path: 'section',
-        loadComponent: () =>
-          import('./section/section').then((c) => c.IRSection),
+        loadComponent: () => import('./section/section').then((c) => c.IRSection),
         data: {
           title: 'Section',
         },
@@ -89,8 +86,7 @@ export const componentsRoutes: IRoutes = [
       },
       {
         path: 'textarea',
-        loadComponent: () =>
-          import('./textarea/textarea').then((c) => c.IRTextarea),
+        loadComponent: () => import('./textarea/textarea').then((c) => c.IRTextarea),
         data: {
           title: 'Textarea',
         },

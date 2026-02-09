@@ -7,7 +7,8 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { IAlertService, IUI } from '@insight/ui';
+import { IAlertService } from '../../../dialog';
+import { IUI } from '../../../ui';
 
 @Component({
   selector: 'ir-datepicker',
@@ -31,9 +32,7 @@ export class Datepicker {
 
   onSubmit(): void {
     if (this.basicFormGroup.valid) {
-      this.alert
-        .success('Success', this.description)
-        .subscribe((result) => console.log(result));
+      this.alert.success('Success', this.description).subscribe((result) => console.log(result));
     } else {
       console.log('error');
     }

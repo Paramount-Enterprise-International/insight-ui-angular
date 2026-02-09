@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { IUI } from '@insight/ui';
+import { IUI } from '../../../ui';
 
 @Component({
   selector: 'ir-toggle',
@@ -11,8 +11,9 @@ import { IUI } from '@insight/ui';
 })
 export class Toggle {
   settingsForm: FormGroup;
-  toggleState: boolean = false;
-  ischeck: boolean = true;
+  toggleState = false;
+  ischeck = true;
+
   constructor(private fb: FormBuilder) {
     this.settingsForm = this.fb.group({
       notifications: [true],

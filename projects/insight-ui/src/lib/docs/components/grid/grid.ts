@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
-import { IGridDataSource, IUI } from '@insight/ui';
+import { IUI } from '../../../ui';
+import { IGridDataSource } from '../../../grid';
 
 type TreeNode = {
   id: number;

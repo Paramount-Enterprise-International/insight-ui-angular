@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { IUI } from '@insight/ui';
+import { IUI } from '../../../ui';
 
 @Component({
   selector: 'ir-icon',

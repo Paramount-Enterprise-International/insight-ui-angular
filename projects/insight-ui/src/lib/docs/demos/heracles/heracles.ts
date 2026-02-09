@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { IGridDataSource, IUI } from '@insight/ui';
+import { IUI } from '../../../ui';
 
 export interface Request {
   requestNo: string;
@@ -16,7 +16,9 @@ export interface Request {
   requestDetails: RequestDetail[];
 }
 
-export interface RequestDetail {}
+export interface RequestDetail {
+  id: any;
+}
 
 @Component({
   selector: 'ir-heracles',
