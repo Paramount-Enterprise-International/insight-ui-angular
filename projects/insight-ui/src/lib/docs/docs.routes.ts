@@ -7,21 +7,13 @@ import { stylesRoutes } from './styles/styles.routes';
 export const docsRoutes: IRoutes = [
   {
     path: '',
+    loadComponent: () => import('./docs').then((c) => c.IRDocs),
     data: {
-      title: 'Docs',
+      title: '',
     },
-    children: [
-      {
-        path: '',
-        loadComponent: () => import('./docs').then((c) => c.IRDocs),
-        data: {
-          title: '',
-        },
-      },
-      ...componentsRoutes,
-      ...demosRoutes,
-      ...guideRoutes,
-      ...stylesRoutes,
-    ],
   },
+  ...componentsRoutes,
+  ...demosRoutes,
+  ...guideRoutes,
+  ...stylesRoutes,
 ];
