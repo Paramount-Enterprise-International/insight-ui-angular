@@ -2,15 +2,15 @@ name: Build & Publish @insight/ui from Release Tag
 
 on:
   release:
-    types: [published]
+    types: [published] # Only when YOU publish a Release in GitHub UI
 
 env:
-  LIB_NAME: insight-ui
-  BUILD_BRANCH: build
-  MAIN_BRANCH: main
+  LIB_NAME: insight-ui # Angular project name: projects/insight-ui
+  BUILD_BRANCH: build # Branch that will hold the built package
+  MAIN_BRANCH: main # Branch to merge the release source back into
 
 permissions:
-  contents: write
+  contents: write # Needed to push branches & tags
 
 jobs:
   release-build:
@@ -21,10 +21,10 @@ jobs:
       - name: Checkout source at tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name }} # e.g. "1.13.0"
           fetch-depth: 0
 
-      # 2) Extract version from tag (tag == version)
+      # 2) Extract version from tag (tag == version, e.g. "1.13.0")
       - name: Extract version from tag
         id: version
         shell: bash
@@ -32,6 +32,7 @@ jobs:
           TAG="${{ github.event.release.tag_name }}"
           echo "Tag from release: $TAG"
 
+          # Basic semver-ish validation
           if [[ ! "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Tag '$TAG' does not look like x.y.z (e.g. 1.0.2)."
             exit 1
@@ -72,32 +73,39 @@ jobs:
           echo "Built dist/${LIB_NAME}:"
           ls -la "dist/${LIB_NAME}"
 
-      # 7) Checkout / create the build branch
+      # 7) Stash build artifacts OUTSIDE the repo (survives branch switches + git clean)
+      - name: Stash build artifacts
+        shell: bash
+        run: |
+          ART_DIR="/tmp/${LIB_NAME}-artifacts"
+          rm -rf "$ART_DIR"
+          mkdir -p "$ART_DIR"
+          cp -R "dist/${LIB_NAME}/." "$ART_DIR/"
+          echo "Artifacts stashed at $ART_DIR:"
+          ls -la "$ART_DIR"
+
+      # 8) Checkout / create the build branch
       - name: Checkout or create build branch
         shell: bash
         run: |
           git fetch origin "$BUILD_BRANCH" || true
-
           if git show-ref --quiet "refs/heads/$BUILD_BRANCH"; then
             git switch "$BUILD_BRANCH"
           else
             git switch -c "$BUILD_BRANCH"
           fi
 
-      # 8) Replace build branch contents with artifacts (tracked + untracked)
+      # 9) Replace build branch contents with artifacts
       - name: Replace build branch contents with artifacts
         shell: bash
         run: |
           echo "Cleaning build branch workspace..."
-
-          # Remove tracked files
           git rm -rf . || true
-
-          # Remove untracked files/dirs (IMPORTANT: removes old build leftovers)
           git clean -fdx
 
-          echo "Copying artifacts from dist/${LIB_NAME} into branch root..."
-          cp -R "../dist/${LIB_NAME}/." .
+          ART_DIR="/tmp/${LIB_NAME}-artifacts"
+          echo "Copying artifacts from $ART_DIR into branch root..."
+          cp -R "$ART_DIR/." .
 
           # Safety: remove any node_modules if they ended up here
           rm -rf node_modules
@@ -109,7 +117,7 @@ jobs:
           echo "Resulting tree on $BUILD_BRANCH:"
           ls -la
 
-      # 9) Commit & push build branch
+      # 10) Commit & push build branch
       - name: Commit and push build branch
         shell: bash
         run: |
@@ -126,23 +134,30 @@ jobs:
             git push origin "$BUILD_BRANCH" --force
           fi
 
-      # 10) Move version tag + latest to this build commit
+      # 11) Move version tag + latest to this build commit
       - name: Update tags to point at built artifacts
         shell: bash
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           echo "Moving tag '${VERSION}' to current build on branch ${BUILD_BRANCH}"
 
+          # Ensure we have all tags
           git fetch --tags origin
 
+          # Move the version tag to this commit
           git tag -f "$VERSION"
           git push origin "$VERSION" --force
 
+          # Optional: maintain a moving 'latest' tag as well
           echo "Updating 'latest' tag"
           git tag -f latest
           git push origin latest --force
 
-      # 11) Merge release source branch back into main
+      # 12) Merge release source branch back into main
+      #
+      # This merges the branch you chose when creating the Release
+      # (github.event.release.target_commitish) back into MAIN_BRANCH.
+      # If you always release from main, this will basically be a no-op merge.
       - name: Merge release source branch back into main
         shell: bash
         run: |
@@ -152,13 +167,16 @@ jobs:
           echo "Release target_commitish: $SRC_REF"
           echo "Main branch: $MAIN_BRANCH"
 
+          # If the release was created from main itself, skip merge
           if [ "$SRC_REF" = "$MAIN_BRANCH" ]; then
             echo "Release source is already '$MAIN_BRANCH'. Nothing to merge."
             exit 0
           fi
 
+          # Fetch main and the source ref (branch or commit)
           git fetch origin "$MAIN_BRANCH"
 
+          # Try to fetch source ref as branch; if it fails, assume it's a commit SHA
           if git ls-remote --exit-code origin "$SRC_REF" >/dev/null 2>&1; then
             echo "Fetching source branch '$SRC_REF' from origin"
             git fetch origin "$SRC_REF":"$SRC_REF"
@@ -166,13 +184,16 @@ jobs:
             echo "'$SRC_REF' does not look like a remote branch, treating as commit/sha"
           fi
 
+          # Checkout / create local main tracking branch
           if git show-ref --quiet "refs/heads/$MAIN_BRANCH"; then
             git switch "$MAIN_BRANCH"
           else
             git switch -c "$MAIN_BRANCH" "origin/$MAIN_BRANCH"
           fi
 
+          # Merge the release source into main
           echo "Merging '$SRC_REF' into '$MAIN_BRANCH'"
           git merge --no-ff "$SRC_REF" -m "chore: merge release $SRC_REF into $MAIN_BRANCH"
 
+          # Push updated main
           git push origin "$MAIN_BRANCH"
