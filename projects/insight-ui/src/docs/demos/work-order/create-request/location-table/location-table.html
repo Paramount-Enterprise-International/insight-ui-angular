@@ -1,0 +1,17 @@
+<i-dialog title="Create Request" (onSave)="onSave()">
+  <i-section>
+    <i-section-body class="p-0">
+      <i-grid
+        class="p-0"
+        selectionMode="multiple"
+        [dataSource]="treeData"
+        [showNumberColumn]="true"
+        [tree]="'children'"
+        [treeInitialExpandLevel]="2"
+        (selectionChange)="onSelectionChange($event)"
+      >
+        <i-grid-column fieldName="name" label="Name" width="fill" [freeze]="true" />
+      </i-grid>
+    </i-section-body>
+  </i-section>
+</i-dialog>

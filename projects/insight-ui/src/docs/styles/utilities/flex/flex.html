@@ -1,0 +1,559 @@
+<i-section>
+  <i-section-body>
+    <div class="flex flex-col gap-md">
+      <h1>Flex</h1>
+      <p>
+        Utilities for building flexible layouts with CSS Flexbox. Use <code>.flex</code> or
+        <code>.inline-flex</code> to create a container, then combine direction, wrap, alignment,
+        gap, grow/shrink, and basis helpers to control the layout.
+      </p>
+      <br />
+      <h3>Display</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Styles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>flex</code></td>
+            <td>
+              <code>--i-flex-direction: row;</code><br />
+              <code>--i-flex-wrap: nowrap;</code><br />
+              <code>--i-align-content: stretch;</code><br />
+              <code>--i-justify-content: flex-start;</code><br />
+              <code>--i-align-items: stretch;</code><br />
+              <code>--i-gap: 0;</code><br />
+              <code>display: flex;</code><br />
+              <code>flex-direction: var(--i-flex-direction);</code><br />
+              <code>flex-wrap: var(--i-flex-wrap);</code><br />
+              <code>align-content: var(--i-align-content);</code><br />
+              <code>justify-content: var(--i-justify-content);</code><br />
+              <code>align-items: var(--i-align-items);</code><br />
+              <code>gap: var(--i-gap);</code><br />
+              <code>column-gap: var(--i-col-gap, var(--i-gap, 0));</code><br />
+              <code>row-gap: var(--i-row-gap, var(--i-gap, 0));</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>inline-flex</code></td>
+            <td>
+              <code>--i-flex-direction: row;</code><br />
+              <code>--i-flex-wrap: nowrap;</code><br />
+              <code>--i-align-content: stretch;</code><br />
+              <code>--i-justify-content: flex-start;</code><br />
+              <code>--i-align-items: stretch;</code><br />
+              <code>--i-gap: 0;</code><br />
+              <code>display: inline-flex;</code><br />
+              <code>flex-direction: var(--i-flex-direction);</code><br />
+              <code>flex-wrap: var(--i-flex-wrap);</code><br />
+              <code>justify-content: var(--i-justify-content);</code><br />
+              <code>align-items: var(--i-align-items);</code><br />
+              <code>gap: var(--i-gap);</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h3>Direction</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Styles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>flex-row</code></td>
+            <td>
+              <code>--i-flex-direction: row;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>flex-row-reverse</code></td>
+            <td>
+              <code>--i-flex-direction: row-reverse;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>flex-col</code></td>
+            <td>
+              <code>--i-flex-direction: column;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>flex-col-reverse</code></td>
+            <td>
+              <code>--i-flex-direction: column-reverse;</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h3>Wrap</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Styles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>flex-nowrap</code></td>
+            <td>
+              <code>--i-flex-wrap: nowrap;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>flex-wrap</code></td>
+            <td>
+              <code>--i-flex-wrap: wrap;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>flex-wrap-reverse</code></td>
+            <td>
+              <code>--i-flex-wrap: wrap-reverse;</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h3>Align Items</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Styles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>align-start</code></td>
+            <td>
+              <code>--i-align-items: flex-start;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>align-center</code></td>
+            <td>
+              <code>--i-align-items: center;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>align-end</code></td>
+            <td>
+              <code>--i-align-items: flex-end;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>align-stretch</code></td>
+            <td>
+              <code>--i-align-items: stretch;</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h3>Justify Content</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Styles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>justify-start</code></td>
+            <td>
+              <code>--i-justify-content: flex-start;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>justify-end</code></td>
+            <td>
+              <code>--i-justify-content: flex-end;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>justify-end-safe</code></td>
+            <td>
+              <code>--i-justify-content: safe flex-end;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>justify-center</code></td>
+            <td>
+              <code>--i-justify-content: center;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>justify-center-safe</code></td>
+            <td>
+              <code>--i-justify-content: safe center;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>justify-between</code></td>
+            <td>
+              <code>--i-justify-content: space-between;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>justify-around</code></td>
+            <td>
+              <code>--i-justify-content: space-around;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>justify-evenly</code></td>
+            <td>
+              <code>--i-justify-content: space-evenly;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>justify-stretch</code></td>
+            <td>
+              <code>--i-justify-content: stretch;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>justify-baseline</code></td>
+            <td>
+              <code>--i-justify-content: baseline;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>justify-normal</code></td>
+            <td>
+              <code>--i-justify-content: normal;</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h3>Gap</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Styles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>gap-2xs</code></td>
+            <td>
+              <code>--i-gap: var(--i-gap-2xs);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-xs</code></td>
+            <td>
+              <code>--i-gap: var(--i-gap-xs);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-sm</code></td>
+            <td>
+              <code>--i-gap: var(--i-gap-sm);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-md</code></td>
+            <td>
+              <code>--i-gap: var(--i-gap-md);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-lg</code></td>
+            <td>
+              <code>--i-gap: var(--i-gap-lg);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-xl</code></td>
+            <td>
+              <code>--i-gap: var(--i-gap-xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-2xl</code></td>
+            <td>
+              <code>--i-gap: var(--i-gap-2xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-3xl</code></td>
+            <td>
+              <code>--i-gap: var(--i-gap-3xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-4xl</code></td>
+            <td>
+              <code>--i-gap: var(--i-gap-4xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-5xl</code></td>
+            <td>
+              <code>--i-gap: var(--i-gap-5xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-6xl</code></td>
+            <td>
+              <code>--i-gap: var(--i-gap-6xl);</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h3>Column Gap</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Styles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>gap-2xs</code></td>
+            <td>
+              <code>--i-col-gap: var(--i-gap-2xs);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-xs</code></td>
+            <td>
+              <code>--i-col-gap: var(--i-gap-xs);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-sm</code></td>
+            <td>
+              <code>--i-col-gap: var(--i-gap-sm);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-md</code></td>
+            <td>
+              <code>--i-col-gap: var(--i-gap-md);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-lg</code></td>
+            <td>
+              <code>--i-col-gap: var(--i-gap-lg);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-xl</code></td>
+            <td>
+              <code>--i-col-gap: var(--i-gap-xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-2xl</code></td>
+            <td>
+              <code>--i-col-gap: var(--i-gap-2xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-3xl</code></td>
+            <td>
+              <code>--i-col-gap: var(--i-gap-3xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-4xl</code></td>
+            <td>
+              <code>--i-col-gap: var(--i-gap-4xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-5xl</code></td>
+            <td>
+              <code>--i-col-gap: var(--i-gap-5xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-6xl</code></td>
+            <td>
+              <code>--i-col-gap: var(--i-gap-6xl);</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h3>Row Gap</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Styles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>gap-2xs</code></td>
+            <td>
+              <code>--i-row-gap: var(--i-gap-2xs);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-xs</code></td>
+            <td>
+              <code>--i-row-gap: var(--i-gap-xs);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-sm</code></td>
+            <td>
+              <code>--i-row-gap: var(--i-gap-sm);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-md</code></td>
+            <td>
+              <code>--i-row-gap: var(--i-gap-md);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-lg</code></td>
+            <td>
+              <code>--i-row-gap: var(--i-gap-lg);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-xl</code></td>
+            <td>
+              <code>--i-row-gap: var(--i-gap-xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-2xl</code></td>
+            <td>
+              <code>--i-row-gap: var(--i-gap-2xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-3xl</code></td>
+            <td>
+              <code>--i-row-gap: var(--i-gap-3xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-4xl</code></td>
+            <td>
+              <code>--i-row-gap: var(--i-gap-4xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-5xl</code></td>
+            <td>
+              <code>--i-row-gap: var(--i-gap-5xl);</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>gap-6xl</code></td>
+            <td>
+              <code>--i-row-gap: var(--i-gap-6xl);</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h3>Flex Items</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Styles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>flex-fill</code></td>
+            <td>
+              <code>flex: 1 1 0%;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>flex-auto</code></td>
+            <td>
+              <code>flex: 1 1 auto;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>flex-initial</code></td>
+            <td>
+              <code>flex: 0 1 auto;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>flex-none</code></td>
+            <td>
+              <code>flex: 0 0 auto;</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h3>Grow / Shrink / Basis</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Styles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>grow</code></td>
+            <td>
+              <code>flex-grow: 1;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>grow-0</code></td>
+            <td>
+              <code>flex-grow: 0;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>shrink</code></td>
+            <td>
+              <code>flex-shrink: 1;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>shrink-0</code></td>
+            <td>
+              <code>flex-shrink: 0;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>basis-auto</code></td>
+            <td>
+              <code>flex-basis: auto;</code>
+            </td>
+          </tr>
+          <tr>
+            <td><code>basis-0</code></td>
+            <td>
+              <code>flex-basis: 0%;</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </i-section-body>
+</i-section>

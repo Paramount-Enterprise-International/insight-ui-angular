@@ -1,0 +1,294 @@
+# Datepicker Component Documentation
+
+<i-section>
+  <i-section-body>
+    <div class="flex flex-col gap-md">
+      <h1>Datepicker</h1>
+      <div><code>i-datepicker</code> & <code>i-fc-datepicker</code></div>
+      <p>
+        The Datepicker component system provides a comprehensive date selection
+        solution with two main components:
+        <code>i-datepicker</code> for core date selection and
+        <code>i-fc-datepicker</code> for form-controlled usage with label and
+        error handling. Both components support Angular Forms integration via
+        ControlValueAccessor.
+      </p>
+      <br />
+      <h2>Components Overview</h2>
+      <p>The Datepicker system consists of these components:</p>
+      <ul>
+        <li>
+          <code>i-datepicker</code> - Core datepicker component with calendar
+          popup
+        </li>
+        <li>
+          <code>i-fc-datepicker</code> - Form-controlled wrapper with label and
+          error handling
+        </li>
+      </ul>
+      <br />
+      <h2>Component Properties</h2>
+      <h3>i-datepicker Properties</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Default Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>placeholder</code></td>
+            <td><code>string</code></td>
+            <td>Optional</td>
+            <td><code>''</code></td>
+            <td>Input placeholder text</td>
+          </tr>
+          <tr>
+            <td><code>disabled</code></td>
+            <td><code>boolean</code></td>
+            <td>Optional</td>
+            <td><code>false</code></td>
+            <td>Disables the datepicker interaction</td>
+          </tr>
+          <tr>
+            <td><code>invalid</code></td>
+            <td><code>boolean</code></td>
+            <td>Optional</td>
+            <td><code>false</code></td>
+            <td>Visual invalid state</td>
+          </tr>
+          <tr>
+            <td><code>format</code></td>
+            <td><code>string</code></td>
+            <td>Optional</td>
+            <td><code>'dd/MM/yyyy'</code></td>
+            <td>Date display format (supports yyyy, MM, dd tokens)</td>
+          </tr>
+          <tr>
+            <td><code>panelPosition</code></td>
+            <td><code>IDatepickerPanelPosition</code></td>
+            <td>Optional</td>
+            <td><code>'bottom left'</code></td>
+            <td>Calendar popup position relative to input</td>
+          </tr>
+          <tr>
+            <td><code>value</code></td>
+            <td><code>Date | string | null</code></td>
+            <td>Optional</td>
+            <td><code>null</code></td>
+            <td>Current date value (accepts Date object or string)</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h3>i-fc-datepicker Properties</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Required</th>
+            <th>Default Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>label</code></td>
+            <td><code>string</code></td>
+            <td>Optional</td>
+            <td><code>''</code></td>
+            <td>Form control label</td>
+          </tr>
+          <tr>
+            <td><code>placeholder</code></td>
+            <td><code>string</code></td>
+            <td>Optional</td>
+            <td><code>''</code></td>
+            <td>Input placeholder text</td>
+          </tr>
+          <tr>
+            <td><code>format</code></td>
+            <td><code>string</code></td>
+            <td>Optional</td>
+            <td><code>'dd/MM/yyyy'</code></td>
+            <td>Date display format</td>
+          </tr>
+          <tr>
+            <td><code>panelPosition</code></td>
+            <td><code>IDatepickerPanelPosition</code></td>
+            <td>Optional</td>
+            <td><code>'bottom left'</code></td>
+            <td>Calendar popup position</td>
+          </tr>
+          <tr>
+            <td><code>errorMessage</code></td>
+            <td><code>IFormControlErrorMessage</code></td>
+            <td>Optional</td>
+            <td><code>undefined</code></td>
+            <td>Custom error messages for validation</td>
+          </tr>
+          <tr>
+            <td><code>value</code></td>
+            <td><code>Date | null</code></td>
+            <td>Optional</td>
+            <td><code>null</code></td>
+            <td>Current date value</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h2>Events</h2>
+      <h3>i-datepicker Events</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>onChanged</code></td>
+            <td><code>EventEmitter&lt;Date | null&gt;</code></td>
+            <td>Emitted when date value changes</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h2>Type Definitions</h2>
+      <h3>IDatepickerPanelPosition</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>'top'</code></td>
+            <td>Calendar appears above input</td>
+          </tr>
+          <tr>
+            <td><code>'bottom'</code></td>
+            <td>Calendar appears below input</td>
+          </tr>
+          <tr>
+            <td><code>'left'</code></td>
+            <td>Calendar appears to the left of input</td>
+          </tr>
+          <tr>
+            <td><code>'right'</code></td>
+            <td>Calendar appears to the right of input</td>
+          </tr>
+          <tr>
+            <td><code>'top left'</code></td>
+            <td>Calendar appears above and aligned left</td>
+          </tr>
+          <tr>
+            <td><code>'top right'</code></td>
+            <td>Calendar appears above and aligned right</td>
+          </tr>
+          <tr>
+            <td><code>'bottom left'</code></td>
+            <td>Calendar appears below and aligned left</td>
+          </tr>
+          <tr>
+            <td><code>'bottom right'</code></td>
+            <td>Calendar appears below and aligned right</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+      <h3>Date Format Tokens</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Description</th>
+            <th>Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>yyyy</code></td>
+            <td>4-digit year</td>
+            <td>2024</td>
+          </tr>
+          <tr>
+            <td><code>MM</code></td>
+            <td>2-digit month (01-12)</td>
+            <td>01, 12</td>
+          </tr>
+          <tr>
+            <td><code>dd</code></td>
+            <td>2-digit day (01-31)</td>
+            <td>01, 31</td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
+
+      <h2>Examples</h2>
+      <p>Basic Datepicker Usage</p>
+      <i-section>
+        <i-section-tabs height="350">
+          <i-section-tab title="Preview">
+            <div
+              class="flex flex-col gap-4 p-6 justify-center align-center h-full">
+              <i-datepicker class="" label="Request Date From" />
+            </div>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="docs/basic-datepicker.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="docs/basic-datepicker.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+      <p>Form-controlled Datepicker with Validation</p>
+      <i-section>
+        <i-section-tabs height="350">
+          <i-section-tab title="Preview">
+            <form
+              class="flex gap-md flex-fill align-end"
+              [formGroup]="basicFormGroup"
+              (ngSubmit)="onSubmit()">
+              <i-fc-datepicker
+                class="w-full"
+                formControlName="dateFromControl"
+                label="Request Date From a" />
+              <!-- <i-fc-datepicker
+                class="w-full"
+                formControlName="dateFromControl"
+                label="Request Date From"
+                [value]="null"
+              /> -->
+              <i-fc-datepicker
+                class="w-full"
+                formControlName="dateToControl"
+                label="Request Date To"
+                [value]="null" />
+              <i-button icon="fa-solid fa-magnifying-glass" type="submit" />
+            </form>
+          </i-section-tab>
+          <i-section-tab title="HTML">
+            <i-code-viewer class="h-full" file="docs/fc-datepicker.html" />
+          </i-section-tab>
+          <i-section-tab title="Typescript">
+            <i-code-viewer class="h-full" file="docs/fc-datepicker.ts" />
+          </i-section-tab>
+        </i-section-tabs>
+      </i-section>
+      <br />
+    </div>
+  </i-section-body>
+</i-section>

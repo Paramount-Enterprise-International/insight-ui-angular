@@ -1,0 +1,93 @@
+.border-rouded-lg {
+    border-radius: var(--i-radius-lg);
+}
+.bg-blue-100{
+    background-color: var(--i-color-blue-100);
+}
+.bg-amber-100{
+    background-color: var(--i-color-amber-100);
+}
+.bg-green-100{
+    background-color: var(--i-color-green-100);
+}
+.bg-red-100{
+    background-color: var(--i-color-red-100);
+}
+
+.border-rouded-sm {
+    border-radius: var(--i-radius-sm);
+}
+.status-wrapper {
+  position: relative;
+  display: inline-block;
+  
+  /* Enable hover untuk tooltip */
+  &:hover .tooltip-right {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+.status-badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #fbbf24;
+  border-radius: 0.5rem;
+  width: 2.75rem;
+  background-color: #fef3c7;
+  cursor: help;
+  
+  span {
+    color: #d97706;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+}
+
+/* TOOLTIP DI KANAN - PAKAI ABSOLUTE DULU */
+.tooltip-right {
+  position: absolute; /* Tetap absolute untuk positioning relatif */
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%) translateX(-10px);
+  margin-left: 0.5rem;
+  
+  /* CRITICAL: Force tooltip ke layer terpisah */
+  z-index: 999999 !important;
+  
+  /* Hidden state */
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Pastikan tooltip tidak terpotong */
+  pointer-events: none;
+  
+  .tooltip-content {
+    background: #000000; /* Warna solid */
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+    position: relative;
+    
+    /* Shadow untuk kontras */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+    
+    /* Arrow kiri */
+    &::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: 100%; /* Arrow di sebelah kiri tooltip */
+      transform: translateY(-50%);
+      border: 6px solid transparent;
+      border-right-color: #000000;
+    }
+  }
+}

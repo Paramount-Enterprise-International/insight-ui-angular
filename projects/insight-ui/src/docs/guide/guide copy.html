@@ -1,0 +1,470 @@
+<i-section>
+  <i-section-body>
+    UI Components
+    <div class="flex flex-wrap">
+      <i-card>
+        <h1>Button</h1>
+      </i-card>
+      <i-card>
+        <h1>Input</h1>
+      </i-card>
+      <i-card>
+        <h1>Icon</h1>
+      </i-card>
+    </div>
+  </i-section-body>
+</i-section>
+<i-section>
+  <i-section-filter>
+    <i-input label="Testing" />
+    <i-button>Testing</i-button>
+    <a class="i-btn i-btn-xs i-btn-danger" href="https://insight.paramount-land.com" target="_blank"
+      >Testing Anchor</a
+    >
+    <form
+      class="d-flex gap-2 w-full align-items-start"
+      [formGroup]="formGroup"
+      (ngSubmit)="submit()"
+    >
+      <i-fc-input
+        class="w-120"
+        formControlName="test1"
+        label="Test 1"
+        placeholder="Ini placeholder"
+        [errorMessage]="{
+          required: '{label} is cuwax',
+        }"
+      />
+      <i-fc-textarea class="w-160" formControlName="test2" label="Test 2" />
+      <!-- <i-fc-select
+        label="Select"
+        formControlName="test3"
+        [value]="{ userId: 1, userName: 'Dylan', employeeCode: 'PL1378' }"
+        [options$]="rows$" /> -->
+      <!-- <i-fc-input
+        class="w-fill"
+        formControlName="test4"
+        label="Test 4"
+        [prepend]="[
+          {
+            type: 'button',
+            icon: 'fa-solid fa-pen',
+            variant: 'info',
+            onClick: test4Click1,
+          },
+          {
+            type: 'button',
+            icon: 'fa-solid fa-pen',
+            variant: 'success',
+            onClick: test4Click2,
+          },
+        ]" /> -->
+      <i-button icon="save" type="submit">Submit</i-button>
+    </form>
+  </i-section-filter>
+  <i-section-filter>
+    <i-input
+      class="w-fill"
+      label="Testing"
+      placeholder="Testing Placeholder"
+      [append]="{
+        type: 'button',
+        icon: 'fa-solid fa-pen',
+        onClick: test2Click,
+      }"
+    />
+    <i-input
+      class="w-fill"
+      label="Testing"
+      placeholder="Testing Placeholder"
+      [append]="{
+        type: 'link',
+        icon: 'fa-solid fa-pen',
+        href: 'https://insight.paramount-land.com',
+      }"
+    />
+    <i-input
+      label="Testing"
+      placeholder="Testing Placeholder"
+      [append]="{
+        type: 'text',
+        text: 'm2',
+      }"
+    />
+    <i-input
+      class="w-fill"
+      label="Testing"
+      placeholder="Testing Placeholder"
+      [append]="[
+        {
+          type: 'button',
+          icon: 'fa-solid fa-pen',
+          variant: 'danger',
+          onClick: test3Click1,
+        },
+        {
+          type: 'button',
+          icon: 'angle-down',
+          onClick: test3Click2,
+        },
+      ]"
+    />
+  </i-section-filter>
+  <!-- <i-section-filter>
+    <i-textarea placeholder="Testing Textarea"></i-textarea>
+    <i-input [mask]="{ type: 'date', format: 'dd/MM/yyyy' }"></i-input>
+    <i-input [mask]="{ type: 'time', format: 'HH:mm:ss' }"></i-input>
+    <i-select
+      class="w-120"
+      [options$]="rows$"
+      displayWith="userName"
+      (onOptionSelected)="onOptionSelected($event)">
+      <ng-container *iSelectOption="let row">
+        <h6 class="mb-0">{{ row.userName }}</h6>
+        <small class="text-muted">{{ row.varemployeeCodeiable3 }}</small>
+      </ng-container>
+    </i-select>
+    <i-select [options]="rows" (onOptionSelected)="onOptionSelected($event)">
+      <ng-container *iSelectOption="let row">
+        <h6 class="mb-0">{{ row.userName }}</h6>
+        <small class="text-muted">{{ row.employeeCode }}</small>
+      </ng-container>
+    </i-select>
+    <i-select
+      #userSelect
+      label="Select"
+      [options$]="rows$"
+      (onOptionSelected)="onOptionSelected($event)">
+      <ng-container *iSelectOption="let row">
+        <h6
+          class="mb-0"
+          [innerHTML]="
+            row.userName | highlightSearch: userSelect.filterText
+          "></h6>
+        <small
+          class="text-muted"
+          [innerHTML]="
+            row.employeeCode | highlightSearch: userSelect.filterText
+          "></small>
+      </ng-container>
+    </i-select>
+    <i-select
+      label="Select"
+      [value]="{ userId: 1, userName: 'Dylan', employeeCode: 'PL1378' }"
+      [options$]="rows$"
+      (onOptionSelected)="onOptionSelected($event)"></i-select>
+
+    <i-datepicker />
+  </i-section-filter> -->
+  <i-section-body class="flex gap-md">
+    <!-- <i-textarea
+      [rows]="5"
+      label="Text Area"
+      value="testing textarea value"
+      placeholder="insert your content here.."></i-textarea>
+    <i-select
+      label="Select"
+      [options$]="rows$"
+      displayWith="userName"
+      (onOptionSelected)="onOptionSelected($event)">
+      <ng-container *iSelectOption="let row">
+        <h6 class="mb-0">{{ row.userName }}</h6>
+        <small class="text-muted">{{ row.varemployeeCodeiable3 }}</small>
+      </ng-container>
+    </i-select>
+    <i-select [options$]="rows$" (onOptionSelected)="onOptionSelected($event)">
+      <ng-container *iSelectOption="let row">
+        <h6 class="mb-0">{{ row.userName }}</h6>
+        <small class="text-muted">{{ row.employeeCode }}</small>
+      </ng-container>
+    </i-select>
+    <i-select
+      #userSelect
+      label="Select"
+      [options$]="rows$"
+      (onOptionSelected)="onOptionSelected($event)">
+      <ng-container *iSelectOption="let row">
+        <h6
+          class="mb-0"
+          [innerHTML]="
+            row.userName | highlightSearch: userSelect.filterText
+          "></h6>
+        <small
+          class="text-muted"
+          [innerHTML]="
+            row.employeeCode | highlightSearch: userSelect.filterText
+          "></small>
+      </ng-container>
+    </i-select>
+    <i-select
+      label="Select"
+      [value]="{ userId: 1, userName: 'Dylan', employeeCode: 'PL1378' }"
+      [options$]="rows$"
+      (onOptionSelected)="onOptionSelected($event)"></i-select> -->
+  </i-section-body>
+  <i-section-body class="flex gap-md">
+    <!-- <i-input
+      type="date"
+      label="Birth date"
+      placeholder="Select date.."
+      format="dd MMM yyyy">
+    </i-input> -->
+  </i-section-body>
+  <i-section-body class="flex gap-md">
+    <i-button class="w-fill" (onClick)="buttonPrimaryClick()">Button Primary</i-button>
+    <i-button class="w-fill" variant="success" (onClick)="buttonSuccessClick()"
+      >Button Success</i-button
+    >
+    <i-button class="w-fill" variant="warning" (onClick)="buttonWarningClick()"
+      >Button Warning</i-button
+    >
+    <i-button class="w-fill" variant="danger" (onClick)="buttonDangerClick()"
+      >Button Danger</i-button
+    >
+    <i-button class="w-fill" variant="outline" (onClick)="buttonDangerClick()"
+      >Button Danger</i-button
+    >
+  </i-section-body>
+  <i-section-body class="flex gap-md">
+    <i-button icon="save" size="xs" (onClick)="buttonPrimaryClick()" />
+    <i-button icon="save" size="sm" (onClick)="buttonPrimaryClick()" />
+    <i-button icon="save" size="md" (onClick)="buttonPrimaryClick()" />
+    <i-button icon="save" size="lg" (onClick)="buttonPrimaryClick()" />
+    <i-button icon="save" size="xs" (onClick)="buttonPrimaryClick()">Button XS</i-button>
+    <i-button icon="save" size="sm" (onClick)="buttonPrimaryClick()">Button SM</i-button>
+    <i-button icon="save" size="md" (onClick)="buttonPrimaryClick()">Button MD</i-button>
+    <i-button icon="save" size="lg" (onClick)="buttonPrimaryClick()">Button LG</i-button>
+  </i-section-body>
+  <i-section-body class="flex gap-md">
+    <i-button
+      class="w-fill"
+      [loading]="true"
+      loadingText="Button Primary"
+      (onClick)="buttonPrimaryClick()"
+      >Button Primary</i-button
+    >
+    <i-button
+      class="w-fill"
+      variant="success"
+      [loading]="true"
+      loadingText="Button Success"
+      (onClick)="buttonSuccessClick()"
+      >Button Success</i-button
+    >
+    <i-button
+      class="w-fill"
+      variant="warning"
+      [loading]="true"
+      loadingText="Button Warning"
+      (onClick)="buttonWarningClick()"
+      >Button Warning</i-button
+    >
+    <i-button
+      class="w-fill"
+      variant="danger"
+      [loading]="true"
+      loadingText="Button Danger"
+      (onClick)="buttonDangerClick()"
+      >Button Danger</i-button
+    >
+    <i-button
+      class="w-fill"
+      variant="outline"
+      [loading]="true"
+      loadingText="Button Outline"
+      (onClick)="buttonDangerClick()"
+      >Button Outline</i-button
+    >
+  </i-section-body>
+  <i-section-body class="flex gap-md">
+    <i-button class="w-fill" [disabled]="true" (onClick)="buttonPrimaryClick()"
+      >Button Primary</i-button
+    >
+    <i-button class="w-fill" [disabled]="true" variant="success" (onClick)="buttonSuccessClick()"
+      >Button Success</i-button
+    >
+    <i-button class="w-fill" [disabled]="true" variant="warning" (onClick)="buttonWarningClick()"
+      >Button Warning</i-button
+    >
+    <i-button class="w-fill" [disabled]="true" variant="danger" (onClick)="buttonDangerClick()"
+      >Button Danger</i-button
+    >
+    <i-button class="w-fill" [disabled]="true" variant="outline" (onClick)="buttonDangerClick()"
+      >Button Outline</i-button
+    >
+  </i-section-body>
+</i-section>
+<i-section>
+  <i-section-header>Icons</i-section-header>
+  <i-section-body class="flex-row flex-wrap gap-md">
+    <i-card class="justify-center p-0">
+      <i-icon class="px-md py-lg" icon="add" />
+      <label class="bg-gray-100 px-md py-2xs">add</label>
+    </i-card>
+    <i-card>
+      <i-icon icon="back" />
+    </i-card>
+    <i-card>
+      <i-icon icon="bars" />
+    </i-card>
+    <i-card>
+      <i-icon icon="cancel" />
+    </i-card>
+    <i-card>
+      <i-icon icon="calendar" />
+    </i-card>
+    <i-card>
+      <i-icon icon="check" />
+    </i-card>
+    <i-card>
+      <i-icon icon="delete" />
+    </i-card>
+    <i-card>
+      <i-icon icon="edit" />
+    </i-card>
+    <i-card>
+      <i-icon icon="ellipsis" />
+    </i-card>
+    <i-card>
+      <i-icon icon="file-excel" />
+    </i-card>
+    <i-card>
+      <i-icon icon="file-pdf" />
+    </i-card>
+    <i-card>
+      <i-icon icon="hashtag" />
+    </i-card>
+    <i-card>
+      <i-icon icon="maximize" />
+    </i-card>
+    <i-card>
+      <i-icon icon="map-marker" />
+    </i-card>
+    <i-card>
+      <i-icon icon="save" />
+    </i-card>
+    <i-card>
+      <i-icon icon="signature" />
+    </i-card>
+    <i-card>
+      <i-icon icon="sync" />
+    </i-card>
+    <i-card>
+      <i-icon icon="tags" />
+    </i-card>
+    <i-card>
+      <i-icon icon="user" />
+    </i-card>
+    <i-card>
+      <i-icon icon="users" />
+    </i-card>
+    <i-card>
+      <i-icon icon="unlock" />
+    </i-card>
+    <i-card>
+      <i-icon icon="upload" />
+    </i-card>
+    <i-card>
+      <i-icon icon="view" />
+    </i-card>
+  </i-section-body>
+</i-section>
+<i-section>
+  <i-section-header>Alerts</i-section-header>
+  <i-section-body class="flex-row gap-md">
+    <i-button class="w-fill" icon="maximize" (onClick)="showInformationAlert()"
+      >Information Alert</i-button
+    >
+    <i-button class="w-fill" icon="maximize" variant="success" (onClick)="showSuccessAlert()"
+      >Success Alert</i-button
+    >
+    <i-button class="w-fill" icon="maximize" variant="warning" (onClick)="showWarningAlert()"
+      >Warning Alert</i-button
+    >
+    <i-button class="w-fill" icon="maximize" variant="danger" (onClick)="showDangerAlert()"
+      >Danger Alert</i-button
+    >
+  </i-section-body>
+</i-section>
+<i-section>
+  <i-section-header>Confirms</i-section-header>
+  <i-section-body class="flex-row gap-md">
+    <i-button class="w-fill" icon="maximize" (onClick)="showInformationConfirm()"
+      >Information Confirm</i-button
+    >
+    <i-button class="w-fill" icon="maximize" variant="success" (onClick)="showSuccessConfirm()"
+      >Success Confirm</i-button
+    >
+    <i-button class="w-fill" icon="maximize" variant="warning" (onClick)="showWarningConfirm()"
+      >Warning Confirm</i-button
+    >
+    <i-button class="w-fill" icon="maximize" variant="danger" (onClick)="showDangerConfirm()"
+      >Danger Confirm</i-button
+    >
+  </i-section-body>
+</i-section>
+<i-section>
+  <i-section-header>Loading</i-section-header>
+  <i-section-body>
+    <div class="flex text-bg-light w-full h-104">
+      <i-loading class="w-full h-full" />
+    </div>
+    <div class="flex text-bg-dark w-full h-104">
+      <i-loading class="w-full h-full" [light]="true" />
+    </div>
+  </i-section-body>
+</i-section>
+<i-section>
+  <i-section-header>Grid</i-section-header>
+  <i-section-body class="p-0">
+    <i-grid
+      [dataSource]="dataSource"
+      selectionMode="multiple"
+      (selectionChange)="onSelection($event)"
+      [stickyHeader]="true"
+      [bodyHeight]="200"
+    >
+      <i-grid-column fieldName="fullName" [width]="160" title="Full Name">
+        <i-grid-cell *iCellDef="let row">
+          {{ row.fullName }}
+        </i-grid-cell>
+      </i-grid-column>
+
+      <i-grid-column [fieldName]="'Employee Code'" [width]="120" freeze></i-grid-column>
+
+      <i-grid-column [fieldName]="'Employee Code'" [width]="120" freeze></i-grid-column>
+
+      <i-grid-column [fieldName]="'Employee Code'" [width]="120" freeze></i-grid-column>
+
+      <i-grid-column [fieldName]="'Employee Code'" [width]="120" freeze></i-grid-column>
+
+      <i-grid-column fieldName="Address" title="Address" [width]="200"></i-grid-column>
+
+      <i-grid-column fieldName="Address" title="Address" [width]="200"></i-grid-column>
+
+      <i-grid-custom-column title="Actions" [width]="120" [sortable]="false">
+        <i-grid-cell *iCellDef="let row">
+          <i-button icon="save" size="sm"></i-button>
+          <i-button icon="delete" size="sm" variant="danger"></i-button>
+        </i-grid-cell>
+      </i-grid-custom-column>
+    </i-grid>
+    <!-- <i-grid
+      [dataSource]="dataSource">
+      <i-grid-column title="Actions" [width]="120" [sortable]="false">
+        <i-grid-cell *iCellDef="let row">
+          <i-button icon="save" size="sm"></i-button>
+          <i-button icon="delete" size="sm" variant="danger"></i-button>
+        </i-grid-cell>
+      </i-grid-column>
+    </i-grid> -->
+    <i-grid [dataSource]="dataSource" selectionMode="multiple">
+      <i-grid-custom-column title="Actions" [width]="80" [sortable]="false">
+        <i-grid-cell *iCellDef="let row">
+          <i-button icon="save" size="sm"></i-button>
+          <i-button icon="delete" size="sm" variant="danger"></i-button>
+        </i-grid-cell>
+      </i-grid-custom-column>
+    </i-grid>
+  </i-section-body>
+</i-section>

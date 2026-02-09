@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../../../.."
+		},
+		{
+			"path": "../../../../../insight-host-web"
+		},
+		{
+			"path": "E:/nginx-1.28.1"
+		},
+		{
+			"path": "../../../../../insight-ui-angular"
+		}
+	],
+	"settings": {}
+}
