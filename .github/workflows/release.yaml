@@ -21,12 +21,13 @@ jobs:
       - name: Checkout source at tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }} # e.g. "1.0.2"
+          ref: ${{ github.event.release.tag_name }} # e.g. "1.13.0"
           fetch-depth: 0
 
-      # 2) Extract version from tag (tag == version, e.g. "1.0.2")
+      # 2) Extract version from tag (tag == version, e.g. "1.13.0")
       - name: Extract version from tag
         id: version
+        shell: bash
         run: |
           TAG="${{ github.event.release.tag_name }}"
           echo "Tag from release: $TAG"
@@ -44,16 +45,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # cache: npm
 
       # 4) Install deps
       - name: Install dependencies
+        shell: bash
         run: |
           rm -rf node_modules package-lock.json
           npm install
 
       # 5) Sync library version to tag (for the built artifact only)
       - name: Sync library version to tag
+        shell: bash
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           echo "Setting projects/${LIB_NAME}/package.json version to ${VERSION}"
@@ -65,23 +67,28 @@ jobs:
 
       # 6) Build Angular library
       - name: Build Angular library
+        shell: bash
         run: |
           npx --yes @angular/cli@20 build "$LIB_NAME" --configuration=production
+          echo "Built dist/${LIB_NAME}:"
+          ls -la "dist/${LIB_NAME}"
 
-      # 7) Copy dist output to a temporary folder
-      - name: Prepare build artifacts
+      # 7) Stash build artifacts OUTSIDE the repo (survives branch switches + git clean)
+      - name: Stash build artifacts
+        shell: bash
         run: |
-          rm -rf release-tmp
-          mkdir -p release-tmp
-          cp -R "dist/${LIB_NAME}/." release-tmp/
-          echo "Artifacts in release-tmp:"
-          ls -la release-tmp
+          ART_DIR="/tmp/${LIB_NAME}-artifacts"
+          rm -rf "$ART_DIR"
+          mkdir -p "$ART_DIR"
+          cp -R "dist/${LIB_NAME}/." "$ART_DIR/"
+          echo "Artifacts stashed at $ART_DIR:"
+          ls -la "$ART_DIR"
 
       # 8) Checkout / create the build branch
       - name: Checkout or create build branch
+        shell: bash
         run: |
           git fetch origin "$BUILD_BRANCH" || true
-
           if git show-ref --quiet "refs/heads/$BUILD_BRANCH"; then
             git switch "$BUILD_BRANCH"
           else
@@ -90,16 +97,19 @@ jobs:
 
       # 9) Replace build branch contents with artifacts
       - name: Replace build branch contents with artifacts
+        shell: bash
         run: |
-          # Remove everything tracked in this branch
+          echo "Cleaning build branch workspace..."
           git rm -rf . || true
+          git clean -fdx
 
-          # Copy built files from temp into root
-          cp -R release-tmp/* .
+          ART_DIR="/tmp/${LIB_NAME}-artifacts"
+          echo "Copying artifacts from $ART_DIR into branch root..."
+          cp -R "$ART_DIR/." .
 
           # Safety: remove any node_modules if they ended up here
           rm -rf node_modules
-          find . -type d -name "node_modules" -prune -exec rm -rf {} \;
+          find . -type d -name "node_modules" -prune -exec rm -rf {} \; || true
 
           # Optional: remove stray .ts (non-declaration) if any
           find . -type f -name '*.ts' ! -name '*.d.ts' -delete || true
@@ -109,6 +119,7 @@ jobs:
 
       # 10) Commit & push build branch
       - name: Commit and push build branch
+        shell: bash
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
@@ -125,6 +136,7 @@ jobs:
 
       # 11) Move version tag + latest to this build commit
       - name: Update tags to point at built artifacts
+        shell: bash
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           echo "Moving tag '${VERSION}' to current build on branch ${BUILD_BRANCH}"
@@ -147,6 +159,7 @@ jobs:
       # (github.event.release.target_commitish) back into MAIN_BRANCH.
       # If you always release from main, this will basically be a no-op merge.
       - name: Merge release source branch back into main
+        shell: bash
         run: |
           SRC_REF="${{ github.event.release.target_commitish }}"
           MAIN_BRANCH="${{ env.MAIN_BRANCH }}"
