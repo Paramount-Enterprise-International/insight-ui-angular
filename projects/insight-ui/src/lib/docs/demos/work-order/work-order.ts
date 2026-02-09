@@ -6,14 +6,11 @@ import {
   FormsModule,
   ReactiveFormsModule,
 } from '@angular/forms';
-import {
-  IAlertService,
-  IDialogService,
-  IGridDataSource,
-  IUI,
-} from '@insight/ui';
 import { CreateRequest } from './create-request/create-request';
 import { EditRequest } from './edit-request/edit-request';
+import { IUI } from '../../../ui';
+import { IAlertService, IDialogService } from '../../../dialog';
+import { IGridDataSource } from '../../../grid';
 
 type RequestData = {
   id: number;
@@ -109,9 +106,7 @@ export class WorkOrder implements OnInit {
           this.displayedData = [...parsedData];
           console.log('Data loaded from storage:', this.originalData);
         } else {
-          console.warn(
-            'Data di storage bukan array atau kosong, menggunakan default'
-          );
+          console.warn('Data di storage bukan array atau kosong, menggunakan default');
           this.initializeDefaultData();
         }
       } else {
@@ -161,14 +156,10 @@ export class WorkOrder implements OnInit {
     }
   }
   showSuccessAlert(): void {
-    this.alert
-      .success('Success', this.description)
-      .subscribe((result) => console.log(result));
+    this.alert.success('Success', this.description).subscribe((result) => console.log(result));
   }
   showSuccessEditAlert(): void {
-    this.alert
-      .success('Success', this.descriptionEdit)
-      .subscribe((result) => console.log(result));
+    this.alert.success('Success', this.descriptionEdit).subscribe((result) => console.log(result));
   }
   createRequest(): void {
     const dialogRef = this.dialog.open(CreateRequest, {

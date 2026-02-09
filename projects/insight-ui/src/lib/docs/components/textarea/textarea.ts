@@ -6,7 +6,8 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { IFCTextArea, IUI } from '@insight/ui';
+import { IUI } from '../../../ui';
+import { IFCTextArea } from '../../../textarea';
 
 @Component({
   selector: 'ir-textarea',

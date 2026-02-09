@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ICard, ICardBody, ISectionModule } from '@insight/ui';
+import { ISectionModule } from '../../section';
+import { ICard, ICardBody } from '../../card';
 
 @Component({
   selector: 'ir-components',

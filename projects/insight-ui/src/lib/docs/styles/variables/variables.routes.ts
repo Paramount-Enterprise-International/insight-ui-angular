@@ -1,4 +1,4 @@
-import { IRoutes } from '@insight/ui';
+import { IRoutes } from '../../../host';
 
 export const variablesRoutes: IRoutes = [
   {

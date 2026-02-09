@@ -1,10 +1,6 @@
 import { Component, inject } from '@angular/core';
-import {
-  IAlertService,
-  IConfirmService,
-  IDialogService,
-  IUI,
-} from '@insight/ui';
+import { IUI } from '../../../ui';
+import { IAlertService, IConfirmService, IDialogService } from '../../../dialog';
 
 @Component({
   selector: 'ir-card',

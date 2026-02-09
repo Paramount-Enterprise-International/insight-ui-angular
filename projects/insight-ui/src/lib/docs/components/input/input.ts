@@ -8,7 +8,10 @@ import {
   ɵInternalFormsSharedModule,
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { IButton, ICodeViewer, IFCInput, IInput, ISectionModule } from '@insight/ui';
+import { IButton } from '../../../button';
+import { ICodeViewer } from '../../../code-viewer';
+import { ISectionModule } from '../../../section';
+import { IFCInput, IInput } from '../../../input';
 
 @Component({
   selector: 'ir-input',

@@ -1,5 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { I_DIALOG_DATA, IDialogRef, IUI } from '@insight/ui';
+import { IUI } from '../../../../../ui';
+import { I_DIALOG_DATA, IDialogRef } from '../../../../../dialog';
 
 type TreeNode = {
   id: number;

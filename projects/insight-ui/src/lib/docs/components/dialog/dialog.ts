@@ -1,17 +1,8 @@
 import { Component, inject } from '@angular/core';
-import {
-  FormBuilder,
-  FormControl,
-  FormGroup,
-  Validators,
-} from '@angular/forms';
-import {
-  IAlertService,
-  IConfirmService,
-  IDialogService,
-  IUI,
-} from '@insight/ui';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { ComponentDialogExample } from './component-dialog-example/component-dialog-example';
+import { IUI } from '../../../ui';
+import { IAlertService, IConfirmService, IDialogService } from '../../../dialog';
 
 @Component({
   selector: 'ir-dialog',
@@ -57,9 +48,7 @@ export class IRDialog {
   }
 
   showDangerAlert(): void {
-    this.alert
-      .danger('Danger Alert', this.description)
-      .subscribe((result) => console.log(result));
+    this.alert.danger('Danger Alert', this.description).subscribe((result) => console.log(result));
   }
 
   showInformationConfirm(): void {

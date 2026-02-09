@@ -1,5 +1,4 @@
 import { Component, inject } from '@angular/core';
-import { ISelectChange, IUI } from '@insight/ui';
 import { of } from 'rxjs';
 import {
   FormBuilder,
@@ -8,6 +7,8 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { IUI } from '../../../ui';
+import { ISelectChange } from '../../../select';
 
 export interface MyRow {
   userId: number;

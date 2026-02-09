@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { IUI } from '@insight/ui';
+import { IUI } from '../../ui';
 
 @Component({
   selector: 'ir-demos',

@@ -7,15 +7,11 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import {
-  I_DIALOG_DATA,
-  IDialogRef,
-  IDialogService,
-  ISelectChange,
-  IUI,
-} from '@insight/ui';
 import { of } from 'rxjs';
 import { LocationTable } from '../create-request/location-table/location-table';
+import { IUI } from '../../../../ui';
+import { I_DIALOG_DATA, IDialogRef, IDialogService } from '../../../../dialog';
+import { ISelectChange } from '../../../../select';
 
 type MyRow = {
   userId: number;
@@ -103,9 +99,7 @@ export class EditRequest implements OnInit {
   openDialog = (): void => {
     const currentValue = this.locationFormControl.value;
 
-    const selectedNames = currentValue
-      ? currentValue.split(',').map((name) => name.trim())
-      : [];
+    const selectedNames = currentValue ? currentValue.split(',').map((name) => name.trim()) : [];
     const locationDialogRef = this.dialog.open(LocationTable, {
       width: '850px',
       data: selectedNames,
@@ -115,9 +109,7 @@ export class EditRequest implements OnInit {
       if (result) {
         console.log('Selected array:', result.data.selected);
 
-        const firstItem = result.data.selected
-          .map((x: any) => x.name)
-          .join(', ');
+        const firstItem = result.data.selected.map((x: any) => x.name).join(', ');
         console.log(firstItem, 'firstItem');
         this.locationFormControl.setValue(firstItem);
       }
@@ -154,9 +146,7 @@ export class EditRequest implements OnInit {
       this.divisionFormControl.setValue(dataEdit.destination);
       this.locationFormControl.setValue(dataEdit.location);
       this.descriptionFormControl.setValue(dataEdit.description || '');
-      this.selectedDivision = this.divisions.find(
-        (div) => div.divionName === dataEdit.destination
-      );
+      this.selectedDivision = this.divisions.find((div) => div.divionName === dataEdit.destination);
 
       if (dataEdit.sendEmail) {
         try {
@@ -179,8 +169,7 @@ export class EditRequest implements OnInit {
           }
 
           if (userId) {
-            this.selectedUser =
-              this.rows.find((u) => u.userId === userId) || null;
+            this.selectedUser = this.rows.find((u) => u.userId === userId) || null;
           }
         } catch (error) {
           console.log('Bukan JSON, skip email', error);
@@ -193,8 +182,7 @@ export class EditRequest implements OnInit {
     console.log('Selected email option:', e);
 
     try {
-      const selectedData =
-        typeof e.value === 'string' ? JSON.parse(e.value) : e.value;
+      const selectedData = typeof e.value === 'string' ? JSON.parse(e.value) : e.value;
       this.selectedEmailValue = selectedData;
       this.sendEmailFormControl.setValue(JSON.stringify(selectedData));
     } catch (error) {
@@ -239,8 +227,7 @@ export class EditRequest implements OnInit {
         location: this.locationFormControl.value || '',
         status: this.statusFormControl.value || 'Pending',
         description: this.descriptionFormControl.value || '',
-        sendEmail:
-          this.sendEmailFormControl.value || this.currentRequest.sendEmail,
+        sendEmail: this.sendEmailFormControl.value || this.currentRequest.sendEmail,
         requestCode: this.currentRequest.requestCode,
         requestDate: this.currentRequest.requestDate,
       };
@@ -269,9 +256,7 @@ export class EditRequest implements OnInit {
         return false;
       }
 
-      const requestIndex = allData.findIndex(
-        (req: any) => req.id === this.requestId
-      );
+      const requestIndex = allData.findIndex((req: any) => req.id === this.requestId);
 
       console.log(`Found request at index: ${requestIndex}`);
 

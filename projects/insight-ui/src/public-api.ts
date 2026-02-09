@@ -7,6 +7,7 @@ export * from './lib/card';
 export * from './lib/code-viewer';
 export * from './lib/datepicker';
 export * from './lib/dialog';
+export * from './lib/docs';
 export * from './lib/grid';
 export * from './lib/grid';
 export * from './lib/highlight-search.pipe';

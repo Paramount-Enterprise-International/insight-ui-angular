@@ -8,24 +8,16 @@ import {
   Validators,
 } from '@angular/forms';
 
-import {
-  IAlertService,
-  IButton,
-  ICard,
-  IConfirmService,
-  IDialogService,
-  IFCInput,
-  IGridDataSource,
-  IGridModule,
-  IGridSelectionChange,
-  IIcon,
-  IInput,
-  ILoading,
-  ISectionModule,
-  ITextArea,
-} from '@insight/ui';
-
 import { TestDialog } from './test-dialog/test-dialog';
+import { ISectionModule } from '../../section';
+import { ICard } from '../../card';
+import { IFCInput, IInput } from '../../input';
+import { IButton } from '../../button';
+import { ITextArea } from '../../textarea';
+import { IIcon } from '../../icon';
+import { ILoading } from '../../loading';
+import { IGridDataSource, IGridModule, IGridSelectionChange } from '../../grid';
+import { IAlertService, IConfirmService, IDialogService } from '../../dialog';
 
 export type MyRow = {
   userId: number;
