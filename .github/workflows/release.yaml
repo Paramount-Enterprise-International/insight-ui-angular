@@ -5,9 +5,9 @@ on:
     types: [published]
 
 env:
-  LIB_NAME: insight-ui # Angular project name: projects/insight-ui
-  BUILD_BRANCH: build # Branch that will hold the built package
-  MAIN_BRANCH: main # Branch to merge the release source back into
+  LIB_NAME: insight-ui
+  BUILD_BRANCH: build
+  MAIN_BRANCH: main
 
 permissions:
   contents: write
@@ -52,7 +52,7 @@ jobs:
           rm -rf node_modules package-lock.json
           npm install
 
-      # 5) Sync library version to tag (build artifact version)
+      # 5) Sync library version to tag (build artifact only)
       - name: Sync library version to tag
         shell: bash
         run: |
@@ -70,7 +70,7 @@ jobs:
         run: |
           npx --yes @angular/cli@20 build "$LIB_NAME" --configuration=production
 
-      # 7) Stash dist output OUTSIDE the repo (so branch cleaning can't delete it)
+      # 7) Stash dist output OUTSIDE the repo (so cleaning can't delete it)
       - name: Stash build artifacts to runner temp
         shell: bash
         run: |
@@ -91,15 +91,23 @@ jobs:
           echo "Artifacts stashed to $ART_DIR:"
           ls -la "$ART_DIR"
 
-      # 8) Switch to build branch
+      # ✅ 7.5) RESET repo so we can switch branches (fixes your error)
+      - name: Reset workspace to allow branch switch
+        shell: bash
+        run: |
+          echo "Resetting workspace (discard changes) before switching branches..."
+          git reset --hard
+          git clean -fdx
+
+      # 8) Switch to build branch (force-safe)
       - name: Checkout or create build branch
         shell: bash
         run: |
           git fetch origin "${BUILD_BRANCH}" || true
 
+          # If build exists remotely, switch to it; otherwise create it
           if git ls-remote --exit-code --heads origin "${BUILD_BRANCH}" >/dev/null 2>&1; then
-            git switch "${BUILD_BRANCH}"
-            git pull origin "${BUILD_BRANCH}" --rebase || true
+            git switch -C "${BUILD_BRANCH}" "origin/${BUILD_BRANCH}"
           else
             git switch -c "${BUILD_BRANCH}"
           fi
@@ -109,9 +117,7 @@ jobs:
         shell: bash
         run: |
           echo "Cleaning build branch workspace..."
-          # Remove tracked files
           git rm -rf . || true
-          # Remove untracked files too
           git clean -fdx
 
       # 10) Copy artifacts from runner temp into branch root
@@ -185,11 +191,6 @@ jobs:
             git fetch origin "$SRC_REF":"$SRC_REF"
           fi
 
-          if git show-ref --quiet "refs/heads/$MAIN_BRANCH"; then
-            git switch "$MAIN_BRANCH"
-          else
-            git switch -c "$MAIN_BRANCH" "origin/$MAIN_BRANCH"
-          fi
-
+          git switch -C "$MAIN_BRANCH" "origin/$MAIN_BRANCH"
           git merge --no-ff "$SRC_REF" -m "chore: merge release $SRC_REF into $MAIN_BRANCH"
           git push origin "$MAIN_BRANCH"
