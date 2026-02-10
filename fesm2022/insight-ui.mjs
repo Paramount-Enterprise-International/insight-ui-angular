@@ -8964,445 +8964,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImpo
                 }]
         }] });
 
-// section.ts
-/**
- * ISection
- * Version: 1.0.1
- * <i-section>
- *   <i-section-header></i-section-header>
- *   <i-section-filter></i-section-filter>
- *   <i-section-body></i-section-body>
- *   <i-section-footer></i-section-footer>
- *   <i-section-tabs></i-section-tabs>
- * </i-section>
- */
-class ISection {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISection, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISection, isStandalone: true, selector: "i-section", ngImport: i0, template: `<ng-content />`, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISection, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section',
-                    imports: [],
-                    template: `<ng-content />`,
-                }]
-        }] });
-class ISectionHeader {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionHeader, isStandalone: true, selector: "i-section-header", ngImport: i0, template: `<h4><ng-content /></h4>`, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionHeader, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-header',
-                    imports: [],
-                    template: `<h4><ng-content /></h4>`,
-                }]
-        }] });
-class ISectionSubHeader {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionSubHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionSubHeader, isStandalone: true, selector: "i-section-sub-header", ngImport: i0, template: `<h6><ng-content /></h6>`, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionSubHeader, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-sub-header',
-                    imports: [],
-                    template: `<h6><ng-content /></h6>`,
-                }]
-        }] });
-class ISectionFilter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionFilter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionFilter, isStandalone: true, selector: "i-section-filter", ngImport: i0, template: `<ng-content />`, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionFilter, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-filter',
-                    imports: [],
-                    template: `<ng-content />`,
-                }]
-        }] });
-class ISectionBody {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionBody, isStandalone: true, selector: "i-section-body", ngImport: i0, template: `<ng-content />`, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionBody, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-body',
-                    imports: [],
-                    template: `<ng-content />`,
-                }]
-        }] });
-class ISectionFooter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionFooter, isStandalone: true, selector: "i-section-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionFooter, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-footer',
-                    imports: [],
-                    template: `<ng-content />`,
-                }]
-        }] });
-/**
- * ISection Tabs
- *
- * Badge rules:
- * - badge / badge="true" / badge="" => red dot
- * - badge="3" => red dot with number 3
- */
-function isTruthyAttr(v) {
-    if (v === null || v === undefined)
-        return false;
-    const s = String(v).trim().toLowerCase();
-    if (s === 'false' || s === '0' || s === 'null' || s === 'undefined')
-        return false;
-    return true;
-}
-function parseBadge(v) {
-    if (!isTruthyAttr(v))
-        return { enabled: false, value: null };
-    const s = String(v).trim();
-    if (s === '' || s.toLowerCase() === 'true')
-        return { enabled: true, value: null };
-    const n = Number(s);
-    if (Number.isFinite(n) && Number.isInteger(n) && n >= 0) {
-        return { enabled: true, value: n };
-    }
-    return { enabled: true, value: null };
-}
-function parseTabsHeight(v) {
-    // null => wrap (default)
-    if (v === null || v === undefined)
-        return null;
-    const s = String(v).trim().toLowerCase();
-    if (s === '' || s === 'wrap' || s === 'auto')
-        return null;
-    // allow "300", "300px"
-    if (s.endsWith('px')) {
-        const n = Number(s.slice(0, -2).trim());
-        return Number.isFinite(n) && n > 0 ? n : null;
-    }
-    const n = Number(s);
-    return Number.isFinite(n) && n > 0 ? n : null;
-}
-class ISectionTabHeader {
-    tpl;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTabHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionTabHeader, isStandalone: true, selector: "i-section-tab-header", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
-    <ng-template #tpl>
-      <ng-content />
-    </ng-template>
-  `, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTabHeader, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-tab-header',
-                    standalone: true,
-                    template: `
-    <ng-template #tpl>
-      <ng-content />
-    </ng-template>
-  `,
-                }]
-        }], propDecorators: { tpl: [{
-                type: ViewChild,
-                args: ['tpl', { static: true }]
-            }] } });
-class ISectionTabContent {
-    tpl;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTabContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionTabContent, isStandalone: true, selector: "i-section-tab-content", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
-    <ng-template #tpl>
-      <ng-content />
-    </ng-template>
-  `, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTabContent, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-tab-content',
-                    standalone: true,
-                    template: `
-    <ng-template #tpl>
-      <ng-content />
-    </ng-template>
-  `,
-                }]
-        }], propDecorators: { tpl: [{
-                type: ViewChild,
-                args: ['tpl', { static: true }]
-            }] } });
-class ISectionTab {
-    title = '';
-    opened = false;
-    set badge(v) {
-        const parsed = parseBadge(v);
-        this._badgeEnabled = parsed.enabled;
-        this._badgeValue = parsed.value;
-    }
-    get badge() {
-        return this._badgeEnabled ? (this._badgeValue ?? true) : null;
-    }
-    _badgeEnabled = false;
-    _badgeValue = null;
-    headerCmp;
-    contentCmp;
-    defaultHeaderTpl;
-    defaultContentTpl;
-    headerTpl;
-    contentTpl;
-    _active = false;
-    ngAfterContentInit() {
-        this.headerTpl = this.headerCmp?.tpl ?? this.defaultHeaderTpl;
-        this.contentTpl = this.contentCmp?.tpl ?? this.defaultContentTpl;
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTab, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.16", type: ISectionTab, isStandalone: true, selector: "i-section-tab", inputs: { title: "title", opened: ["opened", "opened", (v) => v !== null && `${v}` !== 'false'], badge: "badge" }, queries: [{ propertyName: "headerCmp", first: true, predicate: ISectionTabHeader, descendants: true }, { propertyName: "contentCmp", first: true, predicate: ISectionTabContent, descendants: true }], viewQueries: [{ propertyName: "defaultHeaderTpl", first: true, predicate: ["defaultHeaderTpl"], descendants: true, static: true }, { propertyName: "defaultContentTpl", first: true, predicate: ["defaultContentTpl"], descendants: true, static: true }], ngImport: i0, template: `
-    <ng-template #defaultHeaderTpl>
-      <span class="i-section-tab-title">{{ title }}</span>
-
-      @if (_badgeEnabled) {
-        <span class="i-section-tab-badge" [class.has-number]="_badgeValue !== null">
-          @if (_badgeValue !== null) {
-            <span class="i-section-tab-badge-number">{{ _badgeValue }}</span>
-          }
-        </span>
-      }
-    </ng-template>
-
-    <ng-template #defaultContentTpl>
-      <ng-content />
-    </ng-template>
-  `, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTab, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-tab',
-                    standalone: true,
-                    template: `
-    <ng-template #defaultHeaderTpl>
-      <span class="i-section-tab-title">{{ title }}</span>
-
-      @if (_badgeEnabled) {
-        <span class="i-section-tab-badge" [class.has-number]="_badgeValue !== null">
-          @if (_badgeValue !== null) {
-            <span class="i-section-tab-badge-number">{{ _badgeValue }}</span>
-          }
-        </span>
-      }
-    </ng-template>
-
-    <ng-template #defaultContentTpl>
-      <ng-content />
-    </ng-template>
-  `,
-                }]
-        }], propDecorators: { title: [{
-                type: Input
-            }], opened: [{
-                type: Input,
-                args: [{ transform: (v) => v !== null && `${v}` !== 'false' }]
-            }], badge: [{
-                type: Input
-            }], headerCmp: [{
-                type: ContentChild,
-                args: [ISectionTabHeader]
-            }], contentCmp: [{
-                type: ContentChild,
-                args: [ISectionTabContent]
-            }], defaultHeaderTpl: [{
-                type: ViewChild,
-                args: ['defaultHeaderTpl', { static: true }]
-            }], defaultContentTpl: [{
-                type: ViewChild,
-                args: ['defaultContentTpl', { static: true }]
-            }] } });
-class ISectionTabs {
-    tabs;
-    /** optional controlled mode */
-    selectedIndex = null;
-    /** ✅ standardized output name (Angular + React parity) */
-    onSelectedIndexChange = new EventEmitter();
-    /**
-     * height:
-     * - "wrap" (default) => content height depends on each tab
-     * - "300" / 300 / "300px" => fixed content height (px) + internal scroll
-     */
-    set height(v) {
-        this._contentHeightPx = parseTabsHeight(v);
-        this.cdr.markForCheck();
-    }
-    get height() {
-        return this._contentHeightPx ?? 'wrap';
-    }
-    _contentHeightPx = null;
-    get contentHeightPx() {
-        return this._contentHeightPx;
-    }
-    get isFixedHeight() {
-        return this._contentHeightPx !== null;
-    }
-    tabsArr = [];
-    activeIndex = 0;
-    cdr = inject(ChangeDetectorRef);
-    get activeTab() {
-        return this.tabsArr[this.activeIndex] ?? null;
-    }
-    ngAfterContentInit() {
-        const sync = () => {
-            this.tabsArr = this.tabs?.toArray() ?? [];
-            let nextIndex = 0;
-            if (this.selectedIndex !== null && this.isValidIndex(this.selectedIndex)) {
-                nextIndex = this.selectedIndex;
-            }
-            else {
-                const openedIndex = this.tabsArr.findIndex((t) => t.opened);
-                nextIndex = openedIndex >= 0 ? openedIndex : 0;
-            }
-            this.setActive(nextIndex, false);
-            this.cdr.markForCheck();
-        };
-        sync();
-        this.tabs.changes.subscribe(() => sync());
-    }
-    activate(index) {
-        this.setActive(index, true);
-        this.cdr.markForCheck();
-    }
-    activateByTab(tab) {
-        const index = this.tabsArr.indexOf(tab);
-        this.activate(index);
-    }
-    setActive(index, emit) {
-        if (!this.isValidIndex(index))
-            return;
-        this.activeIndex = index;
-        this.tabsArr.forEach((t, i) => (t._active = i === index));
-        if (emit) {
-            this.onSelectedIndexChange.emit(index);
-        }
-    }
-    isValidIndex(index) {
-        return Number.isInteger(index) && index >= 0 && index < this.tabsArr.length;
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTabs, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.16", type: ISectionTabs, isStandalone: true, selector: "i-section-tabs", inputs: { selectedIndex: "selectedIndex", height: "height" }, outputs: { onSelectedIndexChange: "onSelectedIndexChange" }, queries: [{ propertyName: "tabs", predicate: ISectionTab }], ngImport: i0, template: `
-    <div class="i-section-tabs-headers" role="tablist">
-      @for (tab of tabsArr; track tab) {
-        <button
-          class="i-section-tabs-header"
-          role="tab"
-          type="button"
-          [attr.aria-selected]="tab._active"
-          [attr.tabindex]="tab._active ? 0 : -1"
-          [class.active]="tab._active"
-          (click)="activateByTab(tab)"
-        >
-          <ng-container [ngTemplateOutlet]="tab.headerTpl" />
-        </button>
-      }
-    </div>
-
-    <div
-      class="i-section-tabs-content"
-      [class.scroll]="isFixedHeight"
-      [class.scroll-y]="isFixedHeight"
-      [style.height.px]="contentHeightPx"
-    >
-      @if (activeTab; as tab) {
-        <ng-container [ngTemplateOutlet]="tab.contentTpl" />
-      }
-    </div>
-  `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "directive", type: i1$1.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTabs, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-tabs',
-                    standalone: true,
-                    imports: [CommonModule],
-                    changeDetection: ChangeDetectionStrategy.OnPush,
-                    template: `
-    <div class="i-section-tabs-headers" role="tablist">
-      @for (tab of tabsArr; track tab) {
-        <button
-          class="i-section-tabs-header"
-          role="tab"
-          type="button"
-          [attr.aria-selected]="tab._active"
-          [attr.tabindex]="tab._active ? 0 : -1"
-          [class.active]="tab._active"
-          (click)="activateByTab(tab)"
-        >
-          <ng-container [ngTemplateOutlet]="tab.headerTpl" />
-        </button>
-      }
-    </div>
-
-    <div
-      class="i-section-tabs-content"
-      [class.scroll]="isFixedHeight"
-      [class.scroll-y]="isFixedHeight"
-      [style.height.px]="contentHeightPx"
-    >
-      @if (activeTab; as tab) {
-        <ng-container [ngTemplateOutlet]="tab.contentTpl" />
-      }
-    </div>
-  `,
-                }]
-        }], propDecorators: { tabs: [{
-                type: ContentChildren,
-                args: [ISectionTab]
-            }], selectedIndex: [{
-                type: Input
-            }], onSelectedIndexChange: [{
-                type: Output
-            }], height: [{
-                type: Input
-            }] } });
-class ISectionModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.16", ngImport: i0, type: ISectionModule, imports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs, ISectionTab, ISectionTabHeader, ISectionTabContent], exports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs, ISectionTab, ISectionTabHeader, ISectionTabContent] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionModule, imports: [ISectionTabs] });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionModule, decorators: [{
-            type: NgModule,
-            args: [{
-                    imports: [
-                        ISection,
-                        ISectionHeader,
-                        ISectionSubHeader,
-                        ISectionFilter,
-                        ISectionBody,
-                        ISectionFooter,
-                        ISectionTabs,
-                        ISectionTab,
-                        ISectionTabHeader,
-                        ISectionTabContent,
-                    ],
-                    exports: [
-                        ISection,
-                        ISectionHeader,
-                        ISectionSubHeader,
-                        ISectionFilter,
-                        ISectionBody,
-                        ISectionFooter,
-                        ISectionTabs,
-                        ISectionTab,
-                        ISectionTabHeader,
-                        ISectionTabContent,
-                    ],
-                }]
-        }] });
-
 /* =========================================================
  * host.ts (insight-ui-angular)
  * ✅ Includes:
@@ -10280,6 +9841,584 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImpo
                 args: ['class.hidden']
             }] } });
 
+class IPill {
+    /**
+     * ✅ Autocomplete for IIconName
+     * ✅ Still allow any string (raw FA classes, custom classes, etc.)
+     */
+    icon;
+    size = 'md';
+    variant = 'default';
+    disabled = false;
+    /** show close button */
+    closable = false;
+    onClose = new EventEmitter();
+    onClick = new EventEmitter();
+    // base class for the "i-pill, .i-pill" selector group
+    baseClass = true;
+    // attribute hooks
+    get attrSize() {
+        return this.size;
+    }
+    get attrVariant() {
+        return this.variant;
+    }
+    // disabled hook
+    get ariaDisabled() {
+        return this.disabled ? 'true' : null;
+    }
+    get hasOnClickHandler() {
+        // avoids emitting when nobody bound (optional micro-optimization)
+        return this.onClick.observed;
+    }
+    get hasOnCloseHandler() {
+        return this.onClose.observed;
+    }
+    handleHostClick(e) {
+        if (this.disabled) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+        // Ignore clicks originating from the close button
+        const target = e.target;
+        if (target?.closest?.('.i-pill__close'))
+            return;
+        if (this.hasOnClickHandler)
+            this.onClick.emit(e);
+    }
+    handleClose(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.disabled)
+            return;
+        if (this.hasOnCloseHandler)
+            this.onClose.emit(e);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: IPill, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.16", type: IPill, isStandalone: true, selector: "i-pill", inputs: { icon: "icon", size: "size", variant: "variant", disabled: ["disabled", "disabled", booleanAttribute], closable: ["closable", "closable", booleanAttribute] }, outputs: { onClose: "onClose", onClick: "onClick" }, host: { listeners: { "click": "handleHostClick($event)" }, properties: { "class.i-pill": "this.baseClass", "attr.size": "this.attrSize", "attr.variant": "this.attrVariant", "attr.aria-disabled": "this.ariaDisabled" } }, ngImport: i0, template: `
+    @if (icon) {
+      <i-icon [icon]="icon" [size]="size" />
+    }
+
+    <span class="i-pill__content">
+      <ng-content />
+    </span>
+
+    @if (closable) {
+      <button
+        aria-label="Close"
+        class="i-pill__close"
+        type="button"
+        [disabled]="disabled"
+        (click)="handleClose($event)"
+      >
+        ×
+      </button>
+    }
+  `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: IPill, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-pill',
+                    standalone: true,
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    imports: [IIcon],
+                    template: `
+    @if (icon) {
+      <i-icon [icon]="icon" [size]="size" />
+    }
+
+    <span class="i-pill__content">
+      <ng-content />
+    </span>
+
+    @if (closable) {
+      <button
+        aria-label="Close"
+        class="i-pill__close"
+        type="button"
+        [disabled]="disabled"
+        (click)="handleClose($event)"
+      >
+        ×
+      </button>
+    }
+  `,
+                }]
+        }], propDecorators: { icon: [{
+                type: Input
+            }], size: [{
+                type: Input
+            }], variant: [{
+                type: Input
+            }], disabled: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], closable: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], onClose: [{
+                type: Output
+            }], onClick: [{
+                type: Output
+            }], baseClass: [{
+                type: HostBinding,
+                args: ['class.i-pill']
+            }], attrSize: [{
+                type: HostBinding,
+                args: ['attr.size']
+            }], attrVariant: [{
+                type: HostBinding,
+                args: ['attr.variant']
+            }], ariaDisabled: [{
+                type: HostBinding,
+                args: ['attr.aria-disabled']
+            }], handleHostClick: [{
+                type: HostListener,
+                args: ['click', ['$event']]
+            }] } });
+
+// section.ts
+/**
+ * ISection
+ * Version: 1.0.1
+ * <i-section>
+ *   <i-section-header></i-section-header>
+ *   <i-section-filter></i-section-filter>
+ *   <i-section-body></i-section-body>
+ *   <i-section-footer></i-section-footer>
+ *   <i-section-tabs></i-section-tabs>
+ * </i-section>
+ */
+class ISection {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISection, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISection, isStandalone: true, selector: "i-section", ngImport: i0, template: `<ng-content />`, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISection, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section',
+                    imports: [],
+                    template: `<ng-content />`,
+                }]
+        }] });
+class ISectionHeader {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionHeader, isStandalone: true, selector: "i-section-header", ngImport: i0, template: `<h4><ng-content /></h4>`, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionHeader, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-header',
+                    imports: [],
+                    template: `<h4><ng-content /></h4>`,
+                }]
+        }] });
+class ISectionSubHeader {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionSubHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionSubHeader, isStandalone: true, selector: "i-section-sub-header", ngImport: i0, template: `<h6><ng-content /></h6>`, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionSubHeader, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-sub-header',
+                    imports: [],
+                    template: `<h6><ng-content /></h6>`,
+                }]
+        }] });
+class ISectionFilter {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionFilter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionFilter, isStandalone: true, selector: "i-section-filter", ngImport: i0, template: `<ng-content />`, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionFilter, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-filter',
+                    imports: [],
+                    template: `<ng-content />`,
+                }]
+        }] });
+class ISectionBody {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionBody, isStandalone: true, selector: "i-section-body", ngImport: i0, template: `<ng-content />`, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionBody, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-body',
+                    imports: [],
+                    template: `<ng-content />`,
+                }]
+        }] });
+class ISectionFooter {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionFooter, isStandalone: true, selector: "i-section-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionFooter, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-footer',
+                    imports: [],
+                    template: `<ng-content />`,
+                }]
+        }] });
+/**
+ * ISection Tabs
+ *
+ * Badge rules:
+ * - badge / badge="true" / badge="" => red dot
+ * - badge="3" => red dot with number 3
+ */
+function isTruthyAttr(v) {
+    if (v === null || v === undefined)
+        return false;
+    const s = String(v).trim().toLowerCase();
+    if (s === 'false' || s === '0' || s === 'null' || s === 'undefined')
+        return false;
+    return true;
+}
+function parseBadge(v) {
+    if (!isTruthyAttr(v))
+        return { enabled: false, value: null };
+    const s = String(v).trim();
+    if (s === '' || s.toLowerCase() === 'true')
+        return { enabled: true, value: null };
+    const n = Number(s);
+    if (Number.isFinite(n) && Number.isInteger(n) && n >= 0) {
+        return { enabled: true, value: n };
+    }
+    return { enabled: true, value: null };
+}
+function parseTabsHeight(v) {
+    // null => wrap (default)
+    if (v === null || v === undefined)
+        return null;
+    const s = String(v).trim().toLowerCase();
+    if (s === '' || s === 'wrap' || s === 'auto')
+        return null;
+    // allow "300", "300px"
+    if (s.endsWith('px')) {
+        const n = Number(s.slice(0, -2).trim());
+        return Number.isFinite(n) && n > 0 ? n : null;
+    }
+    const n = Number(s);
+    return Number.isFinite(n) && n > 0 ? n : null;
+}
+class ISectionTabHeader {
+    tpl;
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTabHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionTabHeader, isStandalone: true, selector: "i-section-tab-header", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
+    <ng-template #tpl>
+      <ng-content />
+    </ng-template>
+  `, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTabHeader, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-tab-header',
+                    standalone: true,
+                    template: `
+    <ng-template #tpl>
+      <ng-content />
+    </ng-template>
+  `,
+                }]
+        }], propDecorators: { tpl: [{
+                type: ViewChild,
+                args: ['tpl', { static: true }]
+            }] } });
+class ISectionTabContent {
+    tpl;
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTabContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: ISectionTabContent, isStandalone: true, selector: "i-section-tab-content", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
+    <ng-template #tpl>
+      <ng-content />
+    </ng-template>
+  `, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTabContent, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-tab-content',
+                    standalone: true,
+                    template: `
+    <ng-template #tpl>
+      <ng-content />
+    </ng-template>
+  `,
+                }]
+        }], propDecorators: { tpl: [{
+                type: ViewChild,
+                args: ['tpl', { static: true }]
+            }] } });
+class ISectionTab {
+    title = '';
+    opened = false;
+    set badge(v) {
+        const parsed = parseBadge(v);
+        this._badgeEnabled = parsed.enabled;
+        this._badgeValue = parsed.value;
+    }
+    get badge() {
+        return this._badgeEnabled ? (this._badgeValue ?? true) : null;
+    }
+    _badgeEnabled = false;
+    _badgeValue = null;
+    headerCmp;
+    contentCmp;
+    defaultHeaderTpl;
+    defaultContentTpl;
+    headerTpl;
+    contentTpl;
+    _active = false;
+    ngAfterContentInit() {
+        this.headerTpl = this.headerCmp?.tpl ?? this.defaultHeaderTpl;
+        this.contentTpl = this.contentCmp?.tpl ?? this.defaultContentTpl;
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTab, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.16", type: ISectionTab, isStandalone: true, selector: "i-section-tab", inputs: { title: "title", opened: ["opened", "opened", (v) => v !== null && `${v}` !== 'false'], badge: "badge" }, queries: [{ propertyName: "headerCmp", first: true, predicate: ISectionTabHeader, descendants: true }, { propertyName: "contentCmp", first: true, predicate: ISectionTabContent, descendants: true }], viewQueries: [{ propertyName: "defaultHeaderTpl", first: true, predicate: ["defaultHeaderTpl"], descendants: true, static: true }, { propertyName: "defaultContentTpl", first: true, predicate: ["defaultContentTpl"], descendants: true, static: true }], ngImport: i0, template: `
+    <ng-template #defaultHeaderTpl>
+      <span class="i-section-tab-title">{{ title }}</span>
+
+      @if (_badgeEnabled) {
+        <span class="i-section-tab-badge" [class.has-number]="_badgeValue !== null">
+          @if (_badgeValue !== null) {
+            <span class="i-section-tab-badge-number">{{ _badgeValue }}</span>
+          }
+        </span>
+      }
+    </ng-template>
+
+    <ng-template #defaultContentTpl>
+      <ng-content />
+    </ng-template>
+  `, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTab, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-tab',
+                    standalone: true,
+                    template: `
+    <ng-template #defaultHeaderTpl>
+      <span class="i-section-tab-title">{{ title }}</span>
+
+      @if (_badgeEnabled) {
+        <span class="i-section-tab-badge" [class.has-number]="_badgeValue !== null">
+          @if (_badgeValue !== null) {
+            <span class="i-section-tab-badge-number">{{ _badgeValue }}</span>
+          }
+        </span>
+      }
+    </ng-template>
+
+    <ng-template #defaultContentTpl>
+      <ng-content />
+    </ng-template>
+  `,
+                }]
+        }], propDecorators: { title: [{
+                type: Input
+            }], opened: [{
+                type: Input,
+                args: [{ transform: (v) => v !== null && `${v}` !== 'false' }]
+            }], badge: [{
+                type: Input
+            }], headerCmp: [{
+                type: ContentChild,
+                args: [ISectionTabHeader]
+            }], contentCmp: [{
+                type: ContentChild,
+                args: [ISectionTabContent]
+            }], defaultHeaderTpl: [{
+                type: ViewChild,
+                args: ['defaultHeaderTpl', { static: true }]
+            }], defaultContentTpl: [{
+                type: ViewChild,
+                args: ['defaultContentTpl', { static: true }]
+            }] } });
+class ISectionTabs {
+    tabs;
+    /** optional controlled mode */
+    selectedIndex = null;
+    /** ✅ standardized output name (Angular + React parity) */
+    onSelectedIndexChange = new EventEmitter();
+    /**
+     * height:
+     * - "wrap" (default) => content height depends on each tab
+     * - "300" / 300 / "300px" => fixed content height (px) + internal scroll
+     */
+    set height(v) {
+        this._contentHeightPx = parseTabsHeight(v);
+        this.cdr.markForCheck();
+    }
+    get height() {
+        return this._contentHeightPx ?? 'wrap';
+    }
+    _contentHeightPx = null;
+    get contentHeightPx() {
+        return this._contentHeightPx;
+    }
+    get isFixedHeight() {
+        return this._contentHeightPx !== null;
+    }
+    tabsArr = [];
+    activeIndex = 0;
+    cdr = inject(ChangeDetectorRef);
+    get activeTab() {
+        return this.tabsArr[this.activeIndex] ?? null;
+    }
+    ngAfterContentInit() {
+        const sync = () => {
+            this.tabsArr = this.tabs?.toArray() ?? [];
+            let nextIndex = 0;
+            if (this.selectedIndex !== null && this.isValidIndex(this.selectedIndex)) {
+                nextIndex = this.selectedIndex;
+            }
+            else {
+                const openedIndex = this.tabsArr.findIndex((t) => t.opened);
+                nextIndex = openedIndex >= 0 ? openedIndex : 0;
+            }
+            this.setActive(nextIndex, false);
+            this.cdr.markForCheck();
+        };
+        sync();
+        this.tabs.changes.subscribe(() => sync());
+    }
+    activate(index) {
+        this.setActive(index, true);
+        this.cdr.markForCheck();
+    }
+    activateByTab(tab) {
+        const index = this.tabsArr.indexOf(tab);
+        this.activate(index);
+    }
+    setActive(index, emit) {
+        if (!this.isValidIndex(index))
+            return;
+        this.activeIndex = index;
+        this.tabsArr.forEach((t, i) => (t._active = i === index));
+        if (emit) {
+            this.onSelectedIndexChange.emit(index);
+        }
+    }
+    isValidIndex(index) {
+        return Number.isInteger(index) && index >= 0 && index < this.tabsArr.length;
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTabs, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.16", type: ISectionTabs, isStandalone: true, selector: "i-section-tabs", inputs: { selectedIndex: "selectedIndex", height: "height" }, outputs: { onSelectedIndexChange: "onSelectedIndexChange" }, queries: [{ propertyName: "tabs", predicate: ISectionTab }], ngImport: i0, template: `
+    <div class="i-section-tabs-headers" role="tablist">
+      @for (tab of tabsArr; track tab) {
+        <button
+          class="i-section-tabs-header"
+          role="tab"
+          type="button"
+          [attr.aria-selected]="tab._active"
+          [attr.tabindex]="tab._active ? 0 : -1"
+          [class.active]="tab._active"
+          (click)="activateByTab(tab)"
+        >
+          <ng-container [ngTemplateOutlet]="tab.headerTpl" />
+        </button>
+      }
+    </div>
+
+    <div
+      class="i-section-tabs-content"
+      [class.scroll]="isFixedHeight"
+      [class.scroll-y]="isFixedHeight"
+      [style.height.px]="contentHeightPx"
+    >
+      @if (activeTab; as tab) {
+        <ng-container [ngTemplateOutlet]="tab.contentTpl" />
+      }
+    </div>
+  `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "directive", type: i1$1.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionTabs, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-tabs',
+                    standalone: true,
+                    imports: [CommonModule],
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    template: `
+    <div class="i-section-tabs-headers" role="tablist">
+      @for (tab of tabsArr; track tab) {
+        <button
+          class="i-section-tabs-header"
+          role="tab"
+          type="button"
+          [attr.aria-selected]="tab._active"
+          [attr.tabindex]="tab._active ? 0 : -1"
+          [class.active]="tab._active"
+          (click)="activateByTab(tab)"
+        >
+          <ng-container [ngTemplateOutlet]="tab.headerTpl" />
+        </button>
+      }
+    </div>
+
+    <div
+      class="i-section-tabs-content"
+      [class.scroll]="isFixedHeight"
+      [class.scroll-y]="isFixedHeight"
+      [style.height.px]="contentHeightPx"
+    >
+      @if (activeTab; as tab) {
+        <ng-container [ngTemplateOutlet]="tab.contentTpl" />
+      }
+    </div>
+  `,
+                }]
+        }], propDecorators: { tabs: [{
+                type: ContentChildren,
+                args: [ISectionTab]
+            }], selectedIndex: [{
+                type: Input
+            }], onSelectedIndexChange: [{
+                type: Output
+            }], height: [{
+                type: Input
+            }] } });
+class ISectionModule {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.16", ngImport: i0, type: ISectionModule, imports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs, ISectionTab, ISectionTabHeader, ISectionTabContent], exports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs, ISectionTab, ISectionTabHeader, ISectionTabContent] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionModule, imports: [ISectionTabs] });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: ISectionModule, decorators: [{
+            type: NgModule,
+            args: [{
+                    imports: [
+                        ISection,
+                        ISectionHeader,
+                        ISectionSubHeader,
+                        ISectionFilter,
+                        ISectionBody,
+                        ISectionFooter,
+                        ISectionTabs,
+                        ISectionTab,
+                        ISectionTabHeader,
+                        ISectionTabContent,
+                    ],
+                    exports: [
+                        ISection,
+                        ISectionHeader,
+                        ISectionSubHeader,
+                        ISectionFilter,
+                        ISectionBody,
+                        ISectionFooter,
+                        ISectionTabs,
+                        ISectionTab,
+                        ISectionTabHeader,
+                        ISectionTabContent,
+                    ],
+                }]
+        }] });
+
 const INTERACTIVE_SELECTOR_PARTS = [
     'a',
     'button',
@@ -10468,145 +10607,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImpo
                 args: ['click', ['$event']]
             }] } });
 
-class IPill {
-    /**
-     * ✅ Autocomplete for IIconName
-     * ✅ Still allow any string (raw FA classes, custom classes, etc.)
-     */
-    icon;
-    size = 'md';
-    variant = 'default';
-    disabled = false;
-    /** show close button */
-    closable = false;
-    onClose = new EventEmitter();
-    onClick = new EventEmitter();
-    // base class for the "i-pill, .i-pill" selector group
-    baseClass = true;
-    // attribute hooks
-    get attrSize() {
-        return this.size;
-    }
-    get attrVariant() {
-        return this.variant;
-    }
-    // disabled hook
-    get ariaDisabled() {
-        return this.disabled ? 'true' : null;
-    }
-    get hasOnClickHandler() {
-        // avoids emitting when nobody bound (optional micro-optimization)
-        return this.onClick.observed;
-    }
-    get hasOnCloseHandler() {
-        return this.onClose.observed;
-    }
-    handleHostClick(e) {
-        if (this.disabled) {
-            e.preventDefault();
-            e.stopPropagation();
-            return;
-        }
-        // Ignore clicks originating from the close button
-        const target = e.target;
-        if (target?.closest?.('.i-pill__close'))
-            return;
-        if (this.hasOnClickHandler)
-            this.onClick.emit(e);
-    }
-    handleClose(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (this.disabled)
-            return;
-        if (this.hasOnCloseHandler)
-            this.onClose.emit(e);
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: IPill, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.16", type: IPill, isStandalone: true, selector: "i-pill", inputs: { icon: "icon", size: "size", variant: "variant", disabled: ["disabled", "disabled", booleanAttribute], closable: ["closable", "closable", booleanAttribute] }, outputs: { onClose: "onClose", onClick: "onClick" }, host: { listeners: { "click": "handleHostClick($event)" }, properties: { "class.i-pill": "this.baseClass", "attr.size": "this.attrSize", "attr.variant": "this.attrVariant", "attr.aria-disabled": "this.ariaDisabled" } }, ngImport: i0, template: `
-    @if (icon) {
-      <i-icon [icon]="icon" [size]="size" />
-    }
-
-    <span class="i-pill__content">
-      <ng-content />
-    </span>
-
-    @if (closable) {
-      <button
-        aria-label="Close"
-        class="i-pill__close"
-        type="button"
-        [disabled]="disabled"
-        (click)="handleClose($event)"
-      >
-        ×
-      </button>
-    }
-  `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: IPill, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-pill',
-                    standalone: true,
-                    changeDetection: ChangeDetectionStrategy.OnPush,
-                    imports: [IIcon],
-                    template: `
-    @if (icon) {
-      <i-icon [icon]="icon" [size]="size" />
-    }
-
-    <span class="i-pill__content">
-      <ng-content />
-    </span>
-
-    @if (closable) {
-      <button
-        aria-label="Close"
-        class="i-pill__close"
-        type="button"
-        [disabled]="disabled"
-        (click)="handleClose($event)"
-      >
-        ×
-      </button>
-    }
-  `,
-                }]
-        }], propDecorators: { icon: [{
-                type: Input
-            }], size: [{
-                type: Input
-            }], variant: [{
-                type: Input
-            }], disabled: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], closable: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], onClose: [{
-                type: Output
-            }], onClick: [{
-                type: Output
-            }], baseClass: [{
-                type: HostBinding,
-                args: ['class.i-pill']
-            }], attrSize: [{
-                type: HostBinding,
-                args: ['attr.size']
-            }], attrVariant: [{
-                type: HostBinding,
-                args: ['attr.variant']
-            }], ariaDisabled: [{
-                type: HostBinding,
-                args: ['attr.aria-disabled']
-            }], handleHostClick: [{
-                type: HostListener,
-                args: ['click', ['$event']]
-            }] } });
-
 class IUI {
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: IUI, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
     static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.16", ngImport: i0, type: IUI, imports: [IButton,
@@ -10707,396 +10707,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImpo
                 }]
         }] });
 
-class IRDocs {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: IRDocs, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.16", type: IRDocs, isStandalone: true, selector: "ir-docs", ngImport: i0, template: "<i-section>\n  <i-section-body>\n    <div class=\"flex flex-col gap-md\">\n      <h1>Documentation</h1>\n      <p>Components, Styles and Demos</p>\n      <br />\n      <div class=\"flex flex-row flex-wrap gap-md\">\n        <i-card class=\"h-25 flex-fill\" routerLink=\"components\">\n          <i-card-body class=\"flex justify-center align-center\">Components</i-card-body>\n        </i-card>\n        <i-card class=\"h-25 flex-fill\" routerLink=\"styles\">\n          <i-card-body class=\"flex justify-center align-center\">Styles</i-card-body>\n        </i-card>\n        <i-card class=\"h-25 flex-fill\" routerLink=\"demos\">\n          <i-card-body class=\"flex justify-center align-center\">Demos</i-card-body>\n        </i-card>\n      </div>\n    </div>\n  </i-section-body>\n</i-section>\n", styles: [""], dependencies: [{ kind: "ngmodule", type: IUI }, { kind: "component", type: ICard, selector: "i-card", inputs: ["href", "routerLink", "queryParams", "fragment", "replaceUrl", "skipLocationChange", "state", "target", "rel", "disabled"], outputs: ["onClick"] }, { kind: "component", type: ICardBody, selector: "i-card-body" }, { kind: "component", type: ISection, selector: "i-section" }, { kind: "component", type: ISectionBody, selector: "i-section-body" }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }] });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.16", ngImport: i0, type: IRDocs, decorators: [{
-            type: Component,
-            args: [{ selector: 'ir-docs', imports: [IUI, RouterLink], template: "<i-section>\n  <i-section-body>\n    <div class=\"flex flex-col gap-md\">\n      <h1>Documentation</h1>\n      <p>Components, Styles and Demos</p>\n      <br />\n      <div class=\"flex flex-row flex-wrap gap-md\">\n        <i-card class=\"h-25 flex-fill\" routerLink=\"components\">\n          <i-card-body class=\"flex justify-center align-center\">Components</i-card-body>\n        </i-card>\n        <i-card class=\"h-25 flex-fill\" routerLink=\"styles\">\n          <i-card-body class=\"flex justify-center align-center\">Styles</i-card-body>\n        </i-card>\n        <i-card class=\"h-25 flex-fill\" routerLink=\"demos\">\n          <i-card-body class=\"flex justify-center align-center\">Demos</i-card-body>\n        </i-card>\n      </div>\n    </div>\n  </i-section-body>\n</i-section>\n" }]
-        }] });
-
-var docs = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    IRDocs: IRDocs
-});
-
-const componentsRoutes = [
-    {
-        path: 'components',
-        data: {
-            title: 'Components',
-        },
-        children: [
-            {
-                path: '',
-                loadComponent: () => import('./insight-ui-components-BsrAtoJ2.mjs').then((c) => c.IRComponents),
-                data: {
-                    title: '',
-                },
-            },
-            {
-                path: 'button',
-                loadComponent: () => import('./insight-ui-button-NxJMJAtP.mjs').then((c) => c.IRButton),
-                data: {
-                    title: 'Button',
-                },
-            },
-            {
-                path: 'card',
-                loadComponent: () => import('./insight-ui-card-gQyvp0iQ.mjs').then((c) => c.IRCard),
-                data: {
-                    title: 'Card',
-                },
-            },
-            {
-                path: 'datepicker',
-                loadComponent: () => import('./insight-ui-datepicker-BrDW3saZ.mjs').then((c) => c.Datepicker),
-                data: {
-                    title: 'Pill',
-                },
-            },
-            {
-                path: 'dialog',
-                loadComponent: () => import('./insight-ui-dialog-D30611M7.mjs').then((c) => c.IRDialog),
-                data: {
-                    title: 'Dialog',
-                },
-            },
-            {
-                path: 'grid',
-                loadComponent: () => import('./insight-ui-grid-DdrdAQlc.mjs').then((c) => c.IRGrid),
-                data: {
-                    title: 'Grid',
-                },
-            },
-            {
-                path: 'icon',
-                loadComponent: () => import('./insight-ui-icon-BW5XukgO.mjs').then((c) => c.IRIcon),
-                data: {
-                    title: 'Icon',
-                },
-            },
-            {
-                path: 'input',
-                loadComponent: () => import('./insight-ui-input-DivT08_H.mjs').then((c) => c.IRInput),
-                data: {
-                    title: 'Input',
-                },
-            },
-            {
-                path: 'loading',
-                loadComponent: () => import('./insight-ui-loading-CZNh2sag.mjs').then((c) => c.IRLoading),
-                data: {
-                    title: 'Loading',
-                },
-            },
-            {
-                path: 'section',
-                loadComponent: () => import('./insight-ui-section-YxcuRhia.mjs').then((c) => c.IRSection),
-                data: {
-                    title: 'Section',
-                },
-            },
-            {
-                path: 'select',
-                loadComponent: () => import('./insight-ui-select-B_mE8Tdw.mjs').then((c) => c.IRSelect),
-                data: {
-                    title: 'Select',
-                },
-            },
-            {
-                path: 'textarea',
-                loadComponent: () => import('./insight-ui-textarea-Cr9jA0Qn.mjs').then((c) => c.IRTextarea),
-                data: {
-                    title: 'Textarea',
-                },
-            },
-            {
-                path: 'toggle',
-                loadComponent: () => import('./insight-ui-toggle-D-dMuoRm.mjs').then((c) => c.Toggle),
-                data: {
-                    title: 'Toggle',
-                },
-            },
-            {
-                path: 'pill',
-                loadComponent: () => import('./insight-ui-pill-BVZ9EkfK.mjs').then((c) => c.Pill),
-                data: {
-                    title: 'Pill',
-                },
-            },
-        ],
-    },
-];
-
-const demosRoutes = [
-    {
-        path: 'demos',
-        data: {
-            title: 'Demos',
-        },
-        children: [
-            {
-                path: '',
-                loadComponent: () => import('./insight-ui-demos-CUBtBPL6.mjs').then((c) => c.IRDemos),
-                data: {
-                    title: '',
-                },
-            },
-            {
-                path: 'heracles',
-                loadComponent: () => import('./insight-ui-heracles-x_iqGECQ.mjs').then((c) => c.IRHeracles),
-                data: {
-                    title: 'Heracles',
-                },
-            },
-            {
-                path: 'work-order',
-                loadComponent: () => import('./insight-ui-work-order-BN8ERMq9.mjs').then((c) => c.WorkOrder),
-                data: {
-                    title: 'Work Order',
-                },
-            },
-        ],
-    },
-];
-
-const guideRoutes = [
-    {
-        path: 'guide',
-        loadComponent: () => import('./insight-ui-guide-D57V2SZN.mjs').then((c) => c.IRGuide),
-        data: {
-            title: '',
-        },
-    },
-];
-
-const utilitiesRoutes = [
-    {
-        path: 'utilities',
-        data: {
-            title: 'Utilities',
-        },
-        children: [
-            {
-                path: '',
-                loadComponent: () => import('./insight-ui-utilities-DQseZapF.mjs').then((c) => c.IRUtilities),
-                data: {
-                    title: '',
-                },
-            },
-            {
-                path: 'background-color',
-                loadComponent: () => import('./insight-ui-background-color-P39nGPvM.mjs').then((c) => c.IRUtilitiesBackgroundColor),
-                data: {
-                    title: 'Background Color',
-                },
-            },
-            {
-                path: 'border',
-                loadComponent: () => import('./insight-ui-border-DDIoSSU1.mjs').then((c) => c.IRUtilitiesBorder),
-                data: {
-                    title: 'Border',
-                },
-            },
-            {
-                path: 'display',
-                loadComponent: () => import('./insight-ui-display-CosIaNU3.mjs').then((c) => c.IRUtilitiesDisplay),
-                data: {
-                    title: 'Display',
-                },
-            },
-            {
-                path: 'flex',
-                loadComponent: () => import('./insight-ui-flex-Byw3eCGK.mjs').then((c) => c.IRUtilitiesFlex),
-                data: {
-                    title: 'Flex',
-                },
-            },
-            {
-                path: 'height',
-                loadComponent: () => import('./insight-ui-height-B_2WuPhY.mjs').then((c) => c.IRUtilitiesHeight),
-                data: {
-                    title: 'Height',
-                },
-            },
-            {
-                path: 'margin',
-                loadComponent: () => import('./insight-ui-margin-CX1z-j-W.mjs').then((c) => c.IRUtilitiesMargin),
-                data: {
-                    title: 'Margin',
-                },
-            },
-            {
-                path: 'object-fit',
-                loadComponent: () => import('./insight-ui-object-fit-BPo9KV93.mjs').then((c) => c.IRUtilitiesObjectFit),
-                data: {
-                    title: 'Object Fit',
-                },
-            },
-            {
-                path: 'padding',
-                loadComponent: () => import('./insight-ui-padding-CzEDyzTM.mjs').then((c) => c.IRUtilitiesPadding),
-                data: {
-                    title: 'Padding',
-                },
-            },
-            {
-                path: 'scroll',
-                loadComponent: () => import('./insight-ui-scroll-CKK4FHPZ.mjs').then((c) => c.IRUtilitiesScroll),
-                data: {
-                    title: 'Scroll',
-                },
-            },
-            {
-                path: 'typography',
-                loadComponent: () => import('./insight-ui-typography-BysBb4K3.mjs').then((c) => c.IRUtilitiesTypography),
-                data: {
-                    title: 'Typpgraphy',
-                },
-            },
-            {
-                path: 'width',
-                loadComponent: () => import('./insight-ui-width-fZx4eJ8v.mjs').then((c) => c.IRUtilitiesWidth),
-                data: {
-                    title: 'Width',
-                },
-            },
-        ],
-    },
-];
-
-const variablesRoutes = [
-    {
-        path: 'variables',
-        data: {
-            title: 'Variables',
-        },
-        children: [
-            {
-                path: '',
-                loadComponent: () => import('./insight-ui-variables-CB8raNvp.mjs').then((c) => c.IRVariables),
-                data: {
-                    title: '',
-                },
-            },
-            {
-                path: 'border',
-                loadComponent: () => import('./insight-ui-border-DlrpGdIa.mjs').then((c) => c.IRVariableBorder),
-                data: {
-                    title: 'Border',
-                },
-            },
-            {
-                path: 'color',
-                loadComponent: () => import('./insight-ui-color-BlSwuAnW.mjs').then((c) => c.IRVariableColor),
-                data: {
-                    title: 'Color',
-                },
-            },
-            {
-                path: 'elevation',
-                loadComponent: () => import('./insight-ui-elevation-CEFGHlhL.mjs').then((c) => c.IRVariableElevation),
-                data: {
-                    title: 'Elevation',
-                },
-            },
-            {
-                path: 'icon-size',
-                loadComponent: () => import('./insight-ui-icon-size-Bj61t3CW.mjs').then((c) => c.IRVariableIconSize),
-                data: {
-                    title: 'Elevation',
-                },
-            },
-            {
-                path: 'opacity',
-                loadComponent: () => import('./insight-ui-opacity-B_zYxpmG.mjs').then((c) => c.IRVariableOpacity),
-                data: {
-                    title: 'Opacity',
-                },
-            },
-            {
-                path: 'radius',
-                loadComponent: () => import('./insight-ui-radius-BF6TrWCk.mjs').then((c) => c.IRVariableRadius),
-                data: {
-                    title: 'Opacity',
-                },
-            },
-            {
-                path: 'semantic',
-                loadComponent: () => import('./insight-ui-semantic-DcG4npc0.mjs').then((c) => c.Semantic),
-                data: {
-                    title: 'Semantic',
-                },
-            },
-            {
-                path: 'shadow',
-                loadComponent: () => import('./insight-ui-shadow-Dm6ENfpD.mjs').then((c) => c.Shadow),
-                data: {
-                    title: 'Shadow',
-                },
-            },
-            {
-                path: 'spacing',
-                loadComponent: () => import('./insight-ui-spacing-CvoOoiQj.mjs').then((c) => c.Spacing),
-                data: {
-                    title: 'Spacing',
-                },
-            },
-            {
-                path: 'typography',
-                loadComponent: () => import('./insight-ui-typography-DKHZLrin.mjs').then((c) => c.Typography),
-                data: {
-                    title: 'Typography',
-                },
-            },
-            {
-                path: '',
-                redirectTo: 'border',
-                data: {
-                    title: 'Border',
-                },
-                pathMatch: 'full',
-            },
-        ],
-    },
-];
-
-const stylesRoutes = [
-    {
-        path: 'styles',
-        data: {
-            title: 'Styles',
-        },
-        children: [
-            {
-                path: '',
-                loadComponent: () => import('./insight-ui-styles-CPJ5SQPa.mjs').then((c) => c.IRStyles),
-                data: {
-                    title: '',
-                },
-            },
-            ...utilitiesRoutes,
-            ...variablesRoutes,
-        ],
-    },
-];
-
-const DOCS_ROUTES = [
-    {
-        path: '',
-        loadComponent: () => Promise.resolve().then(function () { return docs; }).then((c) => c.IRDocs),
-        data: {
-            title: '',
-        },
-    },
-    ...componentsRoutes,
-    ...demosRoutes,
-    ...guideRoutes,
-    ...stylesRoutes,
-];
-
 /*
  * Public API Surface of insight-ui
  */
@@ -11105,5 +10715,5 @@ const DOCS_ROUTES = [
  * Generated bundle index. Do not edit.
  */
 
-export { DOCS_ROUTES, IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, IRDocs, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, isControlRequired, resolveControlErrorMessage };
+export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, isControlRequired, resolveControlErrorMessage };
 //# sourceMappingURL=insight-ui.mjs.map
