@@ -273,7 +273,7 @@ export type IDialogActionCustom = {
   variant?: IButtonVariant;
   icon?: IIconName | string;
   className?: string;
-  onClick?: () => void;
+  // onClick?: () => void; // not being used anywhere
 };
 
 export type IDialogActionObject =
@@ -283,7 +283,7 @@ export type IDialogActionObject =
   | IDialogActionConfirm
   | IDialogActionCustom;
 
-export type DialogAction = IDialogActionType | IDialogActionObject;
+export type IDialogAction = IDialogActionType | IDialogActionObject;
 
 @Component({
   selector: 'i-dialog',
@@ -351,7 +351,7 @@ export type DialogAction = IDialogActionType | IDialogActionObject;
 export class IDialog {
   @Input() title: string | undefined;
 
-  @Input() actions: DialogAction[] = ['save', 'cancel'];
+  @Input() actions: IDialogAction[] = ['save', 'cancel'];
 
   @Output() readonly onOk: EventEmitter<any> = new EventEmitter<any>();
 
