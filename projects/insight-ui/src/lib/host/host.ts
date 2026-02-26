@@ -8,6 +8,7 @@
  * - Override breadcrumbs support routerLink + correct href with baseHref "/-/" (NO "/-/-/" bug)
  * - Override breadcrumb click also notifies React Router (popstate) so React pages update
  * - IHMenu / IHSidebar kept as you had them
+ * - ✅ NEW: sidebar menu click preserves ?menu-filter=... (internal + external)
  * ========================================================= */
 
 import { APP_BASE_HREF, AsyncPipe, NgClass } from '@angular/common';
@@ -408,7 +409,7 @@ export class IHContent {
 }
 
 /* =========================================================
- * IHMenu (unchanged)
+ * IHMenu (✅ now preserves query params on internal route clicks)
  * ========================================================= */
 
 @Component({
@@ -441,8 +442,8 @@ export class IHContent {
             </div>
           } @else {
             <!-- leaf items: add #menuItem and is-selected -->
-            @if (menu.applicationCode === 'INS5') {
-              <a #menuItem [class.is-selected]="isSelected" [routerLink]="menu.route">
+            @if (menu.applicationCode === 'INS') {
+              <a #menuItem [class.is-selected]="isSelected" [href]="menu.applicationUrl">
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
                     <span></span>
@@ -452,7 +453,12 @@ export class IHContent {
                 <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
               </a>
             } @else {
-              <a #menuItem [class.is-selected]="isSelected" [href]="menu.applicationUrl">
+              <a
+                #menuItem
+                [class.is-selected]="isSelected"
+                [queryParamsHandling]="'merge'"
+                [routerLink]="menu.route"
+              >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
                     <span></span>
@@ -538,7 +544,7 @@ export class IHMenu implements OnChanges {
 }
 
 /* =========================================================
- * IHSidebar (unchanged)
+ * IHSidebar (✅ now forwards menu-filter to destination URL)
  * ========================================================= */
 
 @Component({
@@ -812,11 +818,45 @@ export class IHSidebar implements OnInit, OnChanges {
     this.navigateToMenu(menu);
   }
 
+  // ✅ NEW: keep menu-filter query param for destination
+  private menuFilterQueryParams(): Record<string, any> {
+    const term = this.menuFilter().trim();
+    return term ? { 'menu-filter': term } : {};
+  }
+
+  // ✅ NEW: for external apps, append menu-filter into URL (preserve existing query + hash)
+  private appendMenuFilterToUrl(raw: string): string {
+    const term = this.menuFilter().trim();
+    if (!term) return raw;
+
+    try {
+      // absolute URL
+      const u = new URL(raw);
+      u.searchParams.set('menu-filter', term);
+      return u.toString();
+    } catch {
+      // relative URL
+      const origin = window.location.origin;
+      const u = new URL(raw, origin);
+      u.searchParams.set('menu-filter', term);
+
+      const isAbsolute = /^https?:\/\//i.test(raw);
+      return isAbsolute ? u.toString() : `${u.pathname}${u.search}${u.hash}`;
+    }
+  }
+
   private navigateToMenu(menu: IMenu): void {
+    const qp = this.menuFilterQueryParams();
+
     if (menu.applicationCode === 'INS5' && menu.route) {
-      this.router.navigate([menu.route]);
+      // ✅ preserve current filter when navigating to other routes
+      this.router.navigate([menu.route], {
+        queryParams: qp,
+        queryParamsHandling: 'merge',
+      });
     } else if (menu.applicationUrl) {
-      window.location.href = menu.applicationUrl;
+      // ✅ external app: carry menu-filter
+      window.location.href = this.appendMenuFilterToUrl(menu.applicationUrl);
     }
   }
 
