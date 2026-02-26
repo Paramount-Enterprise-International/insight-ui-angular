@@ -706,13 +706,12 @@ type IDialogActionCustom = {
     variant?: IButtonVariant;
     icon?: IIconName | string;
     className?: string;
-    onClick?: () => void;
 };
 type IDialogActionObject = IDialogActionCancel | IDialogActionSave | IDialogActionOK | IDialogActionConfirm | IDialogActionCustom;
-type DialogAction = IDialogActionType | IDialogActionObject;
+type IDialogAction = IDialogActionType | IDialogActionObject;
 declare class IDialog {
     title: string | undefined;
-    actions: DialogAction[];
+    actions: IDialogAction[];
     readonly onOk: EventEmitter<any>;
     readonly onConfirm: EventEmitter<any>;
     readonly onSave: EventEmitter<any>;
@@ -1373,6 +1372,8 @@ declare class IHSidebar implements OnInit, OnChanges {
     private ensureKeyboardNavActive;
     private moveSelection;
     private activateSelected;
+    private menuFilterQueryParams;
+    private appendMenuFilterToUrl;
     private navigateToMenu;
     updateUrl(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHSidebar, never>;
@@ -1782,4 +1783,4 @@ declare class IUI {
 }
 
 export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, isControlRequired, resolveControlErrorMessage };
-export type { DialogAction, IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IPaginatorState, IPillSize, IPillVariant, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IUISize, IUIVariant, IUser };
+export type { IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IPaginatorState, IPillSize, IPillVariant, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IUISize, IUIVariant, IUser };
