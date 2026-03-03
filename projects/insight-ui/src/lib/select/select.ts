@@ -991,6 +991,20 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   @Output() readonly onChanged = new EventEmitter<ISelectChange<T>>();
   @Output() readonly onOptionSelected = new EventEmitter<ISelectChange<T>>();
 
+  @Input()
+  get value(): T | null {
+    return this._value;
+  }
+  set value(v: T | null) {
+    this._value = v ?? null;
+
+    if (this.innerSelect) {
+      this.innerSelect.writeValue(this._value);
+    }
+
+    this.cdr.markForCheck();
+  }
+
   // =========================================================
   // Internal State
   // =========================================================
