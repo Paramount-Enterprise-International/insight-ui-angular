@@ -3908,6 +3908,16 @@ class IFCSelect {
     // =========================================================
     onChanged = new EventEmitter();
     onOptionSelected = new EventEmitter();
+    get value() {
+        return this._value;
+    }
+    set value(v) {
+        this._value = v ?? null;
+        if (this.innerSelect) {
+            this.innerSelect.writeValue(this._value);
+        }
+        this.cdr.markForCheck();
+    }
     // =========================================================
     // Internal State
     // =========================================================
@@ -3998,7 +4008,7 @@ class IFCSelect {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IFCSelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.17", type: IFCSelect, isStandalone: true, selector: "i-fc-select", inputs: { label: "label", placeholder: "placeholder", options: "options", options$: "options$", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", errorMessage: "errorMessage" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.17", type: IFCSelect, isStandalone: true, selector: "i-fc-select", inputs: { label: "label", placeholder: "placeholder", options: "options", options$: "options$", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", errorMessage: "errorMessage", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `
     @if (label) {
       <label class="i-fc-select__label" (click)="focusInnerSelect()">
         {{ label }} :
@@ -4094,6 +4104,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
                 type: Output
             }], onOptionSelected: [{
                 type: Output
+            }], value: [{
+                type: Input
             }] } });
 
 /**
