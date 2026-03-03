@@ -1,5 +1,5 @@
 import * as i0 from '@angular/core';
-import { EventEmitter, OnInit, OnDestroy, AfterContentInit, AfterViewChecked, TemplateRef, ElementRef, AfterViewInit, Type, OnChanges, Injector, SimpleChanges, InjectionToken, QueryList, PipeTransform } from '@angular/core';
+import { EventEmitter, OnInit, OnDestroy, AfterViewInit, AfterContentInit, AfterViewChecked, TemplateRef, ElementRef, Type, OnChanges, Injector, SimpleChanges, InjectionToken, QueryList, PipeTransform } from '@angular/core';
 import { AbstractControl, NgControl, ControlValueAccessor, FormBuilder, FormControl, FormGroup, FormGroupDirective } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { Route } from '@angular/router';
@@ -383,7 +383,7 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCon
     static ɵfac: i0.ɵɵFactoryDeclaration<ISelect<any>, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<ISelect<any>, "i-select", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
 }
-declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
+declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, AfterViewInit {
     innerSelect: ISelect<T>;
     label: string;
     placeholder: string;
@@ -394,10 +394,14 @@ declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     filterPredicate: (row: T, term: string) => boolean;
     panelPosition: ISelectPanelPosition;
     errorMessage?: IFormControlErrorMessage;
-    readonly onChanged: EventEmitter<ISelectChange<T>>;
-    readonly onOptionSelected: EventEmitter<ISelectChange<T>>;
+    /**
+     * Optional standalone usage support
+     * DO NOT use together with formControlName
+     */
     get value(): T | null;
     set value(v: T | null);
+    readonly onChanged: EventEmitter<ISelectChange<T>>;
+    readonly onOptionSelected: EventEmitter<ISelectChange<T>>;
     private _value;
     isDisabled: boolean;
     private onChange;
@@ -408,6 +412,7 @@ declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     private submitSub?;
     constructor();
     ngOnDestroy(): void;
+    ngAfterViewInit(): void;
     writeValue(v: T | null): void;
     registerOnChange(fn: any): void;
     registerOnTouched(fn: any): void;

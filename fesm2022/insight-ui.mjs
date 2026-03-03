@@ -3183,8 +3183,12 @@ class ISelect {
     filterInput$ = new Subject();
     filterInputSub;
     // ---------- CVA ----------
-    onChange = (_) => { };
-    onTouched = () => { };
+    onChange = (_) => {
+        /*  */
+    };
+    onTouched = () => {
+        /*  */
+    };
     get panelPositionClass() {
         const value = (this.panelPosition || 'bottom left').trim();
         const normalized = value.replace(/\s+/g, '-');
@@ -3903,11 +3907,10 @@ class IFCSelect {
     };
     panelPosition = 'bottom left';
     errorMessage;
-    // =========================================================
-    // Outputs (API Symmetry with i-select)
-    // =========================================================
-    onChanged = new EventEmitter();
-    onOptionSelected = new EventEmitter();
+    /**
+     * Optional standalone usage support
+     * DO NOT use together with formControlName
+     */
     get value() {
         return this._value;
     }
@@ -3919,12 +3922,21 @@ class IFCSelect {
         this.cdr.markForCheck();
     }
     // =========================================================
+    // Outputs (API Symmetry)
+    // =========================================================
+    onChanged = new EventEmitter();
+    onOptionSelected = new EventEmitter();
+    // =========================================================
     // Internal State
     // =========================================================
     _value = null;
     isDisabled = false;
-    onChange = () => { };
-    onTouched = () => { };
+    onChange = () => {
+        /*  */
+    };
+    onTouched = () => {
+        /*  */
+    };
     ngControl = inject(NgControl, {
         self: true,
         optional: true,
@@ -3950,7 +3962,17 @@ class IFCSelect {
         this.submitSub?.unsubscribe();
     }
     // =========================================================
-    // CVA BRIDGE
+    // FIX: ViewChild timing sync
+    // =========================================================
+    ngAfterViewInit() {
+        if (this.innerSelect) {
+            this.innerSelect.writeValue(this._value);
+            this.innerSelect.setDisabledState(this.isDisabled);
+        }
+        this.cdr.markForCheck();
+    }
+    // =========================================================
+    // CVA Bridge
     // =========================================================
     writeValue(v) {
         this._value = v ?? null;
@@ -3973,14 +3995,14 @@ class IFCSelect {
         this.cdr.markForCheck();
     }
     // =========================================================
-    // Event Bridge from Inner Select
+    // Event Bridge from inner select
     // =========================================================
     handleSelectChange(change) {
         this._value = change.value ?? null;
         // Forward to Angular Forms
         this.onChange(this._value);
         this.onTouched();
-        // Forward as component events
+        // Forward component events
         this.onChanged.emit(change);
         this.onOptionSelected.emit(change);
     }
@@ -4100,12 +4122,12 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
                 type: Input
             }], errorMessage: [{
                 type: Input
+            }], value: [{
+                type: Input
             }], onChanged: [{
                 type: Output
             }], onOptionSelected: [{
                 type: Output
-            }], value: [{
-                type: Input
             }] } });
 
 /**
