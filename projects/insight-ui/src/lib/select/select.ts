@@ -924,14 +924,12 @@ export class ISelect<T = any>
   }
 }
 
-/**
- * IFCSelect (unchanged)
- */
 @Component({
   selector: 'i-fc-select',
   standalone: true,
   imports: [ISelect],
-  template: `@if (label) {
+  template: `
+    @if (label) {
       <label class="i-fc-select__label" (click)="focusInnerSelect()">
         {{ label }} :
         @if (required) {
@@ -950,7 +948,6 @@ export class ISelect<T = any>
       [options$]="options$"
       [panelPosition]="panelPosition"
       [placeholder]="placeholder"
-      [value]="value"
       (onChanged)="handleSelectChange($event)"
     >
       <ng-content />
@@ -960,11 +957,16 @@ export class ISelect<T = any>
       <div class="i-fc-select__error">
         {{ resolvedErrorText }}
       </div>
-    }`,
+    }
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   @ViewChild(ISelect) innerSelect!: ISelect<T>;
+
+  // =========================================================
+  // Inputs
+  // =========================================================
 
   @Input() label = '';
   @Input() placeholder = '';
@@ -982,28 +984,43 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   @Input() panelPosition: ISelectPanelPosition = 'bottom left';
   @Input() errorMessage?: IFormControlErrorMessage;
 
-  @Input()
-  get value(): T | null {
-    return this._value;
-  }
-  set value(v: T | null) {
-    this._value = v ?? null;
-  }
-  private _value: T | null = null;
+  // =========================================================
+  // Outputs (API Symmetry with i-select)
+  // =========================================================
 
+  @Output() readonly onChanged = new EventEmitter<ISelectChange<T>>();
+  @Output() readonly onOptionSelected = new EventEmitter<ISelectChange<T>>();
+
+  // =========================================================
+  // Internal State
+  // =========================================================
+
+  private _value: T | null = null;
   isDisabled = false;
 
   private onChange: (v: any) => void = () => {};
   private onTouched: () => void = () => {};
 
-  readonly ngControl = inject(NgControl, { self: true, optional: true });
-  private readonly formDir = inject(FormGroupDirective, { optional: true });
+  readonly ngControl = inject(NgControl, {
+    self: true,
+    optional: true,
+  });
+
+  private readonly formDir = inject(FormGroupDirective, {
+    optional: true,
+  });
+
   private readonly cdr = inject(ChangeDetectorRef);
 
   private submitSub?: Subscription;
 
   constructor() {
-    if (this.ngControl) this.ngControl.valueAccessor = this;
+    // Register as value accessor
+    if (this.ngControl) {
+      this.ngControl.valueAccessor = this;
+    }
+
+    // Re-render validation after submit
     if (this.formDir) {
       this.submitSub = this.formDir.ngSubmit.subscribe(() => {
         this.cdr.markForCheck();
@@ -1015,8 +1032,18 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     this.submitSub?.unsubscribe();
   }
 
-  writeValue(v: any): void {
+  // =========================================================
+  // CVA BRIDGE
+  // =========================================================
+
+  writeValue(v: T | null): void {
     this._value = v ?? null;
+
+    if (this.innerSelect) {
+      this.innerSelect.writeValue(this._value);
+    }
+
+    this.cdr.markForCheck();
   }
 
   registerOnChange(fn: any): void {
@@ -1029,23 +1056,48 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
 
   setDisabledState(isDisabled: boolean): void {
     this.isDisabled = isDisabled;
+
+    if (this.innerSelect) {
+      this.innerSelect.setDisabledState(isDisabled);
+    }
+
+    this.cdr.markForCheck();
   }
+
+  // =========================================================
+  // Event Bridge from Inner Select
+  // =========================================================
 
   handleSelectChange(change: ISelectChange<T>): void {
     this._value = change.value ?? null;
+
+    // Forward to Angular Forms
     this.onChange(this._value);
     this.onTouched();
+
+    // Forward as component events
+    this.onChanged.emit(change);
+    this.onOptionSelected.emit(change);
   }
 
   focusInnerSelect(): void {
-    if (!this.isDisabled && this.innerSelect) this.innerSelect.focus();
+    if (!this.isDisabled && this.innerSelect) {
+      this.innerSelect.focus();
+    }
   }
+
+  // =========================================================
+  // Validation Helpers
+  // =========================================================
 
   get controlInvalid(): boolean {
     const c = this.ngControl?.control;
     if (!c) return false;
 
-    if (this.formDir) return c.invalid && !!this.formDir.submitted;
+    if (this.formDir) {
+      return c.invalid && !!this.formDir.submitted;
+    }
+
     return c.invalid && (c.dirty || c.touched);
   }
 

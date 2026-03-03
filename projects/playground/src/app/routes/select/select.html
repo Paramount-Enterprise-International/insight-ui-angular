@@ -44,6 +44,19 @@
       <i-toggle></i-toggle>
       <i-toggle>Label goes here</i-toggle>
       <i-toggle></i-toggle>
+      <form class="flex flex-col" [formGroup]="formGroup" (ngSubmit)="onSubmit()">
+        <i-fc-select
+          formControlName="applicationTypeId"
+          label="Application Type"
+          [options]="[
+            { optionId: 1, optionName: 'Satu' },
+            { optionId: 2, optionName: 'Dua' },
+            { optionId: 3, optionName: 'Tiga' },
+            { optionId: 4, optionName: 'Empat' },
+          ]"
+          (onChanged)="onChange($event)"
+        />
+      </form>
     </div>
   </i-section-body>
 </i-section>

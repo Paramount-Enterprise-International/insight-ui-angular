@@ -66,4 +66,14 @@ export class Select {
   remove(): void {
     /*  */
   }
+
+  onChange(e: any): void {
+    console.log('e', e);
+  }
+
+  applicationTypeId: FormControl = new FormControl(0, [Validators.required]);
+
+  formGroup: FormGroup = this.formBuilder.group({
+    applicationTypeId: this.applicationTypeId,
+  });
 }
