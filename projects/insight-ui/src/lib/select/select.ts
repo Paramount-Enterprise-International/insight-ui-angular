@@ -14,6 +14,7 @@ import { NgClass, NgTemplateOutlet } from '@angular/common';
 import {
   AfterContentInit,
   AfterViewChecked,
+  AfterViewInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
@@ -268,8 +269,12 @@ export class ISelect<T = any>
   private filterInputSub?: Subscription;
 
   // ---------- CVA ----------
-  onChange = (_: any): void => {};
-  onTouched = (): void => {};
+  onChange = (_: any): void => {
+    /*  */
+  };
+  onTouched = (): void => {
+    /*  */
+  };
 
   get panelPositionClass(): string {
     const value = (this.panelPosition || 'bottom left').trim();
@@ -961,7 +966,7 @@ export class ISelect<T = any>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
+export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, AfterViewInit {
   @ViewChild(ISelect) innerSelect!: ISelect<T>;
 
   // =========================================================
@@ -984,13 +989,10 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   @Input() panelPosition: ISelectPanelPosition = 'bottom left';
   @Input() errorMessage?: IFormControlErrorMessage;
 
-  // =========================================================
-  // Outputs (API Symmetry with i-select)
-  // =========================================================
-
-  @Output() readonly onChanged = new EventEmitter<ISelectChange<T>>();
-  @Output() readonly onOptionSelected = new EventEmitter<ISelectChange<T>>();
-
+  /**
+   * Optional standalone usage support
+   * DO NOT use together with formControlName
+   */
   @Input()
   get value(): T | null {
     return this._value;
@@ -1006,14 +1008,25 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   }
 
   // =========================================================
+  // Outputs (API Symmetry)
+  // =========================================================
+
+  @Output() readonly onChanged = new EventEmitter<ISelectChange<T>>();
+  @Output() readonly onOptionSelected = new EventEmitter<ISelectChange<T>>();
+
+  // =========================================================
   // Internal State
   // =========================================================
 
   private _value: T | null = null;
   isDisabled = false;
 
-  private onChange: (v: any) => void = () => {};
-  private onTouched: () => void = () => {};
+  private onChange: (v: any) => void = () => {
+    /*  */
+  };
+  private onTouched: () => void = () => {
+    /*  */
+  };
 
   readonly ngControl = inject(NgControl, {
     self: true,
@@ -1047,7 +1060,20 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   }
 
   // =========================================================
-  // CVA BRIDGE
+  // FIX: ViewChild timing sync
+  // =========================================================
+
+  ngAfterViewInit(): void {
+    if (this.innerSelect) {
+      this.innerSelect.writeValue(this._value);
+      this.innerSelect.setDisabledState(this.isDisabled);
+    }
+
+    this.cdr.markForCheck();
+  }
+
+  // =========================================================
+  // CVA Bridge
   // =========================================================
 
   writeValue(v: T | null): void {
@@ -1079,7 +1105,7 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   }
 
   // =========================================================
-  // Event Bridge from Inner Select
+  // Event Bridge from inner select
   // =========================================================
 
   handleSelectChange(change: ISelectChange<T>): void {
@@ -1089,7 +1115,7 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     this.onChange(this._value);
     this.onTouched();
 
-    // Forward as component events
+    // Forward component events
     this.onChanged.emit(change);
     this.onOptionSelected.emit(change);
   }
