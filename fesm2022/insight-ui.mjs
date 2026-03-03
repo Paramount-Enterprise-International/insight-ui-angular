@@ -3886,11 +3886,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
                 type: HostListener,
                 args: ['document:click', ['$event']]
             }] } });
-/**
- * IFCSelect (unchanged)
- */
 class IFCSelect {
     innerSelect;
+    // =========================================================
+    // Inputs
+    // =========================================================
     label = '';
     placeholder = '';
     options = null;
@@ -3903,23 +3903,33 @@ class IFCSelect {
     };
     panelPosition = 'bottom left';
     errorMessage;
-    get value() {
-        return this._value;
-    }
-    set value(v) {
-        this._value = v ?? null;
-    }
+    // =========================================================
+    // Outputs (API Symmetry with i-select)
+    // =========================================================
+    onChanged = new EventEmitter();
+    onOptionSelected = new EventEmitter();
+    // =========================================================
+    // Internal State
+    // =========================================================
     _value = null;
     isDisabled = false;
     onChange = () => { };
     onTouched = () => { };
-    ngControl = inject(NgControl, { self: true, optional: true });
-    formDir = inject(FormGroupDirective, { optional: true });
+    ngControl = inject(NgControl, {
+        self: true,
+        optional: true,
+    });
+    formDir = inject(FormGroupDirective, {
+        optional: true,
+    });
     cdr = inject(ChangeDetectorRef);
     submitSub;
     constructor() {
-        if (this.ngControl)
+        // Register as value accessor
+        if (this.ngControl) {
             this.ngControl.valueAccessor = this;
+        }
+        // Re-render validation after submit
         if (this.formDir) {
             this.submitSub = this.formDir.ngSubmit.subscribe(() => {
                 this.cdr.markForCheck();
@@ -3929,8 +3939,15 @@ class IFCSelect {
     ngOnDestroy() {
         this.submitSub?.unsubscribe();
     }
+    // =========================================================
+    // CVA BRIDGE
+    // =========================================================
     writeValue(v) {
         this._value = v ?? null;
+        if (this.innerSelect) {
+            this.innerSelect.writeValue(this._value);
+        }
+        this.cdr.markForCheck();
     }
     registerOnChange(fn) {
         this.onChange = fn;
@@ -3940,22 +3957,38 @@ class IFCSelect {
     }
     setDisabledState(isDisabled) {
         this.isDisabled = isDisabled;
+        if (this.innerSelect) {
+            this.innerSelect.setDisabledState(isDisabled);
+        }
+        this.cdr.markForCheck();
     }
+    // =========================================================
+    // Event Bridge from Inner Select
+    // =========================================================
     handleSelectChange(change) {
         this._value = change.value ?? null;
+        // Forward to Angular Forms
         this.onChange(this._value);
         this.onTouched();
+        // Forward as component events
+        this.onChanged.emit(change);
+        this.onOptionSelected.emit(change);
     }
     focusInnerSelect() {
-        if (!this.isDisabled && this.innerSelect)
+        if (!this.isDisabled && this.innerSelect) {
             this.innerSelect.focus();
+        }
     }
+    // =========================================================
+    // Validation Helpers
+    // =========================================================
     get controlInvalid() {
         const c = this.ngControl?.control;
         if (!c)
             return false;
-        if (this.formDir)
+        if (this.formDir) {
             return c.invalid && !!this.formDir.submitted;
+        }
         return c.invalid && (c.dirty || c.touched);
     }
     get required() {
@@ -3965,7 +3998,8 @@ class IFCSelect {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IFCSelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.17", type: IFCSelect, isStandalone: true, selector: "i-fc-select", inputs: { label: "label", placeholder: "placeholder", options: "options", options$: "options$", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `@if (label) {
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.17", type: IFCSelect, isStandalone: true, selector: "i-fc-select", inputs: { label: "label", placeholder: "placeholder", options: "options", options$: "options$", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", errorMessage: "errorMessage" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `
+    @if (label) {
       <label class="i-fc-select__label" (click)="focusInnerSelect()">
         {{ label }} :
         @if (required) {
@@ -3984,7 +4018,6 @@ class IFCSelect {
       [options$]="options$"
       [panelPosition]="panelPosition"
       [placeholder]="placeholder"
-      [value]="value"
       (onChanged)="handleSelectChange($event)"
     >
       <ng-content />
@@ -3994,7 +4027,8 @@ class IFCSelect {
       <div class="i-fc-select__error">
         {{ resolvedErrorText }}
       </div>
-    }`, isInline: true, dependencies: [{ kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+    }
+  `, isInline: true, dependencies: [{ kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IFCSelect, decorators: [{
             type: Component,
@@ -4002,7 +4036,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
                     selector: 'i-fc-select',
                     standalone: true,
                     imports: [ISelect],
-                    template: `@if (label) {
+                    template: `
+    @if (label) {
       <label class="i-fc-select__label" (click)="focusInnerSelect()">
         {{ label }} :
         @if (required) {
@@ -4021,7 +4056,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
       [options$]="options$"
       [panelPosition]="panelPosition"
       [placeholder]="placeholder"
-      [value]="value"
       (onChanged)="handleSelectChange($event)"
     >
       <ng-content />
@@ -4031,7 +4065,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
       <div class="i-fc-select__error">
         {{ resolvedErrorText }}
       </div>
-    }`,
+    }
+  `,
                     changeDetection: ChangeDetectionStrategy.OnPush,
                 }]
         }], ctorParameters: () => [], propDecorators: { innerSelect: [{
@@ -4055,8 +4090,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
                 type: Input
             }], errorMessage: [{
                 type: Input
-            }], value: [{
-                type: Input
+            }], onChanged: [{
+                type: Output
+            }], onOptionSelected: [{
+                type: Output
             }] } });
 
 /**

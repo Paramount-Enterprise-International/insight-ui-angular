@@ -1,5 +1,5 @@
 import * as i0 from '@angular/core';
-import { EventEmitter, OnInit, TemplateRef, AfterContentInit, AfterViewChecked, OnDestroy, ElementRef, AfterViewInit, InjectionToken, Type, OnChanges, Injector, SimpleChanges, QueryList, PipeTransform } from '@angular/core';
+import { EventEmitter, OnInit, OnDestroy, AfterContentInit, AfterViewChecked, TemplateRef, ElementRef, AfterViewInit, Type, OnChanges, Injector, SimpleChanges, InjectionToken, QueryList, PipeTransform } from '@angular/core';
 import { AbstractControl, NgControl, ControlValueAccessor, FormBuilder, FormControl, FormGroup, FormGroupDirective } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { Route } from '@angular/router';
@@ -383,9 +383,6 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCon
     static ɵfac: i0.ɵɵFactoryDeclaration<ISelect<any>, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<ISelect<any>, "i-select", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
 }
-/**
- * IFCSelect (unchanged)
- */
 declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     innerSelect: ISelect<T>;
     label: string;
@@ -397,8 +394,8 @@ declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     filterPredicate: (row: T, term: string) => boolean;
     panelPosition: ISelectPanelPosition;
     errorMessage?: IFormControlErrorMessage;
-    get value(): T | null;
-    set value(v: T | null);
+    readonly onChanged: EventEmitter<ISelectChange<T>>;
+    readonly onOptionSelected: EventEmitter<ISelectChange<T>>;
     private _value;
     isDisabled: boolean;
     private onChange;
@@ -409,7 +406,7 @@ declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     private submitSub?;
     constructor();
     ngOnDestroy(): void;
-    writeValue(v: any): void;
+    writeValue(v: T | null): void;
     registerOnChange(fn: any): void;
     registerOnTouched(fn: any): void;
     setDisabledState(isDisabled: boolean): void;
@@ -419,7 +416,7 @@ declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     get required(): boolean;
     get resolvedErrorText(): string | null;
     static ɵfac: i0.ɵɵFactoryDeclaration<IFCSelect<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelect<any>, "i-fc-select", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, {}, never, ["*"], true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelect<any>, "i-fc-select", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, never, ["*"], true, never>;
 }
 
 type IDatepickerDay = {
