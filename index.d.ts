@@ -104,20 +104,25 @@ declare class IButton {
     variant: IButtonVariant;
     size: IButtonSize;
     icon: IIconName | (string & {}) | undefined;
-    /** Public click output if you want to use (onClick) */
+    routerLink?: any[] | string;
+    queryParams?: Record<string, any>;
+    fragment?: string;
+    state?: any;
+    href?: string;
+    target?: '_blank' | '_self' | '_parent' | '_top';
+    rel?: string;
     readonly onClick: EventEmitter<MouseEvent>;
-    get tabIndex(): number;
+    get isDisabled(): boolean;
+    get computedRel(): string | null;
+    get hostVariant(): string;
+    get hostSize(): string;
     get ariaDisabled(): string | null;
     get ariaBusy(): string | null;
-    /** Reflect variant to host: <i-button variant="primary"> */
-    get hostVariant(): string;
-    /** Reflect size to host: <i-button size="md"> */
-    get hostSize(): string;
+    get mode(): string;
     handleClick(event: MouseEvent): void;
-    handleKeydown(event: KeyboardEvent): void;
-    private findClosestForm;
     static ɵfac: i0.ɵɵFactoryDeclaration<IButton, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IButton, "i-button", never, { "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "type": { "alias": "type"; "required": false; }; "loadingText": { "alias": "loadingText"; "required": false; }; "variant": { "alias": "variant"; "required": false; }; "size": { "alias": "size"; "required": false; }; "icon": { "alias": "icon"; "required": false; }; }, { "onClick": "onClick"; }, never, ["*"], true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IButton, "i-button", never, { "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "type": { "alias": "type"; "required": false; }; "loadingText": { "alias": "loadingText"; "required": false; }; "variant": { "alias": "variant"; "required": false; }; "size": { "alias": "size"; "required": false; }; "icon": { "alias": "icon"; "required": false; }; "routerLink": { "alias": "routerLink"; "required": false; }; "queryParams": { "alias": "queryParams"; "required": false; }; "fragment": { "alias": "fragment"; "required": false; }; "state": { "alias": "state"; "required": false; }; "href": { "alias": "href"; "required": false; }; "target": { "alias": "target"; "required": false; }; "rel": { "alias": "rel"; "required": false; }; }, { "onClick": "onClick"; }, never, ["*"], true, never>;
+    static ngAcceptInputType_disabled: unknown;
     static ngAcceptInputType_loading: unknown;
 }
 

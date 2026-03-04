@@ -1,5 +1,5 @@
 import * as i0 from '@angular/core';
-import { Input, Component, HostBinding, EventEmitter, booleanAttribute, HostListener, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, Directive, forwardRef, Pipe, TemplateRef, ElementRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, ViewChildren } from '@angular/core';
+import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, HostListener, Directive, forwardRef, Pipe, TemplateRef, ElementRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, ViewChildren } from '@angular/core';
 import * as i1$1 from '@angular/common';
 import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
@@ -136,7 +136,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
             }] } });
 
 class IButton {
-    // @Input({ transform: booleanAttribute }) disabled = false;
+    /* ---------- BASE INPUTS ---------- */
     disabled = false;
     loading = false;
     type = 'button';
@@ -144,113 +144,181 @@ class IButton {
     variant = 'primary';
     size = 'md';
     icon;
-    /** Public click output if you want to use (onClick) */
+    /* ---------- ROUTER SUPPORT ---------- */
+    routerLink;
+    queryParams;
+    fragment;
+    state;
+    /* ---------- HREF SUPPORT ---------- */
+    href;
+    target;
+    rel;
+    /* ---------- OUTPUT ---------- */
     onClick = new EventEmitter();
-    /* ---------- HOST BINDINGS ---------- */
-    get tabIndex() {
-        return this.disabled ? -1 : 0;
+    /* ---------- DERIVED ---------- */
+    get isDisabled() {
+        return this.disabled || this.loading;
+    }
+    get computedRel() {
+        if (this.target === '_blank') {
+            return this.rel ?? 'noopener noreferrer';
+        }
+        return this.rel ?? null;
+    }
+    /* ---------- HOST REFLECTION (for your CSS) ---------- */
+    get hostVariant() {
+        return this.variant;
+    }
+    get hostSize() {
+        return this.size;
     }
     get ariaDisabled() {
-        return this.disabled ? 'true' : null;
+        return this.isDisabled ? 'true' : null;
     }
     get ariaBusy() {
         return this.loading ? 'true' : null;
     }
-    /** Reflect variant to host: <i-button variant="primary"> */
-    get hostVariant() {
-        return this.variant;
+    get mode() {
+        if (this.routerLink)
+            return 'router';
+        if (this.href)
+            return 'anchor';
+        return 'button';
     }
-    /** Reflect size to host: <i-button size="md"> */
-    get hostSize() {
-        return this.size;
-    }
-    /* ---------- EVENTS ---------- */
-    // Mouse click
+    /* ---------- CLICK ---------- */
     handleClick(event) {
-        if (this.disabled || this.loading) {
+        if (this.isDisabled) {
             event.preventDefault();
             event.stopImmediatePropagation();
             return;
         }
         this.onClick.emit(event);
-        // Handle submit/reset behavior manually if needed
-        if (this.type === 'submit' || this.type === 'reset') {
-            const form = this.findClosestForm(event.target);
-            if (form) {
-                if (this.type === 'submit') {
-                    if (form.requestSubmit) {
-                        form.requestSubmit();
-                    }
-                    else {
-                        form.submit();
-                    }
-                }
-                else if (this.type === 'reset') {
-                    form.reset();
-                }
-            }
-        }
-    }
-    // Keyboard activation (Space/Enter)
-    handleKeydown(event) {
-        if (this.disabled || this.loading) {
-            return;
-        }
-        const key = event.key;
-        if (key === 'Enter' || key === ' ') {
-            event.preventDefault();
-            // Simulate click via the same logic, so form behavior stays consistent
-            const mouseEvent = new MouseEvent('click', {
-                bubbles: true,
-                cancelable: true,
-                composed: true,
-            });
-            // This will re-enter handleClick with proper submit/reset handling
-            event.target?.dispatchEvent(mouseEvent);
-        }
-    }
-    /* ---------- UTILS ---------- */
-    findClosestForm(startEl) {
-        let el = startEl;
-        while (el) {
-            if (el instanceof HTMLFormElement) {
-                return el;
-            }
-            el = el.parentElement;
-        }
-        return null;
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IButton, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.17", type: IButton, isStandalone: true, selector: "i-button", inputs: { disabled: "disabled", loading: ["loading", "loading", booleanAttribute], type: "type", loadingText: "loadingText", variant: "variant", size: "size", icon: "icon" }, outputs: { onClick: "onClick" }, host: { attributes: { "role": "button" }, listeners: { "click": "handleClick($event)", "keydown": "handleKeydown($event)" }, properties: { "attr.tabindex": "this.tabIndex", "attr.aria-disabled": "this.ariaDisabled", "attr.aria-busy": "this.ariaBusy", "attr.variant": "this.hostVariant", "attr.size": "this.hostSize" } }, ngImport: i0, template: `@if (loading) {
-      <i-loading [label]="loadingText" [light]="variant !== 'outline'" />
-    } @else {
-      @if (icon) {
-        <i-icon [icon]="icon" [size]="size" />
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.17", type: IButton, isStandalone: true, selector: "i-button", inputs: { disabled: ["disabled", "disabled", booleanAttribute], loading: ["loading", "loading", booleanAttribute], type: "type", loadingText: "loadingText", variant: "variant", size: "size", icon: "icon", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", state: "state", href: "href", target: "target", rel: "rel" }, outputs: { onClick: "onClick" }, host: { properties: { "attr.variant": "this.hostVariant", "attr.size": "this.hostSize", "attr.aria-disabled": "this.ariaDisabled", "attr.aria-busy": "this.ariaBusy", "attr.data-mode": "this.mode" } }, ngImport: i0, template: `
+    <!-- ROUTER LINK -->
+    @if (routerLink) {
+      <a
+        class="i-button-inner"
+        [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.rel]="computedRel"
+        [attr.target]="target"
+        [fragment]="fragment"
+        [queryParams]="queryParams"
+        [routerLink]="routerLink"
+        [state]="state"
+        (click)="handleClick($event)"
+      >
+        <ng-container *ngTemplateOutlet="content" />
+      </a>
+    }
+
+    <!-- HREF -->
+    @else if (href) {
+      <a
+        class="i-button-inner"
+        [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.href]="isDisabled ? null : href"
+        [attr.rel]="computedRel"
+        [attr.target]="target"
+        (click)="handleClick($event)"
+      >
+        <ng-container *ngTemplateOutlet="content" />
+      </a>
+    }
+
+    <!-- BUTTON -->
+    @else {
+      <button
+        class="i-button-inner"
+        [disabled]="isDisabled"
+        [type]="type"
+        (click)="handleClick($event)"
+      >
+        <ng-container *ngTemplateOutlet="content" />
+      </button>
+    }
+
+    <!-- SHARED CONTENT -->
+    <ng-template #content>
+      @if (loading) {
+        <i-loading [label]="loadingText" [light]="variant !== 'outline'" />
+      } @else {
+        @if (icon) {
+          <i-icon [icon]="icon" [size]="size" />
+        }
+        <ng-content />
       }
-      <ng-content />
-    } `, isInline: true, dependencies: [{ kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+    </ng-template>
+  `, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IButton, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-button',
                     standalone: true,
-                    template: `@if (loading) {
-      <i-loading [label]="loadingText" [light]="variant !== 'outline'" />
-    } @else {
-      @if (icon) {
-        <i-icon [icon]="icon" [size]="size" />
-      }
-      <ng-content />
-    } `,
                     changeDetection: ChangeDetectionStrategy.OnPush,
-                    host: {
-                        role: 'button',
-                    },
-                    imports: [ILoading, IIcon],
+                    imports: [NgTemplateOutlet, RouterLink, ILoading, IIcon],
+                    template: `
+    <!-- ROUTER LINK -->
+    @if (routerLink) {
+      <a
+        class="i-button-inner"
+        [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.rel]="computedRel"
+        [attr.target]="target"
+        [fragment]="fragment"
+        [queryParams]="queryParams"
+        [routerLink]="routerLink"
+        [state]="state"
+        (click)="handleClick($event)"
+      >
+        <ng-container *ngTemplateOutlet="content" />
+      </a>
+    }
+
+    <!-- HREF -->
+    @else if (href) {
+      <a
+        class="i-button-inner"
+        [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.href]="isDisabled ? null : href"
+        [attr.rel]="computedRel"
+        [attr.target]="target"
+        (click)="handleClick($event)"
+      >
+        <ng-container *ngTemplateOutlet="content" />
+      </a>
+    }
+
+    <!-- BUTTON -->
+    @else {
+      <button
+        class="i-button-inner"
+        [disabled]="isDisabled"
+        [type]="type"
+        (click)="handleClick($event)"
+      >
+        <ng-container *ngTemplateOutlet="content" />
+      </button>
+    }
+
+    <!-- SHARED CONTENT -->
+    <ng-template #content>
+      @if (loading) {
+        <i-loading [label]="loadingText" [light]="variant !== 'outline'" />
+      } @else {
+        @if (icon) {
+          <i-icon [icon]="icon" [size]="size" />
+        }
+        <ng-content />
+      }
+    </ng-template>
+  `,
                 }]
         }], propDecorators: { disabled: [{
-                type: Input
+                type: Input,
+                args: [{ transform: booleanAttribute }]
             }], loading: [{
                 type: Input,
                 args: [{ transform: booleanAttribute }]
@@ -264,29 +332,37 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
                 type: Input
             }], icon: [{
                 type: Input
+            }], routerLink: [{
+                type: Input
+            }], queryParams: [{
+                type: Input
+            }], fragment: [{
+                type: Input
+            }], state: [{
+                type: Input
+            }], href: [{
+                type: Input
+            }], target: [{
+                type: Input
+            }], rel: [{
+                type: Input
             }], onClick: [{
                 type: Output
-            }], tabIndex: [{
-                type: HostBinding,
-                args: ['attr.tabindex']
-            }], ariaDisabled: [{
-                type: HostBinding,
-                args: ['attr.aria-disabled']
-            }], ariaBusy: [{
-                type: HostBinding,
-                args: ['attr.aria-busy']
             }], hostVariant: [{
                 type: HostBinding,
                 args: ['attr.variant']
             }], hostSize: [{
                 type: HostBinding,
                 args: ['attr.size']
-            }], handleClick: [{
-                type: HostListener,
-                args: ['click', ['$event']]
-            }], handleKeydown: [{
-                type: HostListener,
-                args: ['keydown', ['$event']]
+            }], ariaDisabled: [{
+                type: HostBinding,
+                args: ['attr.aria-disabled']
+            }], ariaBusy: [{
+                type: HostBinding,
+                args: ['attr.aria-busy']
+            }], mode: [{
+                type: HostBinding,
+                args: ['attr.data-mode']
             }] } });
 
 /**
@@ -956,7 +1032,7 @@ class ICodeViewer {
         </div>
       </div>
     </div>
-  `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon"], outputs: ["onClick"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: ICodeViewer, decorators: [{
             type: Component,
@@ -1181,7 +1257,7 @@ class IInputAddon {
     <!-- text -->
     <span>{{ addon.text }}</span>
     }
-  `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IInputAddon, decorators: [{
             type: Component,
@@ -4800,7 +4876,7 @@ class IDatepicker {
         }
       </div>
     </i-datepicker-panel>
-  `, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon"], outputs: ["onClick"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask"] }, { kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask"] }, { kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IDatepicker, decorators: [{
             type: Component,
@@ -5812,7 +5888,7 @@ class IDialog {
           >
         }
       </div>
-    } `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon"], outputs: ["onClick"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: IDialogCloseDirective, selector: "[i-dialog-close], [iDialogClose]", inputs: ["iDialogClose"] }] });
+    } `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: IDialogCloseDirective, selector: "[i-dialog-close], [iDialogClose]", inputs: ["iDialogClose"] }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IDialog, decorators: [{
             type: Component,
@@ -6316,7 +6392,7 @@ class IPaginator {
         </div>
       }
     </div>
-  `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon"], outputs: ["onClick"] }] });
+  `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IPaginator, decorators: [{
             type: Component,
@@ -8622,7 +8698,7 @@ class IGrid {
           (onPageChange)="onPageChange($event)"
         />
       </div>
-    }`, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: IGridHeaderRowDirective, selector: "i-grid-header-row" }, { kind: "directive", type: IGridRowDirective, selector: "i-grid-row" }, { kind: "component", type: IGridHeaderCell, selector: "i-grid-header-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IGridCell, selector: "i-grid-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IPaginator, selector: "i-paginator", inputs: ["length", "pageIndex", "pageSize", "pageSizeOptions"], outputs: ["onPageChange"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon"], outputs: ["onClick"] }, { kind: "directive", type: ITruncatedTooltipDirective, selector: "[truncatedTooltip]", inputs: ["truncatedTooltip"] }, { kind: "component", type: IGridHeaderCellGroup, selector: "i-grid-header-cell-group" }, { kind: "component", type: IGridHeaderCellGroupColumns, selector: "i-grid-header-cell-group-columns" }, { kind: "component", type: IGridViewport, selector: "i-grid-viewport" }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
+    }`, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: IGridHeaderRowDirective, selector: "i-grid-header-row" }, { kind: "directive", type: IGridRowDirective, selector: "i-grid-row" }, { kind: "component", type: IGridHeaderCell, selector: "i-grid-header-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IGridCell, selector: "i-grid-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IPaginator, selector: "i-paginator", inputs: ["length", "pageIndex", "pageSize", "pageSizeOptions"], outputs: ["onPageChange"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: ITruncatedTooltipDirective, selector: "[truncatedTooltip]", inputs: ["truncatedTooltip"] }, { kind: "component", type: IGridHeaderCellGroup, selector: "i-grid-header-cell-group" }, { kind: "component", type: IGridHeaderCellGroupColumns, selector: "i-grid-header-cell-group-columns" }, { kind: "component", type: IGridViewport, selector: "i-grid-viewport" }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IGrid, decorators: [{
             type: Component,
