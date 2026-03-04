@@ -4,10 +4,11 @@ import {
   Component,
   EventEmitter,
   HostBinding,
-  HostListener,
   Input,
   Output,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { IIcon, IIconName } from '../icon/icon';
 import { IUISize, IUIVariant } from '../interfaces';
 import { ILoading } from '../loading/loading';
@@ -22,49 +23,123 @@ export type IButtonVariant = Extract<
 @Component({
   selector: 'i-button',
   standalone: true,
-  template: `@if (loading) {
-      <i-loading [label]="loadingText" [light]="variant !== 'outline'" />
-    } @else {
-      @if (icon) {
-        <i-icon [icon]="icon" [size]="size" />
-      }
-      <ng-content />
-    } `,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    role: 'button',
-  },
-  imports: [ILoading, IIcon],
+  imports: [NgTemplateOutlet, RouterLink, ILoading, IIcon],
+  template: `
+    <!-- ROUTER LINK -->
+    @if (routerLink) {
+      <a
+        class="i-button-inner"
+        [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.rel]="computedRel"
+        [attr.target]="target"
+        [fragment]="fragment"
+        [queryParams]="queryParams"
+        [routerLink]="routerLink"
+        [state]="state"
+        (click)="handleClick($event)"
+      >
+        <ng-container *ngTemplateOutlet="content" />
+      </a>
+    }
+
+    <!-- HREF -->
+    @else if (href) {
+      <a
+        class="i-button-inner"
+        [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.href]="isDisabled ? null : href"
+        [attr.rel]="computedRel"
+        [attr.target]="target"
+        (click)="handleClick($event)"
+      >
+        <ng-container *ngTemplateOutlet="content" />
+      </a>
+    }
+
+    <!-- BUTTON -->
+    @else {
+      <button
+        class="i-button-inner"
+        [disabled]="isDisabled"
+        [type]="type"
+        (click)="handleClick($event)"
+      >
+        <ng-container *ngTemplateOutlet="content" />
+      </button>
+    }
+
+    <!-- SHARED CONTENT -->
+    <ng-template #content>
+      @if (loading) {
+        <i-loading [label]="loadingText" [light]="variant !== 'outline'" />
+      } @else {
+        @if (icon) {
+          <i-icon [icon]="icon" [size]="size" />
+        }
+        <ng-content />
+      }
+    </ng-template>
+  `,
 })
 export class IButton {
-  // @Input({ transform: booleanAttribute }) disabled = false;
-  @Input() disabled = false;
+  /* ---------- BASE INPUTS ---------- */
 
+  @Input({ transform: booleanAttribute }) disabled = false;
   @Input({ transform: booleanAttribute }) loading = false;
 
   @Input() type: IButtonType = 'button';
-
   @Input() loadingText = '';
 
   @Input() variant: IButtonVariant = 'primary';
-
   @Input() size: IButtonSize = 'md';
-
   @Input() icon: IIconName | (string & {}) | undefined;
 
-  /** Public click output if you want to use (onClick) */
+  /* ---------- ROUTER SUPPORT ---------- */
+
+  @Input() routerLink?: any[] | string;
+  @Input() queryParams?: Record<string, any>;
+  @Input() fragment?: string;
+  @Input() state?: any;
+
+  /* ---------- HREF SUPPORT ---------- */
+
+  @Input() href?: string;
+  @Input() target?: '_blank' | '_self' | '_parent' | '_top';
+  @Input() rel?: string;
+
+  /* ---------- OUTPUT ---------- */
+
   @Output() readonly onClick = new EventEmitter<MouseEvent>();
 
-  /* ---------- HOST BINDINGS ---------- */
+  /* ---------- DERIVED ---------- */
 
-  @HostBinding('attr.tabindex')
-  get tabIndex(): number {
-    return this.disabled ? -1 : 0;
+  get isDisabled(): boolean {
+    return this.disabled || this.loading;
+  }
+
+  get computedRel(): string | null {
+    if (this.target === '_blank') {
+      return this.rel ?? 'noopener noreferrer';
+    }
+    return this.rel ?? null;
+  }
+
+  /* ---------- HOST REFLECTION (for your CSS) ---------- */
+
+  @HostBinding('attr.variant')
+  get hostVariant(): string {
+    return this.variant;
+  }
+
+  @HostBinding('attr.size')
+  get hostSize(): string {
+    return this.size;
   }
 
   @HostBinding('attr.aria-disabled')
   get ariaDisabled(): string | null {
-    return this.disabled ? 'true' : null;
+    return this.isDisabled ? 'true' : null;
   }
 
   @HostBinding('attr.aria-busy')
@@ -72,81 +147,22 @@ export class IButton {
     return this.loading ? 'true' : null;
   }
 
-  /** Reflect variant to host: <i-button variant="primary"> */
-  @HostBinding('attr.variant')
-  get hostVariant(): string {
-    return this.variant;
+  @HostBinding('attr.data-mode')
+  get mode(): string {
+    if (this.routerLink) return 'router';
+    if (this.href) return 'anchor';
+    return 'button';
   }
 
-  /** Reflect size to host: <i-button size="md"> */
-  @HostBinding('attr.size')
-  get hostSize(): string {
-    return this.size;
-  }
+  /* ---------- CLICK ---------- */
 
-  /* ---------- EVENTS ---------- */
-
-  // Mouse click
-  @HostListener('click', ['$event'])
   handleClick(event: MouseEvent): void {
-    if (this.disabled || this.loading) {
+    if (this.isDisabled) {
       event.preventDefault();
       event.stopImmediatePropagation();
       return;
     }
 
     this.onClick.emit(event);
-
-    // Handle submit/reset behavior manually if needed
-    if (this.type === 'submit' || this.type === 'reset') {
-      const form = this.findClosestForm(event.target as HTMLElement | null);
-      if (form) {
-        if (this.type === 'submit') {
-          if ((form as any).requestSubmit) {
-            (form as HTMLFormElement).requestSubmit();
-          } else {
-            form.submit();
-          }
-        } else if (this.type === 'reset') {
-          form.reset();
-        }
-      }
-    }
-  }
-
-  // Keyboard activation (Space/Enter)
-  @HostListener('keydown', ['$event'])
-  handleKeydown(event: KeyboardEvent): void {
-    if (this.disabled || this.loading) {
-      return;
-    }
-
-    const key = event.key;
-
-    if (key === 'Enter' || key === ' ') {
-      event.preventDefault();
-
-      // Simulate click via the same logic, so form behavior stays consistent
-      const mouseEvent = new MouseEvent('click', {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-      });
-      // This will re-enter handleClick with proper submit/reset handling
-      (event.target as HTMLElement | null)?.dispatchEvent(mouseEvent);
-    }
-  }
-
-  /* ---------- UTILS ---------- */
-
-  private findClosestForm(startEl: HTMLElement | null): HTMLFormElement | null {
-    let el: HTMLElement | null = startEl;
-    while (el) {
-      if (el instanceof HTMLFormElement) {
-        return el;
-      }
-      el = el.parentElement;
-    }
-    return null;
   }
 }
