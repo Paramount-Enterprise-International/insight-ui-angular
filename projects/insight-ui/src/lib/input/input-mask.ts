@@ -24,7 +24,14 @@ import {
   SimpleChanges,
 } from '@angular/core';
 
-export type IInputMaskType = 'date' | 'integer' | 'number' | 'currency' | 'time';
+export type IInputMaskType =
+  | 'date'
+  | 'integer'
+  | 'number'
+  | 'currency'
+  | 'time'
+  | 'lowercase'
+  | 'uppercase';
 
 export type IInputMask = {
   type: IInputMaskType;
@@ -982,6 +989,13 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     return result;
   }
 
+  private applyTextCaseMask(value: string, type: 'lowercase' | 'uppercase'): string {
+    if (!value) return value;
+
+    if (type === 'lowercase') return value.toLowerCase();
+    return value.toUpperCase();
+  }
+
   // ----------------------------------------------------
   // CARET ↔ DIGIT helpers (used for smart keydown typing)
   // ----------------------------------------------------
@@ -1390,6 +1404,8 @@ export class IInputMaskDirective implements OnInit, OnChanges {
       value = this.applyNumericMask(value, false);
     } else if (type === 'number' || type === 'currency') {
       value = this.applyNumericMask(value, true);
+    } else if (type === 'lowercase' || type === 'uppercase') {
+      value = this.applyTextCaseMask(value, type);
     }
 
     if (value !== oldValue) {
@@ -1490,6 +1506,11 @@ export class IInputMaskDirective implements OnInit, OnChanges {
     }
 
     if (this.isControlKey(event)) return;
+
+    // Text case masks allow all characters
+    if (type === 'lowercase' || type === 'uppercase') {
+      return;
+    }
 
     // Date/time: smart digit typing + allow separators
     if (type === 'date' || type === 'time') {
