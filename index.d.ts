@@ -1389,7 +1389,7 @@ declare class IHSidebar implements OnInit, OnChanges {
     static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; }, {}, never, never, true, never>;
 }
 
-type IInputMaskType = 'date' | 'integer' | 'number' | 'currency' | 'time';
+type IInputMaskType = 'date' | 'integer' | 'number' | 'currency' | 'time' | 'lowercase' | 'uppercase';
 type IInputMask = {
     type: IInputMaskType;
     /**
@@ -1450,6 +1450,7 @@ declare class IInputMaskDirective implements OnInit, OnChanges {
     private applyTimeMask;
     private adjustTimeSegmentByArrow;
     private applyNumericMask;
+    private applyTextCaseMask;
     private countDigitsBeforePos;
     /** caret index in formatted string after `digitCount` digits */
     private caretPosAfterDigits;

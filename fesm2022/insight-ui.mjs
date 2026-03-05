@@ -2163,6 +2163,13 @@ class IInputMaskDirective {
         }
         return result;
     }
+    applyTextCaseMask(value, type) {
+        if (!value)
+            return value;
+        if (type === 'lowercase')
+            return value.toLowerCase();
+        return value.toUpperCase();
+    }
     // ----------------------------------------------------
     // CARET ↔ DIGIT helpers (used for smart keydown typing)
     // ----------------------------------------------------
@@ -2530,6 +2537,9 @@ class IInputMaskDirective {
         else if (type === 'number' || type === 'currency') {
             value = this.applyNumericMask(value, true);
         }
+        else if (type === 'lowercase' || type === 'uppercase') {
+            value = this.applyTextCaseMask(value, type);
+        }
         if (value !== oldValue) {
             const oldLen = oldValue.length;
             el.value = value;
@@ -2618,6 +2628,10 @@ class IInputMaskDirective {
         }
         if (this.isControlKey(event))
             return;
+        // Text case masks allow all characters
+        if (type === 'lowercase' || type === 'uppercase') {
+            return;
+        }
         // Date/time: smart digit typing + allow separators
         if (type === 'date' || type === 'time') {
             const format = this.mask.format || '';
