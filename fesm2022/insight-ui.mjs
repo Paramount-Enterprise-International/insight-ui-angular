@@ -8529,7 +8529,7 @@ class IGrid {
       }
 
       <!-- ROWS -->
-      @for (row of renderedData; track trackBy?.(row) ?? row; let rowIndex = $index) {
+      @for (row of renderedData; track trackBy ? trackBy(row) : rowIndex; let rowIndex = $index) {
         <i-grid-row [class.i-grid-selection-row]="!!selectionMode" (click)="onRowClicked(row)">
           <!-- Expand control column (detail rows, non-tree mode) -->
           @if (!treeEnabled && hasExpandableRow) {
@@ -8866,7 +8866,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
       }
 
       <!-- ROWS -->
-      @for (row of renderedData; track trackBy?.(row) ?? row; let rowIndex = $index) {
+      @for (row of renderedData; track trackBy ? trackBy(row) : rowIndex; let rowIndex = $index) {
         <i-grid-row [class.i-grid-selection-row]="!!selectionMode" (click)="onRowClicked(row)">
           <!-- Expand control column (detail rows, non-tree mode) -->
           @if (!treeEnabled && hasExpandableRow) {
