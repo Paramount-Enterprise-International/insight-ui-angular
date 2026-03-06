@@ -1117,7 +1117,7 @@ export class IGridViewport {}
       }
 
       <!-- ROWS -->
-      @for (row of renderedData; track trackBy?.(row) ?? row; let rowIndex = $index) {
+      @for (row of renderedData; track trackBy ? trackBy(row) : rowIndex; let rowIndex = $index) {
         <i-grid-row [class.i-grid-selection-row]="!!selectionMode" (click)="onRowClicked(row)">
           <!-- Expand control column (detail rows, non-tree mode) -->
           @if (!treeEnabled && hasExpandableRow) {
