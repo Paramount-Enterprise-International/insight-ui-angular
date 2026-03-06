@@ -7355,6 +7355,7 @@ class IGrid {
     tree = null;
     /** Indent per tree level (px) */
     treeIndent = 16;
+    trackBy;
     /**
      * Tree host column (fieldName).
      * - If set, tree UI (indent/toggle/checkbox) is rendered inside that column.
@@ -8396,7 +8397,7 @@ class IGrid {
         return base + (endIndex - idx);
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IGrid, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.17", type: IGrid, isStandalone: true, selector: "i-grid", inputs: { dataSource: "dataSource", selectionMode: "selectionMode", tree: "tree", treeIndent: "treeIndent", treeColumn: "treeColumn", treeInitialExpandLevel: "treeInitialExpandLevel", showNumberColumn: ["showNumberColumn", "showNumberColumn", booleanAttribute] }, outputs: { onSelectionChange: "onSelectionChange", onRowClick: "onRowClick", onRowExpandChange: "onRowExpandChange", onExpandedRowsChange: "onExpandedRowsChange" }, host: { attributes: { "role": "table" }, classAttribute: "i-grid" }, queries: [{ propertyName: "expandableRowDef", first: true, predicate: IGridRowDefDirective, descendants: true }, { propertyName: "columnDefs", predicate: IGridColumn }, { propertyName: "customColumnDefs", predicate: IGridCustomColumn }, { propertyName: "columnGroupDefs", predicate: IGridColumnGroup }], exportAs: ["iGrid"], usesOnChanges: true, ngImport: i0, template: `<i-grid-viewport>
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.17", type: IGrid, isStandalone: true, selector: "i-grid", inputs: { dataSource: "dataSource", selectionMode: "selectionMode", tree: "tree", treeIndent: "treeIndent", trackBy: "trackBy", treeColumn: "treeColumn", treeInitialExpandLevel: "treeInitialExpandLevel", showNumberColumn: ["showNumberColumn", "showNumberColumn", booleanAttribute] }, outputs: { onSelectionChange: "onSelectionChange", onRowClick: "onRowClick", onRowExpandChange: "onRowExpandChange", onExpandedRowsChange: "onExpandedRowsChange" }, host: { attributes: { "role": "table" }, classAttribute: "i-grid" }, queries: [{ propertyName: "expandableRowDef", first: true, predicate: IGridRowDefDirective, descendants: true }, { propertyName: "columnDefs", predicate: IGridColumn }, { propertyName: "customColumnDefs", predicate: IGridCustomColumn }, { propertyName: "columnGroupDefs", predicate: IGridColumnGroup }], exportAs: ["iGrid"], usesOnChanges: true, ngImport: i0, template: `<i-grid-viewport>
       <!-- HEADER -->
       @if (headerItems.length) {
         <i-grid-header-row>
@@ -8528,7 +8529,7 @@ class IGrid {
       }
 
       <!-- ROWS -->
-      @for (row of renderedData; track rowIndex; let rowIndex = $index) {
+      @for (row of renderedData; track trackBy?.(row) ?? row; let rowIndex = $index) {
         <i-grid-row [class.i-grid-selection-row]="!!selectionMode" (click)="onRowClicked(row)">
           <!-- Expand control column (detail rows, non-tree mode) -->
           @if (!treeEnabled && hasExpandableRow) {
@@ -8865,7 +8866,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
       }
 
       <!-- ROWS -->
-      @for (row of renderedData; track rowIndex; let rowIndex = $index) {
+      @for (row of renderedData; track trackBy?.(row) ?? row; let rowIndex = $index) {
         <i-grid-row [class.i-grid-selection-row]="!!selectionMode" (click)="onRowClicked(row)">
           <!-- Expand control column (detail rows, non-tree mode) -->
           @if (!treeEnabled && hasExpandableRow) {
@@ -9063,6 +9064,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
             }], tree: [{
                 type: Input
             }], treeIndent: [{
+                type: Input
+            }], trackBy: [{
                 type: Input
             }], treeColumn: [{
                 type: Input
