@@ -1117,7 +1117,7 @@ export class IGridViewport {}
       }
 
       <!-- ROWS -->
-      @for (row of renderedData; track rowIndex; let rowIndex = $index) {
+      @for (row of renderedData; track trackBy?.(row) ?? row; let rowIndex = $index) {
         <i-grid-row [class.i-grid-selection-row]="!!selectionMode" (click)="onRowClicked(row)">
           <!-- Expand control column (detail rows, non-tree mode) -->
           @if (!treeEnabled && hasExpandableRow) {
@@ -1319,6 +1319,8 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   /** Indent per tree level (px) */
   @Input() treeIndent = 16;
+
+  @Input() trackBy?: (row: T) => any;
 
   /**
    * Tree host column (fieldName).
