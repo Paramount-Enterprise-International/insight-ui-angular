@@ -1226,6 +1226,10 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     get singleSelectionName(): string;
     getRowNumber(visibleRowIndex: number): number;
     getFrozenColumnZ(column: IGridColumnLike<any>): number;
+    getColumnTrack(col: IGridColumnLike<T>, index: number): string;
+    getHeaderItemTrack(item: IGridHeaderItem<T>, index: number): string;
+    getRowTrack(row: T, index: number): any;
+    private _hasExplicitColumns;
     static ɵfac: i0.ɵɵFactoryDeclaration<IGrid<any>, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<IGrid<any>, "i-grid", ["iGrid"], { "dataSource": { "alias": "dataSource"; "required": false; }; "selectionMode": { "alias": "selectionMode"; "required": false; }; "tree": { "alias": "tree"; "required": false; }; "treeIndent": { "alias": "treeIndent"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "treeColumn": { "alias": "treeColumn"; "required": false; }; "treeInitialExpandLevel": { "alias": "treeInitialExpandLevel"; "required": false; }; "showNumberColumn": { "alias": "showNumberColumn"; "required": false; }; }, { "onSelectionChange": "onSelectionChange"; "onRowClick": "onRowClick"; "onRowExpandChange": "onRowExpandChange"; "onExpandedRowsChange": "onExpandedRowsChange"; }, ["expandableRowDef", "columnDefs", "customColumnDefs", "columnGroupDefs"], never, true, never>;
     static ngAcceptInputType_showNumberColumn: unknown;

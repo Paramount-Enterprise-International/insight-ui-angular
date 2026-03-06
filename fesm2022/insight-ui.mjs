@@ -8350,7 +8350,9 @@ class IGrid {
                 this.renderedData = data || [];
                 this._reconcileSelectionWithData();
                 this._reconcileExpandedWithData();
-                this._rebuildColumnsAndHeader(true);
+                if (!this._hasExplicitColumns()) {
+                    this._rebuildColumnsAndHeader(true);
+                }
                 this._updateCurrentFilterText();
             });
             return;
@@ -8395,6 +8397,32 @@ class IGrid {
         }
         const base = 20;
         return base + (endIndex - idx);
+    }
+    getColumnTrack(col, index) {
+        if (col.fieldName) {
+            return `field:${col.fieldName}`;
+        }
+        return `custom:${col.title || 'col'}:${index}`;
+    }
+    getHeaderItemTrack(item, index) {
+        if (item.kind === 'col') {
+            return `col:${this.getColumnTrack(item.col, index)}`;
+        }
+        const childKeys = item.columns.map((col, i) => this.getColumnTrack(col, i)).join('|');
+        return `group:${item.title}:${childKeys}`;
+    }
+    getRowTrack(row, index) {
+        if (this.trackBy) {
+            return this.trackBy(row);
+        }
+        const anyRow = row;
+        return anyRow?.id ?? anyRow?.uid ?? anyRow?.uuid ?? anyRow?.key ?? anyRow?.code ?? index;
+    }
+    _hasExplicitColumns() {
+        const directCols = this.columnDefs?.toArray?.() ?? [];
+        const directCustom = this.customColumnDefs?.toArray?.() ?? [];
+        const groups = this.columnGroupDefs?.toArray?.() ?? [];
+        return groups.length > 0 || directCols.length > 0 || directCustom.length > 0;
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IGrid, deps: [], target: i0.ɵɵFactoryTarget.Component });
     static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.17", type: IGrid, isStandalone: true, selector: "i-grid", inputs: { dataSource: "dataSource", selectionMode: "selectionMode", tree: "tree", treeIndent: "treeIndent", trackBy: "trackBy", treeColumn: "treeColumn", treeInitialExpandLevel: "treeInitialExpandLevel", showNumberColumn: ["showNumberColumn", "showNumberColumn", booleanAttribute] }, outputs: { onSelectionChange: "onSelectionChange", onRowClick: "onRowClick", onRowExpandChange: "onRowExpandChange", onExpandedRowsChange: "onExpandedRowsChange" }, host: { attributes: { "role": "table" }, classAttribute: "i-grid" }, queries: [{ propertyName: "expandableRowDef", first: true, predicate: IGridRowDefDirective, descendants: true }, { propertyName: "columnDefs", predicate: IGridColumn }, { propertyName: "customColumnDefs", predicate: IGridCustomColumn }, { propertyName: "columnGroupDefs", predicate: IGridColumnGroup }], exportAs: ["iGrid"], usesOnChanges: true, ngImport: i0, template: `<i-grid-viewport>
@@ -8458,7 +8486,7 @@ class IGrid {
           }
 
           <!-- Header items (columns OR groups) -->
-          @for (item of headerItems; track item; let i = $index) {
+          @for (item of headerItems; track getHeaderItemTrack(item, i); let i = $index) {
             @if (item.kind === 'col') {
               @let col = item.col;
 
@@ -8509,7 +8537,7 @@ class IGrid {
 
                 <!-- Group columns row -->
                 <i-grid-header-cell-group-columns>
-                  @for (col of g.columns; track col) {
+                  @for (col of g.columns; track getColumnTrack(col, $index)) {
                     @if (col.headerDef; as tmpl) {
                       <ng-container [ngTemplateOutlet]="tmpl" />
                     } @else {
@@ -8529,7 +8557,7 @@ class IGrid {
       }
 
       <!-- ROWS -->
-      @for (row of renderedData; track trackBy ? trackBy(row) : rowIndex; let rowIndex = $index) {
+      @for (row of renderedData; track getRowTrack(row, rowIndex); let rowIndex = $index) {
         <i-grid-row [class.i-grid-selection-row]="!!selectionMode" (click)="onRowClicked(row)">
           <!-- Expand control column (detail rows, non-tree mode) -->
           @if (!treeEnabled && hasExpandableRow) {
@@ -8597,7 +8625,7 @@ class IGrid {
           }
 
           <!-- Data/custom cells (FLATTENED columns) -->
-          @for (col of columns; track col; let colIndex = $index) {
+          @for (col of columns; track getColumnTrack(col, colIndex); let colIndex = $index) {
             @if (treeEnabled && isTreeHostColumn(col)) {
               <!-- TREE MODE: tree UI is inside this cell -->
               <i-grid-cell
@@ -8795,7 +8823,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
           }
 
           <!-- Header items (columns OR groups) -->
-          @for (item of headerItems; track item; let i = $index) {
+          @for (item of headerItems; track getHeaderItemTrack(item, i); let i = $index) {
             @if (item.kind === 'col') {
               @let col = item.col;
 
@@ -8846,7 +8874,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
 
                 <!-- Group columns row -->
                 <i-grid-header-cell-group-columns>
-                  @for (col of g.columns; track col) {
+                  @for (col of g.columns; track getColumnTrack(col, $index)) {
                     @if (col.headerDef; as tmpl) {
                       <ng-container [ngTemplateOutlet]="tmpl" />
                     } @else {
@@ -8866,7 +8894,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
       }
 
       <!-- ROWS -->
-      @for (row of renderedData; track trackBy ? trackBy(row) : rowIndex; let rowIndex = $index) {
+      @for (row of renderedData; track getRowTrack(row, rowIndex); let rowIndex = $index) {
         <i-grid-row [class.i-grid-selection-row]="!!selectionMode" (click)="onRowClicked(row)">
           <!-- Expand control column (detail rows, non-tree mode) -->
           @if (!treeEnabled && hasExpandableRow) {
@@ -8934,7 +8962,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
           }
 
           <!-- Data/custom cells (FLATTENED columns) -->
-          @for (col of columns; track col; let colIndex = $index) {
+          @for (col of columns; track getColumnTrack(col, colIndex); let colIndex = $index) {
             @if (treeEnabled && isTreeHostColumn(col)) {
               <!-- TREE MODE: tree UI is inside this cell -->
               <i-grid-cell
