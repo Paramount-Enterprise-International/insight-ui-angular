@@ -1,22 +1,31 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { IFCInput } from './input';
 
-import { IInput } from './input';
+@Component({
+  standalone: true,
+  imports: [IFCInput],
+  template: `<i-fc-input label="Name" [value]="'Alice'" />`,
+})
+class InputHost {}
 
-describe('Input', () => {
-  let component: IInput;
-  let fixture: ComponentFixture<IInput>;
+describe('IFCInput', () => {
+  let fixture: ComponentFixture<InputHost>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [IInput],
+      imports: [InputHost],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(IInput);
-    component = fixture.componentInstance;
+    fixture = TestBed.createComponent(InputHost);
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('renders host and input', () => {
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('i-fc-input')).toBeTruthy();
+    expect(host.querySelector('i-input input')).toBeTruthy();
+    expect(host.querySelector('label.i-fc-input__label')?.textContent).toContain('Name');
   });
 });

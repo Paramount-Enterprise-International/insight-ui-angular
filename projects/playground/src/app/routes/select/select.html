@@ -41,9 +41,9 @@
         <span class="i-toggle__thumb"></span>
         <input type="checkbox" />
       </div>
-      <i-toggle></i-toggle>
+      <i-toggle />
       <i-toggle>Label goes here</i-toggle>
-      <i-toggle></i-toggle>
+      <i-toggle />
       <form class="flex flex-col" [formGroup]="formGroup" (ngSubmit)="onSubmit()">
         <i-fc-select
           formControlName="applicationTypeId"
@@ -209,9 +209,9 @@
         [displayWith]="displayWith"
         [options]="options"
         (onOptionSelected)="onOptionSelected($event)"
-      ></i-select>
+      />
 
-      <i-datepicker class="w-50"></i-datepicker>
+      <i-datepicker class="w-50" />
       <form
         class="flex gap-md flex-fill align-center"
         [formGroup]="basicFormGroup"

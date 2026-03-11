@@ -1,22 +1,30 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { IFCDatepicker } from './datepicker';
 
-import { IDatepicker } from './datepicker';
+@Component({
+  standalone: true,
+  imports: [IFCDatepicker],
+  template: `<i-fc-datepicker label="Date" [value]="null" />`,
+})
+class DatepickerHost {}
 
-describe('IDatepicker', () => {
-  let component: IDatepicker;
-  let fixture: ComponentFixture<IDatepicker>;
+describe('IFCDatepicker', () => {
+  let fixture: ComponentFixture<DatepickerHost>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [IDatepicker],
+      imports: [DatepickerHost],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(IDatepicker);
-    component = fixture.componentInstance;
+    fixture = TestBed.createComponent(DatepickerHost);
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('renders host and inner datepicker', () => {
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('i-fc-datepicker')).toBeTruthy();
+    expect(host.querySelector('i-datepicker')).toBeTruthy();
   });
 });

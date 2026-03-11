@@ -43,8 +43,7 @@ import { Observable, Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { IHighlightSearchPipe } from './../highlight-search.pipe';
 import { IIcon } from '../icon/icon';
-import { IInput } from '../input/input';
-import { IInputAddonButton, IInputAddonLoading } from '../input/input-addon';
+import { IInput, IInputAddonButton, IInputAddonLoading } from '../input/input';
 import {
   IFormControlErrorMessage,
   isControlRequired,
@@ -269,8 +268,8 @@ export class ISelect<T = any>
   private filterInputSub?: Subscription;
 
   // ---------- CVA ----------
-  onChange = (_: any): void => {
-    /*  */
+  onChange = (value: any): void => {
+    void value;
   };
   onTouched = (): void => {
     /*  */

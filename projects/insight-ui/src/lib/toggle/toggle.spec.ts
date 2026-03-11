@@ -1,23 +1,30 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { IToggle } from './toggle';
 
-import { Toggle } from './toggle';
+@Component({
+  standalone: true,
+  imports: [IToggle],
+  template: `<i-toggle />`,
+})
+class ToggleHost {}
 
-describe('Toggle', () => {
-  let component: Toggle;
-  let fixture: ComponentFixture<Toggle>;
+describe('IToggle', () => {
+  let fixture: ComponentFixture<ToggleHost>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Toggle]
-    })
-    .compileComponents();
+      imports: [ToggleHost],
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(Toggle);
-    component = fixture.componentInstance;
+    fixture = TestBed.createComponent(ToggleHost);
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('renders host and input', () => {
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('i-toggle')).toBeTruthy();
+    expect(host.querySelector('i-toggle input[type="checkbox"]')).toBeTruthy();
   });
 });

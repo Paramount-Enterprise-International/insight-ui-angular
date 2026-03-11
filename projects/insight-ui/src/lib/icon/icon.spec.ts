@@ -1,23 +1,32 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { IIcon } from './icon';
 
-describe('Icon', () => {
-  let component: IIcon;
-  let fixture: ComponentFixture<IIcon>;
+@Component({
+  standalone: true,
+  imports: [IIcon],
+  template: `<i-icon icon="add" />`,
+})
+class IconHost {}
+
+describe('IIcon', () => {
+  let fixture: ComponentFixture<IconHost>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [IIcon]
-    })
-      .compileComponents();
+      imports: [IconHost],
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(IIcon);
-    component = fixture.componentInstance;
+    fixture = TestBed.createComponent(IconHost);
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('renders host and inner icon', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    const inner = host.querySelector('i-icon i') as HTMLElement | null;
+
+    expect(host.querySelector('i-icon')).toBeTruthy();
+    expect(inner).toBeTruthy();
+    expect(inner?.className).toContain('fa-plus');
   });
 });

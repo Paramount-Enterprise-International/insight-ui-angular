@@ -1,23 +1,35 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ISection, ISectionHeader } from './section';
 
-import { ISection } from './section';
+@Component({
+  standalone: true,
+  imports: [ISection, ISectionHeader],
+  template: `
+    <i-section>
+      <i-section-header>Title</i-section-header>
+    </i-section>
+  `,
+})
+class SectionHost {}
 
-describe('Section', () => {
-  let component: ISection;
-  let fixture: ComponentFixture<ISection>;
+describe('ISection', () => {
+  let fixture: ComponentFixture<SectionHost>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ISection]
-    })
-      .compileComponents();
+      imports: [SectionHost],
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(ISection);
-    component = fixture.componentInstance;
+    fixture = TestBed.createComponent(SectionHost);
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('renders section shell', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    const header = host.querySelector('i-section-header h4') as HTMLElement | null;
+
+    expect(host.querySelector('i-section')).toBeTruthy();
+    expect(header?.textContent).toContain('Title');
   });
 });
