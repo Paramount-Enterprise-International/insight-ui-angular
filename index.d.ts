@@ -1,5 +1,5 @@
 import * as i0 from '@angular/core';
-import { EventEmitter, OnInit, OnDestroy, AfterViewInit, AfterContentInit, AfterViewChecked, TemplateRef, ElementRef, Type, OnChanges, Injector, SimpleChanges, InjectionToken, QueryList, PipeTransform } from '@angular/core';
+import { EventEmitter, OnInit, OnDestroy, ElementRef, OnChanges, SimpleChanges, AfterViewInit, AfterContentInit, AfterViewChecked, TemplateRef, Type, Injector, InjectionToken, QueryList, PipeTransform } from '@angular/core';
 import { AbstractControl, NgControl, ControlValueAccessor, FormBuilder, FormControl, FormGroup, FormGroupDirective } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { Route } from '@angular/router';
@@ -238,6 +238,14 @@ declare class ICodeViewerModule {
     static ɵinj: i0.ɵɵInjectorDeclaration<ICodeViewerModule>;
 }
 
+/**
+ * IInput
+ * Version: 2.0.0
+ *
+ * - Simple CVA text input
+ * - Masking is handled by IInputMaskDirective on the inner <input>
+ */
+
 type IInputAddonKind = 'icon' | 'text' | 'button' | 'link' | 'loading';
 type IInputAddonType = {
     type: IInputAddonKind;
@@ -276,6 +284,173 @@ declare class IInputAddon {
     get addonKind(): string;
     static ɵfac: i0.ɵɵFactoryDeclaration<IInputAddon, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<IInputAddon, "i-input-addon", never, { "addon": { "alias": "addon"; "required": true; }; }, {}, never, never, true, never>;
+}
+type IInputMaskType = 'date' | 'integer' | 'number' | 'currency' | 'time' | 'lowercase' | 'uppercase';
+type IInputMask = {
+    type: IInputMaskType;
+    /**
+     * Optional format, used for:
+     * - type: 'date' → e.g. 'dd/MM/yyyy', 'yyyy-MM-dd'
+     * - type: 'time' → e.g. 'HH:mm', 'HH:mm:ss'
+     * For 'integer' | 'number' | 'currency' format is currently ignored.
+     */
+    format?: string;
+};
+declare class IInputMaskDirective implements OnInit, OnChanges {
+    mask: IInputMask | undefined;
+    /** Whether initial default (today / now) has been applied */
+    private _defaultApplied;
+    private elRef;
+    ngOnInit(): void;
+    ngOnChanges(changes: SimpleChanges): void;
+    /**
+     * Resolve the real native input/textarea.
+     * Works for:
+     * - <input iInputMask ...>
+     * - <textarea iInputMask ...>
+     * - <i-input iInputMask ...> (wrapper custom element)
+     */
+    private get nativeInput();
+    private get hasMask();
+    private safeSetSelectionRange;
+    private dispatchInputEvent;
+    private computeDefaultForMask;
+    private applyInitialDefaultIfNeeded;
+    private isControlKey;
+    private daysInMonth;
+    /** Split date format into tokens (dd, MM, yyyy) and separators. */
+    private splitDateFormat;
+    /** Segments (day, month, year) with actual positions in current value. */
+    private getDateSegments;
+    /** Format day/month/year back to string according to format tokens. */
+    private formatDateFromParts;
+    /** Normalize full date string (used on blur / Enter). */
+    private normalizeDateValue;
+    /**
+     * Digits-only behavior for date mask (no separators typed yet).
+     *
+     * For dd/MM/yyyy:
+     * - "12"       → "12/"
+     * - "1210"     → "12/10/"
+     * - "12101980" → "12/10/1980"
+     */
+    private applyDateMaskDigitsOnly;
+    private applyDateMask;
+    private adjustDateSegmentByArrow;
+    private splitTimeFormat;
+    private getTimeSegments;
+    private formatTimeFromParts;
+    private normalizeTimeValue;
+    private applyTimeMaskDigitsOnly;
+    private applyTimeMask;
+    private adjustTimeSegmentByArrow;
+    private applyNumericMask;
+    private applyTextCaseMask;
+    private countDigitsBeforePos;
+    /** caret index in formatted string after `digitCount` digits */
+    private caretPosAfterDigits;
+    private clamp;
+    private clampMonth2;
+    private clampDay2;
+    /**
+     * Smart digit typing for DATE:
+     * - never allows 3-digit day/month or 5-digit year
+     * - when caret is at end of a full segment, typing "rolls" that segment:
+     *   month "01" + '2' => "12" (shift + append)
+     *   year "2026" + '1' => "0261" (keeps last 4)
+     */
+    private handleDateDigitKey;
+    /**
+     * Smart digit typing for TIME (similar behavior, keeps segments fixed-length).
+     * - HH:mm       => keeps hour/min 2 digits
+     * - HH:mm:ss    => keeps hour/min/sec 2 digits
+     */
+    private handleTimeDigitKey;
+    private normalizePastedDate;
+    private normalizePastedTime;
+    onInput(): void;
+    onBlur(): void;
+    onFocus(): void;
+    onKeydown(event: KeyboardEvent): void;
+    onPaste(event: ClipboardEvent): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IInputMaskDirective, never>;
+    static ɵdir: i0.ɵɵDirectiveDeclaration<IInputMaskDirective, "[iInputMask]", never, { "mask": { "alias": "iInputMask"; "required": false; }; }, {}, never, never, true, never>;
+}
+declare class IInput implements ControlValueAccessor {
+    type: string;
+    placeholder: string;
+    autocomplete: string | undefined;
+    readonly: boolean;
+    /** invalid state (controlled by form or wrapper) */
+    invalid: boolean;
+    mask: IInputMask | undefined;
+    /** value usable both by CVA and by [value] binding */
+    get value(): string | null;
+    set value(v: string | null);
+    prepend: IInputAddons | IInputAddons[] | undefined;
+    append: IInputAddons | IInputAddons[] | IInputAddonLoading | undefined;
+    inputRef: ElementRef<HTMLInputElement>;
+    private _value;
+    isDisabled: boolean;
+    get disabled(): boolean;
+    set disabled(value: boolean);
+    private onChange;
+    private onTouched;
+    writeValue(value: any): void;
+    registerOnChange(fn: any): void;
+    registerOnTouched(fn: any): void;
+    setDisabledState(isDisabled: boolean): void;
+    handleInput(event: Event): void;
+    handleBlur(): void;
+    /** Click anywhere on <i-input> focuses the inner input, except clicks on addons */
+    handleHostClick(event: MouseEvent): void;
+    get prepends(): IInputAddons[];
+    get appends(): (IInputAddons | IInputAddonLoading)[];
+    static ɵfac: i0.ɵɵFactoryDeclaration<IInput, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IInput, "i-input", never, { "type": { "alias": "type"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "autocomplete": { "alias": "autocomplete"; "required": false; }; "readonly": { "alias": "readonly"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "mask": { "alias": "mask"; "required": false; }; "value": { "alias": "value"; "required": false; }; "prepend": { "alias": "prepend"; "required": false; }; "append": { "alias": "append"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; }, {}, never, never, true, never>;
+}
+declare class IFCInput implements ControlValueAccessor, OnDestroy {
+    innerInput: IInput;
+    private readonly cdr;
+    private readonly ngControl;
+    private readonly formDir;
+    private submitSub?;
+    label: string;
+    placeholder: string;
+    autocomplete: string | undefined;
+    readonly: boolean;
+    type: string;
+    mask: IInputMask | undefined;
+    prepend: IInput['prepend'];
+    append: IInput['append'];
+    /** old-style custom error templates: { required: '{label} is cuwax' } */
+    errorMessage?: IFormControlErrorMessage;
+    /** non-form usage: [value] binding */
+    get value(): string | null;
+    set value(v: string | null);
+    private _value;
+    isDisabled: boolean;
+    private onChange;
+    private onTouched;
+    constructor();
+    ngOnDestroy(): void;
+    writeValue(v: any): void;
+    registerOnChange(fn: any): void;
+    registerOnTouched(fn: any): void;
+    setDisabledState(isDisabled: boolean): void;
+    handleInnerInput(event: Event): void;
+    handleInnerBlur(): void;
+    focusInnerInput(): void;
+    get controlInvalid(): boolean;
+    get required(): boolean;
+    get resolvedErrorText(): string | null;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IFCInput, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IFCInput, "i-fc-input", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "autocomplete": { "alias": "autocomplete"; "required": false; }; "readonly": { "alias": "readonly"; "required": false; }; "type": { "alias": "type"; "required": false; }; "mask": { "alias": "mask"; "required": false; }; "prepend": { "alias": "prepend"; "required": false; }; "append": { "alias": "append"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, {}, never, never, true, never>;
+}
+declare class IInputModule {
+    static ɵfac: i0.ɵɵFactoryDeclaration<IInputModule, never>;
+    static ɵmod: i0.ɵɵNgModuleDeclaration<IInputModule, never, [typeof IInput, typeof IFCInput, typeof IInputAddon, typeof IInputMaskDirective], [typeof IInput, typeof IFCInput, typeof IInputAddon, typeof IInputMaskDirective]>;
+    static ɵinj: i0.ɵɵInjectorDeclaration<IInputModule>;
 }
 
 type ISelectOptionContext<T> = {
@@ -337,7 +512,7 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCon
     private optionsSub?;
     private filterInput$;
     private filterInputSub?;
-    onChange: (_: any) => void;
+    onChange: (value: any) => void;
     onTouched: () => void;
     get panelPositionClass(): string;
     private readonly hostEl;
@@ -908,7 +1083,7 @@ declare class IGridDataSource<T = any> {
     private _pageSizeOptions;
     private _externalDataSub?;
     private _dataSource$?;
-    constructor(initialData?: T[], config?: IGridDataSourceConfig<T>);
+    constructor(initialData?: T[], config?: IGridDataSourceConfig);
     private _applyPaginatorConfig;
     get paginatorEnabled(): boolean;
     get pageIndex(): number;
@@ -1029,8 +1204,8 @@ declare class IGridCustomColumn<T = any> implements IGridColumnLike<T> {
 }
 declare class IGridColumnGroup<T = any> {
     title: string;
-    columns: QueryList<IGridColumn<T>>;
-    customColumns: QueryList<IGridCustomColumn<T>>;
+    columns: QueryList<IGridColumn>;
+    customColumns: QueryList<IGridCustomColumn>;
     static ɵfac: i0.ɵɵFactoryDeclaration<IGridColumnGroup<any>, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<IGridColumnGroup<any>, "i-grid-column-group", never, { "title": { "alias": "title"; "required": false; }; }, {}, ["columns", "customColumns"], never, true, never>;
 }
@@ -1120,13 +1295,13 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
         expanded: boolean;
     }>;
     readonly onExpandedRowsChange: EventEmitter<T[]>;
-    columnDefs: QueryList<IGridColumn<T>>;
-    customColumnDefs: QueryList<IGridCustomColumn<T>>;
-    columnGroupDefs: QueryList<IGridColumnGroup<T>>;
+    columnDefs: QueryList<IGridColumn>;
+    customColumnDefs: QueryList<IGridCustomColumn>;
+    columnGroupDefs: QueryList<IGridColumnGroup>;
     expandableRowDef?: IGridRowDefDirective<T>;
     get hasExpandableRow(): boolean;
-    columns: IGridColumnLike<T>[];
-    headerItems: IGridHeaderItem<T>[];
+    columns: IGridColumnLike[];
+    headerItems: IGridHeaderItem[];
     renderedData: T[];
     currentFilterText: string;
     sortStates: ISortState[];
@@ -1142,7 +1317,7 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     private _numberColumnInternal?;
     private _treeMeta;
     private _treeRoots;
-    get numberColumn(): IGridColumnLike<T>;
+    get numberColumn(): IGridColumnLike;
     expandRow(row: T): void;
     collapseRow(row: T): void;
     toggleRowExpanded(row: T): void;
@@ -1172,7 +1347,7 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     toggleRow(row: T): void;
     onTreeToggle(row: T, event?: MouseEvent): void;
     private _getTreeHostFieldName;
-    isTreeHostColumn(col: IGridColumnLike<T>): boolean;
+    isTreeHostColumn(col: IGridColumnLike): boolean;
     isRowSelected(row: T): boolean;
     getRowChecked(row: T): boolean;
     getRowIndeterminate(row: T): boolean;
@@ -1226,8 +1401,8 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     get singleSelectionName(): string;
     getRowNumber(visibleRowIndex: number): number;
     getFrozenColumnZ(column: IGridColumnLike<any>): number;
-    getColumnTrack(col: IGridColumnLike<T>, index: number): string;
-    getHeaderItemTrack(item: IGridHeaderItem<T>, index: number): string;
+    getColumnTrack(col: IGridColumnLike, index: number): string;
+    getHeaderItemTrack(item: IGridHeaderItem, index: number): string;
     getRowTrack(row: T, index: number): any;
     private _hasExplicitColumns;
     static ɵfac: i0.ɵɵFactoryDeclaration<IGrid<any>, never>;
@@ -1392,184 +1567,6 @@ declare class IHSidebar implements OnInit, OnChanges {
     updateUrl(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHSidebar, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; }, {}, never, never, true, never>;
-}
-
-type IInputMaskType = 'date' | 'integer' | 'number' | 'currency' | 'time' | 'lowercase' | 'uppercase';
-type IInputMask = {
-    type: IInputMaskType;
-    /**
-     * Optional format, used for:
-     * - type: 'date' → e.g. 'dd/MM/yyyy', 'yyyy-MM-dd'
-     * - type: 'time' → e.g. 'HH:mm', 'HH:mm:ss'
-     * For 'integer' | 'number' | 'currency' format is currently ignored.
-     */
-    format?: string;
-};
-declare class IInputMaskDirective implements OnInit, OnChanges {
-    private elRef;
-    mask: IInputMask | undefined;
-    /** Whether initial default (today / now) has been applied */
-    private _defaultApplied;
-    constructor(elRef: ElementRef<HTMLElement>);
-    ngOnInit(): void;
-    ngOnChanges(changes: SimpleChanges): void;
-    /**
-     * Resolve the real native input/textarea.
-     * Works for:
-     * - <input iInputMask ...>
-     * - <textarea iInputMask ...>
-     * - <i-input iInputMask ...> (wrapper custom element)
-     */
-    private get nativeInput();
-    private get hasMask();
-    private safeSetSelectionRange;
-    private dispatchInputEvent;
-    private computeDefaultForMask;
-    private applyInitialDefaultIfNeeded;
-    private isControlKey;
-    private daysInMonth;
-    /** Split date format into tokens (dd, MM, yyyy) and separators. */
-    private splitDateFormat;
-    /** Segments (day, month, year) with actual positions in current value. */
-    private getDateSegments;
-    /** Format day/month/year back to string according to format tokens. */
-    private formatDateFromParts;
-    /** Normalize full date string (used on blur / Enter). */
-    private normalizeDateValue;
-    /**
-     * Digits-only behavior for date mask (no separators typed yet).
-     *
-     * For dd/MM/yyyy:
-     * - "12"       → "12/"
-     * - "1210"     → "12/10/"
-     * - "12101980" → "12/10/1980"
-     */
-    private applyDateMaskDigitsOnly;
-    private applyDateMask;
-    private adjustDateSegmentByArrow;
-    private splitTimeFormat;
-    private getTimeSegments;
-    private formatTimeFromParts;
-    private normalizeTimeValue;
-    private applyTimeMaskDigitsOnly;
-    private applyTimeMask;
-    private adjustTimeSegmentByArrow;
-    private applyNumericMask;
-    private applyTextCaseMask;
-    private countDigitsBeforePos;
-    /** caret index in formatted string after `digitCount` digits */
-    private caretPosAfterDigits;
-    private clamp;
-    private clampMonth2;
-    private clampDay2;
-    /**
-     * Smart digit typing for DATE:
-     * - never allows 3-digit day/month or 5-digit year
-     * - when caret is at end of a full segment, typing "rolls" that segment:
-     *   month "01" + '2' => "12" (shift + append)
-     *   year "2026" + '1' => "0261" (keeps last 4)
-     */
-    private handleDateDigitKey;
-    /**
-     * Smart digit typing for TIME (similar behavior, keeps segments fixed-length).
-     * - HH:mm       => keeps hour/min 2 digits
-     * - HH:mm:ss    => keeps hour/min/sec 2 digits
-     */
-    private handleTimeDigitKey;
-    private normalizePastedDate;
-    private normalizePastedTime;
-    onInput(_event: Event): void;
-    onBlur(): void;
-    onFocus(): void;
-    onKeydown(event: KeyboardEvent): void;
-    onPaste(event: ClipboardEvent): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IInputMaskDirective, never>;
-    static ɵdir: i0.ɵɵDirectiveDeclaration<IInputMaskDirective, "[iInputMask]", never, { "mask": { "alias": "iInputMask"; "required": false; }; }, {}, never, never, true, never>;
-}
-
-/**
- * IInput
- * Version: 2.0.0
- *
- * - Simple CVA text input
- * - Masking is handled by IInputMaskDirective on the inner <input>
- */
-
-declare class IInput implements ControlValueAccessor {
-    type: string;
-    placeholder: string;
-    autocomplete: string | undefined;
-    readonly: boolean;
-    /** invalid state (controlled by form or wrapper) */
-    invalid: boolean;
-    mask: IInputMask | undefined;
-    /** value usable both by CVA and by [value] binding */
-    get value(): string | null;
-    set value(v: string | null);
-    prepend: IInputAddons | IInputAddons[] | undefined;
-    append: IInputAddons | IInputAddons[] | IInputAddonLoading | undefined;
-    inputRef: ElementRef<HTMLInputElement>;
-    private _value;
-    isDisabled: boolean;
-    get disabled(): boolean;
-    set disabled(value: boolean);
-    private onChange;
-    private onTouched;
-    writeValue(value: any): void;
-    registerOnChange(fn: any): void;
-    registerOnTouched(fn: any): void;
-    setDisabledState(isDisabled: boolean): void;
-    handleInput(event: Event): void;
-    handleBlur(): void;
-    /** Click anywhere on <i-input> focuses the inner input, except clicks on addons */
-    handleHostClick(event: MouseEvent): void;
-    get prepends(): IInputAddons[];
-    get appends(): (IInputAddons | IInputAddonLoading)[];
-    static ɵfac: i0.ɵɵFactoryDeclaration<IInput, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IInput, "i-input", never, { "type": { "alias": "type"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "autocomplete": { "alias": "autocomplete"; "required": false; }; "readonly": { "alias": "readonly"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "mask": { "alias": "mask"; "required": false; }; "value": { "alias": "value"; "required": false; }; "prepend": { "alias": "prepend"; "required": false; }; "append": { "alias": "append"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; }, {}, never, never, true, never>;
-}
-declare class IFCInput implements ControlValueAccessor, OnDestroy {
-    innerInput: IInput;
-    private readonly cdr;
-    private readonly ngControl;
-    private readonly formDir;
-    private submitSub?;
-    label: string;
-    placeholder: string;
-    autocomplete: string | undefined;
-    readonly: boolean;
-    type: string;
-    mask: IInputMask | undefined;
-    prepend: IInput['prepend'];
-    append: IInput['append'];
-    /** old-style custom error templates: { required: '{label} is cuwax' } */
-    errorMessage?: IFormControlErrorMessage;
-    /** non-form usage: [value] binding */
-    get value(): string | null;
-    set value(v: string | null);
-    private _value;
-    isDisabled: boolean;
-    private onChange;
-    private onTouched;
-    constructor();
-    ngOnDestroy(): void;
-    writeValue(v: any): void;
-    registerOnChange(fn: any): void;
-    registerOnTouched(fn: any): void;
-    setDisabledState(isDisabled: boolean): void;
-    handleInnerInput(event: Event): void;
-    handleInnerBlur(): void;
-    focusInnerInput(): void;
-    get controlInvalid(): boolean;
-    get required(): boolean;
-    get resolvedErrorText(): string | null;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IFCInput, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IFCInput, "i-fc-input", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "autocomplete": { "alias": "autocomplete"; "required": false; }; "readonly": { "alias": "readonly"; "required": false; }; "type": { "alias": "type"; "required": false; }; "mask": { "alias": "mask"; "required": false; }; "prepend": { "alias": "prepend"; "required": false; }; "append": { "alias": "append"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, {}, never, never, true, never>;
-}
-declare class IInputModule {
-    static ɵfac: i0.ɵɵFactoryDeclaration<IInputModule, never>;
-    static ɵmod: i0.ɵɵNgModuleDeclaration<IInputModule, never, [typeof IInput, typeof IFCInput, typeof IInputAddon, typeof IInputMaskDirective], [typeof IInput, typeof IFCInput, typeof IInputAddon, typeof IInputMaskDirective]>;
-    static ɵinj: i0.ɵɵInjectorDeclaration<IInputModule>;
 }
 
 declare class ILoading {

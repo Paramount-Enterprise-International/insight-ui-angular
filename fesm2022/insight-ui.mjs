@@ -1,5 +1,5 @@
 import * as i0 from '@angular/core';
-import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, HostListener, Directive, forwardRef, Pipe, TemplateRef, ElementRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, ViewChildren } from '@angular/core';
+import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, ViewChildren } from '@angular/core';
 import * as i1$1 from '@angular/common';
 import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
@@ -1223,6 +1223,14 @@ function interpolate(tpl, ctx) {
     return tpl.replace(/\{(\w+)\}/g, (_match, key) => map[key] !== null ? String(map[key]) : `{${key}}`);
 }
 
+/* input.ts */
+/**
+ * IInput
+ * Version: 2.0.0
+ *
+ * - Simple CVA text input
+ * - Masking is handled by IInputMaskDirective on the inner <input>
+ */
 class IInputAddon {
     addon;
     get addonKind() {
@@ -1231,31 +1239,31 @@ class IInputAddon {
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IInputAddon, deps: [], target: i0.ɵɵFactoryTarget.Component });
     static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.17", type: IInputAddon, isStandalone: true, selector: "i-input-addon", inputs: { addon: "addon" }, host: { properties: { "attr.kind": "this.addonKind" } }, ngImport: i0, template: `
     @if (!addon || addon.visible === false) {
-    <!-- render nothing -->
+      <!-- render nothing -->
     } @else if (addon.type === 'button') {
-    <i-button
-      size="xs"
-      type="button"
-      [icon]="addon.icon"
-      [variant]="addon.variant ?? 'primary'"
-      (onClick)="addon.onClick ? addon.onClick() : null"
-    />
+      <i-button
+        size="xs"
+        type="button"
+        [icon]="addon.icon"
+        [variant]="addon.variant ?? 'primary'"
+        (onClick)="addon.onClick ? addon.onClick() : null"
+      />
     } @else if (addon.type === 'link') {
-    <a
-      class="i-btn i-btn-xs"
-      target="_blank"
-      [attr.variant]="addon.variant ?? 'primary'"
-      [href]="addon.href"
-    >
-      <i-icon size="xs" [icon]="addon.icon" />
-    </a>
+      <a
+        class="i-btn i-btn-xs"
+        target="_blank"
+        [attr.variant]="addon.variant ?? 'primary'"
+        [href]="addon.href"
+      >
+        <i-icon size="xs" [icon]="addon.icon" />
+      </a>
     } @else if (addon.type === 'icon') {
-    <i-icon size="sm" [icon]="addon.icon" />
+      <i-icon size="sm" [icon]="addon.icon" />
     } @else if (addon.type === 'loading') {
-    <i-loading label="" />
+      <i-loading label="" />
     } @else {
-    <!-- text -->
-    <span>{{ addon.text }}</span>
+      <!-- text -->
+      <span>{{ addon.text }}</span>
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
@@ -1268,31 +1276,31 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
                     imports: [IButton, IIcon, ILoading],
                     template: `
     @if (!addon || addon.visible === false) {
-    <!-- render nothing -->
+      <!-- render nothing -->
     } @else if (addon.type === 'button') {
-    <i-button
-      size="xs"
-      type="button"
-      [icon]="addon.icon"
-      [variant]="addon.variant ?? 'primary'"
-      (onClick)="addon.onClick ? addon.onClick() : null"
-    />
+      <i-button
+        size="xs"
+        type="button"
+        [icon]="addon.icon"
+        [variant]="addon.variant ?? 'primary'"
+        (onClick)="addon.onClick ? addon.onClick() : null"
+      />
     } @else if (addon.type === 'link') {
-    <a
-      class="i-btn i-btn-xs"
-      target="_blank"
-      [attr.variant]="addon.variant ?? 'primary'"
-      [href]="addon.href"
-    >
-      <i-icon size="xs" [icon]="addon.icon" />
-    </a>
+      <a
+        class="i-btn i-btn-xs"
+        target="_blank"
+        [attr.variant]="addon.variant ?? 'primary'"
+        [href]="addon.href"
+      >
+        <i-icon size="xs" [icon]="addon.icon" />
+      </a>
     } @else if (addon.type === 'icon') {
-    <i-icon size="sm" [icon]="addon.icon" />
+      <i-icon size="sm" [icon]="addon.icon" />
     } @else if (addon.type === 'loading') {
-    <i-loading label="" />
+      <i-loading label="" />
     } @else {
-    <!-- text -->
-    <span>{{ addon.text }}</span>
+      <!-- text -->
+      <span>{{ addon.text }}</span>
     }
   `,
                 }]
@@ -1303,30 +1311,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
                 type: HostBinding,
                 args: ['attr.kind']
             }] } });
-
-/**
- * IInputMaskDirective
- * Version: 1.4.2
- *
- * Fixes (1.4.2):
- * - Works when applied to wrapper elements like <i-input> (custom element)
- * - Always resolves the real native <input>/<textarea> before reading/writing value
- * - Prevents setSelectionRange crash (only call when supported)
- * - Prevents "value gone on click" (was writing to <i-input> host instead of inner <input>)
- *
- * Usage:
- *   <input [iInputMask]="{ type: 'date', format: 'dd/MM/yyyy' }" />
- *   <i-input [iInputMask]="{ type: 'date', format: 'dd/MM/yyyy' }" />
- */
 class IInputMaskDirective {
-    elRef;
     mask;
     /** Whether initial default (today / now) has been applied */
     _defaultApplied = false;
-    // NOTE: must be HTMLElement, because this directive is often applied to <i-input>
-    constructor(elRef) {
-        this.elRef = elRef;
-    }
+    elRef = inject((ElementRef));
     // ----------------------------------------------------
     // Lifecycle
     // ----------------------------------------------------
@@ -2514,7 +2503,7 @@ class IInputMaskDirective {
     // ----------------------------------------------------
     // HOST LISTENERS
     // ----------------------------------------------------
-    onInput(_event) {
+    onInput() {
         if (!this.hasMask || !this.mask)
             return;
         const el = this.nativeInput;
@@ -2708,8 +2697,8 @@ class IInputMaskDirective {
             this.safeSetSelectionRange(el, next.length, next.length);
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IInputMaskDirective, deps: [{ token: i0.ElementRef }], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.17", type: IInputMaskDirective, isStandalone: true, selector: "[iInputMask]", inputs: { mask: ["iInputMask", "mask"] }, host: { listeners: { "input": "onInput($event)", "blur": "onBlur()", "focus": "onFocus()", "keydown": "onKeydown($event)", "paste": "onPaste($event)" } }, usesOnChanges: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IInputMaskDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.17", type: IInputMaskDirective, isStandalone: true, selector: "[iInputMask]", inputs: { mask: ["iInputMask", "mask"] }, host: { listeners: { "input": "onInput()", "blur": "onBlur()", "focus": "onFocus()", "keydown": "onKeydown($event)", "paste": "onPaste($event)" } }, usesOnChanges: true, ngImport: i0 });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImport: i0, type: IInputMaskDirective, decorators: [{
             type: Directive,
@@ -2717,12 +2706,12 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
                     selector: '[iInputMask]',
                     standalone: true,
                 }]
-        }], ctorParameters: () => [{ type: i0.ElementRef }], propDecorators: { mask: [{
+        }], propDecorators: { mask: [{
                 type: Input,
                 args: ['iInputMask']
             }], onInput: [{
                 type: HostListener,
-                args: ['input', ['$event']]
+                args: ['input']
             }], onBlur: [{
                 type: HostListener,
                 args: ['blur']
@@ -2736,15 +2725,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
                 type: HostListener,
                 args: ['paste', ['$event']]
             }] } });
-
-/* input.ts */
-/**
- * IInput
- * Version: 2.0.0
- *
- * - Simple CVA text input
- * - Masking is handled by IInputMaskDirective on the inner <input>
- */
 /* =========================================
  * IInput (CVA)
  * ========================================= */
@@ -3273,8 +3253,8 @@ class ISelect {
     filterInput$ = new Subject();
     filterInputSub;
     // ---------- CVA ----------
-    onChange = (_) => {
-        /*  */
+    onChange = (value) => {
+        void value;
     };
     onTouched = () => {
         /*  */
@@ -6810,6 +6790,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
 /* ----------------------------------------------------
  * EXPANDABLE ROW DEF
  * ---------------------------------------------------- */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 class IGridRowDefDirective {
     iRowDefExpandSingle = false;
     template = inject((TemplateRef));
@@ -7004,6 +6985,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
 /* ----------------------------------------------------
  * COLUMN GROUP (public consumer API)
  * ---------------------------------------------------- */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 class IGridColumnGroup {
     title = '';
     columns;
@@ -10074,6 +10056,9 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.17", ngImpo
                 type: HostBinding,
                 args: ['class.hidden']
             }] } });
+
+// export * from './input-addon';
+// export * from './input-mask';
 
 class IPill {
     /**
