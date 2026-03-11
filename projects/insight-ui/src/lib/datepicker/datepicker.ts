@@ -36,9 +36,7 @@ import {
   NgControl,
 } from '@angular/forms';
 import { IButton } from '../button/button';
-import { IInput } from '../input/input';
-import { IInputAddonButton } from '../input/input-addon';
-import { IInputMaskDirective } from '../input/input-mask';
+import { IInput, IInputAddonButton, IInputMaskDirective } from '../input/input';
 import { ISelect, ISelectChange } from '../select/select';
 import {
   IFormControlErrorMessage,

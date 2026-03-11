@@ -1,23 +1,31 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { IPill } from './pill';
 
-import { Pill } from './pill';
+@Component({
+  standalone: true,
+  imports: [IPill],
+  template: `<i-pill>Tag</i-pill>`,
+})
+class PillHost {}
 
-describe('Pill', () => {
-  let component: Pill;
-  let fixture: ComponentFixture<Pill>;
+describe('IPill', () => {
+  let fixture: ComponentFixture<PillHost>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Pill]
-    })
-    .compileComponents();
+      imports: [PillHost],
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(Pill);
-    component = fixture.componentInstance;
+    fixture = TestBed.createComponent(PillHost);
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('renders host and content', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    const content = host.querySelector('.i-pill__content');
+
+    expect(host.querySelector('i-pill')).toBeTruthy();
+    expect(content?.textContent).toContain('Tag');
   });
 });

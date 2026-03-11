@@ -1,22 +1,30 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { ILoading } from './loading';
 
+@Component({
+  standalone: true,
+  imports: [ILoading],
+  template: `<i-loading label="Loading.." />`,
+})
+class LoadingHost {}
+
 describe('ILoading', () => {
-  let component: ILoading;
-  let fixture: ComponentFixture<ILoading>;
+  let fixture: ComponentFixture<LoadingHost>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ILoading],
+      imports: [LoadingHost],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(ILoading);
-    component = fixture.componentInstance;
+    fixture = TestBed.createComponent(LoadingHost);
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('renders host and label', () => {
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('i-loading')).toBeTruthy();
+    expect(host.textContent).toContain('Loading..');
   });
 });

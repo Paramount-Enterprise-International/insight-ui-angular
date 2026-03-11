@@ -1,22 +1,32 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { IFCSelect } from './select';
 
-import { ISelect } from './select';
+@Component({
+  standalone: true,
+  imports: [IFCSelect],
+  template: `<i-fc-select label="Pick" [options]="options" />`,
+})
+class SelectHost {
+  options = ['A', 'B'];
+}
 
-describe('ISelect', () => {
-  let component: ISelect;
-  let fixture: ComponentFixture<ISelect>;
+describe('IFCSelect', () => {
+  let fixture: ComponentFixture<SelectHost>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ISelect],
+      imports: [SelectHost],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(ISelect);
-    component = fixture.componentInstance;
+    fixture = TestBed.createComponent(SelectHost);
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('renders host and inner select', () => {
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('i-fc-select')).toBeTruthy();
+    expect(host.querySelector('i-select')).toBeTruthy();
   });
 });

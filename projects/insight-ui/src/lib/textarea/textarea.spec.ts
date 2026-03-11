@@ -1,22 +1,31 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { IFCTextArea } from './textarea';
 
-import { ITextArea } from './textarea';
+@Component({
+  standalone: true,
+  imports: [IFCTextArea],
+  template: `<i-fc-textarea label="Notes" [value]="'Hello'" />`,
+})
+class TextareaHost {}
 
-describe('ITextarea', () => {
-  let component: ITextArea;
-  let fixture: ComponentFixture<ITextArea>;
+describe('IFCTextArea', () => {
+  let fixture: ComponentFixture<TextareaHost>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ITextArea],
+      imports: [TextareaHost],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(ITextArea);
-    component = fixture.componentInstance;
+    fixture = TestBed.createComponent(TextareaHost);
     fixture.detectChanges();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('renders host and inner textarea', () => {
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('i-fc-textarea')).toBeTruthy();
+    expect(host.querySelector('i-textarea textarea')).toBeTruthy();
+    expect(host.querySelector('label.i-fc-textarea__label')?.textContent).toContain('Notes');
   });
 });

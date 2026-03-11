@@ -24,7 +24,17 @@
         "test": {
           "builder": "@angular/build:karma",
           "options": {
-            "tsConfig": "projects/insight-ui/tsconfig.spec.json"
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
+            "tsConfig": "projects/insight-ui/tsconfig.spec.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/playground/public"
+              }
+            ]
           }
         }
       }
@@ -40,7 +50,9 @@
           "builder": "@angular/build:application",
           "options": {
             "browser": "projects/playground/src/main.ts",
-            "polyfills": ["zone.js"],
+            "polyfills": [
+              "zone.js"
+            ],
             "tsConfig": "projects/playground/tsconfig.app.json",
             "assets": [
               {
@@ -48,7 +60,9 @@
                 "input": "projects/playground/public"
               }
             ],
-            "styles": ["projects/playground/src/styles.css"]
+            "styles": [
+              "projects/playground/src/styles.css"
+            ]
           },
           "configurations": {
             "production": {
@@ -95,7 +109,10 @@
         "test": {
           "builder": "@angular/build:karma",
           "options": {
-            "polyfills": ["zone.js", "zone.js/testing"],
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
             "tsConfig": "projects/playground/tsconfig.spec.json",
             "assets": [
               {
@@ -103,7 +120,9 @@
                 "input": "projects/playground/public"
               }
             ],
-            "styles": ["projects/playground/src/styles.css"]
+            "styles": [
+              "projects/playground/src/styles.css"
+            ]
           }
         }
       }

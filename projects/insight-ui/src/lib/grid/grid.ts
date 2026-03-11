@@ -88,6 +88,7 @@ export type IGridPaginatorInput =
       pageSizeOptions?: number[];
     };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type IGridDataSourceConfig<T = any> = {
   sort?: ISortConfig;
   filter?: IGridFilter;
@@ -122,6 +123,7 @@ export type IGridColumnWidth = number | 'fill';
  * COLUMN-LIKE INTERFACE (manual + auto + custom)
  * ---------------------------------------------------- */
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type IGridColumnLike<T = any> = {
   fieldName?: string;
   title: string;
@@ -176,7 +178,7 @@ export class IGridDataSource<T = any> {
 
   private _dataSource$?: Observable<T[]>;
 
-  constructor(initialData: T[] = [], config: IGridDataSourceConfig<T> = {}) {
+  constructor(initialData: T[] = [], config: IGridDataSourceConfig = {}) {
     this._rawData = initialData || [];
 
     // filter (uses setter to normalize)
@@ -516,6 +518,7 @@ export class IGridCellDefDirective {
   selector: '[iRowDef]',
   standalone: true,
 })
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export class IGridRowDefDirective<T = any> implements OnInit {
   @Input() iRowDefExpandSingle = false;
 
@@ -659,14 +662,15 @@ export class IGridCustomColumn<T = any> implements IGridColumnLike<T> {
   standalone: true,
   template: '',
 })
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export class IGridColumnGroup<T = any> {
   @Input() title = '';
 
   @ContentChildren(IGridColumn)
-  columns!: QueryList<IGridColumn<T>>;
+  columns!: QueryList<IGridColumn>;
 
   @ContentChildren(IGridCustomColumn)
-  customColumns!: QueryList<IGridCustomColumn<T>>;
+  customColumns!: QueryList<IGridCustomColumn>;
 }
 
 /* ----------------------------------------------------
@@ -1353,13 +1357,13 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   @Output() readonly onExpandedRowsChange = new EventEmitter<T[]>();
 
   @ContentChildren(IGridColumn)
-  columnDefs!: QueryList<IGridColumn<T>>;
+  columnDefs!: QueryList<IGridColumn>;
 
   @ContentChildren(IGridCustomColumn)
-  customColumnDefs!: QueryList<IGridCustomColumn<T>>;
+  customColumnDefs!: QueryList<IGridCustomColumn>;
 
   @ContentChildren(IGridColumnGroup)
-  columnGroupDefs!: QueryList<IGridColumnGroup<T>>;
+  columnGroupDefs!: QueryList<IGridColumnGroup>;
 
   @ContentChild(IGridRowDefDirective)
   expandableRowDef?: IGridRowDefDirective<T>;
@@ -1368,8 +1372,8 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     return !!this.expandableRowDef?.template;
   }
 
-  columns: IGridColumnLike<T>[] = [];
-  headerItems: IGridHeaderItem<T>[] = [];
+  columns: IGridColumnLike[] = [];
+  headerItems: IGridHeaderItem[] = [];
 
   renderedData: T[] = [];
   currentFilterText = '';
@@ -1388,7 +1392,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   readonly numberColumnWidth = 60;
   readonly expandColumnWidth = 32;
 
-  private _numberColumnInternal?: IGridColumnLike<T>;
+  private _numberColumnInternal?: IGridColumnLike;
 
   private _treeMeta = new Map<
     T,
@@ -1397,7 +1401,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   private _treeRoots: T[] = [];
 
-  get numberColumn(): IGridColumnLike<T> {
+  get numberColumn(): IGridColumnLike {
     if (!this._numberColumnInternal) {
       this._numberColumnInternal = {
         fieldName: undefined,
@@ -1769,7 +1773,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     return firstData?.fieldName ?? null;
   }
 
-  isTreeHostColumn(col: IGridColumnLike<T>): boolean {
+  isTreeHostColumn(col: IGridColumnLike): boolean {
     if (!this.treeEnabled) {
       return false;
     }
@@ -2383,8 +2387,8 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
     const hasAnyGrouping = groups.length > 0;
 
-    const groupedColsSet = new Set<IGridColumnLike<T>>();
-    const groupedCustomSet = new Set<IGridColumnLike<T>>();
+    const groupedColsSet = new Set<IGridColumnLike>();
+    const groupedCustomSet = new Set<IGridColumnLike>();
 
     for (const g of groups) {
       (g.columns?.toArray?.() ?? []).forEach((c) => groupedColsSet.add(c));
@@ -2401,14 +2405,14 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       directCols.length > 0;
 
     if (hasExplicit) {
-      const headerItems: IGridHeaderItem<T>[] = [];
+      const headerItems: IGridHeaderItem[] = [];
 
       for (const c of topLevelCols) {
         headerItems.push({ kind: 'col', col: c });
       }
 
       for (const g of groups) {
-        const gCols: IGridColumnLike<T>[] = [
+        const gCols: IGridColumnLike[] = [
           ...(g.columns?.toArray?.() ?? []),
           ...(g.customColumns?.toArray?.() ?? []),
         ];
@@ -2424,7 +2428,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
         headerItems.push({ kind: 'col', col: c });
       }
 
-      const flat: IGridColumnLike<T>[] = [];
+      const flat: IGridColumnLike[] = [];
       for (const item of headerItems) {
         if (item.kind === 'col') {
           flat.push(item.col);
@@ -2473,7 +2477,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     }
   }
 
-  private _buildAutoColumnsFromData(): IGridColumnLike<T>[] {
+  private _buildAutoColumnsFromData(): IGridColumnLike[] {
     const rows = this._getAllDataRows();
     if (!rows.length) {
       return [];
@@ -2600,7 +2604,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     return base + (endIndex - idx);
   }
 
-  getColumnTrack(col: IGridColumnLike<T>, index: number): string {
+  getColumnTrack(col: IGridColumnLike, index: number): string {
     if (col.fieldName) {
       return `field:${col.fieldName}`;
     }
@@ -2608,7 +2612,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     return `custom:${col.title || 'col'}:${index}`;
   }
 
-  getHeaderItemTrack(item: IGridHeaderItem<T>, index: number): string {
+  getHeaderItemTrack(item: IGridHeaderItem, index: number): string {
     if (item.kind === 'col') {
       return `col:${this.getColumnTrack(item.col, index)}`;
     }
