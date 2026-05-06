@@ -765,6 +765,8 @@ export class ISelect<T = any>
     const panel = this.getPanelElement();
     if (!panel || !panel.parentNode) return;
 
+    this.clearPanelRuntimeStyles(panel);
+
     if (panel.parentNode !== document.body) {
       this.panelPortaled = false;
       return;
@@ -797,10 +799,29 @@ export class ISelect<T = any>
     this.zone.runOutsideAngular(() => {
       this.repositionRaf = requestAnimationFrame(() => {
         this.repositionRaf = 0;
-        this.repositionPanelNow();
-        after?.();
+        try {
+          this.repositionPanelNow();
+        } finally {
+          after?.();
+        }
       });
     });
+  }
+
+  private clearPanelRuntimeStyles(panel: HTMLElement): void {
+    panel.style.visibility = '';
+    panel.style.pointerEvents = '';
+    panel.style.position = '';
+    panel.style.zIndex = '';
+    panel.style.boxSizing = '';
+    panel.style.overflowX = '';
+    panel.style.overflowY = '';
+    panel.style.width = '';
+    panel.style.minWidth = '';
+    panel.style.maxWidth = '';
+    panel.style.maxHeight = '';
+    panel.style.left = '';
+    panel.style.top = '';
   }
 
   private repositionPanelNow(): void {
@@ -814,20 +835,31 @@ export class ISelect<T = any>
     const vh = window.innerHeight;
 
     const gap = 8;
+    const availableWidth = Math.max(1, vw - gap * 2);
+    const computedMinWidth = Number.parseFloat(window.getComputedStyle(panel).minWidth);
+    const minWidth = Number.isFinite(computedMinWidth)
+      ? Math.min(computedMinWidth, availableWidth)
+      : 0;
     const pos = (this.panelPosition || 'bottom left').trim().toLowerCase();
 
     panel.style.position = 'fixed';
     panel.style.zIndex = '2000';
     panel.style.boxSizing = 'border-box';
+    panel.style.overflowX = 'hidden';
     panel.style.overflowY = 'auto';
+    panel.style.maxWidth = `${Math.floor(availableWidth)}px`;
 
     if (this.matchTriggerWidth) {
-      panel.style.width = `${Math.round(rect.width)}px`;
+      const triggerWidth = Math.min(Math.max(1, Math.round(rect.width)), availableWidth);
+      panel.style.width = `${triggerWidth}px`;
+      panel.style.minWidth = `${triggerWidth}px`;
     } else {
       panel.style.width = '';
+      panel.style.minWidth = minWidth > 0 ? `${Math.floor(minWidth)}px` : '';
     }
 
     const panelRect = panel.getBoundingClientRect();
+    const panelWidth = Math.min(Math.max(1, panelRect.width), availableWidth);
 
     const wantTop = pos.startsWith('top');
     const wantBottom =
@@ -838,15 +870,16 @@ export class ISelect<T = any>
     const wantRight = pos.includes('right') || pos === 'right';
     const alignRight = wantRight && !wantLeft;
 
-    let left = alignRight ? rect.right - panelRect.width : rect.left;
-    const maxLeft = Math.max(gap, vw - panelRect.width - gap);
+    let left = alignRight ? rect.right - panelWidth : rect.left;
+    const maxLeft = Math.max(gap, vw - panelWidth - gap);
     left = Math.min(Math.max(gap, left), maxLeft);
 
     if (pos === 'left') {
-      left = rect.left - panelRect.width - this.panelOffset;
+      left = rect.left - panelWidth - this.panelOffset;
       left = Math.min(Math.max(gap, left), maxLeft);
 
-      const top = Math.min(Math.max(gap, rect.top), Math.max(gap, vh - panelRect.height - gap));
+      const panelHeight = Math.min(panelRect.height, Math.max(60, vh - gap * 2));
+      const top = Math.min(Math.max(gap, rect.top), Math.max(gap, vh - panelHeight - gap));
       panel.style.left = `${Math.round(left)}px`;
       panel.style.top = `${Math.round(top)}px`;
 
@@ -859,7 +892,8 @@ export class ISelect<T = any>
       left = rect.right + this.panelOffset;
       left = Math.min(Math.max(gap, left), maxLeft);
 
-      const top = Math.min(Math.max(gap, rect.top), Math.max(gap, vh - panelRect.height - gap));
+      const panelHeight = Math.min(panelRect.height, Math.max(60, vh - gap * 2));
+      const top = Math.min(Math.max(gap, rect.top), Math.max(gap, vh - panelHeight - gap));
       panel.style.left = `${Math.round(left)}px`;
       panel.style.top = `${Math.round(top)}px`;
 
@@ -882,10 +916,13 @@ export class ISelect<T = any>
     const maxH = Math.max(60, side === 'bottom' ? spaceBelow : spaceAbove);
     panel.style.maxHeight = `${Math.floor(maxH)}px`;
 
-    const top =
+    const panelHeight = Math.min(panelRect.height, maxH);
+    const rawTop =
       side === 'bottom'
         ? rect.bottom + this.panelOffset
-        : rect.top - panelRect.height - this.panelOffset;
+        : rect.top - panelHeight - this.panelOffset;
+    const maxTop = Math.max(gap, vh - panelHeight - gap);
+    const top = Math.min(Math.max(gap, rawTop), maxTop);
 
     panel.style.left = `${Math.round(left)}px`;
     panel.style.top = `${Math.round(top)}px`;
