@@ -4,7 +4,7 @@
  *
  * Fixes:
  * - ✅ IMPORTANT: prevent value from being wiped due to bubbled "input" events
- *   from inner month/year i-select inputs.
+ *   from inner month/year i-dropdown inputs.
  *   -> Only handle input when event.target is the date input itself.
  * - Keep portal + positioning + flicker guard for portaled i-options.
  * - IFCDatepicker included in same file
@@ -37,7 +37,7 @@ import {
 } from '@angular/forms';
 import { IButton } from '../button/button';
 import { IInput, IInputAddonButton, IInputMaskDirective } from '../input/input';
-import { ISelect, ISelectChange } from '../select/select';
+import { IDropdown, IDropdownChange } from '../dropdown';
 import {
   IFormControlErrorMessage,
   isControlRequired,
@@ -70,7 +70,7 @@ const noop = (): void => {
 @Component({
   selector: 'i-datepicker',
   standalone: true,
-  imports: [IInput, IButton, IInputMaskDirective, ISelect, NgClass],
+  imports: [IInput, IButton, IInputMaskDirective, IDropdown, NgClass],
   template: `
     <i-input
       [append]="appendAddon"
@@ -92,15 +92,15 @@ const noop = (): void => {
       <div class="i-datepicker-header">
         <i-button icon="prev" size="xs" (click)="prevMonth()" />
 
-        <i-select
-          class="i-date-picker-month-select"
+        <i-dropdown
+          class="i-date-picker-month-dropdown"
           [options]="months"
           [value]="monthSelected"
           (onOptionSelected)="onMonthChange($event)"
         />
 
-        <i-select
-          class="i-date-picker-year-select"
+        <i-dropdown
+          class="i-date-picker-year-dropdown"
           [options]="years"
           [value]="viewYear"
           (onOptionSelected)="onYearChange($event)"
@@ -621,7 +621,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  onMonthChange(change: ISelectChange<any>): void {
+  onMonthChange(change: IDropdownChange<any>): void {
     const row = change?.value;
     if (!row) return;
 
@@ -634,7 +634,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  onYearChange(change: ISelectChange<number>): void {
+  onYearChange(change: IDropdownChange<number>): void {
     const year = change.value;
     if (typeof year !== 'number') return;
 
@@ -788,7 +788,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   /**
    * ✅ CRITICAL:
    * "input" events bubble.
-   * Month/year i-select (and other inner inputs) will trigger "input" too.
+   * Month/year i-dropdown (and other inner inputs) will trigger "input" too.
    * If we react to those, we'll read the date input at the wrong moment and wipe display.
    */
   @HostListener('input', ['$event'])
@@ -809,7 +809,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   }
 
   /**
-   * Flicker guard (for portaled inner i-select options)
+   * Flicker guard (for portaled inner i-dropdown options)
    */
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
@@ -829,10 +829,10 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     const active = document.activeElement as HTMLElement | null;
     const activeInsidePanel = !!panel && !!active && panel.contains(active);
 
-    const clickedInAnySelectOptions =
+    const clickedInAnyDropdownOptions =
       !!target.closest('i-options') || !!target.closest('.i-options');
 
-    if (activeInsidePanel && clickedInAnySelectOptions) return;
+    if (activeInsidePanel && clickedInAnyDropdownOptions) return;
 
     this.closePanel();
     this.cdr.markForCheck();

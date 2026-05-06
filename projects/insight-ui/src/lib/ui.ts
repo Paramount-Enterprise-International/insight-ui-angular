@@ -9,7 +9,7 @@ import { IIcon } from './icon';
 import { IInputModule } from './input';
 import { ILoading } from './loading';
 import { ISectionModule } from './section';
-import { IFCSelect, ISelect } from './select';
+import { IDropdown, IFCDropdown } from './dropdown';
 import { IFCTextArea, ITextArea } from './textarea';
 import { ICodeViewerModule } from './code-viewer';
 import { IHContent, IHSidebar } from './host';
@@ -31,8 +31,8 @@ import { IPill } from './pill/pill';
     IInputModule,
     ILoading,
     ISectionModule,
-    ISelect,
-    IFCSelect,
+    IDropdown,
+    IFCDropdown,
     ITextArea,
     IFCTextArea,
     IToggle,
@@ -52,8 +52,8 @@ import { IPill } from './pill/pill';
     IInputModule,
     ILoading,
     ISectionModule,
-    ISelect,
-    IFCSelect,
+    IDropdown,
+    IFCDropdown,
     ITextArea,
     IFCTextArea,
     IToggle,

@@ -65,11 +65,17 @@ jobs:
           echo "Updated projects/${LIB_NAME}/package.json:"
           cat "projects/${LIB_NAME}/package.json"
 
+      # 5.4) Run lint
+      - name: Run lint
+        shell: bash
+        run: |
+          npm run lint
+
       # 5.5) Run tests before build
       - name: Run tests
         shell: bash
         run: |
-          npx --yes @angular/cli@20 test "$LIB_NAME" --watch=false --browsers=ChromeHeadless
+          npm run test:ci
 
       # 6) Build Angular library
       - name: Build Angular library
