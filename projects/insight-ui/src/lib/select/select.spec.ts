@@ -48,8 +48,10 @@ describe('IFCSelect', () => {
     fixture.destroy();
     longFixture?.destroy();
     matchedWidthFixture?.destroy();
+
     longFixture = undefined;
     matchedWidthFixture = undefined;
+
     document.body.querySelectorAll('i-options').forEach((el) => el.remove());
   });
 
@@ -66,6 +68,7 @@ describe('IFCSelect', () => {
 
     const select = longFixture.debugElement.query(By.directive(ISelect))
       .componentInstance as ISelect<string>;
+
     const host = longFixture.nativeElement as HTMLElement;
     const input = host.querySelector('i-input') as HTMLElement;
 
@@ -104,9 +107,12 @@ describe('IFCSelect', () => {
     (select as any).repositionPanelNow();
 
     expect(select.isOpen).toBeTrue();
+    expect(panel.classList.contains('i-options--portaled')).toBeTrue();
+    expect(panel.style.position).toBe('fixed');
     expect(panel.style.width).toBe('max-content');
     expect(panel.style.minWidth).toBe('220px');
-    expect(panel.style.overflowX).toBe('hidden');
+    expect(panel.style.overflowX).toBe('clip');
+    expect(panel.style.overflowY).toBe('auto');
     expect(Number.parseFloat(panel.style.maxWidth)).toBeLessThanOrEqual(window.innerWidth - 16);
   });
 
@@ -116,6 +122,7 @@ describe('IFCSelect', () => {
 
     const select = matchedWidthFixture.debugElement.query(By.directive(ISelect))
       .componentInstance as ISelect<string>;
+
     const host = matchedWidthFixture.nativeElement as HTMLElement;
     const input = host.querySelector('i-input') as HTMLElement;
 
@@ -155,5 +162,7 @@ describe('IFCSelect', () => {
 
     expect(panel.style.width).toBe('220px');
     expect(panel.style.minWidth).toBe('220px');
+    expect(panel.style.overflowX).toBe('clip');
+    expect(panel.style.overflowY).toBe('auto');
   });
 });
