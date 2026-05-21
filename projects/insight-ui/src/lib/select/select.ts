@@ -1,13 +1,14 @@
 // select.ts (Angular)
 /**
  * ISelect
- * Version: 2.2.2
+ * Version: 2.2.4
  *
  * Fixes:
  * - Render options container as <i-options> (not <div>)
- * - Match dropdown width to visible control width (uses i-input host rect)
+ * - Let dropdown grow from visible control width to fit option text
  * - Keep portal-to-body + fixed positioning for overflow parents
- * - ✅ Fix flicker: portal + measure + position BEFORE showing panel
+ * - Fix flicker: portal + measure + position BEFORE showing panel
+ * - Fix option text being truncated too early after long-text dropdown width fix
  */
 
 import { NgClass, NgTemplateOutlet } from '@angular/common';
@@ -97,7 +98,6 @@ export type ISelectPanelPosition =
     />
 
     @if (hasOptionsList) {
-      <!-- ✅ render as i-options -->
       <i-options #panel class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
         @for (row of filteredOptions; track row; let idx = $index) {
           <div
@@ -119,6 +119,7 @@ export type ISelectPanelPosition =
                 [innerHTML]="resolveDisplayText(row) | highlightSearch: filterText"
               ></div>
             }
+
             @if (isRowSelected(row)) {
               <span class="i-option-check">
                 <i-icon icon="check" />
@@ -151,14 +152,14 @@ export class ISelect<T = any>
 
   @Input() panelPosition: ISelectPanelPosition = 'bottom left';
 
-  /** portal panel to body to avoid overflow clipping (default true) */
+  /** portal panel to body to avoid overflow clipping */
   @Input() portalToBody = true;
 
   /** gap between trigger and panel (px) */
   @Input() panelOffset = 6;
 
-  /** match dropdown width to control width (default true) */
-  @Input() matchTriggerWidth = true;
+  /** force dropdown width to control width */
+  @Input() matchTriggerWidth = false;
 
   /** Array options */
   @Input()
@@ -227,6 +228,7 @@ export class ISelect<T = any>
   set value(v: T | null) {
     this.writeValue(v);
   }
+
   get value(): T | null {
     return this._modelValue;
   }
@@ -249,11 +251,13 @@ export class ISelect<T = any>
   private pendingModelValue: T | null = null;
 
   private _displayText = '';
+
   get displayText(): string {
     return this._displayText;
   }
 
   private _filterText = '';
+
   get filterText(): string {
     return this._filterText;
   }
@@ -271,8 +275,9 @@ export class ISelect<T = any>
   onChange = (value: any): void => {
     void value;
   };
+
   onTouched = (): void => {
-    /*  */
+    /* noop */
   };
 
   get panelPositionClass(): string {
@@ -312,7 +317,6 @@ export class ISelect<T = any>
 
   ngAfterViewChecked(): void {
     // Safety: if someone toggles portalToBody while open, ensure it's applied.
-    // (But the "first open" work is now done in openDropdown to avoid flicker)
     if (this.isOpen && this.portalToBody && this.panelRef?.nativeElement) {
       this.ensurePanelPortaled();
       this.ensureGlobalListeners();
@@ -395,6 +399,7 @@ export class ISelect<T = any>
     if (!this.isOpen && !force) return;
 
     const term = (this._filterText || '').toLowerCase();
+
     if (!term) {
       this.filteredOptions = [...this._rawOptions];
     } else {
@@ -428,11 +433,11 @@ export class ISelect<T = any>
       let value: any = row;
 
       for (const segment of path) {
-        if (value === null) return '';
+        if (value === null || value === undefined) return '';
         value = value[segment];
       }
 
-      return value !== null ? String(value) : '';
+      return value !== null && value !== undefined ? String(value) : '';
     }
 
     if (!this._displayWithExplicit && row !== null && typeof row === 'object') {
@@ -442,7 +447,7 @@ export class ISelect<T = any>
       const labelEntry = entries[1] ?? entries[0];
       const labelValue = labelEntry[1];
 
-      return labelValue !== null ? String(labelValue) : '';
+      return labelValue !== null && labelValue !== undefined ? String(labelValue) : '';
     }
 
     if (!this._displayWithExplicit && (row === null || typeof row !== 'object')) {
@@ -465,7 +470,9 @@ export class ISelect<T = any>
         const labelEntry = entries[1] ?? entries[0];
         const labelValue = labelEntry[1];
 
-        return labelValue !== null ? String(labelValue) : String(primitive);
+        return labelValue !== null && labelValue !== undefined
+          ? String(labelValue)
+          : String(primitive);
       }
     }
 
@@ -481,8 +488,9 @@ export class ISelect<T = any>
     this._displayText = val;
     this._filterText = val;
 
-    if (!this.isOpen) this.openDropdown();
-    else {
+    if (!this.isOpen) {
+      this.openDropdown();
+    } else {
       this.applyFilter(true);
       this.scheduleReposition();
     }
@@ -490,14 +498,19 @@ export class ISelect<T = any>
 
   private moveHighlight(delta: number): void {
     const len = this.filteredOptions.length;
+
     if (!len) {
       this.highlightIndex = -1;
       return;
     }
 
     let index = this.highlightIndex;
-    if (index === -1) index = 0;
-    else index = (index + delta + len) % len;
+
+    if (index === -1) {
+      index = 0;
+    } else {
+      index = (index + delta + len) % len;
+    }
 
     this.setActiveIndex(index);
     this.scrollHighlightedIntoView();
@@ -508,6 +521,7 @@ export class ISelect<T = any>
       event.preventDefault();
       event.stopPropagation();
     }
+
     if (this.disabled) return;
 
     if (!this.isOpen) {
@@ -532,14 +546,17 @@ export class ISelect<T = any>
     this.isOpen = true;
     this.applyFilter(true);
 
-    // ✅ Ensure panel exists right now
+    // Ensure panel exists right now.
     this.cdr.detectChanges();
 
-    // ✅ Portal immediately (not waiting for ngAfterViewChecked)
-    if (this.portalToBody) this.ensurePanelPortaled();
+    // Portal immediately, not waiting for ngAfterViewChecked.
+    if (this.portalToBody) {
+      this.ensurePanelPortaled();
+    }
 
-    // ✅ Hide until positioned to prevent "top then bottom" flicker
+    // Hide until positioned to prevent flicker.
     const panel = this.getPanelElement();
+
     if (panel) {
       panel.style.visibility = 'hidden';
       panel.style.pointerEvents = 'none';
@@ -547,9 +564,9 @@ export class ISelect<T = any>
 
     this.ensureGlobalListeners();
 
-    // schedule position on next frame (after layout is stable)
     this.scheduleReposition(() => {
       const p = this.getPanelElement();
+
       if (p) {
         p.style.visibility = 'visible';
         p.style.pointerEvents = '';
@@ -557,14 +574,17 @@ export class ISelect<T = any>
     });
 
     const len = this.filteredOptions.length;
+
     if (len === 0) {
       this.highlightIndex = -1;
       return;
     }
 
     const current = this._modelValue;
+
     if (current !== null) {
       const idx = this.filteredOptions.indexOf(current as T);
+
       if (idx >= 0) {
         this.highlightIndex = idx;
         this.scrollHighlightedIntoView();
@@ -628,6 +648,7 @@ export class ISelect<T = any>
     const input = this.hostEl.nativeElement.querySelector(
       'i-input input',
     ) as HTMLInputElement | null;
+
     input?.focus();
   }
 
@@ -639,23 +660,35 @@ export class ISelect<T = any>
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
-        if (!this.isOpen) this.openDropdown();
-        else if (options.length) this.moveHighlight(1);
+
+        if (!this.isOpen) {
+          this.openDropdown();
+        } else if (options.length) {
+          this.moveHighlight(1);
+        }
+
         break;
 
       case 'ArrowUp':
         event.preventDefault();
-        if (!this.isOpen) this.openDropdown();
-        else if (options.length) this.moveHighlight(-1);
+
+        if (!this.isOpen) {
+          this.openDropdown();
+        } else if (options.length) {
+          this.moveHighlight(-1);
+        }
+
         break;
 
       case 'Enter':
         event.preventDefault();
+
         if (!this.isOpen) {
           this.openDropdown();
         } else if (this.highlightIndex >= 0 && this.highlightIndex < options.length) {
           this.selectRow(options[this.highlightIndex]);
         }
+
         break;
 
       case 'Escape':
@@ -663,6 +696,7 @@ export class ISelect<T = any>
           event.preventDefault();
           this.closeDropdown();
         }
+
         break;
     }
   }
@@ -696,7 +730,12 @@ export class ISelect<T = any>
 
   // ---------- Utilities ----------
   get appendAddon(): IInputAddonButton | IInputAddonLoading {
-    if (this.isLoading) return { type: 'loading', visible: true };
+    if (this.isLoading) {
+      return {
+        type: 'loading',
+        visible: true,
+      };
+    }
 
     return {
       type: 'button',
@@ -712,8 +751,11 @@ export class ISelect<T = any>
   }
 
   setActiveIndex(idx: number): void {
-    if (idx < 0 || idx >= this.filteredOptions.length) this.highlightIndex = -1;
-    else this.highlightIndex = idx;
+    if (idx < 0 || idx >= this.filteredOptions.length) {
+      this.highlightIndex = -1;
+    } else {
+      this.highlightIndex = idx;
+    }
   }
 
   // =========================================================
@@ -726,7 +768,10 @@ export class ISelect<T = any>
 
   private getAnchorRect(): DOMRect | null {
     const iInput = this.hostEl.nativeElement.querySelector('i-input') as HTMLElement | null;
-    if (iInput?.getBoundingClientRect) return iInput.getBoundingClientRect();
+
+    if (iInput?.getBoundingClientRect) {
+      return iInput.getBoundingClientRect();
+    }
 
     if (this.hostEl.nativeElement?.getBoundingClientRect) {
       return this.hostEl.nativeElement.getBoundingClientRect();
@@ -735,6 +780,7 @@ export class ISelect<T = any>
     const input = this.hostEl.nativeElement.querySelector(
       'i-input input',
     ) as HTMLInputElement | null;
+
     return input?.getBoundingClientRect?.() ?? null;
   }
 
@@ -763,24 +809,40 @@ export class ISelect<T = any>
     if (!this.panelPortaled) return;
 
     const panel = this.getPanelElement();
-    if (!panel || !panel.parentNode) return;
+
+    if (!panel || !panel.parentNode) {
+      this.panelPortaled = false;
+      this.panelOriginalParent = null;
+      this.panelOriginalNextSibling = null;
+      return;
+    }
+
+    this.clearPanelRuntimeStyles(panel);
 
     if (panel.parentNode !== document.body) {
       this.panelPortaled = false;
+      this.panelOriginalParent = null;
+      this.panelOriginalNextSibling = null;
       return;
     }
 
     const parent = this.panelOriginalParent;
+
     if (!parent) {
       this.panelPortaled = false;
+      this.panelOriginalParent = null;
+      this.panelOriginalNextSibling = null;
       return;
     }
 
     try {
       panel.classList.remove('i-options--portaled');
 
-      if (this.panelOriginalNextSibling) parent.insertBefore(panel, this.panelOriginalNextSibling);
-      else parent.appendChild(panel);
+      if (this.panelOriginalNextSibling) {
+        parent.insertBefore(panel, this.panelOriginalNextSibling);
+      } else {
+        parent.appendChild(panel);
+      }
     } catch {
       // ignore
     }
@@ -792,15 +854,38 @@ export class ISelect<T = any>
 
   private scheduleReposition(after?: () => void): void {
     if (!this.isOpen) return;
-    if (this.repositionRaf) cancelAnimationFrame(this.repositionRaf);
+
+    if (this.repositionRaf) {
+      cancelAnimationFrame(this.repositionRaf);
+    }
 
     this.zone.runOutsideAngular(() => {
       this.repositionRaf = requestAnimationFrame(() => {
         this.repositionRaf = 0;
-        this.repositionPanelNow();
-        after?.();
+
+        try {
+          this.repositionPanelNow();
+        } finally {
+          after?.();
+        }
       });
     });
+  }
+
+  private clearPanelRuntimeStyles(panel: HTMLElement): void {
+    panel.style.visibility = '';
+    panel.style.pointerEvents = '';
+    panel.style.position = '';
+    panel.style.zIndex = '';
+    panel.style.boxSizing = '';
+    panel.style.overflowX = '';
+    panel.style.overflowY = '';
+    panel.style.width = '';
+    panel.style.minWidth = '';
+    panel.style.maxWidth = '';
+    panel.style.maxHeight = '';
+    panel.style.left = '';
+    panel.style.top = '';
   }
 
   private repositionPanelNow(): void {
@@ -808,26 +893,48 @@ export class ISelect<T = any>
 
     const panel = this.getPanelElement();
     const rect = this.getAnchorRect();
+
     if (!panel || !rect) return;
 
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
     const gap = 8;
+    const availableWidth = Math.max(1, vw - gap * 2);
+
+    const computedMinWidth = Number.parseFloat(window.getComputedStyle(panel).minWidth);
+    const minWidth = Number.isFinite(computedMinWidth)
+      ? Math.min(computedMinWidth, availableWidth)
+      : 0;
+
     const pos = (this.panelPosition || 'bottom left').trim().toLowerCase();
 
     panel.style.position = 'fixed';
     panel.style.zIndex = '2000';
     panel.style.boxSizing = 'border-box';
+
+    // Important:
+    // - overflowX clip prevents horizontal scrollbar while still allowing max-content measurement.
+    // - overflowY auto keeps vertical scrolling for long option lists.
+    // - maxWidth protects the dropdown from overflowing the viewport.
+    panel.style.overflowX = 'clip';
     panel.style.overflowY = 'auto';
+    panel.style.maxWidth = `${Math.floor(availableWidth)}px`;
+
+    const triggerWidth = Math.min(Math.max(1, Math.round(rect.width)), availableWidth);
 
     if (this.matchTriggerWidth) {
-      panel.style.width = `${Math.round(rect.width)}px`;
+      panel.style.width = `${triggerWidth}px`;
+      panel.style.minWidth = `${triggerWidth}px`;
     } else {
-      panel.style.width = '';
+      const panelMinWidth = Math.max(triggerWidth, minWidth);
+
+      panel.style.width = 'max-content';
+      panel.style.minWidth = `${Math.floor(panelMinWidth)}px`;
     }
 
     const panelRect = panel.getBoundingClientRect();
+    const panelWidth = Math.min(Math.max(1, panelRect.width), availableWidth);
 
     const wantTop = pos.startsWith('top');
     const wantBottom =
@@ -838,20 +945,24 @@ export class ISelect<T = any>
     const wantRight = pos.includes('right') || pos === 'right';
     const alignRight = wantRight && !wantLeft;
 
-    let left = alignRight ? rect.right - panelRect.width : rect.left;
-    const maxLeft = Math.max(gap, vw - panelRect.width - gap);
+    let left = alignRight ? rect.right - panelWidth : rect.left;
+    const maxLeft = Math.max(gap, vw - panelWidth - gap);
+
     left = Math.min(Math.max(gap, left), maxLeft);
 
     if (pos === 'left') {
-      left = rect.left - panelRect.width - this.panelOffset;
+      left = rect.left - panelWidth - this.panelOffset;
       left = Math.min(Math.max(gap, left), maxLeft);
 
-      const top = Math.min(Math.max(gap, rect.top), Math.max(gap, vh - panelRect.height - gap));
+      const panelHeight = Math.min(panelRect.height, Math.max(60, vh - gap * 2));
+      const top = Math.min(Math.max(gap, rect.top), Math.max(gap, vh - panelHeight - gap));
+
       panel.style.left = `${Math.round(left)}px`;
       panel.style.top = `${Math.round(top)}px`;
 
       const maxH = Math.max(60, vh - top - gap);
       panel.style.maxHeight = `${Math.floor(maxH)}px`;
+
       return;
     }
 
@@ -859,12 +970,15 @@ export class ISelect<T = any>
       left = rect.right + this.panelOffset;
       left = Math.min(Math.max(gap, left), maxLeft);
 
-      const top = Math.min(Math.max(gap, rect.top), Math.max(gap, vh - panelRect.height - gap));
+      const panelHeight = Math.min(panelRect.height, Math.max(60, vh - gap * 2));
+      const top = Math.min(Math.max(gap, rect.top), Math.max(gap, vh - panelHeight - gap));
+
       panel.style.left = `${Math.round(left)}px`;
       panel.style.top = `${Math.round(top)}px`;
 
       const maxH = Math.max(60, vh - top - gap);
       panel.style.maxHeight = `${Math.floor(maxH)}px`;
+
       return;
     }
 
@@ -880,12 +994,18 @@ export class ISelect<T = any>
     }
 
     const maxH = Math.max(60, side === 'bottom' ? spaceBelow : spaceAbove);
+
     panel.style.maxHeight = `${Math.floor(maxH)}px`;
 
-    const top =
+    const panelHeight = Math.min(panelRect.height, maxH);
+
+    const rawTop =
       side === 'bottom'
         ? rect.bottom + this.panelOffset
-        : rect.top - panelRect.height - this.panelOffset;
+        : rect.top - panelHeight - this.panelOffset;
+
+    const maxTop = Math.max(gap, vh - panelHeight - gap);
+    const top = Math.min(Math.max(gap, rawTop), maxTop);
 
     panel.style.left = `${Math.round(left)}px`;
     panel.style.top = `${Math.round(top)}px`;
@@ -916,9 +1036,13 @@ export class ISelect<T = any>
     if (!this.listeningGlobal) return;
 
     const rm = (this as any)._removeGlobal as undefined | (() => void);
-    if (rm) rm();
+
+    if (rm) {
+      rm();
+    }
 
     delete (this as any)._removeGlobal;
+
     this.listeningGlobal = false;
 
     if (this.repositionRaf) {
@@ -948,10 +1072,13 @@ export class ISelect<T = any>
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="controlInvalid"
+      [matchTriggerWidth]="matchTriggerWidth"
       [options]="options"
       [options$]="options$"
+      [panelOffset]="panelOffset"
       [panelPosition]="panelPosition"
       [placeholder]="placeholder"
+      [portalToBody]="portalToBody"
       (onChanged)="handleSelectChange($event)"
     >
       <ng-content />
@@ -986,16 +1113,21 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
   };
 
   @Input() panelPosition: ISelectPanelPosition = 'bottom left';
+  @Input() panelOffset = 6;
+  @Input() portalToBody = true;
+  @Input() matchTriggerWidth = false;
+
   @Input() errorMessage?: IFormControlErrorMessage;
 
   /**
-   * Optional standalone usage support
-   * DO NOT use together with formControlName
+   * Optional standalone usage support.
+   * Do not use together with formControlName.
    */
   @Input()
   get value(): T | null {
     return this._value;
   }
+
   set value(v: T | null) {
     this._value = v ?? null;
 
@@ -1007,7 +1139,7 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
   }
 
   // =========================================================
-  // Outputs (API Symmetry)
+  // Outputs
   // =========================================================
 
   @Output() readonly onChanged = new EventEmitter<ISelectChange<T>>();
@@ -1021,10 +1153,11 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
   isDisabled = false;
 
   private onChange: (v: any) => void = () => {
-    /*  */
+    /* noop */
   };
+
   private onTouched: () => void = () => {
-    /*  */
+    /* noop */
   };
 
   readonly ngControl = inject(NgControl, {
@@ -1041,12 +1174,10 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
   private submitSub?: Subscription;
 
   constructor() {
-    // Register as value accessor
     if (this.ngControl) {
       this.ngControl.valueAccessor = this;
     }
 
-    // Re-render validation after submit
     if (this.formDir) {
       this.submitSub = this.formDir.ngSubmit.subscribe(() => {
         this.cdr.markForCheck();
@@ -1057,10 +1188,6 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
   ngOnDestroy(): void {
     this.submitSub?.unsubscribe();
   }
-
-  // =========================================================
-  // FIX: ViewChild timing sync
-  // =========================================================
 
   ngAfterViewInit(): void {
     if (this.innerSelect) {
@@ -1110,11 +1237,9 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
   handleSelectChange(change: ISelectChange<T>): void {
     this._value = change.value ?? null;
 
-    // Forward to Angular Forms
     this.onChange(this._value);
     this.onTouched();
 
-    // Forward component events
     this.onChanged.emit(change);
     this.onOptionSelected.emit(change);
   }
@@ -1131,6 +1256,7 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
 
   get controlInvalid(): boolean {
     const c = this.ngControl?.control;
+
     if (!c) return false;
 
     if (this.formDir) {

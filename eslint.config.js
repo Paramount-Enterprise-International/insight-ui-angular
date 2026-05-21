@@ -7,6 +7,8 @@ const eslintConfigPrettier = require('eslint-config-prettier');
 module.exports = tseslint.config(
   {
     ignores: ['.angular/**', '.nx/**', 'coverage/**', 'dist/**'],
+  },
+  {
     files: ['**/*.ts'],
     extends: [
       eslint.configs.recommended,
