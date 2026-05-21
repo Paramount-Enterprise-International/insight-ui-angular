@@ -476,11 +476,11 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCon
     /** debounce delay (ms) for filter when typing */
     filterDelay: number;
     panelPosition: ISelectPanelPosition;
-    /** portal panel to body to avoid overflow clipping (default true) */
+    /** portal panel to body to avoid overflow clipping */
     portalToBody: boolean;
     /** gap between trigger and panel (px) */
     panelOffset: number;
-    /** match dropdown width to control width (default true) */
+    /** force dropdown width to control width */
     matchTriggerWidth: boolean;
     /** Array options */
     set options(value: T[] | null);
@@ -557,6 +557,7 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCon
     private ensurePanelPortaled;
     private restorePanelIfNeeded;
     private scheduleReposition;
+    private clearPanelRuntimeStyles;
     private repositionPanelNow;
     private ensureGlobalListeners;
     private removeGlobalListeners;
@@ -573,10 +574,13 @@ declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Aft
     filterDelay: number;
     filterPredicate: (row: T, term: string) => boolean;
     panelPosition: ISelectPanelPosition;
+    panelOffset: number;
+    portalToBody: boolean;
+    matchTriggerWidth: boolean;
     errorMessage?: IFormControlErrorMessage;
     /**
-     * Optional standalone usage support
-     * DO NOT use together with formControlName
+     * Optional standalone usage support.
+     * Do not use together with formControlName.
      */
     get value(): T | null;
     set value(v: T | null);
@@ -603,7 +607,7 @@ declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Aft
     get required(): boolean;
     get resolvedErrorText(): string | null;
     static ɵfac: i0.ɵɵFactoryDeclaration<IFCSelect<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelect<any>, "i-fc-select", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, never, ["*"], true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelect<any>, "i-fc-select", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, never, ["*"], true, never>;
 }
 
 type IDatepickerDay = {
