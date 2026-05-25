@@ -1,7 +1,7 @@
 // select.ts (Angular)
 /**
  * ISelect
- * Version: 2.2.6
+ * Version: 2.2.7
  *
  * Fixes:
  * - Render options container as <i-options>
@@ -11,6 +11,7 @@
  * - Fix option text being truncated too early after long-text dropdown width fix
  * - Fix dropdown not reopening after selecting an option
  * - Fix selected long value poisoning trigger measurement on next open
+ * - Fix panel staying hidden when reposition callback does not reveal it
  */
 
 import { NgClass, NgTemplateOutlet } from '@angular/common';
@@ -541,14 +542,12 @@ export class ISelect<T = any>
 
     this.ensureGlobalListeners();
 
-    this.scheduleReposition(() => {
-      const p = this.getPanelElement();
-
-      if (p) {
-        p.style.visibility = 'visible';
-        p.style.pointerEvents = '';
-      }
-    });
+    /*
+     * Important:
+     * Do not rely only on an after-callback to reveal the panel.
+     * repositionPanelNow() reveals the panel after positioning succeeds.
+     */
+    this.scheduleReposition();
 
     const len = this.filteredOptions.length;
 
@@ -753,17 +752,10 @@ export class ISelect<T = any>
 
     const hostRect = host.getBoundingClientRect?.() ?? null;
     const inputRect = iInput?.getBoundingClientRect?.() ?? null;
-
     const rect = inputRect ?? hostRect;
 
     if (!rect) return null;
 
-    /*
-     * Important:
-     * After selecting very long text, the visible input can be stretched by its
-     * content depending on the inner i-input styles. Clamp the anchor rect to the
-     * viewport so the next dropdown open still has a safe trigger measurement.
-     */
     const viewportWidth = window.innerWidth;
     const safeLeft = Math.max(0, rect.left);
     const safeRight = Math.min(viewportWidth, rect.right);
@@ -857,13 +849,15 @@ export class ISelect<T = any>
       this.repositionRaf = requestAnimationFrame(() => {
         this.repositionRaf = 0;
 
-        try {
-          this.repositionPanelNow();
-        } finally {
-          after?.();
-        }
+        this.repositionPanelNow();
+        after?.();
       });
     });
+  }
+
+  private revealPanel(panel: HTMLElement): void {
+    panel.style.visibility = 'visible';
+    panel.style.pointerEvents = '';
   }
 
   private clearPanelRuntimeStyles(panel: HTMLElement): void {
@@ -952,6 +946,7 @@ export class ISelect<T = any>
       const maxH = Math.max(60, vh - top - gap);
       panel.style.maxHeight = `${Math.floor(maxH)}px`;
 
+      this.revealPanel(panel);
       return;
     }
 
@@ -968,6 +963,7 @@ export class ISelect<T = any>
       const maxH = Math.max(60, vh - top - gap);
       panel.style.maxHeight = `${Math.floor(maxH)}px`;
 
+      this.revealPanel(panel);
       return;
     }
 
@@ -998,6 +994,8 @@ export class ISelect<T = any>
 
     panel.style.left = `${Math.round(left)}px`;
     panel.style.top = `${Math.round(top)}px`;
+
+    this.revealPanel(panel);
   }
 
   private ensureGlobalListeners(): void {
