@@ -3131,7 +3131,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.21", ngImpo
 // select.ts (Angular)
 /**
  * ISelect
- * Version: 2.2.4
+ * Version: 2.2.5
  *
  * Fixes:
  * - Render options container as <i-options> (not <div>)
@@ -3139,6 +3139,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.21", ngImpo
  * - Keep portal-to-body + fixed positioning for overflow parents
  * - Fix flicker: portal + measure + position BEFORE showing panel
  * - Fix option text being truncated too early after long-text dropdown width fix
+ * - Fix dropdown not reopening after selecting an option
  */
 class ISelectOptionDefDirective {
     template = inject(TemplateRef);
@@ -3482,7 +3483,8 @@ class ISelect {
         if (this.isOpen)
             return;
         this.isOpen = true;
-        this.applyFilter(true);
+        this._filterText = '';
+        this.filteredOptions = [...this._rawOptions];
         // Ensure panel exists right now.
         this.cdr.detectChanges();
         // Portal immediately, not waiting for ngAfterViewChecked.
@@ -3521,16 +3523,26 @@ class ISelect {
         this.scrollHighlightedIntoView();
     }
     closeDropdown() {
+        if (!this.isOpen)
+            return;
         this.isOpen = false;
         this.highlightIndex = -1;
         this.removeGlobalListeners();
+        /*
+         * Important:
+         * Restore the portaled panel before Angular removes the @if view.
+         * This avoids stale body-level i-options after selecting an option.
+         */
         this.restorePanelIfNeeded();
+        this.cdr.detectChanges();
     }
-    selectRow(row) {
+    selectRow(row, event) {
+        event?.preventDefault();
+        event?.stopPropagation();
         this._modelValue = row;
         this._displayText = this.resolveDisplayText(row);
         this._filterText = '';
-        this.applyFilter(true);
+        this.filteredOptions = [...this._rawOptions];
         this.onChange(row);
         this.onTouched();
         const payload = {
@@ -3540,6 +3552,7 @@ class ISelect {
         this.onChanged.emit(payload);
         this.onOptionSelected.emit(payload);
         this.closeDropdown();
+        this.cdr.markForCheck();
     }
     isRowSelected(row) {
         return this._modelValue === row;
@@ -3684,40 +3697,37 @@ class ISelect {
         this.panelPortaled = true;
     }
     restorePanelIfNeeded() {
-        if (!this.panelPortaled)
-            return;
         const panel = this.getPanelElement();
-        if (!panel || !panel.parentNode) {
+        if (!this.panelPortaled) {
+            if (panel) {
+                this.clearPanelRuntimeStyles(panel);
+                panel.classList.remove('i-options--portaled');
+            }
+            this.panelOriginalParent = null;
+            this.panelOriginalNextSibling = null;
+            return;
+        }
+        if (!panel) {
             this.panelPortaled = false;
             this.panelOriginalParent = null;
             this.panelOriginalNextSibling = null;
             return;
         }
         this.clearPanelRuntimeStyles(panel);
-        if (panel.parentNode !== document.body) {
-            this.panelPortaled = false;
-            this.panelOriginalParent = null;
-            this.panelOriginalNextSibling = null;
-            return;
-        }
+        panel.classList.remove('i-options--portaled');
         const parent = this.panelOriginalParent;
-        if (!parent) {
-            this.panelPortaled = false;
-            this.panelOriginalParent = null;
-            this.panelOriginalNextSibling = null;
-            return;
-        }
-        try {
-            panel.classList.remove('i-options--portaled');
-            if (this.panelOriginalNextSibling) {
-                parent.insertBefore(panel, this.panelOriginalNextSibling);
+        if (parent) {
+            try {
+                if (this.panelOriginalNextSibling && this.panelOriginalNextSibling.parentNode === parent) {
+                    parent.insertBefore(panel, this.panelOriginalNextSibling);
+                }
+                else {
+                    parent.appendChild(panel);
+                }
             }
-            else {
-                parent.appendChild(panel);
+            catch {
+                // Ignore restore errors. Angular will clean up the view anyway.
             }
-        }
-        catch {
-            // ignore
         }
         this.panelPortaled = false;
         this.panelOriginalParent = null;
@@ -3775,10 +3785,12 @@ class ISelect {
         panel.style.position = 'fixed';
         panel.style.zIndex = '2000';
         panel.style.boxSizing = 'border-box';
-        // Important:
-        // - overflowX clip prevents horizontal scrollbar while still allowing max-content measurement.
-        // - overflowY auto keeps vertical scrolling for long option lists.
-        // - maxWidth protects the dropdown from overflowing the viewport.
+        /*
+         * Important:
+         * - overflowX clip prevents horizontal scrollbar while preserving viewport protection.
+         * - overflowY auto keeps vertical scrolling for long option lists.
+         * - maxWidth protects the dropdown from overflowing the viewport.
+         */
         panel.style.overflowX = 'clip';
         panel.style.overflowY = 'auto';
         panel.style.maxWidth = `${Math.floor(availableWidth)}px`;
@@ -3899,7 +3911,7 @@ class ISelect {
             class="i-option"
             [class.active]="highlightIndex === idx"
             [class.selected]="isRowSelected(row)"
-            (mousedown)="selectRow(row)"
+            (mousedown)="selectRow(row, $event)"
             (mouseenter)="setActiveIndex(idx)"
           >
             @if (optionDef?.template) {
@@ -3948,7 +3960,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.21", ngImpo
             class="i-option"
             [class.active]="highlightIndex === idx"
             [class.selected]="isRowSelected(row)"
-            (mousedown)="selectRow(row)"
+            (mousedown)="selectRow(row, $event)"
             (mouseenter)="setActiveIndex(idx)"
           >
             @if (optionDef?.template) {

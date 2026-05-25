@@ -542,7 +542,7 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCon
     toggleDropdown(event?: MouseEvent): void;
     private openDropdown;
     private closeDropdown;
-    selectRow(row: T): void;
+    selectRow(row: T, event?: MouseEvent): void;
     isRowSelected(row: T): boolean;
     private scrollHighlightedIntoView;
     focus(): void;
