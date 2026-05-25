@@ -467,31 +467,23 @@ type ISelectChange<T = any> = {
     value: T | null;
     label: string;
 };
-/** Position of popup options relative to the input */
 type ISelectPanelPosition = 'top' | 'bottom' | 'left' | 'right' | 'top left' | 'top right' | 'bottom left' | 'bottom right';
 declare class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterContentInit, AfterViewChecked, OnDestroy {
     placeholder: string;
     disabled: boolean;
     invalid: boolean;
-    /** debounce delay (ms) for filter when typing */
     filterDelay: number;
     panelPosition: ISelectPanelPosition;
-    /** portal panel to body to avoid overflow clipping */
     portalToBody: boolean;
-    /** gap between trigger and panel (px) */
     panelOffset: number;
-    /** force dropdown width to control width */
     matchTriggerWidth: boolean;
-    /** Array options */
     set options(value: T[] | null);
-    /** Observable options */
     set options$(value: Observable<T[]> | null);
     private _displayWith;
     private _displayWithExplicit;
     set displayWith(value: ((row: T | null) => string) | string | undefined);
     get displayWith(): ((row: T | null) => string) | string;
     filterPredicate: (row: T, term: string) => boolean;
-    /** Non-reactive usage */
     set value(v: T | null);
     get value(): T | null;
     readonly onChanged: EventEmitter<ISelectChange<T>>;
@@ -557,6 +549,7 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCon
     private ensurePanelPortaled;
     private restorePanelIfNeeded;
     private scheduleReposition;
+    private revealPanel;
     private clearPanelRuntimeStyles;
     private repositionPanelNow;
     private ensureGlobalListeners;
@@ -578,10 +571,6 @@ declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Aft
     portalToBody: boolean;
     matchTriggerWidth: boolean;
     errorMessage?: IFormControlErrorMessage;
-    /**
-     * Optional standalone usage support.
-     * Do not use together with formControlName.
-     */
     get value(): T | null;
     set value(v: T | null);
     readonly onChanged: EventEmitter<ISelectChange<T>>;
