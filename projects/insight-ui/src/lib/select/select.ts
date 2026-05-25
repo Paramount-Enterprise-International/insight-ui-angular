@@ -1,15 +1,17 @@
 // select.ts (Angular)
 /**
  * ISelect
- * Version: 2.2.5
+ * Version: 2.2.7
  *
  * Fixes:
- * - Render options container as <i-options> (not <div>)
+ * - Render options container as <i-options>
  * - Let dropdown grow from visible control width to fit option text
  * - Keep portal-to-body + fixed positioning for overflow parents
  * - Fix flicker: portal + measure + position BEFORE showing panel
  * - Fix option text being truncated too early after long-text dropdown width fix
  * - Fix dropdown not reopening after selecting an option
+ * - Fix selected long value poisoning trigger measurement on next open
+ * - Fix panel staying hidden when reposition callback does not reveal it
  */
 
 import { NgClass, NgTemplateOutlet } from '@angular/common';
@@ -74,7 +76,6 @@ export type ISelectChange<T = any> = {
   label: string;
 };
 
-/** Position of popup options relative to the input */
 export type ISelectPanelPosition =
   | 'top'
   | 'bottom'
@@ -143,26 +144,15 @@ export type ISelectPanelPosition =
 export class ISelect<T = any>
   implements ControlValueAccessor, OnInit, AfterContentInit, AfterViewChecked, OnDestroy
 {
-  // ---------- Inputs ----------
   @Input() placeholder = '';
   @Input() disabled = false;
   @Input() invalid = false;
-
-  /** debounce delay (ms) for filter when typing */
   @Input() filterDelay = 200;
-
   @Input() panelPosition: ISelectPanelPosition = 'bottom left';
-
-  /** portal panel to body to avoid overflow clipping */
   @Input() portalToBody = true;
-
-  /** gap between trigger and panel (px) */
   @Input() panelOffset = 6;
-
-  /** force dropdown width to control width */
   @Input() matchTriggerWidth = false;
 
-  /** Array options */
   @Input()
   set options(value: T[] | null) {
     this._rawOptions = value ?? [];
@@ -170,7 +160,6 @@ export class ISelect<T = any>
     this.syncModelToView();
   }
 
-  /** Observable options */
   @Input()
   set options$(value: Observable<T[]> | null) {
     this.cleanupOptionsSub();
@@ -224,7 +213,6 @@ export class ISelect<T = any>
     return haystack.includes(term);
   };
 
-  /** Non-reactive usage */
   @Input()
   set value(v: T | null) {
     this.writeValue(v);
@@ -234,17 +222,14 @@ export class ISelect<T = any>
     return this._modelValue;
   }
 
-  // ---------- Outputs ----------
   @Output() readonly onChanged = new EventEmitter<ISelectChange<T>>();
   @Output() readonly onOptionSelected = new EventEmitter<ISelectChange<T>>();
 
-  // ---------- Template refs ----------
   @ContentChild(ISelectOptionDefDirective)
   optionDef?: ISelectOptionDefDirective<T>;
 
   @ViewChild('panel') panelRef?: ElementRef<HTMLElement>;
 
-  // ---------- Internal state ----------
   private _rawOptions: T[] = [];
   filteredOptions: T[] = [];
 
@@ -268,11 +253,9 @@ export class ISelect<T = any>
   isLoading = false;
 
   private optionsSub?: Subscription;
-
   private filterInput$ = new Subject<string>();
   private filterInputSub?: Subscription;
 
-  // ---------- CVA ----------
   onChange = (value: any): void => {
     void value;
   };
@@ -291,7 +274,6 @@ export class ISelect<T = any>
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly zone = inject(NgZone);
 
-  // ---------- Portal/position internals ----------
   private panelPortaled = false;
   private panelOriginalParent: Node | null = null;
   private panelOriginalNextSibling: Node | null = null;
@@ -299,7 +281,6 @@ export class ISelect<T = any>
   private repositionRaf = 0;
   private listeningGlobal = false;
 
-  // ---------- Lifecycle ----------
   ngOnInit(): void {
     this.filterInputSub = this.filterInput$
       .pipe(debounceTime(this.filterDelay))
@@ -317,7 +298,6 @@ export class ISelect<T = any>
   }
 
   ngAfterViewChecked(): void {
-    // Safety: if someone toggles portalToBody while open, ensure it's applied.
     if (this.isOpen && this.portalToBody && this.panelRef?.nativeElement) {
       this.ensurePanelPortaled();
       this.ensureGlobalListeners();
@@ -338,7 +318,6 @@ export class ISelect<T = any>
     }
   }
 
-  // ---------- Model ↔ UI sync ----------
   writeValue(value: T | null): void {
     this._modelValue = value;
 
@@ -382,6 +361,7 @@ export class ISelect<T = any>
     } else {
       const found = options.find((row) => row === valueToUse) ?? null;
       const row = found ?? valueToUse;
+
       this._modelValue = found ?? valueToUse;
       this._displayText = this.resolveDisplayText(row);
       this.pendingModelValue = null;
@@ -484,7 +464,6 @@ export class ISelect<T = any>
     return '';
   }
 
-  // ---------- Input + dropdown behavior ----------
   private handleInputText(val: string): void {
     this._displayText = val;
     this._filterText = val;
@@ -537,7 +516,7 @@ export class ISelect<T = any>
       this.closeDropdown();
     }
 
-    this.focus();
+    setTimeout(() => this.focus());
   }
 
   private openDropdown(): void {
@@ -548,15 +527,12 @@ export class ISelect<T = any>
     this._filterText = '';
     this.filteredOptions = [...this._rawOptions];
 
-    // Ensure panel exists right now.
     this.cdr.detectChanges();
 
-    // Portal immediately, not waiting for ngAfterViewChecked.
     if (this.portalToBody) {
       this.ensurePanelPortaled();
     }
 
-    // Hide until positioned to prevent flicker.
     const panel = this.getPanelElement();
 
     if (panel) {
@@ -566,14 +542,12 @@ export class ISelect<T = any>
 
     this.ensureGlobalListeners();
 
-    this.scheduleReposition(() => {
-      const p = this.getPanelElement();
-
-      if (p) {
-        p.style.visibility = 'visible';
-        p.style.pointerEvents = '';
-      }
-    });
+    /*
+     * Important:
+     * Do not rely only on an after-callback to reveal the panel.
+     * repositionPanelNow() reveals the panel after positioning succeeds.
+     */
+    this.scheduleReposition();
 
     const len = this.filteredOptions.length;
 
@@ -605,12 +579,6 @@ export class ISelect<T = any>
     this.highlightIndex = -1;
 
     this.removeGlobalListeners();
-
-    /*
-     * Important:
-     * Restore the portaled panel before Angular removes the @if view.
-     * This avoids stale body-level i-options after selecting an option.
-     */
     this.restorePanelIfNeeded();
 
     this.cdr.detectChanges();
@@ -670,7 +638,6 @@ export class ISelect<T = any>
     input?.focus();
   }
 
-  // ---------- Keyboard + input events ----------
   @HostListener('keydown', ['$event'])
   handleKeydown(event: KeyboardEvent): void {
     const options = this.filteredOptions;
@@ -746,7 +713,6 @@ export class ISelect<T = any>
     }
   }
 
-  // ---------- Utilities ----------
   get appendAddon(): IInputAddonButton | IInputAddonLoading {
     if (this.isLoading) {
       return {
@@ -776,30 +742,36 @@ export class ISelect<T = any>
     }
   }
 
-  // =========================================================
-  // Portal + Positioning
-  // =========================================================
-
   private getPanelElement(): HTMLElement | null {
     return this.panelRef?.nativeElement ?? null;
   }
 
   private getAnchorRect(): DOMRect | null {
-    const iInput = this.hostEl.nativeElement.querySelector('i-input') as HTMLElement | null;
+    const host = this.hostEl.nativeElement;
+    const iInput = host.querySelector('i-input') as HTMLElement | null;
 
-    if (iInput?.getBoundingClientRect) {
-      return iInput.getBoundingClientRect();
-    }
+    const hostRect = host.getBoundingClientRect?.() ?? null;
+    const inputRect = iInput?.getBoundingClientRect?.() ?? null;
+    const rect = inputRect ?? hostRect;
 
-    if (this.hostEl.nativeElement?.getBoundingClientRect) {
-      return this.hostEl.nativeElement.getBoundingClientRect();
-    }
+    if (!rect) return null;
 
-    const input = this.hostEl.nativeElement.querySelector(
-      'i-input input',
-    ) as HTMLInputElement | null;
+    const viewportWidth = window.innerWidth;
+    const safeLeft = Math.max(0, rect.left);
+    const safeRight = Math.min(viewportWidth, rect.right);
+    const safeWidth = Math.max(1, safeRight - safeLeft);
 
-    return input?.getBoundingClientRect?.() ?? null;
+    return {
+      bottom: rect.bottom,
+      height: rect.height,
+      left: safeLeft,
+      right: safeLeft + safeWidth,
+      top: rect.top,
+      width: safeWidth,
+      x: safeLeft,
+      y: rect.y,
+      toJSON: () => ({}),
+    } as DOMRect;
   }
 
   private ensurePanelPortaled(): void {
@@ -857,7 +829,7 @@ export class ISelect<T = any>
           parent.appendChild(panel);
         }
       } catch {
-        // Ignore restore errors. Angular will clean up the view anyway.
+        // Angular will clean up the view anyway.
       }
     }
 
@@ -877,13 +849,15 @@ export class ISelect<T = any>
       this.repositionRaf = requestAnimationFrame(() => {
         this.repositionRaf = 0;
 
-        try {
-          this.repositionPanelNow();
-        } finally {
-          after?.();
-        }
+        this.repositionPanelNow();
+        after?.();
       });
     });
+  }
+
+  private revealPanel(panel: HTMLElement): void {
+    panel.style.visibility = 'visible';
+    panel.style.pointerEvents = '';
   }
 
   private clearPanelRuntimeStyles(panel: HTMLElement): void {
@@ -926,13 +900,6 @@ export class ISelect<T = any>
     panel.style.position = 'fixed';
     panel.style.zIndex = '2000';
     panel.style.boxSizing = 'border-box';
-
-    /*
-     * Important:
-     * - overflowX clip prevents horizontal scrollbar while preserving viewport protection.
-     * - overflowY auto keeps vertical scrolling for long option lists.
-     * - maxWidth protects the dropdown from overflowing the viewport.
-     */
     panel.style.overflowX = 'clip';
     panel.style.overflowY = 'auto';
     panel.style.maxWidth = `${Math.floor(availableWidth)}px`;
@@ -979,6 +946,7 @@ export class ISelect<T = any>
       const maxH = Math.max(60, vh - top - gap);
       panel.style.maxHeight = `${Math.floor(maxH)}px`;
 
+      this.revealPanel(panel);
       return;
     }
 
@@ -995,6 +963,7 @@ export class ISelect<T = any>
       const maxH = Math.max(60, vh - top - gap);
       panel.style.maxHeight = `${Math.floor(maxH)}px`;
 
+      this.revealPanel(panel);
       return;
     }
 
@@ -1025,6 +994,8 @@ export class ISelect<T = any>
 
     panel.style.left = `${Math.round(left)}px`;
     panel.style.top = `${Math.round(top)}px`;
+
+    this.revealPanel(panel);
   }
 
   private ensureGlobalListeners(): void {
@@ -1111,10 +1082,6 @@ export class ISelect<T = any>
 export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, AfterViewInit {
   @ViewChild(ISelect) innerSelect!: ISelect<T>;
 
-  // =========================================================
-  // Inputs
-  // =========================================================
-
   @Input() label = '';
   @Input() placeholder = '';
   @Input() options: T[] | null = null;
@@ -1135,10 +1102,6 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
 
   @Input() errorMessage?: IFormControlErrorMessage;
 
-  /**
-   * Optional standalone usage support.
-   * Do not use together with formControlName.
-   */
   @Input()
   get value(): T | null {
     return this._value;
@@ -1154,16 +1117,8 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
     this.cdr.markForCheck();
   }
 
-  // =========================================================
-  // Outputs
-  // =========================================================
-
   @Output() readonly onChanged = new EventEmitter<ISelectChange<T>>();
   @Output() readonly onOptionSelected = new EventEmitter<ISelectChange<T>>();
-
-  // =========================================================
-  // Internal State
-  // =========================================================
 
   private _value: T | null = null;
   isDisabled = false;
@@ -1214,10 +1169,6 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
     this.cdr.markForCheck();
   }
 
-  // =========================================================
-  // CVA Bridge
-  // =========================================================
-
   writeValue(v: T | null): void {
     this._value = v ?? null;
 
@@ -1246,10 +1197,6 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
     this.cdr.markForCheck();
   }
 
-  // =========================================================
-  // Event Bridge from inner select
-  // =========================================================
-
   handleSelectChange(change: ISelectChange<T>): void {
     this._value = change.value ?? null;
 
@@ -1265,10 +1212,6 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
       this.innerSelect.focus();
     }
   }
-
-  // =========================================================
-  // Validation Helpers
-  // =========================================================
 
   get controlInvalid(): boolean {
     const c = this.ngControl?.control;
