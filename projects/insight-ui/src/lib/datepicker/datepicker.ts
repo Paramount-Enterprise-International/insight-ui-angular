@@ -156,6 +156,27 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   @Input() format = 'dd/MM/yyyy';
   @Input() panelPosition: IDatepickerPanelPosition = 'bottom left';
 
+  private _minYear: number | null = null;
+  private _maxYear: number | null = null;
+
+  @Input()
+  set minYear(value: number | string | null | undefined) {
+    this._minYear = this.coerceYear(value);
+    this.refreshYearRange();
+  }
+  get minYear(): number | null {
+    return this._minYear;
+  }
+
+  @Input()
+  set maxYear(value: number | string | null | undefined) {
+    this._maxYear = this.coerceYear(value);
+    this.refreshYearRange();
+  }
+  get maxYear(): number | null {
+    return this._maxYear;
+  }
+
   @Input() portalToBody = true;
   @Input() matchTriggerWidth = true;
   @Input() panelOffset = 6;
@@ -596,12 +617,21 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   }
 
   prevMonth(): void {
-    if (this.viewMonth === 0) {
-      this.viewMonth = 11;
-      this.viewYear -= 1;
+    let nextYear = this.viewYear;
+    let nextMonth = this.viewMonth;
+
+    if (nextMonth === 0) {
+      nextMonth = 11;
+      nextYear -= 1;
     } else {
-      this.viewMonth -= 1;
+      nextMonth -= 1;
     }
+
+    const clampedYear = this.clampYear(nextYear);
+    if (clampedYear !== nextYear) return;
+
+    this.viewYear = nextYear;
+    this.viewMonth = nextMonth;
     this.ensureYearRange(this.viewYear);
     this.buildCalendar();
     if (this.isOpen) this.scheduleReposition();
@@ -609,12 +639,21 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   }
 
   nextMonth(): void {
-    if (this.viewMonth === 11) {
-      this.viewMonth = 0;
-      this.viewYear += 1;
+    let nextYear = this.viewYear;
+    let nextMonth = this.viewMonth;
+
+    if (nextMonth === 11) {
+      nextMonth = 0;
+      nextYear += 1;
     } else {
-      this.viewMonth += 1;
+      nextMonth += 1;
     }
+
+    const clampedYear = this.clampYear(nextYear);
+    if (clampedYear !== nextYear) return;
+
+    this.viewYear = nextYear;
+    this.viewMonth = nextMonth;
     this.ensureYearRange(this.viewYear);
     this.buildCalendar();
     if (this.isOpen) this.scheduleReposition();
@@ -638,7 +677,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     const year = change.value;
     if (typeof year !== 'number') return;
 
-    this.viewYear = year;
+    this.viewYear = this.clampYear(year);
     this.ensureYearRange(this.viewYear);
     this.buildCalendar();
     if (this.isOpen) this.scheduleReposition();
@@ -676,24 +715,71 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   }
 
   private updateView(date: Date): void {
-    this.viewYear = date.getFullYear();
+    this.viewYear = this.clampYear(date.getFullYear());
     this.viewMonth = date.getMonth();
     this.ensureYearRange(this.viewYear);
     this.buildCalendar();
   }
 
   private ensureYearRange(focusYear: number): void {
+    const { min, max } = this.getNormalizedYearBounds();
+    const safeFocusYear = this.clampYear(focusYear);
+
+    const start = min ?? safeFocusYear - 50;
+    const end = max ?? safeFocusYear + 10;
+
     if (
-      !this._years.length ||
-      focusYear < this._years[0] ||
-      focusYear > this._years[this._years.length - 1]
+      this._years.length &&
+      safeFocusYear >= this._years[0] &&
+      safeFocusYear <= this._years[this._years.length - 1] &&
+      this._years[0] === start &&
+      this._years[this._years.length - 1] === end
     ) {
-      const start = focusYear - 50;
-      const end = focusYear + 10;
-      const arr: number[] = [];
-      for (let y = start; y <= end; y++) arr.push(y);
-      this._years = arr;
+      return;
     }
+
+    const arr: number[] = [];
+    for (let y = start; y <= end; y++) arr.push(y);
+    this._years = arr;
+  }
+
+  private coerceYear(value: number | string | null | undefined): number | null {
+    if (value === null || value === undefined || value === '') return null;
+
+    const year = Number(value);
+    if (!Number.isFinite(year)) return null;
+
+    return Math.trunc(year);
+  }
+
+  private getNormalizedYearBounds(): { min: number | null; max: number | null } {
+    const min = this._minYear;
+    const max = this._maxYear;
+
+    if (min !== null && max !== null && min > max) {
+      return { min: max, max: min };
+    }
+
+    return { min, max };
+  }
+
+  private clampYear(year: number): number {
+    const { min, max } = this.getNormalizedYearBounds();
+
+    if (min !== null && year < min) return min;
+    if (max !== null && year > max) return max;
+
+    return year;
+  }
+
+  private refreshYearRange(): void {
+    if (!this.viewYear) return;
+
+    this.viewYear = this.clampYear(this.viewYear);
+    this._years = [];
+    this.ensureYearRange(this.viewYear);
+    this.buildCalendar();
+    this.cdr.markForCheck();
   }
 
   private buildCalendar(): void {
@@ -867,9 +953,12 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
       [disabled]="isDisabled"
       [format]="format"
       [invalid]="controlInvalid"
+      [maxYear]="maxYear"
+      [minYear]="minYear"
       [panelPosition]="panelPosition"
       [placeholder]="placeholder"
       [value]="forwardedValue"
+      (focusout)="onInnerFocusOut()"
       (onChanged)="handleDateChange($event)"
     />
 
@@ -887,6 +976,8 @@ export class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDes
   @Input() placeholder = '';
   @Input() format = 'dd/MM/yyyy';
   @Input() panelPosition: IDatepickerPanelPosition = 'bottom left';
+  @Input() minYear: number | string | null = null;
+  @Input() maxYear: number | string | null = null;
   @Input() errorMessage?: IFormControlErrorMessage;
 
   /**
