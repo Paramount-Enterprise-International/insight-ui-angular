@@ -620,6 +620,12 @@ declare class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     invalid: boolean;
     format: string;
     panelPosition: IDatepickerPanelPosition;
+    private _minYear;
+    private _maxYear;
+    set minYear(value: number | string | null | undefined);
+    get minYear(): number | null;
+    set maxYear(value: number | string | null | undefined);
+    get maxYear(): number | null;
     portalToBody: boolean;
     matchTriggerWidth: boolean;
     panelOffset: number;
@@ -678,6 +684,10 @@ declare class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     private initViewFromModel;
     private updateView;
     private ensureYearRange;
+    private coerceYear;
+    private getNormalizedYearBounds;
+    private clampYear;
+    private refreshYearRange;
     private buildCalendar;
     private startOfDay;
     private isSameDate;
@@ -696,7 +706,7 @@ declare class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
      */
     onDocumentClick(event: MouseEvent): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IDatepicker, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IDatepicker, "i-datepicker", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "format": { "alias": "format"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IDatepicker, "i-datepicker", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "format": { "alias": "format"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "minYear": { "alias": "minYear"; "required": false; }; "maxYear": { "alias": "maxYear"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; }, never, never, true, never>;
 }
 /**
  * IFCDatepicker
@@ -713,6 +723,8 @@ declare class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDe
     placeholder: string;
     format: string;
     panelPosition: IDatepickerPanelPosition;
+    minYear: number | string | null;
+    maxYear: number | string | null;
     errorMessage?: IFormControlErrorMessage;
     /**
      * Consumers can still set [value].
@@ -770,7 +782,7 @@ declare class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDe
     get required(): boolean;
     get resolvedErrorText(): string | null;
     static ɵfac: i0.ɵɵFactoryDeclaration<IFCDatepicker, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IFCDatepicker, "i-fc-datepicker", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "format": { "alias": "format"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; "_smartFocusHook": { "alias": "_smartFocusHook"; "required": false; }; }, {}, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IFCDatepicker, "i-fc-datepicker", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "format": { "alias": "format"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "minYear": { "alias": "minYear"; "required": false; }; "maxYear": { "alias": "maxYear"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; "_smartFocusHook": { "alias": "_smartFocusHook"; "required": false; }; }, {}, never, never, true, never>;
 }
 
 /**
