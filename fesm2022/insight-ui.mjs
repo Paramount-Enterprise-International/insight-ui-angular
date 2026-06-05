@@ -4250,7 +4250,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.24", ngImpo
 
 /**
  * IDatepicker
- * Version: 1.5.3
+ * Version: 1.5.4
  *
  * Fixes:
  * - ✅ IMPORTANT: prevent value from being wiped due to bubbled "input" events
@@ -4258,6 +4258,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.24", ngImpo
  *   -> Only handle input when event.target is the date input itself.
  * - Keep portal + positioning + flicker guard for portaled i-options.
  * - IFCDatepicker included in same file
+ * - Add absolute minYear/maxYear and relative minYearRange/maxYearRange
  */
 const noop = () => {
     /**/
@@ -4274,6 +4275,8 @@ class IDatepicker {
     panelPosition = 'bottom left';
     _minYear = null;
     _maxYear = null;
+    _minYearRange = null;
+    _maxYearRange = null;
     set minYear(value) {
         this._minYear = this.coerceYear(value);
         this.refreshYearRange();
@@ -4287,6 +4290,20 @@ class IDatepicker {
     }
     get maxYear() {
         return this._maxYear;
+    }
+    set minYearRange(value) {
+        this._minYearRange = this.coerceYear(value);
+        this.refreshYearRange();
+    }
+    get minYearRange() {
+        return this._minYearRange;
+    }
+    set maxYearRange(value) {
+        this._maxYearRange = this.coerceYear(value);
+        this.refreshYearRange();
+    }
+    get maxYearRange() {
+        return this._maxYearRange;
     }
     portalToBody = true;
     matchTriggerWidth = true;
@@ -4344,7 +4361,6 @@ class IDatepicker {
     repositionRaf = 0;
     listeningGlobal = false;
     ngOnInit() {
-        // Default visual: today (only if consumer doesn't provide value)
         if (!this._modelValue && !this._displayText) {
             const today = this.startOfDay(new Date());
             this._modelValue = today;
@@ -4366,7 +4382,6 @@ class IDatepicker {
         else {
             date = null;
         }
-        // If parent writes null, keep display empty (don’t re-default)
         this._modelValue = date;
         this._displayText = date ? this.formatDate(date) : '';
         const baseDate = this._modelValue ?? this.parseInputDate(this._displayText) ?? this.startOfDay(new Date());
@@ -4411,10 +4426,10 @@ class IDatepicker {
             return;
         const raw = (input.value ?? '').trim();
         if (!raw)
-            return; // ✅ never wipe current display/model
+            return;
         const parsed = this.parseInputDate(raw);
         if (!parsed)
-            return; // ✅ partial/invalid typing shouldn't wipe display/model
+            return;
         this._modelValue = parsed;
         this._displayText = this.formatDate(parsed);
     }
@@ -4778,8 +4793,17 @@ class IDatepicker {
         return Math.trunc(year);
     }
     getNormalizedYearBounds() {
-        const min = this._minYear;
-        const max = this._maxYear;
+        const currentYear = new Date().getFullYear();
+        const min = this._minYear !== null
+            ? this._minYear
+            : this._minYearRange !== null
+                ? currentYear + this._minYearRange
+                : null;
+        const max = this._maxYear !== null
+            ? this._maxYear
+            : this._maxYearRange !== null
+                ? currentYear + this._maxYearRange
+                : null;
         if (min !== null && max !== null && min > max) {
             return { min: max, max: min };
         }
@@ -4806,7 +4830,7 @@ class IDatepicker {
         const year = this.viewYear;
         const month = this.viewMonth;
         const firstOfMonth = new Date(year, month, 1);
-        const startDay = (firstOfMonth.getDay() + 6) % 7; // Monday=0
+        const startDay = (firstOfMonth.getDay() + 6) % 7;
         const startDate = new Date(year, month, 1 - startDay);
         const weeks = [];
         const current = new Date(startDate);
@@ -4872,21 +4896,11 @@ class IDatepicker {
         const fmt = this.format || 'yyyy-MM-dd';
         return formatDate(date, fmt, 'en');
     }
-    // =========================================================
-    // Host listeners
-    // =========================================================
-    /**
-     * ✅ CRITICAL:
-     * "input" events bubble.
-     * Month/year i-select (and other inner inputs) will trigger "input" too.
-     * If we react to those, we'll read the date input at the wrong moment and wipe display.
-     */
     onHostInput(event) {
         const target = event.target;
         const dateInput = this.getInnerInput();
         if (!dateInput)
             return;
-        // only react if THIS input event is from the date input itself
         if (target !== dateInput)
             return;
         this.handleInput(dateInput.value);
@@ -4894,9 +4908,6 @@ class IDatepicker {
     onHostFocusOut() {
         this.handleBlur();
     }
-    /**
-     * Flicker guard (for portaled inner i-select options)
-     */
     onDocumentClick(event) {
         if (!this.isOpen)
             return;
@@ -4918,7 +4929,7 @@ class IDatepicker {
         this.cdr.markForCheck();
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.24", ngImport: i0, type: IDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.24", type: IDatepicker, isStandalone: true, selector: "i-datepicker", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", format: "format", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", panelOffset: "panelOffset", value: "value" }, outputs: { onChanged: "onChanged" }, host: { listeners: { "input": "onHostInput($event)", "focusout": "onHostFocusOut()", "document:click": "onDocumentClick($event)" } }, providers: [
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.24", type: IDatepicker, isStandalone: true, selector: "i-datepicker", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", format: "format", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", panelOffset: "panelOffset", value: "value" }, outputs: { onChanged: "onChanged" }, host: { listeners: { "input": "onHostInput($event)", "focusout": "onHostFocusOut()", "document:click": "onDocumentClick($event)" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => IDatepicker),
@@ -5080,6 +5091,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.24", ngImpo
                 type: Input
             }], maxYear: [{
                 type: Input
+            }], minYearRange: [{
+                type: Input
+            }], maxYearRange: [{
+                type: Input
             }], portalToBody: [{
                 type: Input
             }], matchTriggerWidth: [{
@@ -5108,12 +5123,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.24", ngImpo
             }] } });
 /**
  * IFCDatepicker
- * Version: 1.5.3 (smart wrapper)
- *
- * Goals:
- * - Consumers can keep using [value] OR reactive forms.
- * - Wrapper prevents "echo write-back" from rewriting the inner input while user is typing.
- * - Still applies truly-external value changes (reset/patch/etc).
+ * Version: 1.5.4 (smart wrapper)
  */
 class IFCDatepicker {
     innerDatepicker;
@@ -5123,23 +5133,16 @@ class IFCDatepicker {
     panelPosition = 'bottom left';
     minYear = null;
     maxYear = null;
+    minYearRange = null;
+    maxYearRange = null;
     errorMessage;
-    /**
-     * Consumers can still set [value].
-     * We treat this as an "external write".
-     */
     get value() {
         return this._value;
     }
     set value(v) {
-        // external write via input binding
         this.applyExternalValue(v ?? null);
     }
     _value = null;
-    /**
-     * This is what we actually forward to <i-datepicker [value]>
-     * We intentionally decouple it from `_value` while user is typing.
-     */
     forwardedValue = null;
     isDisabled = false;
     onChange = noop;
@@ -5149,16 +5152,7 @@ class IFCDatepicker {
     cdr = inject(ChangeDetectorRef);
     hostEl = inject((ElementRef));
     submitSub;
-    /**
-     * Echo suppression:
-     * - When inner emits a value, parent may immediately feed it back via [value] / writeValue.
-     * - While the inner input is focused, we ignore that "echo" to prevent rewriting the text mid-edit.
-     */
     lastEmittedKey = null;
-    /**
-     * If a truly-external value arrives while user is typing, we can queue it,
-     * then apply right after user stops typing (blur).
-     */
     pendingExternal = undefined;
     constructor() {
         if (this.ngControl)
@@ -5170,16 +5164,11 @@ class IFCDatepicker {
         }
     }
     ngAfterViewInit() {
-        // Ensure forwarded value is in sync on init.
-        // If no value was externally set, keep forwardedValue null so inner can behave normally.
         this.cdr.markForCheck();
     }
     ngOnDestroy() {
         this.submitSub?.unsubscribe?.();
     }
-    // =========================================================
-    // CVA
-    // =========================================================
     writeValue(v) {
         let next = null;
         if (v instanceof Date)
@@ -5190,7 +5179,6 @@ class IFCDatepicker {
         }
         else
             next = null;
-        // external write via form control
         this.applyExternalValue(next);
     }
     registerOnChange(fn) {
@@ -5203,56 +5191,28 @@ class IFCDatepicker {
         this.isDisabled = isDisabled;
         this.cdr.markForCheck();
     }
-    // =========================================================
-    // inner -> outer
-    // =========================================================
     handleDateChange(date) {
         this._value = date ?? null;
-        // Record what we emitted (for echo suppression)
         this.lastEmittedKey = this.dateKey(this._value);
-        // Propagate to outer form / consumer
         this.onChange(this._value);
         this.onTouched();
-        /**
-         * IMPORTANT:
-         * Do NOT force-forward the value back into the inner datepicker here.
-         * That would cause the same "format rewrite while typing".
-         *
-         * forwardedValue is only updated by applyExternalValue(...),
-         * which is called from actual external writes.
-         */
     }
-    // =========================================================
-    // Smart external forwarding
-    // =========================================================
     applyExternalValue(next) {
         const nextKey = this.dateKey(next);
-        // If user is currently editing (inner input focused),
-        // and incoming value equals what we *just* emitted,
-        // treat it as an echo and ignore (prevents rewrite/jumps).
         if (this.isInnerInputFocused()) {
             if (nextKey === this.lastEmittedKey) {
-                // keep internal model aligned, but don't forward to inner while typing
                 this._value = next ?? null;
                 return;
             }
-            // If it's truly different (reset/patch from outside), queue it and apply on blur.
             this.pendingExternal = next ?? null;
             this._value = next ?? null;
             return;
         }
-        // Not editing: apply immediately
         this.pendingExternal = undefined;
         this._value = next ?? null;
         this.forwardedValue = next ?? null;
         this.cdr.markForCheck();
     }
-    /**
-     * When the user stops editing (focus leaves the inner input),
-     * apply any queued external update.
-     *
-     * We don't need to ask consumers to do anything; we listen ourselves.
-     */
     tryFlushPendingExternal() {
         if (this.pendingExternal === undefined)
             return;
@@ -5261,17 +5221,9 @@ class IFCDatepicker {
         this.forwardedValue = v;
         this.cdr.markForCheck();
     }
-    // Listen at wrapper host level (works even though inner is a component)
-    // and flush after focus leaves the inner input.
-    // (We flush in a microtask so document.activeElement has updated.)
     set _smartFocusHook(_) {
-        // no-op; just to keep lint calm if you dislike HostListener in this file
+        // no-op
     }
-    // If you prefer HostListener, you can replace the below with:
-    // @HostListener('focusout') onFocusOut() { queueMicrotask(() => this.tryFlushPendingExternalIfNotFocused()); }
-    //
-    // We'll do it via native event subscription approach to avoid extra decorators.
-    // (Simpler: use a MutationObserver? No. We'll do minimal, safe, synchronous check.)
     isInnerInputFocused() {
         const input = this.hostEl.nativeElement.querySelector('i-datepicker i-input input');
         const active = document.activeElement;
@@ -5287,39 +5239,25 @@ class IFCDatepicker {
         const t = d.getTime();
         if (Number.isNaN(t))
             return null;
-        // Normalize by date (no time)
         const y = d.getFullYear();
         const m = d.getMonth() + 1;
         const day = d.getDate();
-        // YYYY-MM-DD
         const mm = m < 10 ? `0${m}` : `${m}`;
         const dd = day < 10 ? `0${day}` : `${day}`;
         return `${y}-${mm}-${dd}`;
     }
-    // =========================================================
-    // UX helpers
-    // =========================================================
     focusInnerDatepicker() {
         if (this.isDisabled)
             return;
         const input = this.hostEl.nativeElement.querySelector('i-datepicker i-input input');
         input?.focus();
     }
-    // Flush pending external value when focus leaves inner input.
-    // We do this by observing focus changes with a simple timer-less microtask
-    // from common interaction points.
-    // You can call this from anywhere you already have focusout; simplest is:
-    // add (focusout)="onInnerFocusOut()" on <i-datepicker> if you want.
     onInnerFocusOut() {
         queueMicrotask(() => {
-            // only flush if we are no longer focused in the inner input
             if (!this.isInnerInputFocused())
                 this.tryFlushPendingExternal();
         });
     }
-    // =========================================================
-    // form helpers
-    // =========================================================
     get controlInvalid() {
         const c = this.ngControl?.control;
         if (!c)
@@ -5335,7 +5273,7 @@ class IFCDatepicker {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.24", ngImport: i0, type: IFCDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.24", type: IFCDatepicker, isStandalone: true, selector: "i-fc-datepicker", inputs: { label: "label", placeholder: "placeholder", format: "format", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", errorMessage: "errorMessage", value: "value", _smartFocusHook: "_smartFocusHook" }, viewQueries: [{ propertyName: "innerDatepicker", first: true, predicate: ["inner"], descendants: true, static: true }], ngImport: i0, template: `@if (label) {
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.24", type: IFCDatepicker, isStandalone: true, selector: "i-fc-datepicker", inputs: { label: "label", placeholder: "placeholder", format: "format", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", errorMessage: "errorMessage", value: "value", _smartFocusHook: "_smartFocusHook" }, viewQueries: [{ propertyName: "innerDatepicker", first: true, predicate: ["inner"], descendants: true, static: true }], ngImport: i0, template: `@if (label) {
       <label class="i-fc-datepicker__label" (click)="focusInnerDatepicker()">
         {{ label }} :
         @if (required) {
@@ -5350,7 +5288,9 @@ class IFCDatepicker {
       [format]="format"
       [invalid]="controlInvalid"
       [maxYear]="maxYear"
+      [maxYearRange]="maxYearRange"
       [minYear]="minYear"
+      [minYearRange]="minYearRange"
       [panelPosition]="panelPosition"
       [placeholder]="placeholder"
       [value]="forwardedValue"
@@ -5362,7 +5302,7 @@ class IFCDatepicker {
       <div class="i-fc-datepicker__error">
         {{ resolvedErrorText }}
       </div>
-    }`, isInline: true, dependencies: [{ kind: "component", type: IDatepicker, selector: "i-datepicker", inputs: ["placeholder", "disabled", "invalid", "format", "panelPosition", "minYear", "maxYear", "portalToBody", "matchTriggerWidth", "panelOffset", "value"], outputs: ["onChanged"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+    }`, isInline: true, dependencies: [{ kind: "component", type: IDatepicker, selector: "i-datepicker", inputs: ["placeholder", "disabled", "invalid", "format", "panelPosition", "minYear", "maxYear", "minYearRange", "maxYearRange", "portalToBody", "matchTriggerWidth", "panelOffset", "value"], outputs: ["onChanged"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.24", ngImport: i0, type: IFCDatepicker, decorators: [{
             type: Component,
@@ -5385,7 +5325,9 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.24", ngImpo
       [format]="format"
       [invalid]="controlInvalid"
       [maxYear]="maxYear"
+      [maxYearRange]="maxYearRange"
       [minYear]="minYear"
+      [minYearRange]="minYearRange"
       [panelPosition]="panelPosition"
       [placeholder]="placeholder"
       [value]="forwardedValue"
@@ -5414,6 +5356,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.24", ngImpo
             }], minYear: [{
                 type: Input
             }], maxYear: [{
+                type: Input
+            }], minYearRange: [{
+                type: Input
+            }], maxYearRange: [{
                 type: Input
             }], errorMessage: [{
                 type: Input

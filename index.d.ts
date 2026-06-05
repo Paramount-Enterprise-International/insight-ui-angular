@@ -622,10 +622,16 @@ declare class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     panelPosition: IDatepickerPanelPosition;
     private _minYear;
     private _maxYear;
+    private _minYearRange;
+    private _maxYearRange;
     set minYear(value: number | string | null | undefined);
     get minYear(): number | null;
     set maxYear(value: number | string | null | undefined);
     get maxYear(): number | null;
+    set minYearRange(value: number | string | null | undefined);
+    get minYearRange(): number | null;
+    set maxYearRange(value: number | string | null | undefined);
+    get maxYearRange(): number | null;
     portalToBody: boolean;
     matchTriggerWidth: boolean;
     panelOffset: number;
@@ -693,29 +699,15 @@ declare class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     private isSameDate;
     private parseInputDate;
     private formatDate;
-    /**
-     * ✅ CRITICAL:
-     * "input" events bubble.
-     * Month/year i-select (and other inner inputs) will trigger "input" too.
-     * If we react to those, we'll read the date input at the wrong moment and wipe display.
-     */
     onHostInput(event: Event): void;
     onHostFocusOut(): void;
-    /**
-     * Flicker guard (for portaled inner i-select options)
-     */
     onDocumentClick(event: MouseEvent): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IDatepicker, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IDatepicker, "i-datepicker", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "format": { "alias": "format"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "minYear": { "alias": "minYear"; "required": false; }; "maxYear": { "alias": "maxYear"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IDatepicker, "i-datepicker", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "format": { "alias": "format"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "minYear": { "alias": "minYear"; "required": false; }; "maxYear": { "alias": "maxYear"; "required": false; }; "minYearRange": { "alias": "minYearRange"; "required": false; }; "maxYearRange": { "alias": "maxYearRange"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; }, never, never, true, never>;
 }
 /**
  * IFCDatepicker
- * Version: 1.5.3 (smart wrapper)
- *
- * Goals:
- * - Consumers can keep using [value] OR reactive forms.
- * - Wrapper prevents "echo write-back" from rewriting the inner input while user is typing.
- * - Still applies truly-external value changes (reset/patch/etc).
+ * Version: 1.5.4 (smart wrapper)
  */
 declare class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDestroy {
     innerDatepicker: IDatepicker;
@@ -725,18 +717,12 @@ declare class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDe
     panelPosition: IDatepickerPanelPosition;
     minYear: number | string | null;
     maxYear: number | string | null;
+    minYearRange: number | string | null;
+    maxYearRange: number | string | null;
     errorMessage?: IFormControlErrorMessage;
-    /**
-     * Consumers can still set [value].
-     * We treat this as an "external write".
-     */
     get value(): Date | null;
     set value(v: Date | null);
     private _value;
-    /**
-     * This is what we actually forward to <i-datepicker [value]>
-     * We intentionally decouple it from `_value` while user is typing.
-     */
     forwardedValue: Date | null;
     isDisabled: boolean;
     private onChange;
@@ -746,16 +732,7 @@ declare class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDe
     private readonly cdr;
     private readonly hostEl;
     private submitSub?;
-    /**
-     * Echo suppression:
-     * - When inner emits a value, parent may immediately feed it back via [value] / writeValue.
-     * - While the inner input is focused, we ignore that "echo" to prevent rewriting the text mid-edit.
-     */
     private lastEmittedKey;
-    /**
-     * If a truly-external value arrives while user is typing, we can queue it,
-     * then apply right after user stops typing (blur).
-     */
     private pendingExternal;
     constructor();
     ngAfterViewInit(): void;
@@ -766,12 +743,6 @@ declare class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDe
     setDisabledState(isDisabled: boolean): void;
     handleDateChange(date: Date | null): void;
     private applyExternalValue;
-    /**
-     * When the user stops editing (focus leaves the inner input),
-     * apply any queued external update.
-     *
-     * We don't need to ask consumers to do anything; we listen ourselves.
-     */
     private tryFlushPendingExternal;
     set _smartFocusHook(_: any);
     private isInnerInputFocused;
@@ -782,7 +753,7 @@ declare class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDe
     get required(): boolean;
     get resolvedErrorText(): string | null;
     static ɵfac: i0.ɵɵFactoryDeclaration<IFCDatepicker, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IFCDatepicker, "i-fc-datepicker", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "format": { "alias": "format"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "minYear": { "alias": "minYear"; "required": false; }; "maxYear": { "alias": "maxYear"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; "_smartFocusHook": { "alias": "_smartFocusHook"; "required": false; }; }, {}, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IFCDatepicker, "i-fc-datepicker", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "format": { "alias": "format"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "minYear": { "alias": "minYear"; "required": false; }; "maxYear": { "alias": "maxYear"; "required": false; }; "minYearRange": { "alias": "minYearRange"; "required": false; }; "maxYearRange": { "alias": "maxYearRange"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; "_smartFocusHook": { "alias": "_smartFocusHook"; "required": false; }; }, {}, never, never, true, never>;
 }
 
 /**
