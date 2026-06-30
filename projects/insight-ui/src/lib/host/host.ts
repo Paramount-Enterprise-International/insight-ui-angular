@@ -505,7 +505,7 @@ export class IHContent {
 
 @Component({
   selector: 'ih-menu',
-  imports: [NgClass, RouterLink, IHighlightSearchPipe],
+  imports: [NgClass, IHighlightSearchPipe],
   host: { 'data-ih-menu': '' },
   template: `
     @if (menu) {
@@ -535,46 +535,14 @@ export class IHContent {
               ></i>
             </div>
           } @else {
-            @if (nav.behavior === 'spa' && nav.url) {
+            @if (nav.url) {
               <a
                 #menuItem
-                [class.is-selected]="isSelected"
-                [queryParamsHandling]="'merge'"
-                [routerLink]="nav.url"
-                (click)="onSpaClick($event)"
-              >
-                @if (menu.level > 0) {
-                  @for (i of indent(menu.level); track i) {
-                    <span></span>
-                  }
-                }
-
-                <i [class]="menu.icon"></i>
-                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
-              </a>
-            } @else if (nav.behavior === 'reload' && nav.url) {
-              <a
-                #menuItem
-                target="_self"
                 [class.is-selected]="isSelected"
                 [href]="hrefWithMenuFilter(nav.url)"
-              >
-                @if (menu.level > 0) {
-                  @for (i of indent(menu.level); track i) {
-                    <span></span>
-                  }
-                }
-
-                <i [class]="menu.icon"></i>
-                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
-              </a>
-            } @else if (nav.behavior === 'new-tab' && nav.url) {
-              <a
-                #menuItem
-                rel="noopener noreferrer"
-                target="_blank"
-                [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(nav.url)"
+                [rel]="nav.behavior === 'new-tab' ? 'noopener noreferrer' : null"
+                [target]="nav.behavior === 'new-tab' ? '_blank' : '_self'"
+                (click)="onLeafClick($event)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -632,10 +600,7 @@ export class IHMenu implements OnChanges {
     const children = this.menu.child ?? [];
     const hasChildren = children.length > 0;
 
-    const isLeaf =
-      +this.menu.menuTypeId === 3 && (!hasChildren || this.menu.visibility === 'no-child');
-
-    return isLeaf;
+    return +this.menu.menuTypeId === 3 && (!hasChildren || this.menu.visibility === 'no-child');
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -663,13 +628,30 @@ export class IHMenu implements OnChanges {
     this.clicked.emit(this.menu);
   }
 
-  onSpaClick(e: MouseEvent): void {
-    if (e.button !== 0) return;
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  onLeafClick(event: MouseEvent): void {
+    if (!this.menu) return;
 
-    queueMicrotask(() => {
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    });
+    /**
+     * Let browser handle:
+     * - right click
+     * - middle click
+     * - cmd/ctrl click
+     * - shift/alt click
+     *
+     * This keeps "open in new tab" browser behavior.
+     */
+    if (event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    /**
+     * Normal left-click should always go through IHSidebar.navigateToMenu().
+     * That function decides:
+     * - SPA
+     * - reload
+     * - new tab
+     */
+    event.preventDefault();
+    this.clicked.emit(this.menu);
   }
 
   hrefWithMenuFilter(raw: string): string {
