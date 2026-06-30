@@ -9225,15 +9225,19 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
  * - IHContent that reacts to overrides IMMEDIATELY (no NavigationEnd needed)
  * - Override breadcrumbs support routerLink + correct href with baseHref "/-/" (NO "/-/-/" bug)
  * - Override breadcrumb click also notifies React Router (popstate) so React pages update
- * - IHMenu / IHSidebar kept as you had them
- * - ✅ NEW: sidebar menu click preserves ?menu-filter=... (internal + external)
+ * - IHMenu / IHSidebar kept as close as possible to original
+ * - Sidebar navigation rule:
+ *   1. openInNewTab === true => href + target="_blank"
+ *   2. reload === true => href same tab
+ *   3. full http/https route => href same tab
+ *   4. otherwise => routerLink SPA navigation
  * ========================================================= */
 function getMenuUrl(menu) {
     if (!menu)
         return null;
     /**
      * Prefer route going forward.
-     * applicationUrl remains only for old menus.json compatibility.
+     * applicationUrl remains only for backward compatibility.
      */
     return menu.route ?? menu.applicationUrl ?? null;
 }
@@ -9249,7 +9253,7 @@ function resolveMenuNavigation(menu) {
         };
     }
     /**
-     * Priority 1: open new tab.
+     * Highest priority: open in new tab.
      */
     if (menu.openInNewTab) {
         return {
@@ -9258,8 +9262,7 @@ function resolveMenuNavigation(menu) {
         };
     }
     /**
-     * Priority 2: explicit full reload.
-     * This allows relative paths to reload too.
+     * Force full reload, including relative routes.
      */
     if (menu.reload) {
         return {
@@ -9268,7 +9271,7 @@ function resolveMenuNavigation(menu) {
         };
     }
     /**
-     * Priority 3: full http/https URL reloads by default.
+     * Full URL uses browser navigation by default.
      */
     if (isFullUrl(url)) {
         return {
@@ -9277,8 +9280,8 @@ function resolveMenuNavigation(menu) {
         };
     }
     /**
-     * Default: SPA navigation.
-     * This keeps old menus.json with route backward-compatible.
+     * Default: Angular SPA navigation.
+     * This keeps old menus.json route entries backward-compatible.
      */
     return {
         url,
@@ -9349,7 +9352,7 @@ class IHContent {
             const nextUrlPart = segments.join('/');
             // Always advance the URL, even if we don't render a breadcrumb for this level
             const nextUrl = nextUrlPart.length > 0 ? `${url}/${nextUrlPart}` : url || '/';
-            // 🔑 Use route config data, not snapshot data, to avoid inherited data
+            // 🔑 Use *route config* data, not snapshot (avoid inherited data)
             const data = routeConfig.data;
             const label = data?.title;
             if (label) {
@@ -9380,7 +9383,7 @@ class IHContent {
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
             return;
         // Angular routerLink will update the URL via pushState.
-        // React Router BrowserRouter will not notice unless popstate is fired.
+        // React Router (BrowserRouter) won't notice unless popstate is fired.
         queueMicrotask(() => {
             window.dispatchEvent(new PopStateEvent('popstate'));
         });
@@ -9390,10 +9393,13 @@ class IHContent {
      * ========================================================= */
     normalizeBaseHref() {
         let b = (this.baseHref ?? '/').trim();
+        // ensure leading slash
         if (!b.startsWith('/'))
             b = `/${b}`;
+        // ensure trailing slash
         if (!b.endsWith('/'))
             b = `${b}/`;
+        // collapse repeated slashes
         b = b.replace(/\/{2,}/g, '/');
         return b;
     }
@@ -9401,6 +9407,7 @@ class IHContent {
         let u = (url ?? '').trim();
         if (!u)
             return '/';
+        // support only path-like urls here; if ever full origin is passed, keep it
         if (/^https?:\/\//i.test(u))
             return u;
         if (!u.startsWith('/'))
@@ -9422,7 +9429,9 @@ class IHContent {
     overrideRouterLink(url) {
         const base = this.normalizeBaseHref();
         const abs = this.normalizePath(url);
+        // if already includes baseHref, strip it
         if (abs.startsWith(base)) {
+            // base ends with "/" so slice base.length - 1 keeps leading "/"
             const stripped = abs.slice(base.length - 1);
             return stripped.length ? stripped : '/';
         }
@@ -9439,10 +9448,13 @@ class IHContent {
     overrideHref(url) {
         const base = this.normalizeBaseHref();
         const abs = this.normalizePath(url);
+        // already includes baseHref
         if (abs.startsWith(base))
             return abs;
+        // home
         if (abs === '/')
             return base;
+        // join
         return `${base}${abs.slice(1)}`.replace(/\/{2,}/g, '/');
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.25", ngImport: i0, type: IHContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
@@ -9638,8 +9650,9 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
             }] } });
 /* =========================================================
  * IHMenu
- * - navigation is decided by openInNewTab/reload/full-url rules
- * - default is SPA, backward compatible with old route menus.json
+ * - SPA: routerLink
+ * - Reload: href
+ * - New tab: href + target="_blank"
  * ========================================================= */
 class IHMenu {
     menu;
@@ -9647,11 +9660,13 @@ class IHMenu {
     filter = '';
     clicked = new EventEmitter();
     menus;
+    // the actual clickable DOM element (only on leaf items)
     menuItemRef;
     isHidden = false;
     get navigation() {
         return resolveMenuNavigation(this.menu);
     }
+    /** only true for the *leaf* menu that matches selectedMenuId */
     get isSelected() {
         if (!this.menu)
             return false;
@@ -9660,9 +9675,12 @@ class IHMenu {
             return false;
         const children = this.menu.child ?? [];
         const hasChildren = children.length > 0;
-        return +this.menu.menuTypeId === 3 && (!hasChildren || this.menu.visibility === 'no-child');
+        // keep selection only on "leaf" items (same rule as flattenNavigableMenus)
+        const isLeaf = +this.menu.menuTypeId === 3 && (!hasChildren || this.menu.visibility === 'no-child');
+        return isLeaf;
     }
     ngOnChanges(changes) {
+        // whenever selectedMenuId changes, scroll the selected item into view
         if (changes['selectedMenuId'] && this.isSelected && this.menuItemRef) {
             this.menuItemRef.nativeElement.scrollIntoView({
                 block: 'nearest',
@@ -9672,42 +9690,23 @@ class IHMenu {
     }
     indent(level) {
         const n = Math.max(0, Number(level) || 0);
+        // return [0,1,2,...] so each item is stable and unique
         return Array.from({ length: n }, (_, i) => i);
     }
     click() {
         if (!this.menu)
             return;
         if (this.menu.visibility !== 'no-child') {
-            this.menu.visibility = this.menu.visibility === 'expanded' ? 'collapsed' : 'expanded';
-            return;
+            if (this.menu.visibility === 'expanded') {
+                this.menu.visibility = 'collapsed';
+            }
+            else {
+                this.menu.visibility = 'expanded';
+            }
         }
-        this.clicked.emit(this.menu);
-    }
-    onLeafClick(event) {
-        if (!this.menu)
-            return;
-        /**
-         * Let browser handle:
-         * - right click
-         * - middle click
-         * - cmd/ctrl click
-         * - shift/alt click
-         *
-         * This keeps "open in new tab" browser behavior.
-         */
-        if (event.button !== 0)
-            return;
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
-            return;
-        /**
-         * Normal left-click should always go through IHSidebar.navigateToMenu().
-         * That function decides:
-         * - SPA
-         * - reload
-         * - new tab
-         */
-        event.preventDefault();
-        this.clicked.emit(this.menu);
+        else {
+            this.clicked.emit(this.menu);
+        }
     }
     hrefWithMenuFilter(raw) {
         const term = (this.filter ?? '').trim();
@@ -9739,36 +9738,70 @@ class IHMenu {
           <small [innerHTML]="menu.menuName | highlightSearch: filter"></small>
         } @else if (+menu.menuTypeId === 3) {
           @if (hasChild) {
+            <!-- group with children -->
             <div (click)="click()">
               @if (menu.level > 0) {
                 @for (i of indent(menu.level); track i) {
                   <span></span>
                 }
               }
-
               <i [class]="menu.icon"></i>
               <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
-
               <i
                 [ngClass]="menu.visibility === 'expanded' ? 'fas fa-angle-up' : 'fas fa-angle-down'"
               ></i>
             </div>
           } @else {
-            @if (nav.url) {
+            <!-- leaf item: SPA navigation -->
+            @if (nav.behavior === 'spa' && nav.url) {
               <a
                 #menuItem
                 [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(nav.url)"
-                [rel]="nav.behavior === 'new-tab' ? 'noopener noreferrer' : null"
-                [target]="nav.behavior === 'new-tab' ? '_blank' : '_self'"
-                (click)="onLeafClick($event)"
+                [queryParamsHandling]="'merge'"
+                [routerLink]="nav.url"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
                     <span></span>
                   }
                 }
+                <i [class]="menu.icon"></i>
+                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
+              </a>
+            }
 
+            <!-- leaf item: full reload, same tab -->
+            @else if (nav.behavior === 'reload' && nav.url) {
+              <a
+                #menuItem
+                target="_self"
+                [class.is-selected]="isSelected"
+                [href]="hrefWithMenuFilter(nav.url)"
+              >
+                @if (menu.level > 0) {
+                  @for (i of indent(menu.level); track i) {
+                    <span></span>
+                  }
+                }
+                <i [class]="menu.icon"></i>
+                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
+              </a>
+            }
+
+            <!-- leaf item: open in new tab -->
+            @else if (nav.behavior === 'new-tab' && nav.url) {
+              <a
+                #menuItem
+                rel="noopener noreferrer"
+                target="_blank"
+                [class.is-selected]="isSelected"
+                [href]="hrefWithMenuFilter(nav.url)"
+              >
+                @if (menu.level > 0) {
+                  @for (i of indent(menu.level); track i) {
+                    <span></span>
+                  }
+                }
                 <i [class]="menu.icon"></i>
                 <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
               </a>
@@ -9779,24 +9812,19 @@ class IHMenu {
         @if (hasChild) {
           <ul [ngClass]="menu.menuTypeId === 3 ? menu.visibility : ''">
             @for (m of menu.child; track m.menuId) {
-              <ih-menu
-                [filter]="filter"
-                [menu]="m"
-                [selectedMenuId]="selectedMenuId"
-                (clicked)="clicked.emit($event)"
-              />
+              <ih-menu [filter]="filter" [menu]="m" [selectedMenuId]="selectedMenuId" />
             }
           </ul>
         }
       </li>
     }
-  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter"], outputs: ["clicked"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
+  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter"], outputs: ["clicked"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImport: i0, type: IHMenu, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-menu',
-                    imports: [NgClass, IHighlightSearchPipe],
+                    imports: [NgClass, RouterLink, IHighlightSearchPipe],
                     host: { 'data-ih-menu': '' },
                     template: `
     @if (menu) {
@@ -9811,36 +9839,70 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
           <small [innerHTML]="menu.menuName | highlightSearch: filter"></small>
         } @else if (+menu.menuTypeId === 3) {
           @if (hasChild) {
+            <!-- group with children -->
             <div (click)="click()">
               @if (menu.level > 0) {
                 @for (i of indent(menu.level); track i) {
                   <span></span>
                 }
               }
-
               <i [class]="menu.icon"></i>
               <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
-
               <i
                 [ngClass]="menu.visibility === 'expanded' ? 'fas fa-angle-up' : 'fas fa-angle-down'"
               ></i>
             </div>
           } @else {
-            @if (nav.url) {
+            <!-- leaf item: SPA navigation -->
+            @if (nav.behavior === 'spa' && nav.url) {
               <a
                 #menuItem
                 [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(nav.url)"
-                [rel]="nav.behavior === 'new-tab' ? 'noopener noreferrer' : null"
-                [target]="nav.behavior === 'new-tab' ? '_blank' : '_self'"
-                (click)="onLeafClick($event)"
+                [queryParamsHandling]="'merge'"
+                [routerLink]="nav.url"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
                     <span></span>
                   }
                 }
+                <i [class]="menu.icon"></i>
+                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
+              </a>
+            }
 
+            <!-- leaf item: full reload, same tab -->
+            @else if (nav.behavior === 'reload' && nav.url) {
+              <a
+                #menuItem
+                target="_self"
+                [class.is-selected]="isSelected"
+                [href]="hrefWithMenuFilter(nav.url)"
+              >
+                @if (menu.level > 0) {
+                  @for (i of indent(menu.level); track i) {
+                    <span></span>
+                  }
+                }
+                <i [class]="menu.icon"></i>
+                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
+              </a>
+            }
+
+            <!-- leaf item: open in new tab -->
+            @else if (nav.behavior === 'new-tab' && nav.url) {
+              <a
+                #menuItem
+                rel="noopener noreferrer"
+                target="_blank"
+                [class.is-selected]="isSelected"
+                [href]="hrefWithMenuFilter(nav.url)"
+              >
+                @if (menu.level > 0) {
+                  @for (i of indent(menu.level); track i) {
+                    <span></span>
+                  }
+                }
                 <i [class]="menu.icon"></i>
                 <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
               </a>
@@ -9851,12 +9913,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
         @if (hasChild) {
           <ul [ngClass]="menu.menuTypeId === 3 ? menu.visibility : ''">
             @for (m of menu.child; track m.menuId) {
-              <ih-menu
-                [filter]="filter"
-                [menu]="m"
-                [selectedMenuId]="selectedMenuId"
-                (clicked)="clicked.emit($event)"
-              />
+              <ih-menu [filter]="filter" [menu]="m" [selectedMenuId]="selectedMenuId" />
             }
           </ul>
         }
@@ -9887,10 +9944,16 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
  * ========================================================= */
 class IHSidebar {
     router = inject(Router);
+    /* ---------------------------
+     * INPUTS (from parent)
+     * --------------------------- */
     user$;
     menusInput$;
     visible = true;
     footerText = 'Insight Local';
+    /* ---------------------------
+     * INTERNAL STREAMS / STATE
+     * --------------------------- */
     menus$;
     queryParams = {};
     menuSearch = new FormControl('');
@@ -9982,15 +10045,15 @@ class IHSidebar {
         if (this.keyboardNavActive()) {
             const maxIndex = this.navigableMenus.length - 1;
             let idx = this.selectedIndex();
-            if (idx === null || idx < 0 || idx > maxIndex) {
+            if (idx === null || idx < 0 || idx > maxIndex)
                 idx = 0;
-            }
             this.selectedIndex.set(idx);
             this.selectedMenuId.set(this.navigableMenus[idx].menuId);
-            return;
         }
-        this.selectedIndex.set(null);
-        this.selectedMenuId.set(null);
+        else {
+            this.selectedIndex.set(null);
+            this.selectedMenuId.set(null);
+        }
     }
     flattenNavigableMenus(menus) {
         const result = [];
@@ -9998,16 +10061,13 @@ class IHSidebar {
             const children = menu.child ?? [];
             const hasChildren = children.length > 0;
             const isLeafMenu = +menu.menuTypeId === 3 && (!hasChildren || menu.visibility === 'no-child');
-            if (isLeafMenu) {
+            if (isLeafMenu)
                 result.push(menu);
-            }
-            for (const child of children) {
+            for (const child of children)
                 visit(child);
-            }
         };
-        for (const m of menus) {
+        for (const m of menus)
             visit(m);
-        }
         return result;
     }
     onSearchKeyDown(event) {
@@ -10019,14 +10079,12 @@ class IHSidebar {
         if (event.key === 'ArrowDown') {
             event.preventDefault();
             this.ensureKeyboardNavActive(1);
-            return;
         }
-        if (event.key === 'ArrowUp') {
+        else if (event.key === 'ArrowUp') {
             event.preventDefault();
             this.ensureKeyboardNavActive(-1);
-            return;
         }
-        if (event.key === 'Enter') {
+        else if (event.key === 'Enter') {
             if (!this.keyboardNavActive())
                 return;
             event.preventDefault();
@@ -10057,20 +10115,17 @@ class IHSidebar {
             return;
         const maxIndex = this.navigableMenus.length - 1;
         let next = current + delta;
-        if (next < 0) {
+        if (next < 0)
             next = maxIndex;
-        }
-        else if (next > maxIndex) {
+        else if (next > maxIndex)
             next = 0;
-        }
         this.selectedIndex.set(next);
         this.selectedMenuId.set(this.navigableMenus[next].menuId);
     }
     activateSelected() {
         const idx = this.selectedIndex();
-        if (idx === null || idx < 0 || idx >= this.navigableMenus.length) {
+        if (idx === null || idx < 0 || idx >= this.navigableMenus.length)
             return;
-        }
         const menu = this.navigableMenus[idx];
         this.navigateToMenu(menu);
     }
@@ -10103,9 +10158,6 @@ class IHSidebar {
                 queryParams: this.menuFilterQueryParams(),
                 queryParamsHandling: 'merge',
             });
-            queueMicrotask(() => {
-                window.dispatchEvent(new PopStateEvent('popstate'));
-            });
             return;
         }
         const urlWithFilter = this.appendMenuFilterToUrl(nav.url);
@@ -10120,12 +10172,10 @@ class IHSidebar {
     updateUrl() {
         const queryParams = { ...this.queryParams };
         const currentFilter = this.menuFilter().trim();
-        if (currentFilter) {
+        if (currentFilter)
             queryParams['menu-filter'] = currentFilter;
-        }
-        else {
+        else
             delete queryParams['menu-filter'];
-        }
         this.router.navigate([], {
             queryParams,
             queryParamsHandling: 'replace',
@@ -10135,13 +10185,11 @@ class IHSidebar {
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.25", ngImport: i0, type: IHSidebar, deps: [], target: i0.ɵɵFactoryTarget.Component });
     static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.25", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", footerText: "footerText" }, host: { properties: { "class.hidden": "this.sidebarVisibility" } }, usesOnChanges: true, ngImport: i0, template: `
     @let user = user$ | async;
-
     <div class="ih-sidebar-header">
       @if (user) {
         <div class="user-image">
           <img alt="User Image" [src]="user.userImagePath" />
         </div>
-
         <div class="user-info">
           <small class="text-subtle">{{ user.employeeCode }}</small>
           <h6>{{ user.fullName }}</h6>
@@ -10160,15 +10208,9 @@ class IHSidebar {
 
     <div class="ih-sidebar-body scroll scroll-y">
       @let menus = menus$ | async;
-
       <ul>
         @for (m of menus; track m.menuId) {
-          <ih-menu
-            [filter]="menuFilter()"
-            [menu]="m"
-            [selectedMenuId]="selectedMenuId()"
-            (clicked)="navigateToMenu($event)"
-          />
+          <ih-menu [filter]="menuFilter()" [menu]="m" [selectedMenuId]="selectedMenuId()" />
         }
       </ul>
     </div>
@@ -10185,13 +10227,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
                     imports: [AsyncPipe, IHMenu, ReactiveFormsModule],
                     template: `
     @let user = user$ | async;
-
     <div class="ih-sidebar-header">
       @if (user) {
         <div class="user-image">
           <img alt="User Image" [src]="user.userImagePath" />
         </div>
-
         <div class="user-info">
           <small class="text-subtle">{{ user.employeeCode }}</small>
           <h6>{{ user.fullName }}</h6>
@@ -10210,15 +10250,9 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
 
     <div class="ih-sidebar-body scroll scroll-y">
       @let menus = menus$ | async;
-
       <ul>
         @for (m of menus; track m.menuId) {
-          <ih-menu
-            [filter]="menuFilter()"
-            [menu]="m"
-            [selectedMenuId]="selectedMenuId()"
-            (clicked)="navigateToMenu($event)"
-          />
+          <ih-menu [filter]="menuFilter()" [menu]="m" [selectedMenuId]="selectedMenuId()" />
         }
       </ul>
     </div>

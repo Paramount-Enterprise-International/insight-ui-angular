@@ -1423,6 +1423,16 @@ type IResolvedMenuNavigation = {
 type IMenu = {
     menuId: number;
     menuName: string;
+    /**
+     * Main navigation field.
+     *
+     * Examples:
+     * - "/docs/components/button" => SPA navigation
+     * - "/standalone/insight-remote-react" + reload: true => full reload
+     * - "https://example.com" => full reload by default
+     * - "https://example.com" + openInNewTab: true => new tab
+     */
+    route?: string | null;
     menuTypeId: number;
     parentId: number;
     sequence: number;
@@ -1435,29 +1445,14 @@ type IMenu = {
     versionCode?: string;
     applicationCode?: string;
     /**
-     * Main navigation field.
-     *
-     * Rules:
-     * - relative route, for example "/docs/components/button" => SPA navigation
-     * - full URL, for example "https://example.com" => full reload
-     * - relative route + reload: true => full reload
-     * - any route + openInNewTab: true => open new tab
-     */
-    route?: string | null;
-    /**
      * Old compatibility field.
      * Prefer route going forward.
      */
     applicationUrl?: string | null;
     /**
-     * Force opening this menu in a new tab.
-     * This has the highest priority.
+     * New behavior flags.
      */
     openInNewTab?: boolean;
-    /**
-     * Force full browser reload in the same tab.
-     * Useful for relative URLs like "/standalone/insight-remote-react".
-     */
     reload?: boolean;
 };
 type IUser = {
@@ -1529,16 +1524,16 @@ declare class IHMenu implements OnChanges {
     menu: IMenu | undefined;
     selectedMenuId: number | null;
     filter: string;
-    readonly clicked: EventEmitter<IMenu>;
+    readonly clicked: EventEmitter<any>;
     menus: QueryList<IHMenu>;
     menuItemRef: ElementRef<HTMLElement>;
     isHidden: boolean;
     get navigation(): IResolvedMenuNavigation;
+    /** only true for the *leaf* menu that matches selectedMenuId */
     get isSelected(): boolean;
     ngOnChanges(changes: SimpleChanges): void;
     indent(level: number): number[];
     click(): void;
-    onLeafClick(event: MouseEvent): void;
     hrefWithMenuFilter(raw: string): string;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHMenu, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; }, { "clicked": "clicked"; }, never, never, true, never>;
@@ -1572,7 +1567,7 @@ declare class IHSidebar implements OnInit, OnChanges {
     private activateSelected;
     private menuFilterQueryParams;
     private appendMenuFilterToUrl;
-    navigateToMenu(menu: IMenu): void;
+    private navigateToMenu;
     updateUrl(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHSidebar, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; }, {}, never, never, true, never>;
