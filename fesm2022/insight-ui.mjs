@@ -9660,8 +9660,7 @@ class IHMenu {
             return false;
         const children = this.menu.child ?? [];
         const hasChildren = children.length > 0;
-        const isLeaf = +this.menu.menuTypeId === 3 && (!hasChildren || this.menu.visibility === 'no-child');
-        return isLeaf;
+        return +this.menu.menuTypeId === 3 && (!hasChildren || this.menu.visibility === 'no-child');
     }
     ngOnChanges(changes) {
         if (changes['selectedMenuId'] && this.isSelected && this.menuItemRef) {
@@ -9684,14 +9683,31 @@ class IHMenu {
         }
         this.clicked.emit(this.menu);
     }
-    onSpaClick(e) {
-        if (e.button !== 0)
+    onLeafClick(event) {
+        if (!this.menu)
             return;
-        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+        /**
+         * Let browser handle:
+         * - right click
+         * - middle click
+         * - cmd/ctrl click
+         * - shift/alt click
+         *
+         * This keeps "open in new tab" browser behavior.
+         */
+        if (event.button !== 0)
             return;
-        queueMicrotask(() => {
-            window.dispatchEvent(new PopStateEvent('popstate'));
-        });
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+            return;
+        /**
+         * Normal left-click should always go through IHSidebar.navigateToMenu().
+         * That function decides:
+         * - SPA
+         * - reload
+         * - new tab
+         */
+        event.preventDefault();
+        this.clicked.emit(this.menu);
     }
     hrefWithMenuFilter(raw) {
         const term = (this.filter ?? '').trim();
@@ -9738,46 +9754,14 @@ class IHMenu {
               ></i>
             </div>
           } @else {
-            @if (nav.behavior === 'spa' && nav.url) {
+            @if (nav.url) {
               <a
                 #menuItem
-                [class.is-selected]="isSelected"
-                [queryParamsHandling]="'merge'"
-                [routerLink]="nav.url"
-                (click)="onSpaClick($event)"
-              >
-                @if (menu.level > 0) {
-                  @for (i of indent(menu.level); track i) {
-                    <span></span>
-                  }
-                }
-
-                <i [class]="menu.icon"></i>
-                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
-              </a>
-            } @else if (nav.behavior === 'reload' && nav.url) {
-              <a
-                #menuItem
-                target="_self"
                 [class.is-selected]="isSelected"
                 [href]="hrefWithMenuFilter(nav.url)"
-              >
-                @if (menu.level > 0) {
-                  @for (i of indent(menu.level); track i) {
-                    <span></span>
-                  }
-                }
-
-                <i [class]="menu.icon"></i>
-                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
-              </a>
-            } @else if (nav.behavior === 'new-tab' && nav.url) {
-              <a
-                #menuItem
-                rel="noopener noreferrer"
-                target="_blank"
-                [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(nav.url)"
+                [rel]="nav.behavior === 'new-tab' ? 'noopener noreferrer' : null"
+                [target]="nav.behavior === 'new-tab' ? '_blank' : '_self'"
+                (click)="onLeafClick($event)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -9806,13 +9790,13 @@ class IHMenu {
         }
       </li>
     }
-  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter"], outputs: ["clicked"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
+  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter"], outputs: ["clicked"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImport: i0, type: IHMenu, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-menu',
-                    imports: [NgClass, RouterLink, IHighlightSearchPipe],
+                    imports: [NgClass, IHighlightSearchPipe],
                     host: { 'data-ih-menu': '' },
                     template: `
     @if (menu) {
@@ -9842,46 +9826,14 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
               ></i>
             </div>
           } @else {
-            @if (nav.behavior === 'spa' && nav.url) {
+            @if (nav.url) {
               <a
                 #menuItem
-                [class.is-selected]="isSelected"
-                [queryParamsHandling]="'merge'"
-                [routerLink]="nav.url"
-                (click)="onSpaClick($event)"
-              >
-                @if (menu.level > 0) {
-                  @for (i of indent(menu.level); track i) {
-                    <span></span>
-                  }
-                }
-
-                <i [class]="menu.icon"></i>
-                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
-              </a>
-            } @else if (nav.behavior === 'reload' && nav.url) {
-              <a
-                #menuItem
-                target="_self"
                 [class.is-selected]="isSelected"
                 [href]="hrefWithMenuFilter(nav.url)"
-              >
-                @if (menu.level > 0) {
-                  @for (i of indent(menu.level); track i) {
-                    <span></span>
-                  }
-                }
-
-                <i [class]="menu.icon"></i>
-                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
-              </a>
-            } @else if (nav.behavior === 'new-tab' && nav.url) {
-              <a
-                #menuItem
-                rel="noopener noreferrer"
-                target="_blank"
-                [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(nav.url)"
+                [rel]="nav.behavior === 'new-tab' ? 'noopener noreferrer' : null"
+                [target]="nav.behavior === 'new-tab' ? '_blank' : '_self'"
+                (click)="onLeafClick($event)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {

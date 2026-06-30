@@ -1538,7 +1538,7 @@ declare class IHMenu implements OnChanges {
     ngOnChanges(changes: SimpleChanges): void;
     indent(level: number): number[];
     click(): void;
-    onSpaClick(e: MouseEvent): void;
+    onLeafClick(event: MouseEvent): void;
     hrefWithMenuFilter(raw: string): string;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHMenu, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; }, { "clicked": "clicked"; }, never, never, true, never>;
