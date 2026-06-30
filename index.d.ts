@@ -1415,10 +1415,14 @@ type IBreadcrumbItem = {
      */
     url?: string;
 };
+type IMenuNavigationBehavior = 'spa' | 'reload' | 'new-tab';
+type IResolvedMenuNavigation = {
+    url: string | null;
+    behavior: IMenuNavigationBehavior;
+};
 type IMenu = {
     menuId: number;
     menuName: string;
-    route?: string | null;
     menuTypeId: number;
     parentId: number;
     sequence: number;
@@ -1430,13 +1434,28 @@ type IMenu = {
     openInId?: number;
     versionCode?: string;
     applicationCode?: string;
-    applicationUrl?: string;
+    /**
+     * Existing fields. Keep these for backward compatibility with old menus.json.
+     */
+    route?: string | null;
+    applicationUrl?: string | null;
+    /**
+     * New preferred fields.
+     *
+     * url can be an internal route, a relative URL, or a full URL.
+     * navigationBehavior decides how the sidebar opens it.
+     */
+    url?: string | null;
+    navigationBehavior?: IMenuNavigationBehavior | null;
 };
 type IUser = {
     employeeCode: string;
     fullName: string;
     userImagePath: string;
 };
+declare function getMenuUrl(menu: IMenu | null | undefined): string | null;
+declare function getMenuNavigationBehavior(menu: IMenu | null | undefined): IMenuNavigationBehavior;
+declare function resolveMenuNavigation(menu: IMenu | null | undefined): IResolvedMenuNavigation;
 type IHNavigationSnapshot = {
     fullUrl: string;
     basePath: string;
@@ -1498,15 +1517,18 @@ declare class IHMenu implements OnChanges {
     menu: IMenu | undefined;
     selectedMenuId: number | null;
     filter: string;
-    readonly clicked: EventEmitter<any>;
+    readonly clicked: EventEmitter<IMenu>;
     menus: QueryList<IHMenu>;
     menuItemRef: ElementRef<HTMLElement>;
     isHidden: boolean;
+    get navigation(): IResolvedMenuNavigation;
     /** only true for the *leaf* menu that matches selectedMenuId */
     get isSelected(): boolean;
     ngOnChanges(changes: SimpleChanges): void;
     indent(level: number): number[];
     click(): void;
+    onSpaClick(e: MouseEvent): void;
+    hrefWithMenuFilter(raw: string): string;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHMenu, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; }, { "clicked": "clicked"; }, never, never, true, never>;
 }
@@ -1539,7 +1561,7 @@ declare class IHSidebar implements OnInit, OnChanges {
     private activateSelected;
     private menuFilterQueryParams;
     private appendMenuFilterToUrl;
-    private navigateToMenu;
+    navigateToMenu(menu: IMenu): void;
     updateUrl(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHSidebar, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; }, {}, never, never, true, never>;
@@ -1770,5 +1792,5 @@ declare class IUI {
     static ɵinj: i0.ɵɵInjectorDeclaration<IUI>;
 }
 
-export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, isControlRequired, resolveControlErrorMessage };
-export type { IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IPaginatorState, IPillSize, IPillVariant, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IUISize, IUIVariant, IUser };
+export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuNavigationBehavior, getMenuUrl, isControlRequired, resolveControlErrorMessage, resolveMenuNavigation };
+export type { IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IMenuNavigationBehavior, IPaginatorState, IPillSize, IPillVariant, IResolvedMenuNavigation, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IUISize, IUIVariant, IUser };
