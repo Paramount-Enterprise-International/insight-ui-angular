@@ -1435,18 +1435,30 @@ type IMenu = {
     versionCode?: string;
     applicationCode?: string;
     /**
-     * Existing fields. Keep these for backward compatibility with old menus.json.
+     * Main navigation field.
+     *
+     * Rules:
+     * - relative route, for example "/docs/components/button" => SPA navigation
+     * - full URL, for example "https://example.com" => full reload
+     * - relative route + reload: true => full reload
+     * - any route + openInNewTab: true => open new tab
      */
     route?: string | null;
+    /**
+     * Old compatibility field.
+     * Prefer route going forward.
+     */
     applicationUrl?: string | null;
     /**
-     * New preferred fields.
-     *
-     * url can be an internal route, a relative URL, or a full URL.
-     * navigationBehavior decides how the sidebar opens it.
+     * Force opening this menu in a new tab.
+     * This has the highest priority.
      */
-    url?: string | null;
-    navigationBehavior?: IMenuNavigationBehavior | null;
+    openInNewTab?: boolean;
+    /**
+     * Force full browser reload in the same tab.
+     * Useful for relative URLs like "/standalone/insight-remote-react".
+     */
+    reload?: boolean;
 };
 type IUser = {
     employeeCode: string;
@@ -1454,7 +1466,7 @@ type IUser = {
     userImagePath: string;
 };
 declare function getMenuUrl(menu: IMenu | null | undefined): string | null;
-declare function getMenuNavigationBehavior(menu: IMenu | null | undefined): IMenuNavigationBehavior;
+declare function isFullUrl(url: string): boolean;
 declare function resolveMenuNavigation(menu: IMenu | null | undefined): IResolvedMenuNavigation;
 type IHNavigationSnapshot = {
     fullUrl: string;
@@ -1522,7 +1534,6 @@ declare class IHMenu implements OnChanges {
     menuItemRef: ElementRef<HTMLElement>;
     isHidden: boolean;
     get navigation(): IResolvedMenuNavigation;
-    /** only true for the *leaf* menu that matches selectedMenuId */
     get isSelected(): boolean;
     ngOnChanges(changes: SimpleChanges): void;
     indent(level: number): number[];
@@ -1792,5 +1803,5 @@ declare class IUI {
     static ɵinj: i0.ɵɵInjectorDeclaration<IUI>;
 }
 
-export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuNavigationBehavior, getMenuUrl, isControlRequired, resolveControlErrorMessage, resolveMenuNavigation };
+export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuUrl, isControlRequired, isFullUrl, resolveControlErrorMessage, resolveMenuNavigation };
 export type { IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IMenuNavigationBehavior, IPaginatorState, IPillSize, IPillVariant, IResolvedMenuNavigation, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IUISize, IUIVariant, IUser };
