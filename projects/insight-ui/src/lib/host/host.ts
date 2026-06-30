@@ -43,10 +43,10 @@ import { IHighlightSearchPipe } from '../highlight-search.pipe';
 
 export type IRoute = Omit<Route, 'data' | 'children'> & {
   data: {
-    title: string; // 👈 required
+    title: string;
     [key: string]: any;
   };
-  children?: IRoutes; // 👈 recursive
+  children?: IRoutes;
 };
 
 export type IRoutes = IRoute[];
@@ -92,19 +92,33 @@ export type IMenu = {
   applicationCode?: string;
 
   /**
-   * Existing fields. Keep these for backward compatibility with old menus.json.
+   * Main navigation field.
+   *
+   * Rules:
+   * - relative route, for example "/docs/components/button" => SPA navigation
+   * - full URL, for example "https://example.com" => full reload
+   * - relative route + reload: true => full reload
+   * - any route + openInNewTab: true => open new tab
    */
   route?: string | null;
+
+  /**
+   * Old compatibility field.
+   * Prefer route going forward.
+   */
   applicationUrl?: string | null;
 
   /**
-   * New preferred fields.
-   *
-   * url can be an internal route, a relative URL, or a full URL.
-   * navigationBehavior decides how the sidebar opens it.
+   * Force opening this menu in a new tab.
+   * This has the highest priority.
    */
-  url?: string | null;
-  navigationBehavior?: IMenuNavigationBehavior | null;
+  openInNewTab?: boolean;
+
+  /**
+   * Force full browser reload in the same tab.
+   * Useful for relative URLs like "/standalone/insight-remote-react".
+   */
+  reload?: boolean;
 };
 
 export type IUser = {
@@ -115,46 +129,66 @@ export type IUser = {
 
 export function getMenuUrl(menu: IMenu | null | undefined): string | null {
   if (!menu) return null;
-  return menu.url ?? menu.route ?? menu.applicationUrl ?? null;
+
+  /**
+   * Prefer route going forward.
+   * applicationUrl remains only for old menus.json compatibility.
+   */
+  return menu.route ?? menu.applicationUrl ?? null;
 }
 
-export function getMenuNavigationBehavior(menu: IMenu | null | undefined): IMenuNavigationBehavior {
-  if (!menu) return 'spa';
-
-  if (menu.navigationBehavior) {
-    return menu.navigationBehavior;
-  }
-
-  /**
-   * Backward compatibility:
-   * old menus.json with route should keep using Angular SPA navigation.
-   */
-  if (menu.route) {
-    return 'spa';
-  }
-
-  /**
-   * Backward compatibility:
-   * old menus.json with applicationUrl should keep using browser navigation.
-   */
-  if (menu.applicationUrl) {
-    return 'reload';
-  }
-
-  /**
-   * Sensible fallback for new url-only entries.
-   */
-  if (menu.url && /^https?:\/\//i.test(menu.url)) {
-    return 'reload';
-  }
-
-  return 'spa';
+export function isFullUrl(url: string): boolean {
+  return /^https?:\/\//i.test(url);
 }
 
 export function resolveMenuNavigation(menu: IMenu | null | undefined): IResolvedMenuNavigation {
+  const url = getMenuUrl(menu);
+
+  if (!menu || !url) {
+    return {
+      url: null,
+      behavior: 'spa',
+    };
+  }
+
+  /**
+   * Priority 1: open new tab.
+   */
+  if (menu.openInNewTab) {
+    return {
+      url,
+      behavior: 'new-tab',
+    };
+  }
+
+  /**
+   * Priority 2: explicit full reload.
+   * This allows relative paths to reload too.
+   */
+  if (menu.reload) {
+    return {
+      url,
+      behavior: 'reload',
+    };
+  }
+
+  /**
+   * Priority 3: full http/https URL reloads by default.
+   */
+  if (isFullUrl(url)) {
+    return {
+      url,
+      behavior: 'reload',
+    };
+  }
+
+  /**
+   * Default: SPA navigation.
+   * This keeps old menus.json with route backward-compatible.
+   */
   return {
-    url: getMenuUrl(menu),
-    behavior: getMenuNavigationBehavior(menu),
+    url,
+    behavior: 'spa',
   };
 }
 
@@ -309,7 +343,7 @@ export class IHContent {
   /** route-based breadcrumbs */
   readonly breadcrumb$: Observable<IBreadcrumbItem[]> = this.router.events.pipe(
     filter((e) => e instanceof NavigationEnd),
-    startWith(null), // emit once on init
+    startWith(null),
     map(() => this.buildBreadcrumb(this.activatedRoute.root)),
     shareReplay(1),
   );
@@ -341,6 +375,7 @@ export class IHContent {
             const paramName = segment.substring(1);
             return route.snapshot.params[paramName] ?? segment;
           }
+
           return segment;
         });
 
@@ -349,7 +384,7 @@ export class IHContent {
       // Always advance the URL, even if we don't render a breadcrumb for this level
       const nextUrl = nextUrlPart.length > 0 ? `${url}/${nextUrlPart}` : url || '/';
 
-      // 🔑 Use *route config* data, not snapshot (avoid inherited data)
+      // 🔑 Use route config data, not snapshot data, to avoid inherited data
       const data = routeConfig.data as { title?: string } | undefined;
       const label = data?.title;
 
@@ -386,7 +421,7 @@ export class IHContent {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
 
     // Angular routerLink will update the URL via pushState.
-    // React Router (BrowserRouter) won't notice unless popstate is fired.
+    // React Router BrowserRouter will not notice unless popstate is fired.
     queueMicrotask(() => {
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
@@ -399,13 +434,9 @@ export class IHContent {
   private normalizeBaseHref(): string {
     let b = (this.baseHref ?? '/').trim();
 
-    // ensure leading slash
     if (!b.startsWith('/')) b = `/${b}`;
-
-    // ensure trailing slash
     if (!b.endsWith('/')) b = `${b}/`;
 
-    // collapse repeated slashes
     b = b.replace(/\/{2,}/g, '/');
 
     return b;
@@ -415,7 +446,6 @@ export class IHContent {
     let u = (url ?? '').trim();
     if (!u) return '/';
 
-    // support only path-like urls here; if ever full origin is passed, keep it
     if (/^https?:\/\//i.test(u)) return u;
 
     if (!u.startsWith('/')) u = `/${u}`;
@@ -437,12 +467,10 @@ export class IHContent {
    * - "/"            -> "/"
    */
   overrideRouterLink(url: string): string {
-    const base = this.normalizeBaseHref(); // "/-/"
-    const abs = this.normalizePath(url); // "/-/dashboard" or "/dashboard"
+    const base = this.normalizeBaseHref();
+    const abs = this.normalizePath(url);
 
-    // if already includes baseHref, strip it
     if (abs.startsWith(base)) {
-      // base ends with "/" so slice base.length - 1 keeps leading "/"
       const stripped = abs.slice(base.length - 1);
       return stripped.length ? stripped : '/';
     }
@@ -459,24 +487,20 @@ export class IHContent {
    * - "/"            -> "/-/"
    */
   overrideHref(url: string): string {
-    const base = this.normalizeBaseHref(); // "/-/"
+    const base = this.normalizeBaseHref();
     const abs = this.normalizePath(url);
 
-    // already includes baseHref
     if (abs.startsWith(base)) return abs;
-
-    // home
     if (abs === '/') return base;
 
-    // join
     return `${base}${abs.slice(1)}`.replace(/\/{2,}/g, '/');
   }
 }
 
 /* =========================================================
  * IHMenu
- * - navigation is decided by navigationBehavior/url fallback
- * - backward compatible with old route/applicationUrl menus.json
+ * - navigation is decided by openInNewTab/reload/full-url rules
+ * - default is SPA, backward compatible with old route menus.json
  * ========================================================= */
 
 @Component({
@@ -496,21 +520,21 @@ export class IHContent {
           <small [innerHTML]="menu.menuName | highlightSearch: filter"></small>
         } @else if (+menu.menuTypeId === 3) {
           @if (hasChild) {
-            <!-- group with children -->
             <div (click)="click()">
               @if (menu.level > 0) {
                 @for (i of indent(menu.level); track i) {
                   <span></span>
                 }
               }
+
               <i [class]="menu.icon"></i>
               <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
+
               <i
                 [ngClass]="menu.visibility === 'expanded' ? 'fas fa-angle-up' : 'fas fa-angle-down'"
               ></i>
             </div>
           } @else {
-            <!-- leaf item: SPA navigation, no reload -->
             @if (nav.behavior === 'spa' && nav.url) {
               <a
                 #menuItem
@@ -524,13 +548,11 @@ export class IHContent {
                     <span></span>
                   }
                 }
+
                 <i [class]="menu.icon"></i>
                 <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
               </a>
-            }
-
-            <!-- leaf item: full reload -->
-            @else if (nav.behavior === 'reload' && nav.url) {
+            } @else if (nav.behavior === 'reload' && nav.url) {
               <a
                 #menuItem
                 target="_self"
@@ -542,13 +564,11 @@ export class IHContent {
                     <span></span>
                   }
                 }
+
                 <i [class]="menu.icon"></i>
                 <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
               </a>
-            }
-
-            <!-- leaf item: open new tab -->
-            @else if (nav.behavior === 'new-tab' && nav.url) {
+            } @else if (nav.behavior === 'new-tab' && nav.url) {
               <a
                 #menuItem
                 rel="noopener noreferrer"
@@ -561,6 +581,7 @@ export class IHContent {
                     <span></span>
                   }
                 }
+
                 <i [class]="menu.icon"></i>
                 <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
               </a>
@@ -590,9 +611,9 @@ export class IHMenu implements OnChanges {
   @Input() filter = '';
 
   @Output() readonly clicked = new EventEmitter<IMenu>();
+
   @ViewChildren(IHMenu) menus!: QueryList<IHMenu>;
 
-  // the actual clickable DOM element (only on leaf items)
   @ViewChild('menuItem', { static: false })
   menuItemRef!: ElementRef<HTMLElement>;
 
@@ -602,7 +623,6 @@ export class IHMenu implements OnChanges {
     return resolveMenuNavigation(this.menu);
   }
 
-  /** only true for the *leaf* menu that matches selectedMenuId */
   get isSelected(): boolean {
     if (!this.menu) return false;
 
@@ -612,7 +632,6 @@ export class IHMenu implements OnChanges {
     const children = this.menu.child ?? [];
     const hasChildren = children.length > 0;
 
-    // keep selection only on "leaf" items (same rule as flattenNavigableMenus)
     const isLeaf =
       +this.menu.menuTypeId === 3 && (!hasChildren || this.menu.visibility === 'no-child');
 
@@ -620,7 +639,6 @@ export class IHMenu implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    // whenever selectedMenuId changes, scroll the selected item into view
     if (changes['selectedMenuId'] && this.isSelected && this.menuItemRef) {
       this.menuItemRef.nativeElement.scrollIntoView({
         block: 'nearest',
@@ -631,29 +649,24 @@ export class IHMenu implements OnChanges {
 
   indent(level: number): number[] {
     const n = Math.max(0, Number(level) || 0);
-    // return [0,1,2,...] so each item is stable and unique
     return Array.from({ length: n }, (_, i) => i);
   }
 
   click(): void {
     if (!this.menu) return;
+
     if (this.menu.visibility !== 'no-child') {
-      if (this.menu.visibility === 'expanded') {
-        this.menu.visibility = 'collapsed';
-      } else {
-        this.menu.visibility = 'expanded';
-      }
-    } else {
-      this.clicked.emit(this.menu);
+      this.menu.visibility = this.menu.visibility === 'expanded' ? 'collapsed' : 'expanded';
+      return;
     }
+
+    this.clicked.emit(this.menu);
   }
 
   onSpaClick(e: MouseEvent): void {
-    // Let browser handle right-click, ctrl/cmd-click, middle click, etc.
     if (e.button !== 0) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
 
-    // Angular Router changes URL using pushState; React Router may need popstate.
     queueMicrotask(() => {
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
@@ -671,13 +684,14 @@ export class IHMenu implements OnChanges {
       const origin = window.location.origin;
       const u = new URL(raw, origin);
       u.searchParams.set('menu-filter', term);
+
       return `${u.pathname}${u.search}${u.hash}`;
     }
   }
 }
 
 /* =========================================================
- * IHSidebar (✅ now forwards menu-filter to destination URL)
+ * IHSidebar
  * ========================================================= */
 
 @Component({
@@ -685,11 +699,13 @@ export class IHMenu implements OnChanges {
   imports: [AsyncPipe, IHMenu, ReactiveFormsModule],
   template: `
     @let user = user$ | async;
+
     <div class="ih-sidebar-header">
       @if (user) {
         <div class="user-image">
           <img alt="User Image" [src]="user.userImagePath" />
         </div>
+
         <div class="user-info">
           <small class="text-subtle">{{ user.employeeCode }}</small>
           <h6>{{ user.fullName }}</h6>
@@ -708,6 +724,7 @@ export class IHMenu implements OnChanges {
 
     <div class="ih-sidebar-body scroll scroll-y">
       @let menus = menus$ | async;
+
       <ul>
         @for (m of menus; track m.menuId) {
           <ih-menu
@@ -728,23 +745,16 @@ export class IHMenu implements OnChanges {
 export class IHSidebar implements OnInit, OnChanges {
   private router = inject(Router);
 
-  /* ---------------------------
-   * INPUTS (from parent)
-   * --------------------------- */
-
   @Input() user$!: Observable<IUser>;
   @Input() menusInput$!: Observable<IMenu[]>;
   @Input() visible = true;
   @Input() footerText = 'Insight Local';
 
-  /* ---------------------------
-   * INTERNAL STREAMS / STATE
-   * --------------------------- */
-
   menus$!: Observable<IMenu[]>;
   queryParams: any = {};
 
   menuSearch: FormControl<string | null> = new FormControl<string | null>('');
+
   menuFilter = signal('');
   keyboardNavActive = signal(false);
   selectedIndex = signal<number | null>(null);
@@ -761,23 +771,27 @@ export class IHSidebar implements OnInit, OnChanges {
   ngOnInit(): void {
     const searchParams = new URLSearchParams(window.location.search);
     const initialQueryParams: any = {};
+
     searchParams.forEach((value, key) => {
       initialQueryParams[key] = value;
     });
 
     this.queryParams = initialQueryParams;
+
     const initialFilter = (this.queryParams['menu-filter'] as string) ?? '';
 
     this.menuFilter.set(initialFilter);
     this.menuSearch.setValue(initialFilter, { emitEvent: false });
 
     this.originalMenus$ = (this.menusInput$ ?? new Observable<IMenu[]>()).pipe(shareReplay(1));
+
     this.buildMenusStream();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['menusInput$'] && !changes['menusInput$'].firstChange) {
       this.originalMenus$ = (this.menusInput$ ?? new Observable<IMenu[]>()).pipe(shareReplay(1));
+
       this.buildMenusStream();
     }
   }
@@ -812,10 +826,12 @@ export class IHSidebar implements OnInit, OnChanges {
     if (!term) return menus;
 
     const filtered: IMenu[] = [];
+
     for (const menu of menus) {
       const result = this.filterMenuBranch(menu, term);
       if (result) filtered.push(result);
     }
+
     return filtered;
   }
 
@@ -826,6 +842,7 @@ export class IHSidebar implements OnInit, OnChanges {
     const originalChildren = menu.child ?? [];
 
     const filteredChildren: IMenu[] = [];
+
     for (const child of originalChildren) {
       const childResult = this.filterMenuBranch(child, term);
       if (childResult) filteredChildren.push(childResult);
@@ -866,13 +883,18 @@ export class IHSidebar implements OnInit, OnChanges {
     if (this.keyboardNavActive()) {
       const maxIndex = this.navigableMenus.length - 1;
       let idx = this.selectedIndex();
-      if (idx === null || idx < 0 || idx > maxIndex) idx = 0;
+
+      if (idx === null || idx < 0 || idx > maxIndex) {
+        idx = 0;
+      }
+
       this.selectedIndex.set(idx);
       this.selectedMenuId.set(this.navigableMenus[idx].menuId);
-    } else {
-      this.selectedIndex.set(null);
-      this.selectedMenuId.set(null);
+      return;
     }
+
+    this.selectedIndex.set(null);
+    this.selectedMenuId.set(null);
   }
 
   private flattenNavigableMenus(menus: IMenu[]): IMenu[] {
@@ -884,12 +906,18 @@ export class IHSidebar implements OnInit, OnChanges {
 
       const isLeafMenu = +menu.menuTypeId === 3 && (!hasChildren || menu.visibility === 'no-child');
 
-      if (isLeafMenu) result.push(menu);
+      if (isLeafMenu) {
+        result.push(menu);
+      }
 
-      for (const child of children) visit(child);
+      for (const child of children) {
+        visit(child);
+      }
     };
 
-    for (const m of menus) visit(m);
+    for (const m of menus) {
+      visit(m);
+    }
 
     return result;
   }
@@ -903,11 +931,18 @@ export class IHSidebar implements OnInit, OnChanges {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       this.ensureKeyboardNavActive(1);
-    } else if (event.key === 'ArrowUp') {
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
       event.preventDefault();
       this.ensureKeyboardNavActive(-1);
-    } else if (event.key === 'Enter') {
+      return;
+    }
+
+    if (event.key === 'Enter') {
       if (!this.keyboardNavActive()) return;
+
       event.preventDefault();
       this.activateSelected();
     }
@@ -941,8 +976,11 @@ export class IHSidebar implements OnInit, OnChanges {
     const maxIndex = this.navigableMenus.length - 1;
     let next = current + delta;
 
-    if (next < 0) next = maxIndex;
-    else if (next > maxIndex) next = 0;
+    if (next < 0) {
+      next = maxIndex;
+    } else if (next > maxIndex) {
+      next = 0;
+    }
 
     this.selectedIndex.set(next);
     this.selectedMenuId.set(this.navigableMenus[next].menuId);
@@ -950,36 +988,34 @@ export class IHSidebar implements OnInit, OnChanges {
 
   private activateSelected(): void {
     const idx = this.selectedIndex();
-    if (idx === null || idx < 0 || idx >= this.navigableMenus.length) return;
+
+    if (idx === null || idx < 0 || idx >= this.navigableMenus.length) {
+      return;
+    }
 
     const menu = this.navigableMenus[idx];
     this.navigateToMenu(menu);
   }
 
-  // ✅ NEW: keep menu-filter query param for destination
   private menuFilterQueryParams(): Record<string, any> {
     const term = this.menuFilter().trim();
     return term ? { 'menu-filter': term } : {};
   }
 
-  // ✅ NEW: for external apps, append menu-filter into URL (preserve existing query + hash)
   private appendMenuFilterToUrl(raw: string): string {
     const term = this.menuFilter().trim();
     if (!term) return raw;
 
     try {
-      // absolute URL
       const u = new URL(raw);
       u.searchParams.set('menu-filter', term);
       return u.toString();
     } catch {
-      // relative URL
       const origin = window.location.origin;
       const u = new URL(raw, origin);
       u.searchParams.set('menu-filter', term);
 
-      const isAbsolute = /^https?:\/\//i.test(raw);
-      return isAbsolute ? u.toString() : `${u.pathname}${u.search}${u.hash}`;
+      return `${u.pathname}${u.search}${u.hash}`;
     }
   }
 
@@ -988,23 +1024,21 @@ export class IHSidebar implements OnInit, OnChanges {
     if (!nav.url) return;
 
     if (nav.behavior === 'spa') {
-      // SPA navigation: no reload. Old menus.json with route lands here.
       this.router.navigate([nav.url], {
         queryParams: this.menuFilterQueryParams(),
         queryParamsHandling: 'merge',
       });
 
-      // Angular Router changes URL using pushState; React Router may need popstate.
       queueMicrotask(() => {
         window.dispatchEvent(new PopStateEvent('popstate'));
       });
+
       return;
     }
 
     const urlWithFilter = this.appendMenuFilterToUrl(nav.url);
 
     if (nav.behavior === 'reload') {
-      // Browser navigation in the same tab.
       window.location.href = urlWithFilter;
       return;
     }
@@ -1018,8 +1052,11 @@ export class IHSidebar implements OnInit, OnChanges {
     const queryParams = { ...this.queryParams };
     const currentFilter = this.menuFilter().trim();
 
-    if (currentFilter) queryParams['menu-filter'] = currentFilter;
-    else delete queryParams['menu-filter'];
+    if (currentFilter) {
+      queryParams['menu-filter'] = currentFilter;
+    } else {
+      delete queryParams['menu-filter'];
+    }
 
     this.router.navigate([], {
       queryParams,
