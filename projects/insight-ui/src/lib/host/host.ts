@@ -69,10 +69,16 @@ export type IBreadcrumbItem = {
  * Existing types
  * ========================================================= */
 
+export type IMenuNavigationBehavior = 'spa' | 'reload' | 'new-tab';
+
+export type IResolvedMenuNavigation = {
+  url: string | null;
+  behavior: IMenuNavigationBehavior;
+};
+
 export type IMenu = {
   menuId: number;
   menuName: string;
-  route?: string | null;
   menuTypeId: number;
   parentId: number;
   sequence: number;
@@ -84,7 +90,21 @@ export type IMenu = {
   openInId?: number;
   versionCode?: string;
   applicationCode?: string;
-  applicationUrl?: string;
+
+  /**
+   * Existing fields. Keep these for backward compatibility with old menus.json.
+   */
+  route?: string | null;
+  applicationUrl?: string | null;
+
+  /**
+   * New preferred fields.
+   *
+   * url can be an internal route, a relative URL, or a full URL.
+   * navigationBehavior decides how the sidebar opens it.
+   */
+  url?: string | null;
+  navigationBehavior?: IMenuNavigationBehavior | null;
 };
 
 export type IUser = {
@@ -92,6 +112,51 @@ export type IUser = {
   fullName: string;
   userImagePath: string;
 };
+
+export function getMenuUrl(menu: IMenu | null | undefined): string | null {
+  if (!menu) return null;
+  return menu.url ?? menu.route ?? menu.applicationUrl ?? null;
+}
+
+export function getMenuNavigationBehavior(menu: IMenu | null | undefined): IMenuNavigationBehavior {
+  if (!menu) return 'spa';
+
+  if (menu.navigationBehavior) {
+    return menu.navigationBehavior;
+  }
+
+  /**
+   * Backward compatibility:
+   * old menus.json with route should keep using Angular SPA navigation.
+   */
+  if (menu.route) {
+    return 'spa';
+  }
+
+  /**
+   * Backward compatibility:
+   * old menus.json with applicationUrl should keep using browser navigation.
+   */
+  if (menu.applicationUrl) {
+    return 'reload';
+  }
+
+  /**
+   * Sensible fallback for new url-only entries.
+   */
+  if (menu.url && /^https?:\/\//i.test(menu.url)) {
+    return 'reload';
+  }
+
+  return 'spa';
+}
+
+export function resolveMenuNavigation(menu: IMenu | null | undefined): IResolvedMenuNavigation {
+  return {
+    url: getMenuUrl(menu),
+    behavior: getMenuNavigationBehavior(menu),
+  };
+}
 
 export type IHNavigationSnapshot = {
   fullUrl: string;
@@ -409,7 +474,9 @@ export class IHContent {
 }
 
 /* =========================================================
- * IHMenu (✅ now preserves query params on internal route clicks)
+ * IHMenu
+ * - navigation is decided by navigationBehavior/url fallback
+ * - backward compatible with old route/applicationUrl menus.json
  * ========================================================= */
 
 @Component({
@@ -419,6 +486,8 @@ export class IHContent {
   template: `
     @if (menu) {
       @let hasChild = !!menu.child?.length;
+      @let nav = navigation;
+
       <li
         [class.is-module]="menu.menuTypeId === 2"
         [ngClass]="+menu.menuTypeId === 2 ? menu.visibility : ''"
@@ -441,9 +510,15 @@ export class IHContent {
               ></i>
             </div>
           } @else {
-            <!-- leaf items: add #menuItem and is-selected -->
-            @if (menu.applicationCode === 'INS') {
-              <a #menuItem [class.is-selected]="isSelected" [href]="menu.applicationUrl">
+            <!-- leaf item: SPA navigation, no reload -->
+            @if (nav.behavior === 'spa' && nav.url) {
+              <a
+                #menuItem
+                [class.is-selected]="isSelected"
+                [queryParamsHandling]="'merge'"
+                [routerLink]="nav.url"
+                (click)="onSpaClick($event)"
+              >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
                     <span></span>
@@ -452,12 +527,34 @@ export class IHContent {
                 <i [class]="menu.icon"></i>
                 <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
               </a>
-            } @else {
+            }
+
+            <!-- leaf item: full reload -->
+            @else if (nav.behavior === 'reload' && nav.url) {
               <a
                 #menuItem
+                target="_self"
                 [class.is-selected]="isSelected"
-                [queryParamsHandling]="'merge'"
-                [routerLink]="menu.route"
+                [href]="hrefWithMenuFilter(nav.url)"
+              >
+                @if (menu.level > 0) {
+                  @for (i of indent(menu.level); track i) {
+                    <span></span>
+                  }
+                }
+                <i [class]="menu.icon"></i>
+                <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
+              </a>
+            }
+
+            <!-- leaf item: open new tab -->
+            @else if (nav.behavior === 'new-tab' && nav.url) {
+              <a
+                #menuItem
+                rel="noopener noreferrer"
+                target="_blank"
+                [class.is-selected]="isSelected"
+                [href]="hrefWithMenuFilter(nav.url)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -474,7 +571,12 @@ export class IHContent {
         @if (hasChild) {
           <ul [ngClass]="menu.menuTypeId === 3 ? menu.visibility : ''">
             @for (m of menu.child; track m.menuId) {
-              <ih-menu [filter]="filter" [menu]="m" [selectedMenuId]="selectedMenuId" />
+              <ih-menu
+                [filter]="filter"
+                [menu]="m"
+                [selectedMenuId]="selectedMenuId"
+                (clicked)="clicked.emit($event)"
+              />
             }
           </ul>
         }
@@ -487,7 +589,7 @@ export class IHMenu implements OnChanges {
   @Input() selectedMenuId: number | null = null;
   @Input() filter = '';
 
-  @Output() readonly clicked = new EventEmitter<any>();
+  @Output() readonly clicked = new EventEmitter<IMenu>();
   @ViewChildren(IHMenu) menus!: QueryList<IHMenu>;
 
   // the actual clickable DOM element (only on leaf items)
@@ -495,6 +597,10 @@ export class IHMenu implements OnChanges {
   menuItemRef!: ElementRef<HTMLElement>;
 
   @HostBinding('class.hidden') isHidden = false;
+
+  get navigation(): IResolvedMenuNavigation {
+    return resolveMenuNavigation(this.menu);
+  }
 
   /** only true for the *leaf* menu that matches selectedMenuId */
   get isSelected(): boolean {
@@ -541,6 +647,33 @@ export class IHMenu implements OnChanges {
       this.clicked.emit(this.menu);
     }
   }
+
+  onSpaClick(e: MouseEvent): void {
+    // Let browser handle right-click, ctrl/cmd-click, middle click, etc.
+    if (e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+    // Angular Router changes URL using pushState; React Router may need popstate.
+    queueMicrotask(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+  }
+
+  hrefWithMenuFilter(raw: string): string {
+    const term = (this.filter ?? '').trim();
+    if (!term) return raw;
+
+    try {
+      const u = new URL(raw);
+      u.searchParams.set('menu-filter', term);
+      return u.toString();
+    } catch {
+      const origin = window.location.origin;
+      const u = new URL(raw, origin);
+      u.searchParams.set('menu-filter', term);
+      return `${u.pathname}${u.search}${u.hash}`;
+    }
+  }
 }
 
 /* =========================================================
@@ -577,7 +710,12 @@ export class IHMenu implements OnChanges {
       @let menus = menus$ | async;
       <ul>
         @for (m of menus; track m.menuId) {
-          <ih-menu [filter]="menuFilter()" [menu]="m" [selectedMenuId]="selectedMenuId()" />
+          <ih-menu
+            [filter]="menuFilter()"
+            [menu]="m"
+            [selectedMenuId]="selectedMenuId()"
+            (clicked)="navigateToMenu($event)"
+          />
         }
       </ul>
     </div>
@@ -845,18 +983,34 @@ export class IHSidebar implements OnInit, OnChanges {
     }
   }
 
-  private navigateToMenu(menu: IMenu): void {
-    const qp = this.menuFilterQueryParams();
+  navigateToMenu(menu: IMenu): void {
+    const nav = resolveMenuNavigation(menu);
+    if (!nav.url) return;
 
-    if (menu.applicationCode === 'INS5' && menu.route) {
-      // ✅ preserve current filter when navigating to other routes
-      this.router.navigate([menu.route], {
-        queryParams: qp,
+    if (nav.behavior === 'spa') {
+      // SPA navigation: no reload. Old menus.json with route lands here.
+      this.router.navigate([nav.url], {
+        queryParams: this.menuFilterQueryParams(),
         queryParamsHandling: 'merge',
       });
-    } else if (menu.applicationUrl) {
-      // ✅ external app: carry menu-filter
-      window.location.href = this.appendMenuFilterToUrl(menu.applicationUrl);
+
+      // Angular Router changes URL using pushState; React Router may need popstate.
+      queueMicrotask(() => {
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      });
+      return;
+    }
+
+    const urlWithFilter = this.appendMenuFilterToUrl(nav.url);
+
+    if (nav.behavior === 'reload') {
+      // Browser navigation in the same tab.
+      window.location.href = urlWithFilter;
+      return;
+    }
+
+    if (nav.behavior === 'new-tab') {
+      window.open(urlWithFilter, '_blank', 'noopener,noreferrer');
     }
   }
 
