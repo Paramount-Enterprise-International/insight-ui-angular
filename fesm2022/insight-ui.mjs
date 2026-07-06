@@ -9226,67 +9226,55 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
  * - Override breadcrumbs support routerLink + correct href with baseHref "/-/" (NO "/-/-/" bug)
  * - Override breadcrumb click also notifies React Router (popstate) so React pages update
  * - IHMenu / IHSidebar kept as close as possible to original
- * - Sidebar navigation rule:
- *   1. openInNewTab === true => href + target="_blank"
- *   2. reload === true => href same tab
- *   3. full http/https route => href same tab
- *   4. otherwise => routerLink SPA navigation
+ *
+ * Sidebar navigation rule:
+ * - openInNewTab === true => href + target="_blank"
+ * - reload === true => href same tab
+ * - full http/https route => href same tab
+ * - otherwise => routerLink SPA navigation
+ *
+ * Backward compatibility:
+ * - old route: "/docs/..." still works as SPA
+ * - old applicationUrl still works as fallback route/url
  * ========================================================= */
-function getMenuUrl(menu) {
+function getMenuRoute(menu) {
     if (!menu)
         return null;
     /**
      * Prefer route going forward.
-     * applicationUrl remains only for backward compatibility.
+     * applicationUrl remains only for old menus.json compatibility.
      */
-    return menu.route ?? menu.applicationUrl ?? null;
+    // return menu.route ?? menu.applicationUrl ?? null;
+    return menu.route ?? null;
 }
 function isFullUrl(url) {
-    return /^https?:\/\//i.test(url);
+    return !!url && /^https?:\/\//i.test(url);
 }
-function resolveMenuNavigation(menu) {
-    const url = getMenuUrl(menu);
-    if (!menu || !url) {
-        return {
-            url: null,
-            behavior: 'spa',
-        };
-    }
-    /**
-     * Highest priority: open in new tab.
-     */
-    if (menu.openInNewTab) {
-        return {
-            url,
-            behavior: 'new-tab',
-        };
-    }
-    /**
-     * Force full reload, including relative routes.
-     */
-    if (menu.reload) {
-        return {
-            url,
-            behavior: 'reload',
-        };
-    }
-    /**
-     * Full URL uses browser navigation by default.
-     */
-    if (isFullUrl(url)) {
-        return {
-            url,
-            behavior: 'reload',
-        };
-    }
-    /**
-     * Default: Angular SPA navigation.
-     * This keeps old menus.json route entries backward-compatible.
-     */
-    return {
-        url,
-        behavior: 'spa',
-    };
+function isNewTabMenu(menu) {
+    const route = getMenuRoute(menu);
+    if (!menu || !route)
+        return false;
+    return !!menu.openInNewTab;
+}
+function isReloadMenu(menu) {
+    const route = getMenuRoute(menu);
+    if (!menu || !route)
+        return false;
+    if (menu.openInNewTab)
+        return false;
+    return !!menu.reload || isFullUrl(route);
+}
+function isSpaMenu(menu) {
+    const route = getMenuRoute(menu);
+    if (!menu || !route)
+        return false;
+    if (menu.openInNewTab)
+        return false;
+    if (menu.reload)
+        return false;
+    if (isFullUrl(route))
+        return false;
+    return true;
 }
 class IHTitleBreadcrumbService {
     /**
@@ -9352,7 +9340,7 @@ class IHContent {
             const nextUrlPart = segments.join('/');
             // Always advance the URL, even if we don't render a breadcrumb for this level
             const nextUrl = nextUrlPart.length > 0 ? `${url}/${nextUrlPart}` : url || '/';
-            // 🔑 Use *route config* data, not snapshot (avoid inherited data)
+            // 🔑 Use route config data, not snapshot data, to avoid inherited data
             const data = routeConfig.data;
             const label = data?.title;
             if (label) {
@@ -9383,7 +9371,7 @@ class IHContent {
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
             return;
         // Angular routerLink will update the URL via pushState.
-        // React Router (BrowserRouter) won't notice unless popstate is fired.
+        // React Router BrowserRouter will not notice unless popstate is fired.
         queueMicrotask(() => {
             window.dispatchEvent(new PopStateEvent('popstate'));
         });
@@ -9650,9 +9638,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
             }] } });
 /* =========================================================
  * IHMenu
- * - SPA: routerLink
- * - Reload: href
- * - New tab: href + target="_blank"
+ * - Parent/group menu: toggles expanded/collapsed
+ * - Leaf SPA menu: routerLink
+ * - Leaf reload menu: href
+ * - Leaf new-tab menu: href + target="_blank"
  * ========================================================= */
 class IHMenu {
     menu;
@@ -9663,8 +9652,17 @@ class IHMenu {
     // the actual clickable DOM element (only on leaf items)
     menuItemRef;
     isHidden = false;
-    get navigation() {
-        return resolveMenuNavigation(this.menu);
+    get menuRoute() {
+        return getMenuRoute(this.menu);
+    }
+    get isSpa() {
+        return isSpaMenu(this.menu);
+    }
+    get isReload() {
+        return isReloadMenu(this.menu);
+    }
+    get isNewTab() {
+        return isNewTabMenu(this.menu);
     }
     /** only true for the *leaf* menu that matches selectedMenuId */
     get isSelected() {
@@ -9728,7 +9726,7 @@ class IHMenu {
     static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.25", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter" }, outputs: { clicked: "clicked" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
     @if (menu) {
       @let hasChild = !!menu.child?.length;
-      @let nav = navigation;
+      @let route = menuRoute;
 
       <li
         [class.is-module]="menu.menuTypeId === 2"
@@ -9753,12 +9751,12 @@ class IHMenu {
             </div>
           } @else {
             <!-- leaf item: SPA navigation -->
-            @if (nav.behavior === 'spa' && nav.url) {
+            @if (isSpa && route) {
               <a
                 #menuItem
                 [class.is-selected]="isSelected"
                 [queryParamsHandling]="'merge'"
-                [routerLink]="nav.url"
+                [routerLink]="route"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -9771,12 +9769,12 @@ class IHMenu {
             }
 
             <!-- leaf item: full reload, same tab -->
-            @else if (nav.behavior === 'reload' && nav.url) {
+            @else if (isReload && route) {
               <a
                 #menuItem
                 target="_self"
                 [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(nav.url)"
+                [href]="hrefWithMenuFilter(route)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -9789,13 +9787,13 @@ class IHMenu {
             }
 
             <!-- leaf item: open in new tab -->
-            @else if (nav.behavior === 'new-tab' && nav.url) {
+            @else if (isNewTab && route) {
               <a
                 #menuItem
                 rel="noopener noreferrer"
                 target="_blank"
                 [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(nav.url)"
+                [href]="hrefWithMenuFilter(route)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -9829,7 +9827,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
                     template: `
     @if (menu) {
       @let hasChild = !!menu.child?.length;
-      @let nav = navigation;
+      @let route = menuRoute;
 
       <li
         [class.is-module]="menu.menuTypeId === 2"
@@ -9854,12 +9852,12 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
             </div>
           } @else {
             <!-- leaf item: SPA navigation -->
-            @if (nav.behavior === 'spa' && nav.url) {
+            @if (isSpa && route) {
               <a
                 #menuItem
                 [class.is-selected]="isSelected"
                 [queryParamsHandling]="'merge'"
-                [routerLink]="nav.url"
+                [routerLink]="route"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -9872,12 +9870,12 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
             }
 
             <!-- leaf item: full reload, same tab -->
-            @else if (nav.behavior === 'reload' && nav.url) {
+            @else if (isReload && route) {
               <a
                 #menuItem
                 target="_self"
                 [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(nav.url)"
+                [href]="hrefWithMenuFilter(route)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -9890,13 +9888,13 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
             }
 
             <!-- leaf item: open in new tab -->
-            @else if (nav.behavior === 'new-tab' && nav.url) {
+            @else if (isNewTab && route) {
               <a
                 #menuItem
                 rel="noopener noreferrer"
                 target="_blank"
                 [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(nav.url)"
+                [href]="hrefWithMenuFilter(route)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -10150,23 +10148,23 @@ class IHSidebar {
         }
     }
     navigateToMenu(menu) {
-        const nav = resolveMenuNavigation(menu);
-        if (!nav.url)
+        const route = getMenuRoute(menu);
+        if (!route)
             return;
-        if (nav.behavior === 'spa') {
-            this.router.navigate([nav.url], {
+        if (isSpaMenu(menu)) {
+            this.router.navigate([route], {
                 queryParams: this.menuFilterQueryParams(),
                 queryParamsHandling: 'merge',
             });
             return;
         }
-        const urlWithFilter = this.appendMenuFilterToUrl(nav.url);
-        if (nav.behavior === 'reload') {
-            window.location.href = urlWithFilter;
+        const urlWithFilter = this.appendMenuFilterToUrl(route);
+        if (isNewTabMenu(menu)) {
+            window.open(urlWithFilter, '_blank', 'noopener,noreferrer');
             return;
         }
-        if (nav.behavior === 'new-tab') {
-            window.open(urlWithFilter, '_blank', 'noopener,noreferrer');
+        if (isReloadMenu(menu)) {
+            window.location.href = urlWithFilter;
         }
     }
     updateUrl() {
@@ -11152,5 +11150,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuUrl, isControlRequired, isFullUrl, resolveControlErrorMessage, resolveMenuNavigation };
+export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuRoute, isControlRequired, isFullUrl, isNewTabMenu, isReloadMenu, isSpaMenu, resolveControlErrorMessage };
 //# sourceMappingURL=insight-ui.mjs.map
