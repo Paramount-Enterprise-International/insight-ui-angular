@@ -528,7 +528,7 @@ export class IHContent {
             @else if (isReload && route) {
               <a
                 #menuItem
-                is-reload
+                class="is-reload"
                 target="_self"
                 [class.is-selected]="isSelected"
                 [href]="hrefWithMenuFilter(route)"
