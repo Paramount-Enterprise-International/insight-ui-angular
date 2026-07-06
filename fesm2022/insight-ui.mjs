@@ -9230,33 +9230,22 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
  * Sidebar navigation rule:
  * - openInNewTab === true => href + target="_blank"
  * - reload === true => href same tab
- * - full http/https route => href same tab
+ * - route starts with "http" => href same tab
  * - otherwise => routerLink SPA navigation
- *
- * Backward compatibility:
- * - old route: "/docs/..." still works as SPA
- * - old applicationUrl still works as fallback route/url
  * ========================================================= */
-/**
- * Prefer route going forward.
- * applicationUrl remains only for old menus.json compatibility.
- */
 function getMenuRoute(menu) {
-    const route = menu?.route ?? menu?.applicationUrl ?? null;
-    return route?.trim() || null;
+    return menu?.route?.trim() || null;
 }
 /**
- * Very intentionally simple.
- * A full http/https URL must NEVER go into routerLink.
+ * Very intentionally simple:
+ * If route starts with "http", never use routerLink.
  */
-function isFullUrl(value) {
-    if (!value)
-        return false;
-    const route = value.trim();
-    return route.startsWith('http://') || route.startsWith('https://');
+function isHttpRoute(route) {
+    return !!route?.trim().toLowerCase().startsWith('http');
 }
 function isNewTabMenu(menu) {
-    return !!menu?.openInNewTab && !!getMenuRoute(menu);
+    const route = getMenuRoute(menu);
+    return !!route && !!menu?.openInNewTab;
 }
 function isReloadMenu(menu) {
     const route = getMenuRoute(menu);
@@ -9264,13 +9253,19 @@ function isReloadMenu(menu) {
         return false;
     if (menu?.openInNewTab)
         return false;
-    return !!menu?.reload || isFullUrl(route);
+    return !!menu?.reload || isHttpRoute(route);
 }
 function isSpaMenu(menu) {
     const route = getMenuRoute(menu);
     if (!route)
         return false;
-    return !isNewTabMenu(menu) && !isReloadMenu(menu);
+    if (menu?.openInNewTab)
+        return false;
+    if (menu?.reload)
+        return false;
+    if (isHttpRoute(route))
+        return false;
+    return true;
 }
 class IHTitleBreadcrumbService {
     /**
@@ -9750,7 +9745,7 @@ class IHMenu {
           } @else {
             <!-- IMPORTANT:
                  Order matters.
-                 Full URL must hit href branch before SPA/routerLink branch.
+                 Route starting with "http" must hit href branch before SPA/routerLink branch.
             -->
 
             <!-- leaf item: open in new tab -->
@@ -9861,7 +9856,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
           } @else {
             <!-- IMPORTANT:
                  Order matters.
-                 Full URL must hit href branch before SPA/routerLink branch.
+                 Route starting with "http" must hit href branch before SPA/routerLink branch.
             -->
 
             <!-- leaf item: open in new tab -->
@@ -11182,5 +11177,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuRoute, isControlRequired, isFullUrl, isNewTabMenu, isReloadMenu, isSpaMenu, resolveControlErrorMessage };
+export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuRoute, isControlRequired, isHttpRoute, isNewTabMenu, isReloadMenu, isSpaMenu, resolveControlErrorMessage };
 //# sourceMappingURL=insight-ui.mjs.map

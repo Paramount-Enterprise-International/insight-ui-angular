@@ -1418,22 +1418,6 @@ type IBreadcrumbItem = {
 type IMenu = {
     menuId: number;
     menuName: string;
-    /**
-     * Main navigation field.
-     *
-     * Examples:
-     * - "/docs/components/button"
-     *   => routerLink / SPA navigation
-     *
-     * - "/standalone/insight-remote-react" + reload: true
-     *   => href / full reload in the same tab
-     *
-     * - "https://example.com"
-     *   => href / full reload in the same tab
-     *
-     * - "https://example.com" + openInNewTab: true
-     *   => href / open in new tab
-     */
     route?: string | null;
     menuTypeId: number;
     parentId: number;
@@ -1443,21 +1427,12 @@ type IMenu = {
     level: number;
     visibility?: string;
     selected?: boolean;
-    openInId?: number;
-    versionCode?: string;
-    applicationCode?: string;
     /**
-     * Old compatibility field.
-     * Prefer route going forward.
-     */
-    applicationUrl?: string | null;
-    /**
-     * Open using href + target="_blank".
-     * This has the highest priority.
+     * Open route using href + target="_blank".
      */
     openInNewTab?: boolean;
     /**
-     * Force href navigation in the same tab, even when route is relative.
+     * Force route to use href instead of routerLink.
      */
     reload?: boolean;
 };
@@ -1466,16 +1441,12 @@ type IUser = {
     fullName: string;
     userImagePath: string;
 };
-/**
- * Prefer route going forward.
- * applicationUrl remains only for old menus.json compatibility.
- */
 declare function getMenuRoute(menu: IMenu | null | undefined): string | null;
 /**
- * Very intentionally simple.
- * A full http/https URL must NEVER go into routerLink.
+ * Very intentionally simple:
+ * If route starts with "http", never use routerLink.
  */
-declare function isFullUrl(value: string | null | undefined): boolean;
+declare function isHttpRoute(route: string | null | undefined): boolean;
 declare function isNewTabMenu(menu: IMenu | null | undefined): boolean;
 declare function isReloadMenu(menu: IMenu | null | undefined): boolean;
 declare function isSpaMenu(menu: IMenu | null | undefined): boolean;
@@ -1817,5 +1788,5 @@ declare class IUI {
     static ɵinj: i0.ɵɵInjectorDeclaration<IUI>;
 }
 
-export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuRoute, isControlRequired, isFullUrl, isNewTabMenu, isReloadMenu, isSpaMenu, resolveControlErrorMessage };
+export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuRoute, isControlRequired, isHttpRoute, isNewTabMenu, isReloadMenu, isSpaMenu, resolveControlErrorMessage };
 export type { IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IPaginatorState, IPillSize, IPillVariant, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IUISize, IUIVariant, IUser };
