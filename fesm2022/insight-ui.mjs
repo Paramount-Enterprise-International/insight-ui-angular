@@ -9240,15 +9240,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
 function getMenuRoute(menu) {
     if (!menu)
         return null;
-    /**
-     * Prefer route going forward.
-     * applicationUrl remains only for old menus.json compatibility.
-     */
-    // return menu.route ?? menu.applicationUrl ?? null;
-    return menu.route ?? null;
+    const route = menu.route ?? menu.applicationUrl ?? null;
+    return route?.trim() || null;
 }
 function isFullUrl(url) {
-    return !!url && /^https?:\/\//i.test(url);
+    return !!url?.trim() && /^https?:\/\//i.test(url.trim());
 }
 function isNewTabMenu(menu) {
     const route = getMenuRoute(menu);
@@ -9750,13 +9746,14 @@ class IHMenu {
               ></i>
             </div>
           } @else {
-            <!-- leaf item: SPA navigation -->
-            @if (isSpa && route) {
+            <!-- leaf item: open in new tab -->
+            @if (isNewTab && route) {
               <a
                 #menuItem
+                rel="noopener noreferrer"
+                target="_blank"
                 [class.is-selected]="isSelected"
-                [queryParamsHandling]="'merge'"
-                [routerLink]="route"
+                [href]="hrefWithMenuFilter(route)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -9786,14 +9783,13 @@ class IHMenu {
               </a>
             }
 
-            <!-- leaf item: open in new tab -->
-            @else if (isNewTab && route) {
+            <!-- leaf item: SPA navigation -->
+            @else if (isSpa && route) {
               <a
                 #menuItem
-                rel="noopener noreferrer"
-                target="_blank"
                 [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(route)"
+                [queryParamsHandling]="'merge'"
+                [routerLink]="route"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -9851,13 +9847,14 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
               ></i>
             </div>
           } @else {
-            <!-- leaf item: SPA navigation -->
-            @if (isSpa && route) {
+            <!-- leaf item: open in new tab -->
+            @if (isNewTab && route) {
               <a
                 #menuItem
+                rel="noopener noreferrer"
+                target="_blank"
                 [class.is-selected]="isSelected"
-                [queryParamsHandling]="'merge'"
-                [routerLink]="route"
+                [href]="hrefWithMenuFilter(route)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -9887,14 +9884,13 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
               </a>
             }
 
-            <!-- leaf item: open in new tab -->
-            @else if (isNewTab && route) {
+            <!-- leaf item: SPA navigation -->
+            @else if (isSpa && route) {
               <a
                 #menuItem
-                rel="noopener noreferrer"
-                target="_blank"
                 [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(route)"
+                [queryParamsHandling]="'merge'"
+                [routerLink]="route"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {

@@ -1443,10 +1443,14 @@ type IMenu = {
     level: number;
     visibility?: string;
     selected?: boolean;
+    openInId?: number;
+    versionCode?: string;
+    applicationCode?: string;
     /**
      * Old compatibility field.
      * Prefer route going forward.
      */
+    applicationUrl?: string | null;
     /**
      * Open using href + target="_blank".
      * This has the highest priority.
