@@ -1,6 +1,6 @@
 {
   "name": "@insight/ui",
-  "version": "1.15.7",
+  "version": "1.15.8",
   "peerDependencies": {
     "@angular/common": "^20.3.0",
     "@angular/core": "^20.3.0"

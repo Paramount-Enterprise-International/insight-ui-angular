@@ -9772,6 +9772,7 @@ class IHMenu {
             @else if (isReload && route) {
               <a
                 #menuItem
+                is-reload
                 target="_self"
                 [class.is-selected]="isSelected"
                 [href]="hrefWithMenuFilter(route)"
@@ -9883,6 +9884,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
             @else if (isReload && route) {
               <a
                 #menuItem
+                is-reload
                 target="_self"
                 [class.is-selected]="isSelected"
                 [href]="hrefWithMenuFilter(route)"
