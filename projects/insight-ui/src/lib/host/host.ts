@@ -508,6 +508,7 @@ export class IHContent {
             @if (isNewTab && route) {
               <a
                 #menuItem
+                class="is-new-tab"
                 rel="noopener noreferrer"
                 target="_blank"
                 [class.is-selected]="isSelected"
@@ -548,6 +549,7 @@ export class IHContent {
             @else if (isSpa && route) {
               <a
                 #menuItem
+                class="is-spa"
                 [class.is-selected]="isSelected"
                 [queryParamsHandling]="'merge'"
                 [routerLink]="route"
