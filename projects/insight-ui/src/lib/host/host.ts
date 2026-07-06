@@ -108,15 +108,15 @@ export type IMenu = {
   level: number;
   visibility?: string;
   selected?: boolean;
-  // openInId?: number;
-  // versionCode?: string;
-  // applicationCode?: string;
+  openInId?: number;
+  versionCode?: string;
+  applicationCode?: string;
 
   /**
    * Old compatibility field.
    * Prefer route going forward.
    */
-  // applicationUrl?: string | null;
+  applicationUrl?: string | null;
 
   /**
    * Open using href + target="_blank".
@@ -139,16 +139,13 @@ export type IUser = {
 export function getMenuRoute(menu: IMenu | null | undefined): string | null {
   if (!menu) return null;
 
-  /**
-   * Prefer route going forward.
-   * applicationUrl remains only for old menus.json compatibility.
-   */
-  // return menu.route ?? menu.applicationUrl ?? null;
-  return menu.route ?? null;
+  const route = menu.route ?? menu.applicationUrl ?? null;
+
+  return route?.trim() || null;
 }
 
 export function isFullUrl(url: string | null | undefined): boolean {
-  return !!url && /^https?:\/\//i.test(url);
+  return !!url?.trim() && /^https?:\/\//i.test(url.trim());
 }
 
 export function isNewTabMenu(menu: IMenu | null | undefined): boolean {
@@ -533,13 +530,14 @@ export class IHContent {
               ></i>
             </div>
           } @else {
-            <!-- leaf item: SPA navigation -->
-            @if (isSpa && route) {
+            <!-- leaf item: open in new tab -->
+            @if (isNewTab && route) {
               <a
                 #menuItem
+                rel="noopener noreferrer"
+                target="_blank"
                 [class.is-selected]="isSelected"
-                [queryParamsHandling]="'merge'"
-                [routerLink]="route"
+                [href]="hrefWithMenuFilter(route)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -569,14 +567,13 @@ export class IHContent {
               </a>
             }
 
-            <!-- leaf item: open in new tab -->
-            @else if (isNewTab && route) {
+            <!-- leaf item: SPA navigation -->
+            @else if (isSpa && route) {
               <a
                 #menuItem
-                rel="noopener noreferrer"
-                target="_blank"
                 [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(route)"
+                [queryParamsHandling]="'merge'"
+                [routerLink]="route"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
