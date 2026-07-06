@@ -136,44 +136,46 @@ export type IUser = {
   userImagePath: string;
 };
 
+/**
+ * Prefer route going forward.
+ * applicationUrl remains only for old menus.json compatibility.
+ */
 export function getMenuRoute(menu: IMenu | null | undefined): string | null {
-  if (!menu) return null;
-
-  const route = menu.route ?? menu.applicationUrl ?? null;
-
+  const route = menu?.route ?? menu?.applicationUrl ?? null;
   return route?.trim() || null;
 }
 
-export function isFullUrl(url: string | null | undefined): boolean {
-  return !!url?.trim() && /^https?:\/\//i.test(url.trim());
+/**
+ * Very intentionally simple.
+ * A full http/https URL must NEVER go into routerLink.
+ */
+export function isFullUrl(value: string | null | undefined): boolean {
+  if (!value) return false;
+
+  const route = value.trim();
+
+  return route.startsWith('http://') || route.startsWith('https://');
 }
 
 export function isNewTabMenu(menu: IMenu | null | undefined): boolean {
-  const route = getMenuRoute(menu);
-
-  if (!menu || !route) return false;
-
-  return !!menu.openInNewTab;
+  return !!menu?.openInNewTab && !!getMenuRoute(menu);
 }
 
 export function isReloadMenu(menu: IMenu | null | undefined): boolean {
   const route = getMenuRoute(menu);
 
-  if (!menu || !route) return false;
-  if (menu.openInNewTab) return false;
+  if (!route) return false;
+  if (menu?.openInNewTab) return false;
 
-  return !!menu.reload || isFullUrl(route);
+  return !!menu?.reload || isFullUrl(route);
 }
 
 export function isSpaMenu(menu: IMenu | null | undefined): boolean {
   const route = getMenuRoute(menu);
 
-  if (!menu || !route) return false;
-  if (menu.openInNewTab) return false;
-  if (menu.reload) return false;
-  if (isFullUrl(route)) return false;
+  if (!route) return false;
 
-  return true;
+  return !isNewTabMenu(menu) && !isReloadMenu(menu);
 }
 
 export type IHNavigationSnapshot = {
@@ -359,6 +361,7 @@ export class IHContent {
             const paramName = segment.substring(1);
             return route.snapshot.params[paramName] ?? segment;
           }
+
           return segment;
         });
 
@@ -494,9 +497,9 @@ export class IHContent {
 /* =========================================================
  * IHMenu
  * - Parent/group menu: toggles expanded/collapsed
- * - Leaf SPA menu: routerLink
- * - Leaf reload menu: href
  * - Leaf new-tab menu: href + target="_blank"
+ * - Leaf reload menu: href
+ * - Leaf SPA menu: routerLink
  * ========================================================= */
 
 @Component({
@@ -523,13 +526,20 @@ export class IHContent {
                   <span></span>
                 }
               }
+
               <i [class]="menu.icon"></i>
               <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
+
               <i
                 [ngClass]="menu.visibility === 'expanded' ? 'fas fa-angle-up' : 'fas fa-angle-down'"
               ></i>
             </div>
           } @else {
+            <!-- IMPORTANT:
+                 Order matters.
+                 Full URL must hit href branch before SPA/routerLink branch.
+            -->
+
             <!-- leaf item: open in new tab -->
             @if (isNewTab && route) {
               <a
@@ -544,6 +554,7 @@ export class IHContent {
                     <span></span>
                   }
                 }
+
                 <i [class]="menu.icon"></i>
                 <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
               </a>
@@ -562,6 +573,7 @@ export class IHContent {
                     <span></span>
                   }
                 }
+
                 <i [class]="menu.icon"></i>
                 <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
               </a>
@@ -580,6 +592,7 @@ export class IHContent {
                     <span></span>
                   }
                 }
+
                 <i [class]="menu.icon"></i>
                 <h6 [innerHTML]="menu.menuName | highlightSearch: filter"></h6>
               </a>
@@ -707,6 +720,7 @@ export class IHMenu implements OnChanges {
         <div class="user-image">
           <img alt="User Image" [src]="user.userImagePath" />
         </div>
+
         <div class="user-info">
           <small class="text-subtle">{{ user.employeeCode }}</small>
           <h6>{{ user.fullName }}</h6>
@@ -725,6 +739,7 @@ export class IHMenu implements OnChanges {
 
     <div class="ih-sidebar-body scroll scroll-y">
       @let menus = menus$ | async;
+
       <ul>
         @for (m of menus; track m.menuId) {
           <ih-menu [filter]="menuFilter()" [menu]="m" [selectedMenuId]="selectedMenuId()" />
@@ -773,23 +788,27 @@ export class IHSidebar implements OnInit, OnChanges {
   ngOnInit(): void {
     const searchParams = new URLSearchParams(window.location.search);
     const initialQueryParams: any = {};
+
     searchParams.forEach((value, key) => {
       initialQueryParams[key] = value;
     });
 
     this.queryParams = initialQueryParams;
+
     const initialFilter = (this.queryParams['menu-filter'] as string) ?? '';
 
     this.menuFilter.set(initialFilter);
     this.menuSearch.setValue(initialFilter, { emitEvent: false });
 
     this.originalMenus$ = (this.menusInput$ ?? new Observable<IMenu[]>()).pipe(shareReplay(1));
+
     this.buildMenusStream();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['menusInput$'] && !changes['menusInput$'].firstChange) {
       this.originalMenus$ = (this.menusInput$ ?? new Observable<IMenu[]>()).pipe(shareReplay(1));
+
       this.buildMenusStream();
     }
   }
@@ -821,13 +840,19 @@ export class IHSidebar implements OnInit, OnChanges {
 
   private filterMenuTree(menus: IMenu[], rawTerm: string): IMenu[] {
     const term = (rawTerm ?? '').trim().toLowerCase();
+
     if (!term) return menus;
 
     const filtered: IMenu[] = [];
+
     for (const menu of menus) {
       const result = this.filterMenuBranch(menu, term);
-      if (result) filtered.push(result);
+
+      if (result) {
+        filtered.push(result);
+      }
     }
+
     return filtered;
   }
 
@@ -838,9 +863,13 @@ export class IHSidebar implements OnInit, OnChanges {
     const originalChildren = menu.child ?? [];
 
     const filteredChildren: IMenu[] = [];
+
     for (const child of originalChildren) {
       const childResult = this.filterMenuBranch(child, term);
-      if (childResult) filteredChildren.push(childResult);
+
+      if (childResult) {
+        filteredChildren.push(childResult);
+      }
     }
 
     const childMatches = filteredChildren.length > 0;
@@ -878,7 +907,11 @@ export class IHSidebar implements OnInit, OnChanges {
     if (this.keyboardNavActive()) {
       const maxIndex = this.navigableMenus.length - 1;
       let idx = this.selectedIndex();
-      if (idx === null || idx < 0 || idx > maxIndex) idx = 0;
+
+      if (idx === null || idx < 0 || idx > maxIndex) {
+        idx = 0;
+      }
+
       this.selectedIndex.set(idx);
       this.selectedMenuId.set(this.navigableMenus[idx].menuId);
     } else {
@@ -896,12 +929,18 @@ export class IHSidebar implements OnInit, OnChanges {
 
       const isLeafMenu = +menu.menuTypeId === 3 && (!hasChildren || menu.visibility === 'no-child');
 
-      if (isLeafMenu) result.push(menu);
+      if (isLeafMenu) {
+        result.push(menu);
+      }
 
-      for (const child of children) visit(child);
+      for (const child of children) {
+        visit(child);
+      }
     };
 
-    for (const m of menus) visit(m);
+    for (const m of menus) {
+      visit(m);
+    }
 
     return result;
   }
@@ -910,6 +949,7 @@ export class IHSidebar implements OnInit, OnChanges {
     if (!this.navigableMenus.length) return;
 
     const hasFilter = !!this.menuFilter().trim();
+
     if (!hasFilter) return;
 
     if (event.key === 'ArrowDown') {
@@ -920,6 +960,7 @@ export class IHSidebar implements OnInit, OnChanges {
       this.ensureKeyboardNavActive(-1);
     } else if (event.key === 'Enter') {
       if (!this.keyboardNavActive()) return;
+
       event.preventDefault();
       this.activateSelected();
     }
@@ -948,13 +989,17 @@ export class IHSidebar implements OnInit, OnChanges {
 
   private moveSelection(delta: number): void {
     const current = this.selectedIndex();
+
     if (current === null) return;
 
     const maxIndex = this.navigableMenus.length - 1;
     let next = current + delta;
 
-    if (next < 0) next = maxIndex;
-    else if (next > maxIndex) next = 0;
+    if (next < 0) {
+      next = maxIndex;
+    } else if (next > maxIndex) {
+      next = 0;
+    }
 
     this.selectedIndex.set(next);
     this.selectedMenuId.set(this.navigableMenus[next].menuId);
@@ -962,28 +1007,37 @@ export class IHSidebar implements OnInit, OnChanges {
 
   private activateSelected(): void {
     const idx = this.selectedIndex();
-    if (idx === null || idx < 0 || idx >= this.navigableMenus.length) return;
+
+    if (idx === null || idx < 0 || idx >= this.navigableMenus.length) {
+      return;
+    }
 
     const menu = this.navigableMenus[idx];
+
     this.navigateToMenu(menu);
   }
 
   private menuFilterQueryParams(): Record<string, any> {
     const term = this.menuFilter().trim();
+
     return term ? { 'menu-filter': term } : {};
   }
 
   private appendMenuFilterToUrl(raw: string): string {
     const term = this.menuFilter().trim();
+
     if (!term) return raw;
 
     try {
       const u = new URL(raw);
+
       u.searchParams.set('menu-filter', term);
+
       return u.toString();
     } catch {
       const origin = window.location.origin;
       const u = new URL(raw, origin);
+
       u.searchParams.set('menu-filter', term);
 
       return `${u.pathname}${u.search}${u.hash}`;
@@ -992,26 +1046,30 @@ export class IHSidebar implements OnInit, OnChanges {
 
   private navigateToMenu(menu: IMenu): void {
     const route = getMenuRoute(menu);
+
     if (!route) return;
+
+    if (isNewTabMenu(menu)) {
+      const urlWithFilter = this.appendMenuFilterToUrl(route);
+
+      window.open(urlWithFilter, '_blank', 'noopener,noreferrer');
+
+      return;
+    }
+
+    if (isReloadMenu(menu)) {
+      const urlWithFilter = this.appendMenuFilterToUrl(route);
+
+      window.location.href = urlWithFilter;
+
+      return;
+    }
 
     if (isSpaMenu(menu)) {
       this.router.navigate([route], {
         queryParams: this.menuFilterQueryParams(),
         queryParamsHandling: 'merge',
       });
-
-      return;
-    }
-
-    const urlWithFilter = this.appendMenuFilterToUrl(route);
-
-    if (isNewTabMenu(menu)) {
-      window.open(urlWithFilter, '_blank', 'noopener,noreferrer');
-      return;
-    }
-
-    if (isReloadMenu(menu)) {
-      window.location.href = urlWithFilter;
     }
   }
 
@@ -1019,8 +1077,11 @@ export class IHSidebar implements OnInit, OnChanges {
     const queryParams = { ...this.queryParams };
     const currentFilter = this.menuFilter().trim();
 
-    if (currentFilter) queryParams['menu-filter'] = currentFilter;
-    else delete queryParams['menu-filter'];
+    if (currentFilter) {
+      queryParams['menu-filter'] = currentFilter;
+    } else {
+      delete queryParams['menu-filter'];
+    }
 
     this.router.navigate([], {
       queryParams,
