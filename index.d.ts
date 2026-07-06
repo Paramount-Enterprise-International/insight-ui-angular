@@ -1466,8 +1466,16 @@ type IUser = {
     fullName: string;
     userImagePath: string;
 };
+/**
+ * Prefer route going forward.
+ * applicationUrl remains only for old menus.json compatibility.
+ */
 declare function getMenuRoute(menu: IMenu | null | undefined): string | null;
-declare function isFullUrl(url: string | null | undefined): boolean;
+/**
+ * Very intentionally simple.
+ * A full http/https URL must NEVER go into routerLink.
+ */
+declare function isFullUrl(value: string | null | undefined): boolean;
 declare function isNewTabMenu(menu: IMenu | null | undefined): boolean;
 declare function isReloadMenu(menu: IMenu | null | undefined): boolean;
 declare function isSpaMenu(menu: IMenu | null | undefined): boolean;
