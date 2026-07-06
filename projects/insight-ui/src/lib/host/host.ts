@@ -8,11 +8,16 @@
  * - Override breadcrumbs support routerLink + correct href with baseHref "/-/" (NO "/-/-/" bug)
  * - Override breadcrumb click also notifies React Router (popstate) so React pages update
  * - IHMenu / IHSidebar kept as close as possible to original
- * - Sidebar navigation rule:
- *   1. openInNewTab === true => href + target="_blank"
- *   2. reload === true => href same tab
- *   3. full http/https route => href same tab
- *   4. otherwise => routerLink SPA navigation
+ *
+ * Sidebar navigation rule:
+ * - openInNewTab === true => href + target="_blank"
+ * - reload === true => href same tab
+ * - full http/https route => href same tab
+ * - otherwise => routerLink SPA navigation
+ *
+ * Backward compatibility:
+ * - old route: "/docs/..." still works as SPA
+ * - old applicationUrl still works as fallback route/url
  * ========================================================= */
 
 import { APP_BASE_HREF, AsyncPipe, NgClass } from '@angular/common';
@@ -73,13 +78,6 @@ export type IBreadcrumbItem = {
  * Existing types
  * ========================================================= */
 
-export type IMenuNavigationBehavior = 'spa' | 'reload' | 'new-tab';
-
-export type IResolvedMenuNavigation = {
-  url: string | null;
-  behavior: IMenuNavigationBehavior;
-};
-
 export type IMenu = {
   menuId: number;
   menuName: string;
@@ -88,10 +86,17 @@ export type IMenu = {
    * Main navigation field.
    *
    * Examples:
-   * - "/docs/components/button" => SPA navigation
-   * - "/standalone/insight-remote-react" + reload: true => full reload
-   * - "https://example.com" => full reload by default
-   * - "https://example.com" + openInNewTab: true => new tab
+   * - "/docs/components/button"
+   *   => routerLink / SPA navigation
+   *
+   * - "/standalone/insight-remote-react" + reload: true
+   *   => href / full reload in the same tab
+   *
+   * - "https://example.com"
+   *   => href / full reload in the same tab
+   *
+   * - "https://example.com" + openInNewTab: true
+   *   => href / open in new tab
    */
   route?: string | null;
 
@@ -103,20 +108,25 @@ export type IMenu = {
   level: number;
   visibility?: string;
   selected?: boolean;
-  openInId?: number;
-  versionCode?: string;
-  applicationCode?: string;
+  // openInId?: number;
+  // versionCode?: string;
+  // applicationCode?: string;
 
   /**
    * Old compatibility field.
    * Prefer route going forward.
    */
-  applicationUrl?: string | null;
+  // applicationUrl?: string | null;
 
   /**
-   * New behavior flags.
+   * Open using href + target="_blank".
+   * This has the highest priority.
    */
   openInNewTab?: boolean;
+
+  /**
+   * Force href navigation in the same tab, even when route is relative.
+   */
   reload?: boolean;
 };
 
@@ -126,68 +136,47 @@ export type IUser = {
   userImagePath: string;
 };
 
-export function getMenuUrl(menu: IMenu | null | undefined): string | null {
+export function getMenuRoute(menu: IMenu | null | undefined): string | null {
   if (!menu) return null;
 
   /**
    * Prefer route going forward.
-   * applicationUrl remains only for backward compatibility.
+   * applicationUrl remains only for old menus.json compatibility.
    */
-  return menu.route ?? menu.applicationUrl ?? null;
+  // return menu.route ?? menu.applicationUrl ?? null;
+  return menu.route ?? null;
 }
 
-export function isFullUrl(url: string): boolean {
-  return /^https?:\/\//i.test(url);
+export function isFullUrl(url: string | null | undefined): boolean {
+  return !!url && /^https?:\/\//i.test(url);
 }
 
-export function resolveMenuNavigation(menu: IMenu | null | undefined): IResolvedMenuNavigation {
-  const url = getMenuUrl(menu);
+export function isNewTabMenu(menu: IMenu | null | undefined): boolean {
+  const route = getMenuRoute(menu);
 
-  if (!menu || !url) {
-    return {
-      url: null,
-      behavior: 'spa',
-    };
-  }
+  if (!menu || !route) return false;
 
-  /**
-   * Highest priority: open in new tab.
-   */
-  if (menu.openInNewTab) {
-    return {
-      url,
-      behavior: 'new-tab',
-    };
-  }
+  return !!menu.openInNewTab;
+}
 
-  /**
-   * Force full reload, including relative routes.
-   */
-  if (menu.reload) {
-    return {
-      url,
-      behavior: 'reload',
-    };
-  }
+export function isReloadMenu(menu: IMenu | null | undefined): boolean {
+  const route = getMenuRoute(menu);
 
-  /**
-   * Full URL uses browser navigation by default.
-   */
-  if (isFullUrl(url)) {
-    return {
-      url,
-      behavior: 'reload',
-    };
-  }
+  if (!menu || !route) return false;
+  if (menu.openInNewTab) return false;
 
-  /**
-   * Default: Angular SPA navigation.
-   * This keeps old menus.json route entries backward-compatible.
-   */
-  return {
-    url,
-    behavior: 'spa',
-  };
+  return !!menu.reload || isFullUrl(route);
+}
+
+export function isSpaMenu(menu: IMenu | null | undefined): boolean {
+  const route = getMenuRoute(menu);
+
+  if (!menu || !route) return false;
+  if (menu.openInNewTab) return false;
+  if (menu.reload) return false;
+  if (isFullUrl(route)) return false;
+
+  return true;
 }
 
 export type IHNavigationSnapshot = {
@@ -381,7 +370,7 @@ export class IHContent {
       // Always advance the URL, even if we don't render a breadcrumb for this level
       const nextUrl = nextUrlPart.length > 0 ? `${url}/${nextUrlPart}` : url || '/';
 
-      // 🔑 Use *route config* data, not snapshot (avoid inherited data)
+      // 🔑 Use route config data, not snapshot data, to avoid inherited data
       const data = routeConfig.data as { title?: string } | undefined;
       const label = data?.title;
 
@@ -418,7 +407,7 @@ export class IHContent {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
 
     // Angular routerLink will update the URL via pushState.
-    // React Router (BrowserRouter) won't notice unless popstate is fired.
+    // React Router BrowserRouter will not notice unless popstate is fired.
     queueMicrotask(() => {
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
@@ -507,9 +496,10 @@ export class IHContent {
 
 /* =========================================================
  * IHMenu
- * - SPA: routerLink
- * - Reload: href
- * - New tab: href + target="_blank"
+ * - Parent/group menu: toggles expanded/collapsed
+ * - Leaf SPA menu: routerLink
+ * - Leaf reload menu: href
+ * - Leaf new-tab menu: href + target="_blank"
  * ========================================================= */
 
 @Component({
@@ -519,7 +509,7 @@ export class IHContent {
   template: `
     @if (menu) {
       @let hasChild = !!menu.child?.length;
-      @let nav = navigation;
+      @let route = menuRoute;
 
       <li
         [class.is-module]="menu.menuTypeId === 2"
@@ -544,12 +534,12 @@ export class IHContent {
             </div>
           } @else {
             <!-- leaf item: SPA navigation -->
-            @if (nav.behavior === 'spa' && nav.url) {
+            @if (isSpa && route) {
               <a
                 #menuItem
                 [class.is-selected]="isSelected"
                 [queryParamsHandling]="'merge'"
-                [routerLink]="nav.url"
+                [routerLink]="route"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -562,12 +552,12 @@ export class IHContent {
             }
 
             <!-- leaf item: full reload, same tab -->
-            @else if (nav.behavior === 'reload' && nav.url) {
+            @else if (isReload && route) {
               <a
                 #menuItem
                 target="_self"
                 [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(nav.url)"
+                [href]="hrefWithMenuFilter(route)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -580,13 +570,13 @@ export class IHContent {
             }
 
             <!-- leaf item: open in new tab -->
-            @else if (nav.behavior === 'new-tab' && nav.url) {
+            @else if (isNewTab && route) {
               <a
                 #menuItem
                 rel="noopener noreferrer"
                 target="_blank"
                 [class.is-selected]="isSelected"
-                [href]="hrefWithMenuFilter(nav.url)"
+                [href]="hrefWithMenuFilter(route)"
               >
                 @if (menu.level > 0) {
                   @for (i of indent(menu.level); track i) {
@@ -625,8 +615,20 @@ export class IHMenu implements OnChanges {
 
   @HostBinding('class.hidden') isHidden = false;
 
-  get navigation(): IResolvedMenuNavigation {
-    return resolveMenuNavigation(this.menu);
+  get menuRoute(): string | null {
+    return getMenuRoute(this.menu);
+  }
+
+  get isSpa(): boolean {
+    return isSpaMenu(this.menu);
+  }
+
+  get isReload(): boolean {
+    return isReloadMenu(this.menu);
+  }
+
+  get isNewTab(): boolean {
+    return isNewTabMenu(this.menu);
   }
 
   /** only true for the *leaf* menu that matches selectedMenuId */
@@ -664,6 +666,7 @@ export class IHMenu implements OnChanges {
 
   click(): void {
     if (!this.menu) return;
+
     if (this.menu.visibility !== 'no-child') {
       if (this.menu.visibility === 'expanded') {
         this.menu.visibility = 'collapsed';
@@ -991,26 +994,27 @@ export class IHSidebar implements OnInit, OnChanges {
   }
 
   private navigateToMenu(menu: IMenu): void {
-    const nav = resolveMenuNavigation(menu);
-    if (!nav.url) return;
+    const route = getMenuRoute(menu);
+    if (!route) return;
 
-    if (nav.behavior === 'spa') {
-      this.router.navigate([nav.url], {
+    if (isSpaMenu(menu)) {
+      this.router.navigate([route], {
         queryParams: this.menuFilterQueryParams(),
         queryParamsHandling: 'merge',
       });
+
       return;
     }
 
-    const urlWithFilter = this.appendMenuFilterToUrl(nav.url);
+    const urlWithFilter = this.appendMenuFilterToUrl(route);
 
-    if (nav.behavior === 'reload') {
-      window.location.href = urlWithFilter;
-      return;
-    }
-
-    if (nav.behavior === 'new-tab') {
+    if (isNewTabMenu(menu)) {
       window.open(urlWithFilter, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    if (isReloadMenu(menu)) {
+      window.location.href = urlWithFilter;
     }
   }
 
