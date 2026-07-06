@@ -9752,6 +9752,7 @@ class IHMenu {
             @if (isNewTab && route) {
               <a
                 #menuItem
+                class="is-new-tab"
                 rel="noopener noreferrer"
                 target="_blank"
                 [class.is-selected]="isSelected"
@@ -9792,6 +9793,7 @@ class IHMenu {
             @else if (isSpa && route) {
               <a
                 #menuItem
+                class="is-spa"
                 [class.is-selected]="isSelected"
                 [queryParamsHandling]="'merge'"
                 [routerLink]="route"
@@ -9864,6 +9866,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
             @if (isNewTab && route) {
               <a
                 #menuItem
+                class="is-new-tab"
                 rel="noopener noreferrer"
                 target="_blank"
                 [class.is-selected]="isSelected"
@@ -9904,6 +9907,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.25", ngImpo
             @else if (isSpa && route) {
               <a
                 #menuItem
+                class="is-spa"
                 [class.is-selected]="isSelected"
                 [queryParamsHandling]="'merge'"
                 [routerLink]="route"
