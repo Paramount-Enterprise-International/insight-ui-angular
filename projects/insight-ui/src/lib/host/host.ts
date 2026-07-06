@@ -12,12 +12,8 @@
  * Sidebar navigation rule:
  * - openInNewTab === true => href + target="_blank"
  * - reload === true => href same tab
- * - full http/https route => href same tab
+ * - route starts with "http" => href same tab
  * - otherwise => routerLink SPA navigation
- *
- * Backward compatibility:
- * - old route: "/docs/..." still works as SPA
- * - old applicationUrl still works as fallback route/url
  * ========================================================= */
 
 import { APP_BASE_HREF, AsyncPipe, NgClass } from '@angular/common';
@@ -81,25 +77,7 @@ export type IBreadcrumbItem = {
 export type IMenu = {
   menuId: number;
   menuName: string;
-
-  /**
-   * Main navigation field.
-   *
-   * Examples:
-   * - "/docs/components/button"
-   *   => routerLink / SPA navigation
-   *
-   * - "/standalone/insight-remote-react" + reload: true
-   *   => href / full reload in the same tab
-   *
-   * - "https://example.com"
-   *   => href / full reload in the same tab
-   *
-   * - "https://example.com" + openInNewTab: true
-   *   => href / open in new tab
-   */
   route?: string | null;
-
   menuTypeId: number;
   parentId: number;
   sequence: number;
@@ -108,24 +86,14 @@ export type IMenu = {
   level: number;
   visibility?: string;
   selected?: boolean;
-  openInId?: number;
-  versionCode?: string;
-  applicationCode?: string;
 
   /**
-   * Old compatibility field.
-   * Prefer route going forward.
-   */
-  applicationUrl?: string | null;
-
-  /**
-   * Open using href + target="_blank".
-   * This has the highest priority.
+   * Open route using href + target="_blank".
    */
   openInNewTab?: boolean;
 
   /**
-   * Force href navigation in the same tab, even when route is relative.
+   * Force route to use href instead of routerLink.
    */
   reload?: boolean;
 };
@@ -136,29 +104,22 @@ export type IUser = {
   userImagePath: string;
 };
 
-/**
- * Prefer route going forward.
- * applicationUrl remains only for old menus.json compatibility.
- */
 export function getMenuRoute(menu: IMenu | null | undefined): string | null {
-  const route = menu?.route ?? menu?.applicationUrl ?? null;
-  return route?.trim() || null;
+  return menu?.route?.trim() || null;
 }
 
 /**
- * Very intentionally simple.
- * A full http/https URL must NEVER go into routerLink.
+ * Very intentionally simple:
+ * If route starts with "http", never use routerLink.
  */
-export function isFullUrl(value: string | null | undefined): boolean {
-  if (!value) return false;
-
-  const route = value.trim();
-
-  return route.startsWith('http://') || route.startsWith('https://');
+export function isHttpRoute(route: string | null | undefined): boolean {
+  return !!route?.trim().toLowerCase().startsWith('http');
 }
 
 export function isNewTabMenu(menu: IMenu | null | undefined): boolean {
-  return !!menu?.openInNewTab && !!getMenuRoute(menu);
+  const route = getMenuRoute(menu);
+
+  return !!route && !!menu?.openInNewTab;
 }
 
 export function isReloadMenu(menu: IMenu | null | undefined): boolean {
@@ -167,15 +128,18 @@ export function isReloadMenu(menu: IMenu | null | undefined): boolean {
   if (!route) return false;
   if (menu?.openInNewTab) return false;
 
-  return !!menu?.reload || isFullUrl(route);
+  return !!menu?.reload || isHttpRoute(route);
 }
 
 export function isSpaMenu(menu: IMenu | null | undefined): boolean {
   const route = getMenuRoute(menu);
 
   if (!route) return false;
+  if (menu?.openInNewTab) return false;
+  if (menu?.reload) return false;
+  if (isHttpRoute(route)) return false;
 
-  return !isNewTabMenu(menu) && !isReloadMenu(menu);
+  return true;
 }
 
 export type IHNavigationSnapshot = {
@@ -537,7 +501,7 @@ export class IHContent {
           } @else {
             <!-- IMPORTANT:
                  Order matters.
-                 Full URL must hit href branch before SPA/routerLink branch.
+                 Route starting with "http" must hit href branch before SPA/routerLink branch.
             -->
 
             <!-- leaf item: open in new tab -->
