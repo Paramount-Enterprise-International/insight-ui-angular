@@ -1,7 +1,13 @@
 /* grid.ts */
 /**
  * IGrid
- * Version: 1.26.0
+ * Version: 1.27.0
+ *
+ * CHANGES (1.27.0):
+ * - Add sortMode input ('multi' | 'single', default 'multi'):
+ *   - 'multi': clicking columns accumulates sort states (existing behavior)
+ *   - 'single': clicking a column replaces all previous sorts
+ *   - Works with both client-side and server-side data sources
  *
  * CHANGES (1.26.0):
  * - Add native server-side data sourcing support:
@@ -1479,6 +1485,16 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   /** Show auto number column (disabled by default in tree) */
   @Input({ transform: booleanAttribute }) showNumberColumn = true;
 
+  /**
+   * Sort mode:
+   * - 'multi' (default): clicking columns accumulates sort states.
+   *   Click A → A↑, click B → A↑ B↑.
+   * - 'single': clicking a column replaces all previous sorts.
+   *   Click A → A↑, click B → B↑ (A cleared).
+   * Works with both client-side and server-side data sources.
+   */
+  @Input() sortMode: 'multi' | 'single' = 'multi';
+
   get showNumberColumnEffective(): boolean {
     if (this.treeEnabled) {
       return false;
@@ -2245,16 +2261,34 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
     const index = this.sortStates.findIndex((s) => s.active === columnId);
 
-    if (index === -1) {
-      this.sortStates.push({ active: columnId, direction: 'asc' });
-    } else {
-      const current = this.sortStates[index];
-      if (current.direction === 'asc') {
-        current.direction = 'desc';
-      } else if (current.direction === 'desc') {
-        this.sortStates.splice(index, 1);
+    if (this.sortMode === 'single') {
+      // Single-column mode: replace all sorts with just this column
+      if (index !== -1) {
+        const current = this.sortStates[index];
+        if (current.direction === 'asc') {
+          this.sortStates = [{ active: columnId, direction: 'desc' }];
+        } else if (current.direction === 'desc') {
+          // Last direction → clear sort entirely
+          this.sortStates = [];
+        } else {
+          this.sortStates = [{ active: columnId, direction: 'asc' }];
+        }
       } else {
-        current.direction = 'asc';
+        this.sortStates = [{ active: columnId, direction: 'asc' }];
+      }
+    } else {
+      // Multi-column mode (default): accumulate sort states
+      if (index === -1) {
+        this.sortStates.push({ active: columnId, direction: 'asc' });
+      } else {
+        const current = this.sortStates[index];
+        if (current.direction === 'asc') {
+          current.direction = 'desc';
+        } else if (current.direction === 'desc') {
+          this.sortStates.splice(index, 1);
+        } else {
+          current.direction = 'asc';
+        }
       }
     }
 
