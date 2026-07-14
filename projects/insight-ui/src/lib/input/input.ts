@@ -159,6 +159,13 @@ export type IInputMask = {
 export class IInputMaskDirective implements OnInit, OnChanges {
   @Input('iInputMask') mask: IInputMask | undefined;
 
+  /**
+   * When true (default), an empty input is auto-filled with today's date
+   * (or current time) on init and on focus. Set to false inside components
+   * that provide their own initial value (e.g. IDatepicker).
+   */
+  @Input() autoDefault = true;
+
   /** Whether initial default (today / now) has been applied */
   private _defaultApplied = false;
   private elRef: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
@@ -254,6 +261,7 @@ export class IInputMaskDirective implements OnInit, OnChanges {
 
   private applyInitialDefaultIfNeeded(): void {
     if (!this.mask) return;
+    if (!this.autoDefault) return;
 
     const el = this.nativeInput;
     if (!el) return;
@@ -1554,6 +1562,7 @@ export class IInputMaskDirective implements OnInit, OnChanges {
   @HostListener('focus')
   onFocus(): void {
     if (!this.mask) return;
+    if (!this.autoDefault) return;
 
     const el = this.nativeInput;
     if (!el) return;
