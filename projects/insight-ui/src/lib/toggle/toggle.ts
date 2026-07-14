@@ -28,6 +28,9 @@ const INTERACTIVE_SELECTOR_PARTS = [
 
 const INTERACTIVE_SELECTOR = INTERACTIVE_SELECTOR_PARTS.join(',');
 
+/** Available sizes for i-toggle. Maps to --i-size-* design tokens (default: md = 34px). */
+export type IToggleSize = 'xs' | 'sm' | 'md' | 'lg';
+
 @Component({
   selector: 'i-toggle',
   standalone: true,
@@ -63,6 +66,9 @@ export class IToggle implements ControlValueAccessor {
   /** put label left or right */
   @Input() labelPosition: 'left' | 'right' = 'right';
 
+  /** Toggle size. Maps to --i-size-* design tokens. Default 'md' (34px). */
+  @Input() size: IToggleSize = 'md';
+
   checked = false;
 
   @Output() readonly onChange = new EventEmitter<boolean>();
@@ -85,6 +91,25 @@ export class IToggle implements ControlValueAccessor {
   @HostBinding('class.i-toggle__label-left')
   get labelLeftClass(): boolean {
     return this.labelPosition === 'left';
+  }
+
+  // ── Size: override CSS custom properties via inline style ──────────
+  // When size is 'md' (default), return null so the CSS defaults apply.
+  // Otherwise, map to the matching --i-size-* design token.
+
+  @HostBinding('style.--i-toggle-height')
+  get toggleHeight(): string | null {
+    return this.size !== 'md' ? `var(--i-size-${this.size})` : null;
+  }
+
+  @HostBinding('style.--i-toggle-width')
+  get toggleWidth(): string | null {
+    return this.size !== 'md' ? `calc(var(--i-size-${this.size}) * 1.75)` : null;
+  }
+
+  @HostBinding('style.--i-toggle-handle-size')
+  get toggleHandleSize(): string | null {
+    return this.size !== 'md' ? `calc(var(--i-size-${this.size}) - (var(--i-toggle-padding) * 2))` : null;
   }
 
   private cvaOnChange: (v: boolean) => void = () => {
