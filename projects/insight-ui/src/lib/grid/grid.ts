@@ -2147,7 +2147,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     if (px !== null) {
       return `0 0 ${px}px`;
     }
-    return '1 1 0';
+    return '1 1 0%';
   }
 
   setColumnWidth(column: IGridColumnLike<any>, width: number): void {
