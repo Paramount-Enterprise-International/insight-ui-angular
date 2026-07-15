@@ -298,6 +298,12 @@ type IInputMask = {
 };
 declare class IInputMaskDirective implements OnInit, OnChanges {
     mask: IInputMask | undefined;
+    /**
+     * When true (default), an empty input is auto-filled with today's date
+     * (or current time) on init and on focus. Set to false inside components
+     * that provide their own initial value (e.g. IDatepicker).
+     */
+    autoDefault: boolean;
     /** Whether initial default (today / now) has been applied */
     private _defaultApplied;
     private elRef;
@@ -374,7 +380,7 @@ declare class IInputMaskDirective implements OnInit, OnChanges {
     onKeydown(event: KeyboardEvent): void;
     onPaste(event: ClipboardEvent): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IInputMaskDirective, never>;
-    static ɵdir: i0.ɵɵDirectiveDeclaration<IInputMaskDirective, "[iInputMask]", never, { "mask": { "alias": "iInputMask"; "required": false; }; }, {}, never, never, true, never>;
+    static ɵdir: i0.ɵɵDirectiveDeclaration<IInputMaskDirective, "[iInputMask]", never, { "mask": { "alias": "iInputMask"; "required": false; }; "autoDefault": { "alias": "autoDefault"; "required": false; }; }, {}, never, never, true, never>;
 }
 declare class IInput implements ControlValueAccessor {
     type: string;
@@ -638,6 +644,7 @@ declare class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     set value(v: Date | string | null);
     get value(): Date | string | null;
     readonly onChanged: EventEmitter<Date | null>;
+    get disabledHostClass(): boolean;
     private panelRef?;
     private portalHomeRef?;
     private _modelValue;
@@ -846,18 +853,30 @@ type IDialogActionTypes = {
 type IDialogActionType = IDialogActionTypes['type'];
 type IDialogActionCancel = {
     type: 'cancel';
+    disabled?: boolean;
+    loading?: boolean;
+    buttonType?: IButtonType;
     className?: string;
 };
 type IDialogActionSave = {
     type: 'save';
+    disabled?: boolean;
+    loading?: boolean;
+    buttonType?: IButtonType;
     className?: string;
 };
 type IDialogActionOK = {
     type: 'ok';
+    disabled?: boolean;
+    loading?: boolean;
+    buttonType?: IButtonType;
     className?: string;
 };
 type IDialogActionConfirm = {
     type: 'confirm';
+    disabled?: boolean;
+    loading?: boolean;
+    buttonType?: IButtonType;
     className?: string;
 };
 type IDialogActionCustom = {
@@ -865,6 +884,9 @@ type IDialogActionCustom = {
     label: string;
     variant?: IButtonVariant;
     icon?: IIconName | string;
+    disabled?: boolean;
+    loading?: boolean;
+    buttonType?: IButtonType;
     className?: string;
 };
 type IDialogActionObject = IDialogActionCancel | IDialogActionSave | IDialogActionOK | IDialogActionConfirm | IDialogActionCustom;
@@ -1009,6 +1031,33 @@ type IGridPaginatorInput = false | {
     pageSize?: number;
     pageSizeOptions?: number[];
 };
+/**
+ * Configuration for server-side data sourcing.
+ * When provided on IGridDataSource, local sort/filter/paginate are skipped.
+ * Data must be pushed via setData() after each server response.
+ */
+type IGridServerSideConfig<T = any> = {
+    /** Total row count on the server (drives paginator length). */
+    totalRowCount: number;
+    /**
+     * Emitted when the user changes sort via column header click.
+     * The consumer must fetch from the server and call setData().
+     */
+    onSortChange?: (sort: ISortState[]) => void;
+    /**
+     * Emitted when the user changes page or page size via the paginator.
+     * The consumer must fetch from the server and call setData().
+     */
+    onPageChange?: (page: {
+        pageIndex: number;
+        pageSize: number;
+    }) => void;
+    /**
+     * Emitted when the filter value changes (if filter is used).
+     * The consumer must fetch from the server and call setData().
+     */
+    onFilterChange?: (filter: string) => void;
+};
 type IGridDataSourceConfig<T = any> = {
     sort?: ISortConfig;
     filter?: IGridFilter;
@@ -1019,6 +1068,12 @@ type IGridDataSourceConfig<T = any> = {
      * - { pageIndex?, pageSize?, pageSizeOptions? } → enabled + overridden
      */
     paginator?: IGridPaginatorInput;
+    /**
+     * serverSide:
+     * - undefined/missing → client-side mode (local sort/filter/paginate)
+     * - IGridServerSideConfig → server-side mode (delegates to callbacks)
+     */
+    serverSide?: IGridServerSideConfig<T>;
 };
 type IGridSelectionMode = false | 'single' | 'multiple';
 type IGridSelectionChange<T = any> = {
@@ -1059,7 +1114,10 @@ declare class IGridDataSource<T = any> {
     private _pageSizeOptions;
     private _externalDataSub?;
     private _dataSource$?;
+    private _serverSide;
     constructor(initialData?: T[], config?: IGridDataSourceConfig);
+    get serverSide(): IGridServerSideConfig<T> | null;
+    set serverSide(config: IGridServerSideConfig<T> | null);
     private _applyPaginatorConfig;
     get paginatorEnabled(): boolean;
     get pageIndex(): number;
@@ -1075,6 +1133,20 @@ declare class IGridDataSource<T = any> {
     } | null;
     get data(): T[];
     set data(value: T[]);
+    /**
+     * Push server-fetched data into the data source.
+     * In server mode this is the primary way to update the grid after a fetch.
+     *
+     * @param rows   — the page of rows returned by the server
+     * @param options.total      — total row count across all pages (updates paginator length)
+     * @param options.pageIndex  — current page index (syncs paginator indicator)
+     * @param options.pageSize   — current page size (syncs paginator indicator)
+     */
+    setData(rows: T[], options?: {
+        total?: number;
+        pageIndex?: number;
+        pageSize?: number;
+    }): void;
     /**
      * Observable-based data source.
      * Example:
@@ -1260,6 +1332,15 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     treeInitialExpandLevel: number | null;
     /** Show auto number column (disabled by default in tree) */
     showNumberColumn: boolean;
+    /**
+     * Sort mode:
+     * - 'multi' (default): clicking columns accumulates sort states.
+     *   Click A → A↑, click B → A↑ B↑.
+     * - 'single': clicking a column replaces all previous sorts.
+     *   Click A → A↑, click B → B↑ (A cleared).
+     * Works with both client-side and server-side data sources.
+     */
+    sortMode: 'multi' | 'single';
     get showNumberColumnEffective(): boolean;
     /** Emits whenever selection changes */
     readonly onSelectionChange: EventEmitter<IGridSelectionChange<T>>;
@@ -1271,6 +1352,18 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
         expanded: boolean;
     }>;
     readonly onExpandedRowsChange: EventEmitter<T[]>;
+    /**
+     * Server-side delegation events.
+     * These are alternative wiring: instead of configuring callbacks in IGridServerSideConfig,
+     * consumers can bind to these outputs directly on <i-grid>.
+     * The grid wires these to the dataSource.serverSide config automatically in ngAfterContentInit.
+     */
+    readonly onServerSortChange: EventEmitter<ISortState[]>;
+    readonly onServerPageChange: EventEmitter<{
+        pageIndex: number;
+        pageSize: number;
+    }>;
+    readonly onServerFilterChange: EventEmitter<string>;
     columnDefs: QueryList<IGridColumn>;
     customColumnDefs: QueryList<IGridCustomColumn>;
     columnGroupDefs: QueryList<IGridColumnGroup>;
@@ -1382,7 +1475,7 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     getRowTrack(row: T, index: number): any;
     private _hasExplicitColumns;
     static ɵfac: i0.ɵɵFactoryDeclaration<IGrid<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IGrid<any>, "i-grid", ["iGrid"], { "dataSource": { "alias": "dataSource"; "required": false; }; "selectionMode": { "alias": "selectionMode"; "required": false; }; "tree": { "alias": "tree"; "required": false; }; "treeIndent": { "alias": "treeIndent"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "treeColumn": { "alias": "treeColumn"; "required": false; }; "treeInitialExpandLevel": { "alias": "treeInitialExpandLevel"; "required": false; }; "showNumberColumn": { "alias": "showNumberColumn"; "required": false; }; }, { "onSelectionChange": "onSelectionChange"; "onRowClick": "onRowClick"; "onRowExpandChange": "onRowExpandChange"; "onExpandedRowsChange": "onExpandedRowsChange"; }, ["expandableRowDef", "columnDefs", "customColumnDefs", "columnGroupDefs"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IGrid<any>, "i-grid", ["iGrid"], { "dataSource": { "alias": "dataSource"; "required": false; }; "selectionMode": { "alias": "selectionMode"; "required": false; }; "tree": { "alias": "tree"; "required": false; }; "treeIndent": { "alias": "treeIndent"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "treeColumn": { "alias": "treeColumn"; "required": false; }; "treeInitialExpandLevel": { "alias": "treeInitialExpandLevel"; "required": false; }; "showNumberColumn": { "alias": "showNumberColumn"; "required": false; }; "sortMode": { "alias": "sortMode"; "required": false; }; }, { "onSelectionChange": "onSelectionChange"; "onRowClick": "onRowClick"; "onRowExpandChange": "onRowExpandChange"; "onExpandedRowsChange": "onExpandedRowsChange"; "onServerSortChange": "onServerSortChange"; "onServerPageChange": "onServerPageChange"; "onServerFilterChange": "onServerFilterChange"; }, ["expandableRowDef", "columnDefs", "customColumnDefs", "columnGroupDefs"], never, true, never>;
     static ngAcceptInputType_showNumberColumn: unknown;
 }
 declare const I_GRID_DECLARATIONS: (typeof IGridExpandableRow)[];
@@ -1756,10 +1849,14 @@ declare class IFCTextArea implements ControlValueAccessor, OnDestroy {
     static ɵcmp: i0.ɵɵComponentDeclaration<IFCTextArea, "i-fc-textarea", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "readonly": { "alias": "readonly"; "required": false; }; "rows": { "alias": "rows"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, {}, never, never, true, never>;
 }
 
+/** Available sizes for i-toggle. Maps to --i-size-* design tokens (default: md = 34px). */
+type IToggleSize = 'xs' | 'sm' | 'md' | 'lg';
 declare class IToggle implements ControlValueAccessor {
     disabled: boolean;
     /** put label left or right */
     labelPosition: 'left' | 'right';
+    /** Toggle size. Maps to --i-size-* design tokens. Default 'md' (34px). */
+    size: IToggleSize;
     checked: boolean;
     readonly onChange: EventEmitter<boolean>;
     readonly onTouched: EventEmitter<void>;
@@ -1768,6 +1865,9 @@ declare class IToggle implements ControlValueAccessor {
     get activeClass(): boolean;
     get disabledClass(): boolean;
     get labelLeftClass(): boolean;
+    get toggleHeight(): string | null;
+    get toggleWidth(): string | null;
+    get toggleHandleSize(): string | null;
     private cvaOnChange;
     private cvaOnTouched;
     writeValue(value: boolean | null): void;
@@ -1779,14 +1879,51 @@ declare class IToggle implements ControlValueAccessor {
     private isInteractiveElement;
     onHostClick(e: MouseEvent): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IToggle, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IToggle, "i-toggle", never, { "disabled": { "alias": "disabled"; "required": false; }; "labelPosition": { "alias": "labelPosition"; "required": false; }; }, { "onChange": "onChange"; "onTouched": "onTouched"; }, never, ["*"], true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IToggle, "i-toggle", never, { "disabled": { "alias": "disabled"; "required": false; }; "labelPosition": { "alias": "labelPosition"; "required": false; }; "size": { "alias": "size"; "required": false; }; }, { "onChange": "onChange"; "onTouched": "onTouched"; }, never, ["*"], true, never>;
+}
+
+declare class IAvatar {
+    /** Image URL. When empty or on error, falls back to fallbackSrc or icon. */
+    src?: string | null;
+    /** Alt text for the image. */
+    alt?: string;
+    /**
+     * Container size.
+     * - `number` → treated as pixels (e.g. `200` = 200px)
+     * - `IIconSize` string → uses a preset mapping (e.g. `'lg'` = 64px)
+     * @default 40
+     */
+    size: number | IIconSize;
+    /**
+     * Container shape.
+     * @default 'circle'
+     */
+    shape?: 'circle' | 'square' | 'rounded-square';
+    /** Fallback image URL. Used when `src` fails to load. If not set (or also fails), shows the user icon. */
+    fallbackSrc?: string | null;
+    /** Additional CSS classes to inject onto the host element (e.g. `"border-2 border-primary"`). */
+    className?: string;
+    /** Whether the primary `src` image failed to load. */
+    hasError: boolean;
+    /** Whether the `fallbackSrc` image also failed to load. */
+    hasFallbackError: boolean;
+    readonly baseClass = true;
+    get attrShape(): string;
+    get resolvedSizePx(): number;
+    get hostClass(): string | undefined;
+    /** Icon size for the fallback `<i-icon>`. */
+    get resolvedIconSize(): IIconSize;
+    onImgError(): void;
+    onFallbackError(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IAvatar, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IAvatar, "i-avatar", never, { "src": { "alias": "src"; "required": false; }; "alt": { "alias": "alt"; "required": false; }; "size": { "alias": "size"; "required": false; }; "shape": { "alias": "shape"; "required": false; }; "fallbackSrc": { "alias": "fallbackSrc"; "required": false; }; "className": { "alias": "className"; "required": false; }; }, {}, never, never, true, never>;
 }
 
 declare class IUI {
     static ɵfac: i0.ɵɵFactoryDeclaration<IUI, never>;
-    static ɵmod: i0.ɵɵNgModuleDeclaration<IUI, never, [typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IFCDatepicker, typeof IDialogModule, typeof IGridModule, typeof IHContent, typeof IHSidebar, typeof IIcon, typeof IInputModule, typeof ILoading, typeof ISectionModule, typeof ISelect, typeof IFCSelect, typeof ITextArea, typeof IFCTextArea, typeof IToggle, typeof IPill], [typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IFCDatepicker, typeof IDialogModule, typeof IGridModule, typeof IHContent, typeof IHSidebar, typeof IIcon, typeof IInputModule, typeof ILoading, typeof ISectionModule, typeof ISelect, typeof IFCSelect, typeof ITextArea, typeof IFCTextArea, typeof IToggle, typeof IPill]>;
+    static ɵmod: i0.ɵɵNgModuleDeclaration<IUI, never, [typeof IAvatar, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IFCDatepicker, typeof IDialogModule, typeof IGridModule, typeof IHContent, typeof IHSidebar, typeof IIcon, typeof IInputModule, typeof ILoading, typeof ISectionModule, typeof ISelect, typeof IFCSelect, typeof ITextArea, typeof IFCTextArea, typeof IToggle, typeof IPill], [typeof IAvatar, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IFCDatepicker, typeof IDialogModule, typeof IGridModule, typeof IHContent, typeof IHSidebar, typeof IIcon, typeof IInputModule, typeof ILoading, typeof ISectionModule, typeof ISelect, typeof IFCSelect, typeof ITextArea, typeof IFCTextArea, typeof IToggle, typeof IPill]>;
     static ɵinj: i0.ɵɵInjectorDeclaration<IUI>;
 }
 
-export { IAlert, IAlertService, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuRoute, isControlRequired, isHttpRoute, isNewTabMenu, isReloadMenu, isSpaMenu, resolveControlErrorMessage };
-export type { IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IPaginatorState, IPillSize, IPillVariant, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IUISize, IUIVariant, IUser };
+export { IAlert, IAlertService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuRoute, isControlRequired, isHttpRoute, isNewTabMenu, isReloadMenu, isSpaMenu, resolveControlErrorMessage };
+export type { IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IPaginatorState, IPillSize, IPillVariant, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser };
