@@ -18,7 +18,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { BehaviorSubject, map, Observable, Subject } from 'rxjs';
-import { IButton, IButtonVariant } from '../button/button';
+import { IButton, IButtonType, IButtonVariant } from '../button/button';
 import { IIcon, IIconName } from '../icon/icon';
 import {
   FormBuilder,
@@ -249,21 +249,33 @@ export type IDialogActionType = IDialogActionTypes['type'];
 
 export type IDialogActionCancel = {
   type: 'cancel';
+  disabled?: boolean;
+  loading?: boolean;
+  buttonType?: IButtonType;
   className?: string;
 };
 
 export type IDialogActionSave = {
   type: 'save';
+  disabled?: boolean;
+  loading?: boolean;
+  buttonType?: IButtonType;
   className?: string;
 };
 
 export type IDialogActionOK = {
   type: 'ok';
+  disabled?: boolean;
+  loading?: boolean;
+  buttonType?: IButtonType;
   className?: string;
 };
 
 export type IDialogActionConfirm = {
   type: 'confirm';
+  disabled?: boolean;
+  loading?: boolean;
+  buttonType?: IButtonType;
   className?: string;
 };
 
@@ -272,6 +284,9 @@ export type IDialogActionCustom = {
   label: string;
   variant?: IButtonVariant;
   icon?: IIconName | string;
+  disabled?: boolean;
+  loading?: boolean;
+  buttonType?: IButtonType;
   className?: string;
   // onClick?: () => void; // not being used anywhere
 };
@@ -303,6 +318,9 @@ export type IDialogAction = IDialogActionType | IDialogActionObject;
               [icon]="a.icon"
               [ngClass]="a.className"
               [variant]="a.variant || 'primary'"
+              [disabled]="a.disabled"
+              [loading]="a.loading"
+              [type]="a.buttonType || 'button'"
               (onClick)="onCustomActionClick(a)"
               >{{ a.label }}</i-button
             >
@@ -318,6 +336,9 @@ export type IDialogAction = IDialogActionType | IDialogActionObject;
             icon="check"
             variant="primary"
             [ngClass]="okAction.className"
+            [disabled]="okAction.disabled"
+            [loading]="okAction.loading"
+            [type]="okAction.buttonType || 'button'"
             (onClick)="onOkClick()"
             >OK</i-button
           >
@@ -327,6 +348,9 @@ export type IDialogAction = IDialogActionType | IDialogActionObject;
             icon="save"
             variant="primary"
             [ngClass]="confirmAction.className"
+            [disabled]="confirmAction.disabled"
+            [loading]="confirmAction.loading"
+            [type]="confirmAction.buttonType || 'button'"
             (onClick)="onConfirmClick()"
             >Confirm</i-button
           >
@@ -336,12 +360,22 @@ export type IDialogAction = IDialogActionType | IDialogActionObject;
             icon="save"
             variant="primary"
             [ngClass]="saveAction.className"
+            [disabled]="saveAction.disabled"
+            [loading]="saveAction.loading"
+            [type]="saveAction.buttonType || 'button'"
             (onClick)="onSaveClick()"
             >Save</i-button
           >
         }
         @if (cancelAction) {
-          <i-button i-dialog-close icon="cancel" variant="danger" [ngClass]="cancelAction.className"
+          <i-button
+            i-dialog-close
+            icon="cancel"
+            variant="danger"
+            [ngClass]="cancelAction.className"
+            [disabled]="cancelAction.disabled"
+            [loading]="cancelAction.loading"
+            [type]="cancelAction.buttonType || 'button'"
             >Cancel</i-button
           >
         }

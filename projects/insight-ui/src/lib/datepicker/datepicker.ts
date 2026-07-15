@@ -20,6 +20,7 @@ import {
   ElementRef,
   EventEmitter,
   forwardRef,
+  HostBinding,
   HostListener,
   inject,
   Input,
@@ -38,12 +39,12 @@ import {
 } from '@angular/forms';
 import { IButton } from '../button/button';
 import { IInput, IInputAddonButton, IInputMaskDirective } from '../input/input';
-import { ISelect, ISelectChange } from '../select/select';
 import {
   IFormControlErrorMessage,
   isControlRequired,
   resolveControlErrorMessage,
 } from '../interfaces';
+import { ISelect, ISelectChange } from '../select/select';
 
 type IDatepickerDay = {
   date: Date;
@@ -75,6 +76,7 @@ const noop = (): void => {
   template: `
     <i-input
       [append]="appendAddon"
+      [autoDefault]="false"
       [iInputMask]="{ type: 'date', format: format }"
       [invalid]="invalid"
       [placeholder]="placeholder"
@@ -212,6 +214,11 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
 
   @Output() readonly onChanged = new EventEmitter<Date | null>();
 
+  @HostBinding('class.i-datepicker--disabled')
+  get disabledHostClass(): boolean {
+    return this.disabled;
+  }
+
   @ViewChild('panel', { read: ElementRef }) private panelRef?: ElementRef<HTMLElement>;
   @ViewChild('portalHome', { read: ElementRef }) private portalHomeRef?: ElementRef<HTMLElement>;
 
@@ -271,11 +278,11 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   private listeningGlobal = false;
 
   ngOnInit(): void {
+    // Initialize calendar view to today WITHOUT setting a model value.
+    // The input stays empty until a date is picked or written via form control.
+    // Fixes: optional/null date fields no longer auto-fill with today.
     if (!this._modelValue && !this._displayText) {
-      const today = this.startOfDay(new Date());
-      this._modelValue = today;
-      this._displayText = this.formatDate(today);
-      this.updateView(today);
+      this.updateView(this.startOfDay(new Date()));
     }
   }
 
@@ -1014,7 +1021,7 @@ export class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDes
   private onChange: (v: Date | null) => void = noop;
   private onTouched: () => void = noop;
 
-  readonly ngControl = inject(NgControl, { self: true, optional: true });
+  readonly ngControl = inject(NgControl, { optional: true });
   private readonly formDir = inject(FormGroupDirective, { optional: true });
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly hostEl = inject(ElementRef<HTMLElement>);
@@ -1156,7 +1163,12 @@ export class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDes
     const c = this.ngControl?.control;
     if (!c) return false;
 
-    if (this.formDir) return c.invalid && !!this.formDir.submitted;
+    // Show error when: submitted, OR user has interacted (touched/dirty).
+    // Previously only checked submitted when formDir is present, so
+    // markAllAsTouched() had no effect on error visibility.
+    if (this.formDir) {
+      return c.invalid && (this.formDir.submitted || c.touched || c.dirty);
+    }
     return c.invalid && (c.dirty || c.touched);
   }
 
