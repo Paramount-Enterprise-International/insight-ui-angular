@@ -7,7 +7,7 @@
  * Falls back to a FontAwesome user icon when no image is available.
  */
 
-import { ChangeDetectionStrategy, Component, HostBinding, Input } from '@angular/core';
+import { Component, HostBinding, Input } from '@angular/core';
 
 import { IIcon, type IIconSize } from '../icon';
 
@@ -45,7 +45,6 @@ function resolveIconSizeFromPx(px: number): IIconSize {
 @Component({
   selector: 'i-avatar',
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IIcon],
   template: `
     <!-- Primary image -->
