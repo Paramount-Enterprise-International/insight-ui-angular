@@ -18,7 +18,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { BehaviorSubject, map, Observable, Subject } from 'rxjs';
-import { IButton, IButtonVariant } from '../button/button';
+import { IButton, IButtonType, IButtonVariant } from '../button/button';
 import { IIcon, IIconName } from '../icon/icon';
 import {
   FormBuilder,
@@ -249,21 +249,33 @@ export type IDialogActionType = IDialogActionTypes['type'];
 
 export type IDialogActionCancel = {
   type: 'cancel';
+  disabled?: boolean;
+  loading?: boolean;
+  buttonType?: IButtonType;
   className?: string;
 };
 
 export type IDialogActionSave = {
   type: 'save';
+  disabled?: boolean;
+  loading?: boolean;
+  buttonType?: IButtonType;
   className?: string;
 };
 
 export type IDialogActionOK = {
   type: 'ok';
+  disabled?: boolean;
+  loading?: boolean;
+  buttonType?: IButtonType;
   className?: string;
 };
 
 export type IDialogActionConfirm = {
   type: 'confirm';
+  disabled?: boolean;
+  loading?: boolean;
+  buttonType?: IButtonType;
   className?: string;
 };
 
@@ -272,6 +284,9 @@ export type IDialogActionCustom = {
   label: string;
   variant?: IButtonVariant;
   icon?: IIconName | string;
+  disabled?: boolean;
+  loading?: boolean;
+  buttonType?: IButtonType;
   className?: string;
   // onClick?: () => void; // not being used anywhere
 };
@@ -300,8 +315,11 @@ export type IDialogAction = IDialogActionType | IDialogActionObject;
         @if (customActions.length > 0) {
           @for (a of customActions; track $index) {
             <i-button
+              [disabled]="a.disabled"
               [icon]="a.icon"
+              [loading]="a.loading"
               [ngClass]="a.className"
+              [type]="a.buttonType || 'button'"
               [variant]="a.variant || 'primary'"
               (onClick)="onCustomActionClick(a)"
               >{{ a.label }}</i-button
@@ -317,7 +335,10 @@ export type IDialogAction = IDialogActionType | IDialogActionObject;
           <i-button
             icon="check"
             variant="primary"
+            [disabled]="okAction.disabled"
+            [loading]="okAction.loading"
             [ngClass]="okAction.className"
+            [type]="okAction.buttonType || 'button'"
             (onClick)="onOkClick()"
             >OK</i-button
           >
@@ -326,7 +347,10 @@ export type IDialogAction = IDialogActionType | IDialogActionObject;
           <i-button
             icon="save"
             variant="primary"
+            [disabled]="confirmAction.disabled"
+            [loading]="confirmAction.loading"
             [ngClass]="confirmAction.className"
+            [type]="confirmAction.buttonType || 'button'"
             (onClick)="onConfirmClick()"
             >Confirm</i-button
           >
@@ -335,13 +359,23 @@ export type IDialogAction = IDialogActionType | IDialogActionObject;
           <i-button
             icon="save"
             variant="primary"
+            [disabled]="saveAction.disabled"
+            [loading]="saveAction.loading"
             [ngClass]="saveAction.className"
+            [type]="saveAction.buttonType || 'button'"
             (onClick)="onSaveClick()"
             >Save</i-button
           >
         }
         @if (cancelAction) {
-          <i-button i-dialog-close icon="cancel" variant="danger" [ngClass]="cancelAction.className"
+          <i-button
+            i-dialog-close
+            icon="cancel"
+            variant="danger"
+            [disabled]="cancelAction.disabled"
+            [loading]="cancelAction.loading"
+            [ngClass]="cancelAction.className"
+            [type]="cancelAction.buttonType || 'button'"
             >Cancel</i-button
           >
         }
@@ -378,8 +412,7 @@ export class IDialog {
 
   get confirmAction(): IDialogActionConfirm | undefined {
     return this.normalizedActions.find((a) => a.type === 'confirm') as
-      | IDialogActionConfirm
-      | undefined;
+      IDialogActionConfirm | undefined;
   }
 
   get customActions(): IDialogActionCustom[] {
@@ -388,8 +421,7 @@ export class IDialog {
 
   get cancelAction(): IDialogActionCancel | undefined {
     return this.normalizedActions.find((a) => a.type === 'cancel') as
-      | IDialogActionCancel
-      | undefined;
+      IDialogActionCancel | undefined;
   }
 
   onConfirmClick(): void {

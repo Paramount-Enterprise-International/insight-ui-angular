@@ -1,7 +1,23 @@
 /* grid.ts */
 /**
  * IGrid
- * Version: 1.25.0
+ * Version: 1.27.0
+ *
+ * CHANGES (1.27.0):
+ * - Add sortMode input ('multi' | 'single', default 'multi'):
+ *   - 'multi': clicking columns accumulates sort states (existing behavior)
+ *   - 'single': clicking a column replaces all previous sorts
+ *   - Works with both client-side and server-side data sources
+ *
+ * CHANGES (1.26.0):
+ * - Add native server-side data sourcing support:
+ *   - New IGridServerSideConfig<T> type for configuring server-side sort/page/filter delegation
+ *   - IGridDataSource now accepts optional `serverSide` config in constructor
+ *   - setData() convenience method for pushing server results
+ *   - Server mode skips local sort/filter/paginate — delegates to callbacks
+ *   - disconnect() preserves BehaviorSubject lifecycle in server mode
+ * - Add <i-grid> outputs: onServerSortChange, onServerPageChange, onServerFilterChange
+ *   (alternative to IGridServerSideConfig callbacks)
  *
  * CHANGES (1.25.0):
  * - Standardize events to on* prefix:
@@ -88,6 +104,38 @@ export type IGridPaginatorInput =
       pageSizeOptions?: number[];
     };
 
+/* ----------------------------------------------------
+ * SERVER-SIDE TYPES
+ * ---------------------------------------------------- */
+
+/**
+ * Configuration for server-side data sourcing.
+ * When provided on IGridDataSource, local sort/filter/paginate are skipped.
+ * Data must be pushed via setData() after each server response.
+ */
+export type IGridServerSideConfig<T = any> = {
+  /** Total row count on the server (drives paginator length). */
+  totalRowCount: number;
+
+  /**
+   * Emitted when the user changes sort via column header click.
+   * The consumer must fetch from the server and call setData().
+   */
+  onSortChange?: (sort: ISortState[]) => void;
+
+  /**
+   * Emitted when the user changes page or page size via the paginator.
+   * The consumer must fetch from the server and call setData().
+   */
+  onPageChange?: (page: { pageIndex: number; pageSize: number }) => void;
+
+  /**
+   * Emitted when the filter value changes (if filter is used).
+   * The consumer must fetch from the server and call setData().
+   */
+  onFilterChange?: (filter: string) => void;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type IGridDataSourceConfig<T = any> = {
   sort?: ISortConfig;
@@ -100,6 +148,13 @@ export type IGridDataSourceConfig<T = any> = {
    * - { pageIndex?, pageSize?, pageSizeOptions? } → enabled + overridden
    */
   paginator?: IGridPaginatorInput;
+
+  /**
+   * serverSide:
+   * - undefined/missing → client-side mode (local sort/filter/paginate)
+   * - IGridServerSideConfig → server-side mode (delegates to callbacks)
+   */
+  serverSide?: IGridServerSideConfig<T>;
 };
 
 /* ----------------------------------------------------
@@ -178,8 +233,16 @@ export class IGridDataSource<T = any> {
 
   private _dataSource$?: Observable<T[]>;
 
+  // server-side mode
+  private _serverSide: IGridServerSideConfig<T> | null = null;
+
   constructor(initialData: T[] = [], config: IGridDataSourceConfig = {}) {
     this._rawData = initialData || [];
+
+    // server-side config
+    if (config.serverSide) {
+      this._serverSide = config.serverSide;
+    }
 
     // filter (uses setter to normalize)
     if (config.filter !== null) {
@@ -193,6 +256,16 @@ export class IGridDataSource<T = any> {
     this._applyPaginatorConfig(config.paginator);
 
     this._update();
+  }
+
+  /* -------- server-side config -------- */
+
+  get serverSide(): IGridServerSideConfig<T> | null {
+    return this._serverSide;
+  }
+
+  set serverSide(config: IGridServerSideConfig<T> | null) {
+    this._serverSide = config;
   }
 
   /* -------- paginator config logic -------- */
@@ -244,6 +317,13 @@ export class IGridDataSource<T = any> {
 
     this._pageIndex = state.pageIndex;
     this._pageSize = state.pageSize;
+
+    if (this._serverSide?.onPageChange) {
+      // Server handles pagination: delegate to callback, skip local slice.
+      this._serverSide.onPageChange({ pageIndex: state.pageIndex, pageSize: state.pageSize });
+      return;
+    }
+
     this._update();
   }
 
@@ -262,6 +342,36 @@ export class IGridDataSource<T = any> {
 
   set data(value: T[]) {
     this._rawData = value || [];
+    this._update();
+  }
+
+  /**
+   * Push server-fetched data into the data source.
+   * In server mode this is the primary way to update the grid after a fetch.
+   *
+   * @param rows   — the page of rows returned by the server
+   * @param options.total      — total row count across all pages (updates paginator length)
+   * @param options.pageIndex  — current page index (syncs paginator indicator)
+   * @param options.pageSize   — current page size (syncs paginator indicator)
+   */
+  setData(
+    rows: T[],
+    options?: { total?: number; pageIndex?: number; pageSize?: number },
+  ): void {
+    this._rawData = rows || [];
+
+    if (this._serverSide) {
+      if (options?.total !== undefined) {
+        this._serverSide.totalRowCount = options.total;
+      }
+      if (options?.pageIndex !== undefined) {
+        this._pageIndex = options.pageIndex;
+      }
+      if (options?.pageSize !== undefined) {
+        this._pageSize = options.pageSize;
+      }
+    }
+
     this._update();
   }
 
@@ -302,6 +412,12 @@ export class IGridDataSource<T = any> {
       this._filter = '';
       this._recursive = false;
       this._childrenKey = 'children';
+
+      if (this._serverSide?.onFilterChange) {
+        this._serverSide.onFilterChange('');
+        return;
+      }
+
       this._update();
       return;
     }
@@ -310,6 +426,12 @@ export class IGridDataSource<T = any> {
       this._filter = value.toLowerCase().trim();
       this._recursive = false;
       this._childrenKey = 'children';
+
+      if (this._serverSide?.onFilterChange) {
+        this._serverSide.onFilterChange(this._filter);
+        return;
+      }
+
       this._update();
       return;
     }
@@ -318,6 +440,11 @@ export class IGridDataSource<T = any> {
     this._filter = (value.text ?? '').toLowerCase().trim();
     this._recursive = value.recursive === true;
     this._childrenKey = (value.key || 'children').trim() || 'children';
+
+    if (this._serverSide?.onFilterChange) {
+      this._serverSide.onFilterChange(this._filter);
+      return;
+    }
 
     this._update();
   }
@@ -336,10 +463,22 @@ export class IGridDataSource<T = any> {
 
   set sort(value: ISortConfig) {
     this._sort = this._normalizeSort(value);
+
+    if (this._serverSide?.onSortChange) {
+      // Server handles sort: delegate to callback, skip local sort.
+      // The component will fetch from the server and push data via data setter or setData().
+      this._serverSide.onSortChange(this._sort ?? []);
+      return;
+    }
+
     this._update();
   }
 
   get length(): number {
+    // Server handles pagination → return server total
+    if (this._serverSide?.onPageChange) {
+      return this._serverSide.totalRowCount;
+    }
     return this._rawData.length;
   }
 
@@ -367,6 +506,12 @@ export class IGridDataSource<T = any> {
     this._externalDataSub?.unsubscribe();
     this._externalDataSub = undefined;
     this._dataSource$ = undefined;
+
+    // In server mode, preserve the BehaviorSubject so the grid can reconnect
+    // after lifecycle toggles (e.g. @if (loading) destroying <i-grid>).
+    if (this._serverSide) {
+      return;
+    }
 
     this._renderedData$.complete();
   }
@@ -434,9 +579,10 @@ export class IGridDataSource<T = any> {
 
   private _update(): void {
     let data: T[] = [...this._rawData];
+    const ss = this._serverSide;
 
-    // FILTER
-    if (this._filter) {
+    // FILTER — skip if server handles filtering
+    if (!ss?.onFilterChange && this._filter) {
       const f = this._filter;
 
       if (this._recursive) {
@@ -446,8 +592,8 @@ export class IGridDataSource<T = any> {
       }
     }
 
-    // SORT (multi-column)
-    if (this._sort && this._sort.length > 0) {
+    // SORT — skip if server handles sorting
+    if (!ss?.onSortChange && this._sort && this._sort.length > 0) {
       const sorts = [...this._sort];
 
       data.sort((a: T, b: T) => {
@@ -480,8 +626,8 @@ export class IGridDataSource<T = any> {
       });
     }
 
-    // PAGINATION
-    if (this._paginatorEnabled) {
+    // PAGINATION — skip if server handles pagination
+    if (this._paginatorEnabled && !ss?.onPageChange) {
       const start = this._pageIndex * this._pageSize;
       data = data.slice(start, start + this._pageSize);
     }
@@ -1339,6 +1485,16 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   /** Show auto number column (disabled by default in tree) */
   @Input({ transform: booleanAttribute }) showNumberColumn = true;
 
+  /**
+   * Sort mode:
+   * - 'multi' (default): clicking columns accumulates sort states.
+   *   Click A → A↑, click B → A↑ B↑.
+   * - 'single': clicking a column replaces all previous sorts.
+   *   Click A → A↑, click B → B↑ (A cleared).
+   * Works with both client-side and server-side data sources.
+   */
+  @Input() sortMode: 'multi' | 'single' = 'multi';
+
   get showNumberColumnEffective(): boolean {
     if (this.treeEnabled) {
       return false;
@@ -1355,6 +1511,19 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   /** Expand events */
   @Output() readonly onRowExpandChange = new EventEmitter<{ row: T; expanded: boolean }>();
   @Output() readonly onExpandedRowsChange = new EventEmitter<T[]>();
+
+  /**
+   * Server-side delegation events.
+   * These are alternative wiring: instead of configuring callbacks in IGridServerSideConfig,
+   * consumers can bind to these outputs directly on <i-grid>.
+   * The grid wires these to the dataSource.serverSide config automatically in ngAfterContentInit.
+   */
+  @Output() readonly onServerSortChange = new EventEmitter<ISortState[]>();
+  @Output() readonly onServerPageChange = new EventEmitter<{
+    pageIndex: number;
+    pageSize: number;
+  }>();
+  @Output() readonly onServerFilterChange = new EventEmitter<string>();
 
   @ContentChildren(IGridColumn)
   columnDefs!: QueryList<IGridColumn>;
@@ -2092,16 +2261,34 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
     const index = this.sortStates.findIndex((s) => s.active === columnId);
 
-    if (index === -1) {
-      this.sortStates.push({ active: columnId, direction: 'asc' });
-    } else {
-      const current = this.sortStates[index];
-      if (current.direction === 'asc') {
-        current.direction = 'desc';
-      } else if (current.direction === 'desc') {
-        this.sortStates.splice(index, 1);
+    if (this.sortMode === 'single') {
+      // Single-column mode: replace all sorts with just this column
+      if (index !== -1) {
+        const current = this.sortStates[index];
+        if (current.direction === 'asc') {
+          this.sortStates = [{ active: columnId, direction: 'desc' }];
+        } else if (current.direction === 'desc') {
+          // Last direction → clear sort entirely
+          this.sortStates = [];
+        } else {
+          this.sortStates = [{ active: columnId, direction: 'asc' }];
+        }
       } else {
-        current.direction = 'asc';
+        this.sortStates = [{ active: columnId, direction: 'asc' }];
+      }
+    } else {
+      // Multi-column mode (default): accumulate sort states
+      if (index === -1) {
+        this.sortStates.push({ active: columnId, direction: 'asc' });
+      } else {
+        const current = this.sortStates[index];
+        if (current.direction === 'asc') {
+          current.direction = 'desc';
+        } else if (current.direction === 'desc') {
+          this.sortStates.splice(index, 1);
+        } else {
+          current.direction = 'asc';
+        }
       }
     }
 
@@ -2115,6 +2302,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
     if (!this.sortStates.length) {
       this.dataSource.sort = null;
+      this.onServerSortChange.emit([]);
       return;
     }
 
@@ -2122,6 +2310,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       active: s.active,
       direction: s.direction,
     }));
+
+    // Also emit server-side output for template-bound consumers
+    this.onServerSortChange.emit([...this.sortStates]);
   }
 
   /* ------- column width / flex API ------- */
@@ -2147,7 +2338,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     if (px !== null) {
       return `0 0 ${px}px`;
     }
-    return '1 1 0';
+    return '1 1 0%';
   }
 
   setColumnWidth(column: IGridColumnLike<any>, width: number): void {

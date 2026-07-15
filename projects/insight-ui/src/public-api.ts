@@ -21,3 +21,4 @@ export * from './lib/select';
 export * from './lib/textarea';
 export * from './lib/toggle';
 export * from './lib/ui';
+export * from './lib/avatar';
