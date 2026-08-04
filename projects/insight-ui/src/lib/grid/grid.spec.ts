@@ -157,5 +157,36 @@ describe('IGrid — tree mode row click + conditional selection', () => {
 
     expect(host.grid.allVisibleSelected).toBe(true);
   });
+
+  it('setSelected selects selectable rows and ignores hidden/disabled rows', () => {
+    host.grid.setSelected([
+      host.data[0], // Root A — hidden (group) → ignored
+      host.data[0].children![0], // Child A.1 — selectable → selected
+      host.data[0].children![1], // Child A.2 — disabled → ignored
+    ]);
+    fixture.detectChanges();
+
+    const selected = host.grid.selectedRows;
+    expect(selected.length).toBe(1);
+    expect(selected[0].name).toBe('Child A.1');
+  });
+
+  it('setSelected ignores rows not present in the data source', () => {
+    host.grid.setSelected([{ id: 999, name: 'Ghost' }]);
+    fixture.detectChanges();
+
+    expect(host.grid.selectedRows.length).toBe(0);
+  });
+
+  it('setSelected replaces (not merges) an existing selection', () => {
+    host.grid.onRowSelectionToggle(host.data[0].children![0]); // Child A.1
+    fixture.detectChanges();
+
+    // Child A.2 is disabled → filtered out → selection should become empty.
+    host.grid.setSelected([host.data[0].children![1]]);
+    fixture.detectChanges();
+
+    expect(host.grid.selectedRows.length).toBe(0);
+  });
 });
 
