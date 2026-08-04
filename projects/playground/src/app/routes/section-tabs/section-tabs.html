@@ -1,0 +1,120 @@
+<i-section>
+  <i-section-header>
+    <h1>ISectionTabs</h1>
+  </i-section-header>
+
+  <!-- ─── 1. Exact declarative format (must keep working unchanged) ────────── -->
+  <i-section-body>
+    <h3 class="mb-md">Simple format (title tab + custom header/content tab)</h3>
+    <i-section-tabs (onSelectedIndexChange)="onLegacyChange($event)">
+      <i-section-tab title="Title goes here"> content goes here 1</i-section-tab>
+      <i-section-tab>
+        <i-section-tab-header>Header HTML goes here</i-section-tab-header>
+        <i-section-tab-content> content goes here 2</i-section-tab-content>
+      </i-section-tab>
+    </i-section-tabs>
+    <p class="text-sm text-subtle mt-xs">
+      Legacy onSelectedIndexChange emitted: {{ legacyOutputIndex }}
+    </p>
+  </i-section-body>
+
+  <!-- ─── 2. Badge ───────────────────────────────────────────────────────────── -->
+  <i-section-body>
+    <h3 class="mb-md">Badge</h3>
+    <i-section-tabs>
+      <i-section-tab badge="3" title="Inbox">Inbox content</i-section-tab>
+      <i-section-tab badge title="Alerts">Alerts content</i-section-tab>
+      <i-section-tab title="Archive">Archive content</i-section-tab>
+    </i-section-tabs>
+  </i-section-body>
+
+  <!-- ─── 3. Scrollable + chevronSize + many tabs ───────────────────────────── -->
+  <i-section-body>
+    <h3 class="mb-md">Scrollable (natural width + overflow chevrons)</h3>
+    <i-section-tabs chevronSize="md" scrollable>
+      @for (t of manyTabs; track t) {
+        <i-section-tab [title]="t">Content for {{ t }}</i-section-tab>
+      }
+    </i-section-tabs>
+  </i-section-body>
+
+  <!-- ─── 4. Sticky + stickyTopOffset ────────────────────────────────────────── -->
+  <i-section-body>
+    <h3 class="mb-md">Sticky header (scroll this box)</h3>
+    <div class="sticky-demo-scroll-area">
+      <i-section-tabs sticky stickyTopOffset="0px">
+        <i-section-tab title="Overview">
+          <p style="height: 500px">
+            Scroll down — the tab header stays stuck to the top of this box.
+          </p>
+        </i-section-tab>
+        <i-section-tab title="Details">Details content</i-section-tab>
+      </i-section-tabs>
+    </div>
+  </i-section-body>
+
+  <!-- ─── 5. headerClass / tabClass / tabMinHeight ──────────────────────────── -->
+  <i-section-body>
+    <h3 class="mb-md">headerClass / tabClass / tabMinHeight</h3>
+    <i-section-tabs
+      headerClass="text-lg"
+      tabClass="text-xl pt-2xl pb-lg px-2xl"
+      tabMinHeight="64px"
+    >
+      <i-section-tab title="Large Tab A">Content A</i-section-tab>
+      <i-section-tab title="Large Tab B">Content B</i-section-tab>
+    </i-section-tabs>
+  </i-section-body>
+
+  <!-- ─── 6. styleVariant: default vs bar ────────────────────────────────────── -->
+  <i-section-body>
+    <h3 class="mb-md">styleVariant="default" (unchanged look)</h3>
+    <i-section-tabs styleVariant="default">
+      <i-section-tab title="Tab One">Content One</i-section-tab>
+      <i-section-tab title="Tab Two">Content Two</i-section-tab>
+    </i-section-tabs>
+
+    <h3 class="mb-md mt-lg">styleVariant="bar" (ported i-section-tab-bar look)</h3>
+    <i-section-tabs scrollable styleVariant="bar">
+      <i-section-tab title="Tab One">Content One</i-section-tab>
+      <i-section-tab title="Tab Two">Content Two</i-section-tab>
+      <i-section-tab title="Tab Three">Content Three</i-section-tab>
+    </i-section-tabs>
+  </i-section-body>
+
+  <!-- ─── 7. Two-way [(selectedIndex)] binding ──────────────────────────────── -->
+  <i-section-body>
+    <h3 class="mb-md">Two-way [(selectedIndex)] binding</h3>
+    <i-section-tabs [(selectedIndex)]="twoWaySelectedIndex">
+      <i-section-tab title="First">First content</i-section-tab>
+      <i-section-tab title="Second">Second content</i-section-tab>
+      <i-section-tab title="Third">Third content</i-section-tab>
+    </i-section-tabs>
+    <p class="text-sm text-subtle mt-xs">Selected index: {{ twoWaySelectedIndex }}</p>
+  </i-section-body>
+
+  <!-- ─── 8. Lazy tab content via exportAs + @defer (when active) ───────────── -->
+  <i-section-body>
+    <h3 class="mb-md">Lazy tab content (recommended pattern for heavy widgets)</h3>
+    <i-section-tabs>
+      <i-section-tab #t1="iSectionTab" title="Heavy A">
+        <i-section-tab-content>
+          @defer (when t1.active) {
+            <p>Heavy A rendered — only created once this tab became active.</p>
+          } @placeholder {
+            <p class="text-subtle">Not created yet…</p>
+          }
+        </i-section-tab-content>
+      </i-section-tab>
+      <i-section-tab #t2="iSectionTab" title="Heavy B">
+        <i-section-tab-content>
+          @defer (when t2.active) {
+            <p>Heavy B rendered — only created once this tab became active.</p>
+          } @placeholder {
+            <p class="text-subtle">Not created yet…</p>
+          }
+        </i-section-tab-content>
+      </i-section-tab>
+    </i-section-tabs>
+  </i-section-body>
+</i-section>
