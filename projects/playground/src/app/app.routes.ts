@@ -4,6 +4,7 @@ import { Grid } from './routes/grid/grid';
 import { GridTree } from './routes/grid-tree/grid-tree';
 import { Dialog } from './routes/dialog/dialog';
 import { Select } from './routes/select/select';
+import { SectionTabs } from './routes/section-tabs/section-tabs';
 
 export const routes: Routes = [
   {
@@ -25,5 +26,9 @@ export const routes: Routes = [
   {
     path: 'select',
     component: Select,
+  },
+  {
+    path: 'section-tabs',
+    component: SectionTabs,
   },
 ];

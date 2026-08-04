@@ -1,0 +1,6 @@
+.sticky-demo-scroll-area {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--i-color-gray-200);
+  border-radius: var(--i-radius-md);
+}
