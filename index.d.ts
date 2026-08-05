@@ -1317,6 +1317,20 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     dataSource: IGridDataSource<T> | T[];
     /** Row selection mode */
     selectionMode: IGridSelectionMode;
+    /**
+     * Per-row predicate to HIDE the selection checkbox/radio for specific rows
+     * (e.g. group rows in tree mode that structurally cannot be selected).
+     * Hidden rows are excluded from select-all and tree cascade/indeterminate logic.
+     * The cell/slot still reserves space so column alignment is preserved.
+     */
+    selectionRowHidden?: (row: T) => boolean;
+    /**
+     * Per-row predicate to DISABLE (but still show) the selection checkbox/radio
+     * for specific rows (e.g. already-owned/assigned rows). Disabled rows are
+     * excluded from select-all and tree cascade/indeterminate logic, and cannot
+     * be toggled via checkbox, row click, or programmatic API.
+     */
+    selectionRowDisabled?: (row: T) => boolean;
     /** Tree mode */
     tree: string | boolean | null;
     /** Indent per tree level (px) */
@@ -1417,10 +1431,18 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     onTreeToggle(row: T, event?: MouseEvent): void;
     private _getTreeHostFieldName;
     isTreeHostColumn(col: IGridColumnLike): boolean;
+    /** True when `selectionRowHidden` predicate marks this row as hidden. */
+    isSelectionHidden(row: T): boolean;
+    /** True when `selectionRowDisabled` predicate marks this row as disabled. */
+    isSelectionDisabled(row: T): boolean;
+    /** A row participates in selection UI/logic only if not hidden and not disabled. */
+    isRowSelectable(row: T): boolean;
     isRowSelected(row: T): boolean;
     getRowChecked(row: T): boolean;
     getRowIndeterminate(row: T): boolean;
     get selectedRows(): T[];
+    /** Count of rows in `renderedData` that are neither hidden nor disabled for selection. */
+    get allVisibleSelectableCount(): number;
     get allVisibleSelected(): boolean;
     get someVisibleSelected(): boolean;
     private _emitSelectionChange;
@@ -1431,6 +1453,20 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     onRowSelectionToggle(row: T): void;
     onToggleAllVisible(): void;
     clearSelection(): void;
+    /**
+     * Programmatically REPLACES the current selection with the given rows.
+     * Rows that are not present in the current data, or that are hidden/disabled
+     * for selection (`selectionRowHidden` / `selectionRowDisabled`), are ignored.
+     * Emits a single `onSelectionChange` only when the resulting selection
+     * actually differs from the current one.
+     *
+     * Unlike looping `onRowSelectionToggle` per row, this is atomic (one event,
+     * not one per row) and is safe to call once the grid has data (e.g. from
+     * `afterNextRender`). Selection is identity-based and persists across page
+     * changes in client-side mode.
+     */
+    setSelected(rows: T[]): void;
+    private _sameSelection;
     private _reconcileSelectionWithData;
     private _reconcileExpandedWithData;
     private _getAllDataRows;
@@ -1475,7 +1511,7 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     getRowTrack(row: T, index: number): any;
     private _hasExplicitColumns;
     static ɵfac: i0.ɵɵFactoryDeclaration<IGrid<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IGrid<any>, "i-grid", ["iGrid"], { "dataSource": { "alias": "dataSource"; "required": false; }; "selectionMode": { "alias": "selectionMode"; "required": false; }; "tree": { "alias": "tree"; "required": false; }; "treeIndent": { "alias": "treeIndent"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "treeColumn": { "alias": "treeColumn"; "required": false; }; "treeInitialExpandLevel": { "alias": "treeInitialExpandLevel"; "required": false; }; "showNumberColumn": { "alias": "showNumberColumn"; "required": false; }; "sortMode": { "alias": "sortMode"; "required": false; }; }, { "onSelectionChange": "onSelectionChange"; "onRowClick": "onRowClick"; "onRowExpandChange": "onRowExpandChange"; "onExpandedRowsChange": "onExpandedRowsChange"; "onServerSortChange": "onServerSortChange"; "onServerPageChange": "onServerPageChange"; "onServerFilterChange": "onServerFilterChange"; }, ["expandableRowDef", "columnDefs", "customColumnDefs", "columnGroupDefs"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IGrid<any>, "i-grid", ["iGrid"], { "dataSource": { "alias": "dataSource"; "required": false; }; "selectionMode": { "alias": "selectionMode"; "required": false; }; "selectionRowHidden": { "alias": "selectionRowHidden"; "required": false; }; "selectionRowDisabled": { "alias": "selectionRowDisabled"; "required": false; }; "tree": { "alias": "tree"; "required": false; }; "treeIndent": { "alias": "treeIndent"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "treeColumn": { "alias": "treeColumn"; "required": false; }; "treeInitialExpandLevel": { "alias": "treeInitialExpandLevel"; "required": false; }; "showNumberColumn": { "alias": "showNumberColumn"; "required": false; }; "sortMode": { "alias": "sortMode"; "required": false; }; }, { "onSelectionChange": "onSelectionChange"; "onRowClick": "onRowClick"; "onRowExpandChange": "onRowExpandChange"; "onExpandedRowsChange": "onExpandedRowsChange"; "onServerSortChange": "onServerSortChange"; "onServerPageChange": "onServerPageChange"; "onServerFilterChange": "onServerFilterChange"; }, ["expandableRowDef", "columnDefs", "customColumnDefs", "columnGroupDefs"], never, true, never>;
     static ngAcceptInputType_showNumberColumn: unknown;
 }
 declare const I_GRID_DECLARATIONS: (typeof IGridExpandableRow)[];
@@ -1693,30 +1729,6 @@ declare class IPill {
     static ngAcceptInputType_closable: unknown;
 }
 
-declare class ISection {
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISection, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISection, "i-section", never, {}, {}, never, ["*"], true, never>;
-}
-declare class ISectionHeader {
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISectionHeader, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionHeader, "i-section-header", never, {}, {}, never, ["*"], true, never>;
-}
-declare class ISectionSubHeader {
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISectionSubHeader, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionSubHeader, "i-section-sub-header", never, {}, {}, never, ["*"], true, never>;
-}
-declare class ISectionFilter {
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISectionFilter, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionFilter, "i-section-filter", never, {}, {}, never, ["*"], true, never>;
-}
-declare class ISectionBody {
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISectionBody, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionBody, "i-section-body", never, {}, {}, never, ["*"], true, never>;
-}
-declare class ISectionFooter {
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISectionFooter, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionFooter, "i-section-footer", never, {}, {}, never, ["*"], true, never>;
-}
 declare class ISectionTabHeader {
     tpl: TemplateRef<unknown>;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISectionTabHeader, never>;
@@ -1741,17 +1753,45 @@ declare class ISectionTab implements AfterContentInit {
     headerTpl: TemplateRef<unknown>;
     contentTpl: TemplateRef<unknown>;
     _active: boolean;
+    /**
+     * Whether this tab is currently the active/selected one. Exposed so consumers can
+     * lazily render heavy tab content via Angular's native deferred loading, e.g.:
+     * `<i-section-tab #t="iSectionTab">...@defer (when t.active) { <heavy/> }...</i-section-tab>`
+     */
+    get active(): boolean;
     ngAfterContentInit(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISectionTab, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionTab, "i-section-tab", never, { "title": { "alias": "title"; "required": false; }; "opened": { "alias": "opened"; "required": false; }; "badge": { "alias": "badge"; "required": false; }; }, {}, ["headerCmp", "contentCmp"], ["*"], true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionTab, "i-section-tab", ["iSectionTab"], { "title": { "alias": "title"; "required": false; }; "opened": { "alias": "opened"; "required": false; }; "badge": { "alias": "badge"; "required": false; }; }, {}, ["headerCmp", "contentCmp"], ["*"], true, never>;
     static ngAcceptInputType_opened: any;
 }
-declare class ISectionTabs implements AfterContentInit {
+declare class ISectionTabs implements AfterContentInit, AfterViewInit, OnDestroy {
     tabs: QueryList<ISectionTab>;
     /** optional controlled mode */
     selectedIndex: number | null;
-    /** ✅ standardized output name (Angular + React parity) */
+    /** Enable sticky header via plain CSS `position: sticky`. Default off (opt-in). */
+    sticky: boolean;
+    /** CSS `top` offset used when `sticky` is enabled. Default `-16px` accounts for
+     *  section border-radius clearance (matches the previous i-section-tab-bar default). */
+    stickyTopOffset: string;
+    /** Enable natural-width tabs + horizontal overflow scroll + chevrons. Default off
+     *  preserves today's equal-width layout exactly. */
+    scrollable: boolean;
+    /** Chevron icon size — only relevant when `scrollable` is enabled. */
+    chevronSize: 'sm' | 'md' | 'lg' | 'xl';
+    /** Minimum tab button height (CSS value, e.g. `'48px'`). */
+    tabMinHeight: string;
+    /** Extra class(es) applied to the headers row wrapper. */
+    headerClass: string;
+    /** Extra class(es) applied to each tab button. */
+    tabClass: string;
+    /** Visual skin: `'default'` keeps today's equal-width/box-shadow look unchanged (default);
+     *  `'bar'` opts into the fully ported i-section-tab-bar visual style. */
+    styleVariant: 'default' | 'bar';
+    /** ✅ standardized output name (Angular + React parity) — kept for backward compatibility. */
     readonly onSelectedIndexChange: EventEmitter<number>;
+    /** Angular two-way-binding-convention-named alias, enabling `[(selectedIndex)]`.
+     *  Emitted alongside `onSelectedIndexChange` (both always fire together). */
+    readonly selectedIndexChange: EventEmitter<number>;
     /**
      * height:
      * - "wrap" (default) => content height depends on each tab
@@ -1762,17 +1802,59 @@ declare class ISectionTabs implements AfterContentInit {
     private _contentHeightPx;
     get contentHeightPx(): number | null;
     get isFixedHeight(): boolean;
+    /** Computed chevron button width from `chevronSize`. */
+    get chevronWidthPx(): number;
     tabsArr: ISectionTab[];
     activeIndex: number;
+    showLeftChevron: boolean;
+    showRightChevron: boolean;
     private readonly cdr;
+    private resizeObserver;
+    private _scrollContainer?;
+    set scrollContainer(content: ElementRef<HTMLElement> | undefined);
+    get scrollContainer(): ElementRef<HTMLElement> | undefined;
     get activeTab(): ISectionTab | null;
     ngAfterContentInit(): void;
+    ngAfterViewInit(): void;
+    ngOnDestroy(): void;
     activate(index: number): void;
     activateByTab(tab: ISectionTab): void;
+    onScroll(): void;
+    scrollLeft(): void;
+    scrollRight(): void;
+    private checkOverflow;
+    private scrollToActive;
     private setActive;
     private isValidIndex;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISectionTabs, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionTabs, "i-section-tabs", never, { "selectedIndex": { "alias": "selectedIndex"; "required": false; }; "height": { "alias": "height"; "required": false; }; }, { "onSelectedIndexChange": "onSelectedIndexChange"; }, ["tabs"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionTabs, "i-section-tabs", never, { "selectedIndex": { "alias": "selectedIndex"; "required": false; }; "sticky": { "alias": "sticky"; "required": false; }; "stickyTopOffset": { "alias": "stickyTopOffset"; "required": false; }; "scrollable": { "alias": "scrollable"; "required": false; }; "chevronSize": { "alias": "chevronSize"; "required": false; }; "tabMinHeight": { "alias": "tabMinHeight"; "required": false; }; "headerClass": { "alias": "headerClass"; "required": false; }; "tabClass": { "alias": "tabClass"; "required": false; }; "styleVariant": { "alias": "styleVariant"; "required": false; }; "height": { "alias": "height"; "required": false; }; }, { "onSelectedIndexChange": "onSelectedIndexChange"; "selectedIndexChange": "selectedIndexChange"; }, ["tabs"], [":not(i-section-tab)"], true, never>;
+    static ngAcceptInputType_sticky: unknown;
+    static ngAcceptInputType_scrollable: unknown;
+}
+
+declare class ISection {
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISection, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISection, "i-section", never, {}, {}, never, ["*"], true, never>;
+}
+declare class ISectionHeader {
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISectionHeader, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionHeader, "i-section-header", never, {}, {}, never, ["*"], true, never>;
+}
+declare class ISectionSubHeader {
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISectionSubHeader, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionSubHeader, "i-section-sub-header", never, {}, {}, never, ["*"], true, never>;
+}
+declare class ISectionFilter {
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISectionFilter, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionFilter, "i-section-filter", never, {}, {}, never, ["*"], true, never>;
+}
+declare class ISectionBody {
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISectionBody, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionBody, "i-section-body", never, {}, {}, never, ["*"], true, never>;
+}
+declare class ISectionFooter {
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISectionFooter, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionFooter, "i-section-footer", never, {}, {}, never, ["*"], true, never>;
 }
 declare class ISectionModule {
     static ɵfac: i0.ɵɵFactoryDeclaration<ISectionModule, never>;
