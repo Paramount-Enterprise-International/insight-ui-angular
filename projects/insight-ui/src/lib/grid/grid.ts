@@ -2250,6 +2250,49 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     this._emitSelectionChange(null);
   }
 
+  /**
+   * Programmatically REPLACES the current selection with the given rows.
+   * Rows that are not present in the current data, or that are hidden/disabled
+   * for selection (`selectionRowHidden` / `selectionRowDisabled`), are ignored.
+   * Emits a single `onSelectionChange` only when the resulting selection
+   * actually differs from the current one.
+   *
+   * Unlike looping `onRowSelectionToggle` per row, this is atomic (one event,
+   * not one per row) and is safe to call once the grid has data (e.g. from
+   * `afterNextRender`). Selection is identity-based and persists across page
+   * changes in client-side mode.
+   */
+  setSelected(rows: T[]): void {
+    if (!this.selectionMode) {
+      return;
+    }
+
+    const valid = new Set(this._getAllDataRows());
+    const next = new Set<T>();
+    for (const row of rows) {
+      if (valid.has(row) && this.isRowSelectable(row)) {
+        next.add(row);
+      }
+    }
+
+    if (!this._sameSelection(next, this._selection)) {
+      this._selection = next;
+      this._emitSelectionChange(null);
+    }
+  }
+
+  private _sameSelection(a: Set<T>, b: Set<T>): boolean {
+    if (a.size !== b.size) {
+      return false;
+    }
+    for (const item of a) {
+      if (!b.has(item)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private _reconcileSelectionWithData(): void {
     if (!this.selectionMode) {
       return;
