@@ -1,7 +1,24 @@
 /* grid.ts */
 /**
  * IGrid
- * Version: 1.27.0
+ * Version: 1.28.0
+ *
+ * CHANGES (1.28.0):
+ * - Fix tree mode: (onRowClick) never fired because the tree-host body cell
+ *   stopped all click propagation. Removed that blanket stopPropagation —
+ *   interactive controls (expand toggle, checkbox/radio) already stop their
+ *   own propagation individually.
+ * - Tree mode: clicking anywhere on a row (outside interactive controls) now
+ *   also toggles that row's selection when selectionMode is set (flat mode
+ *   unchanged — still checkbox/radio-only for backward compatibility).
+ * - Add selectionRowHidden / selectionRowDisabled per-row predicate inputs:
+ *   - selectionRowHidden(row) => boolean — hides the checkbox/radio for a row
+ *     (space is preserved for column/indent alignment)
+ *   - selectionRowDisabled(row) => boolean — shows but disables the checkbox/radio
+ *   Both flat and tree mode supported. Hidden/disabled rows are excluded from
+ *   select-all (header checkbox) and tree parent cascade/indeterminate
+ *   calculations. Header checkbox auto-disables when zero rows are selectable
+ *   (allVisibleSelectableCount === 0).
  *
  * CHANGES (1.27.0):
  * - Add sortMode input ('multi' | 'single', default 'multi'):
@@ -1172,6 +1189,7 @@ export class IGridViewport {}
                   <input
                     type="checkbox"
                     [checked]="allVisibleSelected"
+                    [disabled]="allVisibleSelectableCount === 0"
                     [indeterminate]="someVisibleSelected"
                     (change)="onToggleAllVisible()"
                     (click)="$event.stopPropagation()"
@@ -1217,6 +1235,7 @@ export class IGridViewport {}
                         class="i-grid-tree-header-checkbox"
                         type="checkbox"
                         [checked]="allVisibleSelected"
+                        [disabled]="allVisibleSelectableCount === 0"
                         [indeterminate]="someVisibleSelected"
                         (change)="onToggleAllVisible()"
                         (click)="$event.stopPropagation()"
@@ -1299,20 +1318,24 @@ export class IGridViewport {}
               [style.position]="'sticky'"
               (click)="$event.stopPropagation()"
             >
-              @if (selectionMode === 'multiple') {
-                <input
-                  type="checkbox"
-                  [checked]="getRowChecked(row)"
-                  [indeterminate]="getRowIndeterminate(row)"
-                  (change)="onRowSelectionToggle(row)"
-                />
-              } @else if (selectionMode === 'single') {
-                <input
-                  type="radio"
-                  [checked]="isRowSelected(row)"
-                  [name]="singleSelectionName"
-                  (change)="onRowSelectionToggle(row)"
-                />
+              @if (!isSelectionHidden(row)) {
+                @if (selectionMode === 'multiple') {
+                  <input
+                    type="checkbox"
+                    [checked]="getRowChecked(row)"
+                    [disabled]="isSelectionDisabled(row)"
+                    [indeterminate]="getRowIndeterminate(row)"
+                    (change)="onRowSelectionToggle(row)"
+                  />
+                } @else if (selectionMode === 'single') {
+                  <input
+                    type="radio"
+                    [checked]="isRowSelected(row)"
+                    [disabled]="isSelectionDisabled(row)"
+                    [name]="singleSelectionName"
+                    (change)="onRowSelectionToggle(row)"
+                  />
+                }
               }
             </i-grid-cell>
           }
@@ -1338,11 +1361,11 @@ export class IGridViewport {}
           @for (col of columns; track getColumnTrack(col, colIndex); let colIndex = $index) {
             @if (treeEnabled && isTreeHostColumn(col)) {
               <!-- TREE MODE: tree UI is inside this cell -->
-              <i-grid-cell
-                [class.i-grid-cell--auto]="col.isAuto"
-                [column]="col"
-                (click)="$event.stopPropagation()"
-              >
+              <!-- NOTE: no cell-level (click) stopPropagation here on purpose —
+                   clicks must bubble to <i-grid-row> so onRowClick fires and
+                   (in tree mode) toggles selection. Interactive controls below
+                   (expand toggle, checkbox/radio) each stop their own click. -->
+              <i-grid-cell [class.i-grid-cell--auto]="col.isAuto" [column]="col">
                 <span class="i-grid-tree-inline">
                   <span class="i-grid-tree-indent" [style.width.px]="getTreeIndentPx(row)"></span>
 
@@ -1358,24 +1381,30 @@ export class IGridViewport {}
                     <span class="i-grid-tree-spacer"></span>
                   }
 
-                  @if (selectionMode === 'multiple') {
-                    <input
-                      class="i-grid-tree-checkbox"
-                      type="checkbox"
-                      [checked]="getRowChecked(row)"
-                      [indeterminate]="getRowIndeterminate(row)"
-                      (change)="onRowSelectionToggle(row)"
-                      (click)="$event.stopPropagation()"
-                    />
-                  } @else if (selectionMode === 'single') {
-                    <input
-                      class="i-grid-tree-radio"
-                      type="radio"
-                      [checked]="isRowSelected(row)"
-                      [name]="singleSelectionName"
-                      (change)="onRowSelectionToggle(row)"
-                      (click)="$event.stopPropagation()"
-                    />
+                  @if (!isSelectionHidden(row)) {
+                    @if (selectionMode === 'multiple') {
+                      <input
+                        class="i-grid-tree-checkbox"
+                        type="checkbox"
+                        [checked]="getRowChecked(row)"
+                        [disabled]="isSelectionDisabled(row)"
+                        [indeterminate]="getRowIndeterminate(row)"
+                        (change)="onRowSelectionToggle(row)"
+                        (click)="$event.stopPropagation()"
+                      />
+                    } @else if (selectionMode === 'single') {
+                      <input
+                        class="i-grid-tree-radio"
+                        type="radio"
+                        [checked]="isRowSelected(row)"
+                        [disabled]="isSelectionDisabled(row)"
+                        [name]="singleSelectionName"
+                        (change)="onRowSelectionToggle(row)"
+                        (click)="$event.stopPropagation()"
+                      />
+                    }
+                  } @else if (selectionMode) {
+                    <span class="i-grid-tree-checkbox-spacer"></span>
                   }
 
                   <!-- cell value -->
@@ -1463,6 +1492,22 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   /** Row selection mode */
   @Input() selectionMode: IGridSelectionMode = false;
+
+  /**
+   * Per-row predicate to HIDE the selection checkbox/radio for specific rows
+   * (e.g. group rows in tree mode that structurally cannot be selected).
+   * Hidden rows are excluded from select-all and tree cascade/indeterminate logic.
+   * The cell/slot still reserves space so column alignment is preserved.
+   */
+  @Input() selectionRowHidden?: (row: T) => boolean;
+
+  /**
+   * Per-row predicate to DISABLE (but still show) the selection checkbox/radio
+   * for specific rows (e.g. already-owned/assigned rows). Disabled rows are
+   * excluded from select-all and tree cascade/indeterminate logic, and cannot
+   * be toggled via checkbox, row click, or programmatic API.
+   */
+  @Input() selectionRowDisabled?: (row: T) => boolean;
 
   /** Tree mode */
   @Input() tree: string | boolean | null = null;
@@ -1955,6 +2000,21 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   /* ------- selection helpers ------- */
 
+  /** True when `selectionRowHidden` predicate marks this row as hidden. */
+  isSelectionHidden(row: T): boolean {
+    return !!this.selectionRowHidden?.(row);
+  }
+
+  /** True when `selectionRowDisabled` predicate marks this row as disabled. */
+  isSelectionDisabled(row: T): boolean {
+    return !!this.selectionRowDisabled?.(row);
+  }
+
+  /** A row participates in selection UI/logic only if not hidden and not disabled. */
+  isRowSelectable(row: T): boolean {
+    return !this.isSelectionHidden(row) && !this.isSelectionDisabled(row);
+  }
+
   isRowSelected(row: T): boolean {
     return this._selection.has(row);
   }
@@ -1964,7 +2024,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       return this.isRowSelected(row);
     }
 
-    const descendants = this._getTreeDescendants(row);
+    const descendants = this._getTreeDescendants(row).filter((r) => this.isRowSelectable(r));
     if (!descendants.length) {
       return this.isRowSelected(row);
     }
@@ -1990,7 +2050,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       return false;
     }
 
-    const descendants = this._getTreeDescendants(row);
+    const descendants = this._getTreeDescendants(row).filter((r) => this.isRowSelectable(r));
     if (!descendants.length) {
       return false;
     }
@@ -2008,11 +2068,23 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     return Array.from(this._selection);
   }
 
+  /** Count of rows in `renderedData` that are neither hidden nor disabled for selection. */
+  get allVisibleSelectableCount(): number {
+    if (!this.selectionMode || !this.renderedData.length) {
+      return 0;
+    }
+    return this.renderedData.filter((row) => this.isRowSelectable(row)).length;
+  }
+
   get allVisibleSelected(): boolean {
     if (!this.selectionMode || !this.renderedData.length) {
       return false;
     }
-    return this.renderedData.every((row) => this.getRowChecked(row));
+    const selectableRows = this.renderedData.filter((row) => this.isRowSelectable(row));
+    if (!selectableRows.length) {
+      return false;
+    }
+    return selectableRows.every((row) => this.getRowChecked(row));
   }
 
   get someVisibleSelected(): boolean {
@@ -2020,7 +2092,12 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       return false;
     }
 
-    const anySelected = this.renderedData.some(
+    const selectableRows = this.renderedData.filter((row) => this.isRowSelectable(row));
+    if (!selectableRows.length) {
+      return false;
+    }
+
+    const anySelected = selectableRows.some(
       (row) => this.getRowChecked(row) || this.getRowIndeterminate(row),
     );
     return anySelected && !this.allVisibleSelected;
@@ -2050,6 +2127,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   private _setBranchSelection(row: T, selected: boolean): void {
     if (!this.treeEnabled) {
+      if (!this.isRowSelectable(row)) {
+        return;
+      }
       if (selected) {
         this._selection.add(row);
       } else {
@@ -2059,11 +2139,16 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     }
 
     const allRows = [row, ...this._getTreeDescendants(row)];
-    if (selected) {
-      allRows.forEach((r) => this._selection.add(r));
-    } else {
-      allRows.forEach((r) => this._selection.delete(r));
-    }
+    allRows.forEach((r) => {
+      if (!this.isRowSelectable(r)) {
+        return;
+      }
+      if (selected) {
+        this._selection.add(r);
+      } else {
+        this._selection.delete(r);
+      }
+    });
   }
 
   private _syncSelectionUpwardsFrom(row: T): void {
@@ -2074,7 +2159,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     let current = this._treeMeta.get(row)?.parent ?? null;
 
     while (current) {
-      const descendants = this._getTreeDescendants(current);
+      const descendants = this._getTreeDescendants(current).filter((r) => this.isRowSelectable(r));
       if (!descendants.length) {
         current = this._treeMeta.get(current)?.parent ?? null;
         continue;
@@ -2097,6 +2182,10 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   onRowSelectionToggle(row: T): void {
     if (!this.selectionMode) {
+      return;
+    }
+
+    if (!this.isRowSelectable(row)) {
       return;
     }
 
@@ -2131,6 +2220,10 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
       return;
     }
 
+    if (this.allVisibleSelectableCount === 0) {
+      return;
+    }
+
     const shouldSelect = !this.allVisibleSelected;
 
     if (this.treeEnabled) {
@@ -2141,10 +2234,11 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
         this._syncSelectionUpwardsFrom(row);
       });
     } else {
+      const selectableRows = this.renderedData.filter((row) => this.isRowSelectable(row));
       if (shouldSelect) {
-        this.renderedData.forEach((row) => this._selection.add(row));
+        selectableRows.forEach((row) => this._selection.add(row));
       } else {
-        this.renderedData.forEach((row) => this._selection.delete(row));
+        selectableRows.forEach((row) => this._selection.delete(row));
       }
     }
 
@@ -2154,6 +2248,49 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   clearSelection(): void {
     this._selection.clear();
     this._emitSelectionChange(null);
+  }
+
+  /**
+   * Programmatically REPLACES the current selection with the given rows.
+   * Rows that are not present in the current data, or that are hidden/disabled
+   * for selection (`selectionRowHidden` / `selectionRowDisabled`), are ignored.
+   * Emits a single `onSelectionChange` only when the resulting selection
+   * actually differs from the current one.
+   *
+   * Unlike looping `onRowSelectionToggle` per row, this is atomic (one event,
+   * not one per row) and is safe to call once the grid has data (e.g. from
+   * `afterNextRender`). Selection is identity-based and persists across page
+   * changes in client-side mode.
+   */
+  setSelected(rows: T[]): void {
+    if (!this.selectionMode) {
+      return;
+    }
+
+    const valid = new Set(this._getAllDataRows());
+    const next = new Set<T>();
+    for (const row of rows) {
+      if (valid.has(row) && this.isRowSelectable(row)) {
+        next.add(row);
+      }
+    }
+
+    if (!this._sameSelection(next, this._selection)) {
+      this._selection = next;
+      this._emitSelectionChange(null);
+    }
+  }
+
+  private _sameSelection(a: Set<T>, b: Set<T>): boolean {
+    if (a.size !== b.size) {
+      return false;
+    }
+    for (const item of a) {
+      if (!b.has(item)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private _reconcileSelectionWithData(): void {
@@ -2764,7 +2901,15 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   onRowClicked(row: T): void {
     this.onRowClick.emit(row);
-    // selection via explicit checkbox/radio only
+
+    // Tree mode: clicking anywhere on the row (outside interactive controls,
+    // which each stop their own propagation) also toggles selection — matches
+    // common tree-select UX. Flat mode stays checkbox/radio-only for backward
+    // compatibility (consumers opt in manually via
+    // `(onRowClick)="grid.onRowSelectionToggle($event)"`).
+    if (this.treeEnabled && this.selectionMode && this.isRowSelectable(row)) {
+      this.onRowSelectionToggle(row);
+    }
   }
 
   /* ------- template helpers ------- */
