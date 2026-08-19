@@ -1544,16 +1544,56 @@ type IBreadcrumbItem = {
      */
     url?: string;
 };
+type IMenuApplication = {
+    id: string;
+    code: string;
+    name: string;
+    url?: string | null;
+    version?: string | null;
+};
+type IMenuCompany = {
+    id: string;
+    code: string;
+    name: string;
+};
+type IMenuOpenIn = 'CURRENT_TAB' | 'NEW_TAB' | 'NEW_WINDOW';
+type IMenuFavoriteToggleEvent = {
+    id: string | number;
+    isFavorite: boolean;
+};
+type IMenuGroup = {
+    key: string;
+    label: string;
+    roots: IMenu[];
+};
+/**
+ * Sidebar menu node.
+ *
+ * Supports two shapes:
+ * - Legacy: numeric `menuId`, `menuName`, `menuTypeId` (2 = module, 3 = group /
+ *   item), `child`, `level`, `visibility`, `openInNewTab` / `reload`.
+ * - Modern (contract-aligned, optional): UUID `id`, `name`, `type`
+ *   ('group' | 'item' | 'function'), `children`, `openIn`, `application`,
+ *   `companies`, `isFavorite`. `IHSidebar` normalizes modern nodes into the
+ *   legacy shape on ingestion; the modern extras are preserved for pin /
+ *   favorites / application-grouping rendering.
+ */
 type IMenu = {
-    menuId: number;
-    menuName: string;
-    route?: string | null;
-    menuTypeId: number;
-    parentId: number;
-    sequence: number;
-    icon?: string | null;
+    id?: string;
+    name?: string;
+    type?: 'group' | 'item' | 'function';
+    children?: IMenu[];
+    openIn?: IMenuOpenIn | null;
+    application?: IMenuApplication | null;
+    companies?: IMenuCompany[];
+    isFavorite?: boolean;
+    menuId?: number;
+    menuName?: string;
+    menuTypeId?: number;
+    parentId?: number;
+    sequence?: number;
     child?: IMenu[];
-    level: number;
+    level?: number;
     visibility?: string;
     selected?: boolean;
     /**
@@ -1564,6 +1604,8 @@ type IMenu = {
      * Force route to use href instead of routerLink.
      */
     reload?: boolean;
+    route?: string | null;
+    icon?: string | null;
 };
 type IUser = {
     employeeCode: string;
@@ -1576,9 +1618,32 @@ declare function getMenuRoute(menu: IMenu | null | undefined): string | null;
  * If route starts with "http", never use routerLink.
  */
 declare function isHttpRoute(route: string | null | undefined): boolean;
+/**
+ * Node key used for tracking and selection — prefers the modern UUID `id`,
+ * falls back to the legacy numeric `menuId`.
+ */
+declare function getMenuKey(menu: IMenu | null | undefined): string | number | null;
+/** Display label — prefers the modern `name`, falls back to legacy `menuName`. */
+declare function getMenuLabel(menu: IMenu | null | undefined): string;
+/** Children — prefers the modern `children`, falls back to legacy `child`. */
+declare function getMenuChildren(menu: IMenu | null | undefined): IMenu[];
+declare function hasMenuChildren(menu: IMenu | null | undefined): boolean;
+/** True for a legacy top-level module header (menuTypeId === 2). */
+declare function isModuleMenu(menu: IMenu | null | undefined): boolean;
+/** True for a structural group/module node (non-navigable container). */
+declare function isGroupNode(menu: IMenu | null | undefined): boolean;
+/** True for a navigable leaf node (item / function / legacy leaf menu). */
+declare function isLeafItem(menu: IMenu | null | undefined): boolean;
 declare function isNewTabMenu(menu: IMenu | null | undefined): boolean;
 declare function isReloadMenu(menu: IMenu | null | undefined): boolean;
 declare function isSpaMenu(menu: IMenu | null | undefined): boolean;
+/**
+ * Converts modern (contract-aligned) menu nodes into the legacy `IMenu` shape
+ * that `IHMenu` renders. Modern extras (`id`, `isFavorite`, `application`,
+ * `companies`, `openIn`, `route`, `icon`) are preserved for pin / favorites /
+ * application-grouping rendering. Legacy nodes pass through untouched.
+ */
+declare function normalizeMenuTree(menus: IMenu[] | null | undefined): IMenu[];
 type IHNavigationSnapshot = {
     fullUrl: string;
     basePath: string;
@@ -1638,24 +1703,65 @@ declare class IHContent {
 }
 declare class IHMenu implements OnChanges {
     menu: IMenu | undefined;
-    selectedMenuId: number | null;
+    selectedMenuId: string | number | null;
     filter: string;
+    /** When true, renders a pin/star toggle on leaf items (emits `favoriteToggle`). */
+    favoriteMode: boolean;
+    /** When true, groups collapse/expand via a chevron (flat is the default). */
+    collapsible: boolean;
+    /** Nesting depth from the sidebar root (0 = top level). Drives indentation and
+        the top-level "no group icon" rule — independent of the data's `level`. */
+    depth: number;
     readonly clicked: EventEmitter<any>;
+    readonly favoriteToggle: EventEmitter<IMenuFavoriteToggleEvent>;
     menus: QueryList<IHMenu>;
+    /** Template-bound helper for stable `@for` tracking (UUID-first). */
+    readonly getMenuKey: typeof getMenuKey;
     menuItemRef: ElementRef<HTMLElement>;
     isHidden: boolean;
     get menuRoute(): string | null;
     get isSpa(): boolean;
     get isReload(): boolean;
     get isNewTab(): boolean;
+    get menuLabel(): string;
+    get menuChildrenList(): IMenu[];
+    get menuHasChildren(): boolean;
+    /** Legacy top-level module header (menuTypeId === 2). */
+    get isModuleNode(): boolean;
+    /** Structural group header (non-leaf container). Modules are handled by `isModuleNode`. */
+    get isGroupNode(): boolean;
+    /** Group is expanded unless explicitly marked collapsed. */
+    get isGroupExpanded(): boolean;
+    /** The synthetic Favorites group — keeps its icon at the top level. */
+    get isFavoritesGroup(): boolean;
+    get menuVisibility(): string;
+    /**
+     * Icon classes for the row icon. Appends FontAwesome's `fa-fw` (fixed-width)
+     * so icons with different glyph widths (e.g. fa-users vs fa-bars) still keep
+     * the menu title aligned. Returns `fa-fw` even when the menu has no icon so
+     * the title position is identical either way.
+     */
+    get menuIcon(): string | null;
+    /** 0-based nesting level; top-level groups are always 0 (never negative). */
+    get menuLevel(): number;
+    /**
+     * Indent level used for rendering: first-level children of a group render
+     * flush-left (0) so the first level looks flat; deeper levels indent from
+     * there (depth - 1, never negative).
+     */
+    get indentLevel(): number;
+    get menuTypeId(): number;
+    get menuIsFavorite(): boolean;
     /** only true for the *leaf* menu that matches selectedMenuId */
     get isSelected(): boolean;
     ngOnChanges(changes: SimpleChanges): void;
     indent(level: number): number[];
     click(): void;
+    onFavoriteClick(event: Event): void;
+    onChildFavoriteToggle(event: IMenuFavoriteToggleEvent): void;
     hrefWithMenuFilter(raw: string): string;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHMenu, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; }, { "clicked": "clicked"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "depth": { "alias": "depth"; "required": false; }; }, { "clicked": "clicked"; "favoriteToggle": "favoriteToggle"; }, never, never, true, never>;
 }
 declare class IHSidebar implements OnInit, OnChanges {
     private router;
@@ -1663,18 +1769,36 @@ declare class IHSidebar implements OnInit, OnChanges {
     menusInput$: Observable<IMenu[]>;
     visible: boolean;
     footerText: string;
+    /** When true, leaf items render a pin/star toggle and the Favorites section is shown. */
+    favoriteMode: boolean;
+    /** Flat favorite leaf nodes, mapped by the host app from the favorites API. Rendered as a 'Favorites' group at the top of the menu body. */
+    favorites$?: Observable<IMenu[]>;
+    /** When true, menu roots are grouped under an application label. */
+    groupByApplication: boolean;
+    /** When true, groups collapse/expand via a chevron (flat is the default). */
+    collapsible: boolean;
+    /** Bubbled up from leaf pin toggles — the host app persists via the favorites API. */
+    readonly onFavoriteToggle: EventEmitter<IMenuFavoriteToggleEvent>;
     menus$: Observable<IMenu[]>;
     queryParams: any;
     menuSearch: FormControl<string | null>;
     menuFilter: i0.WritableSignal<string>;
     keyboardNavActive: i0.WritableSignal<boolean>;
     selectedIndex: i0.WritableSignal<number | null>;
-    selectedMenuId: i0.WritableSignal<number | null>;
+    selectedMenuId: i0.WritableSignal<string | number | null>;
+    /** Template-bound helper for stable `@for` tracking. */
+    readonly getMenuKey: typeof getMenuKey;
+    private favoritesGroupCache;
     private navigableMenus;
     private originalMenus$;
     get sidebarVisibility(): boolean;
     ngOnInit(): void;
     ngOnChanges(changes: SimpleChanges): void;
+    /**
+     * Normalizes modern (contract-aligned) menu nodes into the legacy `IMenu`
+     * shape on ingestion. Legacy menus pass through untouched.
+     */
+    private normalizeMenusStream;
     private buildMenusStream;
     private filterMenuTree;
     private filterMenuBranch;
@@ -1686,10 +1810,21 @@ declare class IHSidebar implements OnInit, OnChanges {
     private activateSelected;
     private menuFilterQueryParams;
     private appendMenuFilterToUrl;
+    /**
+     * Groups menu roots by their owning application so a multi-application
+     * sidebar can render an application label per group.
+     */
+    buildMenuGroups(menus: IMenu[]): IMenuGroup[];
+    /**
+     * Builds a synthetic "Favorites" group node so the favorites list is rendered
+     * with the exact same style as the other menu groups. Memoized by the
+     * favorites array reference so the node identity stays stable across CD cycles.
+     */
+    getFavoritesGroup(favorites: IMenu[] | null | undefined): IMenu | null;
     private navigateToMenu;
     updateUrl(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHSidebar, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; }, {}, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "favorites$": { "alias": "favorites$"; "required": false; }; "groupByApplication": { "alias": "groupByApplication"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; }, { "onFavoriteToggle": "onFavoriteToggle"; }, never, never, true, never>;
 }
 
 declare class ILoading {
@@ -2007,5 +2142,5 @@ declare class IUI {
     static ɵinj: i0.ɵɵInjectorDeclaration<IUI>;
 }
 
-export { IAlert, IAlertService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuRoute, isControlRequired, isHttpRoute, isNewTabMenu, isReloadMenu, isSpaMenu, resolveControlErrorMessage };
-export type { IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IPaginatorState, IPillSize, IPillVariant, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser };
+export { IAlert, IAlertService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSpaMenu, normalizeMenuTree, resolveControlErrorMessage };
+export type { IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IMenuApplication, IMenuCompany, IMenuFavoriteToggleEvent, IMenuGroup, IMenuOpenIn, IPaginatorState, IPillSize, IPillVariant, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser };
