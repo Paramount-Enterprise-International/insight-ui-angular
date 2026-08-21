@@ -26,6 +26,7 @@ import {
   Injectable,
   Input,
   OnChanges,
+  OnDestroy,
   OnInit,
   Output,
   QueryList,
@@ -34,6 +35,7 @@ import {
   ViewChild,
   ViewChildren,
 } from '@angular/core';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import {
   ActivatedRoute,
   NavigationEnd,
@@ -42,8 +44,17 @@ import {
   RouterLink,
   RouterOutlet,
 } from '@angular/router';
-import { combineLatest, filter, map, Observable, shareReplay, startWith, tap } from 'rxjs';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import {
+  combineLatest,
+  filter,
+  map,
+  Observable,
+  of,
+  shareReplay,
+  startWith,
+  Subscription,
+  tap,
+} from 'rxjs';
 import { IHighlightSearchPipe } from '../highlight-search.pipe';
 
 export type IRoute = Omit<Route, 'data' | 'children'> & {
@@ -93,6 +104,16 @@ export type IMenuOpenIn = 'CURRENT_TAB' | 'NEW_TAB' | 'NEW_WINDOW';
 export type IMenuFavoriteToggleEvent = {
   id: string | number;
   isFavorite: boolean;
+};
+
+/**
+ * Emitted by `IHSidebar` after the user drag-drops a favorite into a new
+ * position. Carries the ordered favorite menu ids so the host app can persist
+ * the new display order via the favorites reorder API.
+ */
+export type IMenuFavoriteReorderEvent = {
+  /** Favorite menu ids in their new display order (top to bottom). */
+  menuIds: (string | number)[];
 };
 
 export type IMenuGroup = {
@@ -614,10 +635,7 @@ export class IHContent {
       @let hasChild = menuHasChildren;
       @let route = menuRoute;
 
-      <li
-        [class.is-module]="isModuleNode"
-        [ngClass]="isModuleNode ? menuVisibility : ''"
-      >
+      <li [class.is-module]="isModuleNode" [ngClass]="isModuleNode ? menuVisibility : ''">
         @if (isModuleNode) {
           <!-- old-style module header; chevron + collapse in collapsible mode -->
           <small
@@ -639,11 +657,12 @@ export class IHContent {
           <div
             class="ih-menu-group"
             [class.ih-menu-group--collapsible]="collapsible"
+            [class.ih-menu-group--top]="depth === 0"
             (click)="collapsible ? click() : null"
           >
             @if (indentLevel > 0) {
               @for (i of indent(indentLevel); track i) {
-                <span class="indent-{{depth}}"></span>
+                <span class="indent-{{ depth }}"></span>
               }
             }
 
@@ -674,21 +693,29 @@ export class IHContent {
               class="is-new-tab"
               rel="noopener noreferrer"
               target="_blank"
+              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
               [class.is-selected]="isSelected"
               [href]="hrefWithMenuFilter(route)"
             >
               @if (indentLevel > 0) {
                 @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{depth}}"></span>
+                  <span class="indent-{{ depth }}"></span>
                 }
               }
 
               <i [class]="menuIcon"></i>
-              <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+                @if (showApplication && menu.application?.name) {
+                  <small class="ih-menu-application">{{ menu.application?.name }}</small>
+                }
+              </span>
 
               @if (favoriteMode) {
                 <i
-                  class="ih-menu-favorite {{ menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star' }}"
+                  class="ih-menu-favorite {{
+                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
+                  }}"
                   role="button"
                   tabindex="0"
                   [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
@@ -705,21 +732,29 @@ export class IHContent {
               #menuItem
               class="is-reload"
               target="_self"
+              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
               [class.is-selected]="isSelected"
               [href]="hrefWithMenuFilter(route)"
             >
               @if (indentLevel > 0) {
                 @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{depth}}"></span>
+                  <span class="indent-{{ depth }}"></span>
                 }
               }
 
               <i [class]="menuIcon"></i>
-              <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+                @if (showApplication && menu.application?.name) {
+                  <small class="ih-menu-application">{{ menu.application?.name }}</small>
+                }
+              </span>
 
               @if (favoriteMode) {
                 <i
-                  class="ih-menu-favorite {{ menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star' }}"
+                  class="ih-menu-favorite {{
+                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
+                  }}"
                   role="button"
                   tabindex="0"
                   [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
@@ -735,22 +770,30 @@ export class IHContent {
             <a
               #menuItem
               class="is-spa"
+              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
               [class.is-selected]="isSelected"
               [queryParamsHandling]="'merge'"
               [routerLink]="route"
             >
               @if (indentLevel > 0) {
                 @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{depth}}"></span>
+                  <span class="indent-{{ depth }}"></span>
                 }
               }
 
               <i [class]="menuIcon"></i>
-              <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+                @if (showApplication && menu.application?.name) {
+                  <small class="ih-menu-application">{{ menu.application?.name }}</small>
+                }
+              </span>
 
               @if (favoriteMode) {
                 <i
-                  class="ih-menu-favorite {{ menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star' }}"
+                  class="ih-menu-favorite {{
+                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
+                  }}"
                   role="button"
                   tabindex="0"
                   [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
@@ -771,10 +814,12 @@ export class IHContent {
               <ih-menu
                 [collapsible]="collapsible"
                 [depth]="depth + 1"
+                [dragEnabled]="dragEnabled"
                 [favoriteMode]="favoriteMode"
                 [filter]="filter"
                 [menu]="m"
                 [selectedMenuId]="selectedMenuId"
+                [showApplication]="showApplication"
                 (favoriteToggle)="onChildFavoriteToggle($event)"
               />
             }
@@ -795,6 +840,10 @@ export class IHMenu implements OnChanges {
   /** Nesting depth from the sidebar root (0 = top level). Drives indentation and
       the top-level "no group icon" rule — independent of the data's `level`. */
   @Input() depth = 0;
+  /** When true, leaf items render with `cdkDrag` so the parent `cdkDropList` can reorder them (used for the Favorites section). */
+  @Input() dragEnabled = false;
+  /** When true, leaf items render their owning application name next to the label (used for the Favorites section). */
+  @Input() showApplication = false;
 
   @Output() readonly clicked = new EventEmitter<any>();
   @Output() readonly favoriteToggle = new EventEmitter<IMenuFavoriteToggleEvent>();
@@ -850,7 +899,7 @@ export class IHMenu implements OnChanges {
     return Number(this.menu.menuTypeId) === 3 && hasMenuChildren(this.menu);
   }
 
-  /** Group is expanded unless explicitly marked collapsed. */
+  /** Group is expanded unless explicitly marked collapsed (manual toggle wins). */
   get isGroupExpanded(): boolean {
     return this.menu?.visibility !== 'collapsed';
   }
@@ -907,8 +956,7 @@ export class IHMenu implements OnChanges {
     const hasChildren = this.menuHasChildren;
 
     // keep selection only on "leaf" items (same rule as flattenNavigableMenus)
-    const isLeaf =
-      this.menuTypeId === 3 && (!hasChildren || this.menu.visibility === 'no-child');
+    const isLeaf = this.menuTypeId === 3 && (!hasChildren || this.menu.visibility === 'no-child');
 
     return isLeaf;
   }
@@ -1006,17 +1054,22 @@ export class IHMenu implements OnChanges {
 
     <div class="ih-sidebar-body scroll scroll-y">
       @if (favoriteMode) {
-        @let favorites = favorites$ | async;
-        @let favoritesGroup = getFavoritesGroup(favorites);
+        @let favoritesGroup = getFavoritesGroup(favoriteItems());
         @if (favoritesGroup) {
-          <ul class="ih-sidebar-favorites">
+          <ul
+            class="ih-sidebar-favorites"
+            [class.is-drag-over]="dragOverIndex() !== null"
+            (mousedown)="onFavoritesMouseDown($event)"
+          >
             <ih-menu
               [collapsible]="collapsible"
               [depth]="0"
+              [dragEnabled]="true"
               [favoriteMode]="favoriteMode"
               [filter]="menuFilter()"
               [menu]="favoritesGroup"
               [selectedMenuId]="selectedMenuId()"
+              [showApplication]="true"
               (favoriteToggle)="onFavoriteToggle.emit($event)"
             />
           </ul>
@@ -1027,14 +1080,14 @@ export class IHMenu implements OnChanges {
 
       @if (menus && menus.length > 0) {
         @let groups = buildMenuGroups(menus);
-        @for (group of groups; track group.key) {
-          @if (groupByApplication && group.label && groups.length > 1) {
-            <div class="ih-sidebar-app-label">
-              <small>{{ group.label }}</small>
-            </div>
-          }
-
-          <ul>
+        <!-- Single <ul> for the whole menu tree — all roots live in one list. -->
+        <ul>
+          @for (group of groups; track group.key) {
+            @if (groupByApplication && group.label && groups.length > 1) {
+              <li class="ih-sidebar-app-label">
+                <small>{{ group.label }}</small>
+              </li>
+            }
             @for (m of group.roots; track getMenuKey(m)) {
               <ih-menu
                 [collapsible]="collapsible"
@@ -1046,8 +1099,8 @@ export class IHMenu implements OnChanges {
                 (favoriteToggle)="onFavoriteToggle.emit($event)"
               />
             }
-          </ul>
-        }
+          }
+        </ul>
       }
     </div>
 
@@ -1056,8 +1109,9 @@ export class IHMenu implements OnChanges {
     </div>
   `,
 })
-export class IHSidebar implements OnInit, OnChanges {
+export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   private router = inject(Router);
+  private hostElement = inject(ElementRef);
 
   /* ---------------------------
    * INPUTS (from parent)
@@ -1082,6 +1136,8 @@ export class IHSidebar implements OnInit, OnChanges {
 
   /** Bubbled up from leaf pin toggles — the host app persists via the favorites API. */
   @Output() readonly onFavoriteToggle = new EventEmitter<IMenuFavoriteToggleEvent>();
+  /** Emitted after a favorites drag-drop with the ordered favorite menu ids — the host app persists via the reorder API. */
+  @Output() readonly onFavoriteReorder = new EventEmitter<IMenuFavoriteReorderEvent>();
 
   /* ---------------------------
    * INTERNAL STREAMS / STATE
@@ -1096,10 +1152,17 @@ export class IHSidebar implements OnInit, OnChanges {
   selectedIndex = signal<number | null>(null);
   selectedMenuId = signal<string | number | null>(null);
 
+  /** Index the dragged favorite would land at — drives the drop placeholder + cursor. */
+  readonly dragOverIndex = signal<number | null>(null);
+
   /** Template-bound helper for stable `@for` tracking. */
   readonly getMenuKey = getMenuKey;
 
   private favoritesGroupCache: IMenu | null = null;
+
+  /** Latest favorites array mirrored from `favorites$` — source of truth for drag reorder. */
+  readonly favoriteItems = signal<IMenu[]>([]);
+  private favoritesSubscription: Subscription | null = null;
 
   private navigableMenus: IMenu[] = [];
   private originalMenus$!: Observable<IMenu[]>;
@@ -1127,6 +1190,8 @@ export class IHSidebar implements OnInit, OnChanges {
     this.originalMenus$ = this.normalizeMenusStream();
 
     this.buildMenusStream();
+
+    this.subscribeFavorites();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -1135,6 +1200,163 @@ export class IHSidebar implements OnInit, OnChanges {
 
       this.buildMenusStream();
     }
+
+    if (changes['favorites$']) {
+      this.subscribeFavorites();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.favoritesSubscription?.unsubscribe();
+    // Make sure no document-level drag listeners leak if destroyed mid-drag.
+    if (this.dragState) {
+      this.cleanupFavoriteDrag();
+    }
+  }
+
+  /** Mirrors the `favorites$` input into the local `favoriteItems` signal. */
+  private subscribeFavorites(): void {
+    this.favoritesSubscription?.unsubscribe();
+    this.favoritesSubscription = (this.favorites$ ?? of([])).subscribe((favs) =>
+      this.favoriteItems.set(favs ?? []),
+    );
+  }
+
+  private dragState: {
+    menuId: string;
+    startY: number;
+    moved: boolean;
+    lastTargetIndex: number | null;
+    ghost: HTMLElement | null;
+  } | null = null;
+
+  /** Document mousemove during an active favorites drag (live reorder preview). */
+  private onDocumentMouseMove = (event: MouseEvent): void => {
+    const state = this.dragState;
+    if (!state) return;
+
+    // Ignore tiny jitters so a plain click isn't treated as a drag.
+    if (!state.moved && Math.abs(event.clientY - state.startY) < 5) return;
+    state.moved = true;
+
+    // Follow the pointer with a translucent clone of the dragged leaf.
+    if (state.ghost) {
+      state.ghost.style.display = '';
+      state.ghost.style.left = `${event.clientX}px`;
+      state.ghost.style.top = `${event.clientY}px`;
+    }
+
+    const targetIndex = this.computeFavoriteDropIndex(event.clientY);
+    if (targetIndex !== state.lastTargetIndex) {
+      this.reorderFavoriteLive(state.menuId, targetIndex);
+      state.lastTargetIndex = targetIndex;
+    }
+    this.dragOverIndex.set(targetIndex);
+  };
+
+  /** Document mouseup — finalize (emit) or cancel the favorites drag. */
+  private onDocumentMouseUp = (): void => {
+    const state = this.dragState;
+    if (!state) return;
+
+    if (state.moved) {
+      const reordered = this.favoriteItems();
+      this.cleanupFavoriteDrag();
+
+      const menuIds = reordered
+        .map((menu) => getMenuKey(menu))
+        .filter((key): key is string | number => key !== null && key !== undefined);
+
+      this.onFavoriteReorder.emit({ menuIds });
+    } else {
+      this.cleanupFavoriteDrag();
+    }
+  };
+
+  /** Begins a favorites drag from a leaf inside the favorites list. */
+  onFavoritesMouseDown(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const leaf = target.closest<HTMLElement>('.ih-sidebar-favorites [data-menu-id]');
+    if (!leaf) return;
+
+    const menuId = leaf.dataset['menuId'];
+    if (!menuId) return;
+
+    // Prevent text selection and any native drag/OS behavior.
+    event.preventDefault();
+
+    // Build a translucent clone (drag ghost) that follows the pointer — it is
+    // hidden until the drag actually starts (past the 5px threshold).
+    const ghost = leaf.cloneNode(true) as HTMLElement;
+    ghost.classList.add('ih-drag-ghost');
+    ghost.classList.remove('is-dragging');
+    ghost.style.display = 'none';
+    document.body.appendChild(ghost);
+
+    this.dragState = {
+      menuId,
+      startY: event.clientY,
+      moved: false,
+      lastTargetIndex: null,
+      ghost,
+    };
+    leaf.classList.add('is-dragging');
+
+    document.addEventListener('mousemove', this.onDocumentMouseMove);
+    document.addEventListener('mouseup', this.onDocumentMouseUp);
+  }
+
+  /** Live-reorders the favorites so the target position is previewed while dragging. */
+  private reorderFavoriteLive(menuId: string, targetIndex: number): void {
+    const items = this.favoriteItems();
+    const sourceIndex = items.findIndex((menu) => String(getMenuKey(menu)) === menuId);
+    if (sourceIndex === -1) return;
+
+    // Removing from before the target shifts the insertion point by one.
+    const insertAt = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+    if (insertAt === sourceIndex) return;
+
+    const reordered = [...items];
+    const [moved] = reordered.splice(sourceIndex, 1);
+    reordered.splice(insertAt, 0, moved);
+    this.favoriteItems.set(reordered);
+  }
+
+  /** Cleans up listeners, classes, and state after a favorites drag ends/cancels. */
+  private cleanupFavoriteDrag(): void {
+    // Capture the ghost before resetting the state (TS narrows dragState to null).
+    const ghost = this.dragState?.ghost ?? null;
+    this.dragState = null;
+    this.dragOverIndex.set(null);
+
+    const host = this.hostElement.nativeElement as HTMLElement;
+    host
+      .querySelectorAll('.ih-sidebar-favorites .is-dragging')
+      .forEach((el) => el.classList.remove('is-dragging'));
+
+    document.removeEventListener('mousemove', this.onDocumentMouseMove);
+    document.removeEventListener('mouseup', this.onDocumentMouseUp);
+
+    // Remove the drag ghost clone from the DOM.
+    ghost?.remove();
+  }
+
+  /**
+   * Returns the index (0..n) a drop at `clientY` would land at, based on the
+   * vertical midpoints of the currently rendered favorite leaves.
+   */
+  private computeFavoriteDropIndex(clientY: number): number {
+    const host = this.hostElement.nativeElement as HTMLElement;
+    const leaves = Array.from(
+      host.querySelectorAll<HTMLElement>('.ih-sidebar-favorites [data-menu-id]'),
+    );
+
+    for (let i = 0; i < leaves.length; i++) {
+      const rect = leaves[i].getBoundingClientRect();
+      if (clientY < rect.top + rect.height / 2) return i;
+    }
+
+    return leaves.length;
   }
 
   /**
