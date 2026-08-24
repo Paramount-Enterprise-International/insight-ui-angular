@@ -1,6 +1,7 @@
 import { APP_BASE_HREF } from '@angular/common';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { Observable, of } from 'rxjs';
 
@@ -9,6 +10,7 @@ import {
   IHSidebar,
   IHTitleBreadcrumbService,
   IMenu,
+  IMenuFavoriteReorderEvent,
   IMenuFavoriteToggleEvent,
   IUser,
   normalizeMenuTree,
@@ -105,6 +107,7 @@ const USER: IUser = {
       [groupByApplication]="groupByApplication()"
       [menusInput$]="menus$"
       [user$]="user$"
+      (onFavoriteReorder)="reorders.push($event)"
       (onFavoriteToggle)="toggles.push($event)"
     />
   `,
@@ -117,6 +120,30 @@ class SidebarHost {
   collapsible = signal(false);
   favorites$?: Observable<IMenu[]>;
   toggles: IMenuFavoriteToggleEvent[] = [];
+  reorders: IMenuFavoriteReorderEvent[] = [];
+}
+
+/** Two flat favorite leaf items used to exercise the Favorites drag reorder. */
+const FAVORITES: IMenu[] = [
+  {
+    id: '11111111-1111-4111-a111-111111111102',
+    name: 'Users',
+    type: 'item',
+    route: '/admin/users',
+    icon: 'fas fa-users',
+  },
+  {
+    id: '22222222-2222-4222-a222-222222222203',
+    name: 'Sales Report',
+    type: 'item',
+    route: '/reports/sales',
+    icon: 'fas fa-table',
+  },
+] as IMenu[];
+
+/** Builds a minimal mousedown MouseEvent whose target is a given element. */
+function mouseDownEvent(target: EventTarget): MouseEvent {
+  return { target, preventDefault: (): void => undefined } as unknown as MouseEvent;
 }
 
 describe('normalizeMenuTree', () => {
@@ -243,6 +270,24 @@ describe('IHSidebar (modern menus + favorites)', () => {
     expect(section?.textContent).toContain('Users');
   });
 
+  it('does not make the main menu tree items draggable', () => {
+    host.favorites$ = of(FAVORITES);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const favoritesLeaves = el.querySelectorAll(
+      '.ih-sidebar-favorites a[data-menu-id]',
+    );
+    const mainMenuLeaves = Array.from(
+      el.querySelectorAll('a[data-menu-id]'),
+    ).filter((node) => !(node as HTMLElement).closest('.ih-sidebar-favorites'));
+
+    // Only Favorites leaves carry the drag marker (data-menu-id); the main
+    // menu tree has none.
+    expect(favoritesLeaves.length).toBe(2);
+    expect(mainMenuLeaves.length).toBe(0);
+  });
+
   it('groups menu roots under an application label when groupByApplication is enabled (multiple apps)', () => {
     host.menus$ = of([MODERN_MENU, MODERN_MENU_TWO]);
     host.groupByApplication.set(true);
@@ -254,6 +299,144 @@ describe('IHSidebar (modern menus + favorites)', () => {
     expect(labels.length).toBe(2);
     expect(el.textContent).toContain('IAM Console');
     expect(el.textContent).toContain('Reporting');
+  });
+
+  it('renders the favorites list and marks leaf items as drag sources', () => {
+    host.favorites$ = of(FAVORITES);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const favorites = el.querySelector('.ih-sidebar-favorites');
+
+    expect(favorites).toBeTruthy();
+    // Each favorite leaf carries data-menu-id so the pointer drag can pick it up.
+    const leaves = favorites?.querySelectorAll('a[data-menu-id]') ?? [];
+    expect(leaves.length).toBe(2);
+  });
+
+  it('emits onFavoriteReorder with the ordered menu ids after a pointer drag', () => {
+    host.favorites$ = of(FAVORITES);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const leaves = Array.from(
+      el.querySelectorAll<HTMLElement>('.ih-sidebar-favorites a[data-menu-id]'),
+    );
+    // Deterministic layout: each leaf is 30px tall, stacked from top 0.
+    leaves.forEach((leaf, i) => {
+      leaf.getBoundingClientRect = (): DOMRect =>
+        ({
+          top: i * 30,
+          bottom: (i + 1) * 30,
+          height: 30,
+          width: 200,
+          left: 0,
+          right: 200,
+          x: 0,
+          y: i * 30,
+          toJSON: (): Record<string, never> => ({}),
+        } as DOMRect);
+    });
+
+    const sidebar = fixture.debugElement.query(By.directive(IHSidebar))
+      .componentInstance as IHSidebar;
+    // Mousedown on the first favorite, then move below its midpoint (pos 1)
+    // and release.
+    sidebar.onFavoritesMouseDown(mouseDownEvent(leaves[0]));
+    document.dispatchEvent(new MouseEvent('mousemove', { clientY: 45 }));
+    document.dispatchEvent(new MouseEvent('mouseup'));
+
+    expect(host.reorders.length).toBe(1);
+    expect(host.reorders[0].menuIds).toEqual([
+      '22222222-2222-4222-a222-222222222203',
+      '11111111-1111-4111-a111-111111111102',
+    ]);
+  });
+
+  it('emits onFavoriteReorder when dragging upward', () => {
+    host.favorites$ = of(FAVORITES);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const leaves = Array.from(
+      el.querySelectorAll<HTMLElement>('.ih-sidebar-favorites a[data-menu-id]'),
+    );
+    leaves.forEach((leaf, i) => {
+      leaf.getBoundingClientRect = (): DOMRect =>
+        ({
+          top: i * 30,
+          bottom: (i + 1) * 30,
+          height: 30,
+          width: 200,
+          left: 0,
+          right: 200,
+          x: 0,
+          y: i * 30,
+          toJSON: (): Record<string, never> => ({}),
+        } as DOMRect);
+    });
+
+    const sidebar = fixture.debugElement.query(By.directive(IHSidebar))
+      .componentInstance as IHSidebar;
+    // Mousedown on the 2nd favorite, then move above its midpoint (pos 0).
+    sidebar.onFavoritesMouseDown(mouseDownEvent(leaves[1]));
+    document.dispatchEvent(new MouseEvent('mousemove', { clientY: 10 }));
+    document.dispatchEvent(new MouseEvent('mouseup'));
+
+    expect(host.reorders.length).toBe(1);
+    expect(host.reorders[0].menuIds).toEqual([
+      '22222222-2222-4222-a222-222222222203',
+      '11111111-1111-4111-a111-111111111102',
+    ]);
+  });
+
+  it('shows the owning application name next to favorite labels', () => {
+    host.favorites$ = of([
+      {
+        id: '11111111-1111-4111-a111-111111111102',
+        name: 'Users',
+        type: 'item',
+        route: '/admin/users',
+        icon: 'fas fa-users',
+        application: {
+          id: '77777777-7777-4777-a777-777777777002',
+          code: 'IAMCN',
+          name: 'IAM Console',
+        },
+      } as IMenu,
+    ]);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const appLabel = el.querySelector('.ih-sidebar-favorites .ih-menu-application');
+
+    expect(appLabel).toBeTruthy();
+    expect(appLabel?.textContent).toContain('IAM Console');
+  });
+
+  it('does not show the application name on the main menu tree', () => {
+    host.favorites$ = of([
+      {
+        id: '11111111-1111-4111-a111-111111111102',
+        name: 'Users',
+        type: 'item',
+        route: '/admin/users',
+        icon: 'fas fa-users',
+        application: {
+          id: '77777777-7777-4777-a777-777777777002',
+          code: 'IAMCN',
+          name: 'IAM Console',
+        },
+      } as IMenu,
+    ]);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const mainMenuLabels = Array.from(el.querySelectorAll('.ih-menu-application')).filter(
+      (node) => !(node as HTMLElement).closest('.ih-sidebar-favorites'),
+    );
+
+    expect(mainMenuLabels.length).toBe(0);
   });
 });
 
