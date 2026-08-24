@@ -125,6 +125,21 @@ describe('IUserMenuStore', () => {
     expect(store.defaultRoute).toBe('/dashboard');
   });
 
+  it('defaultRoute prefers the first favorite route, then falls back to the first menu route', () => {
+    // Favorites present → first favorite route wins.
+    store.favorites.set([
+      { id: 'f1', name: 'Report', type: 'item', menuCode: 'report', route: '/report', isFavorite: true },
+    ]);
+    store.menus.set([
+      { id: 'm1', name: 'Dashboard', type: 'item', menuCode: 'dashboard', route: '/dashboard' },
+    ]);
+    expect(store.defaultRoute).toBe('/report');
+
+    // Favorites empty → first navigable menu route.
+    store.favorites.set([]);
+    expect(store.defaultRoute).toBe('/dashboard');
+  });
+
   it('hasMenu checks menu codes (string and array, ANY match) and is async-aware', () => {
     // empty before load → false (gated UI stays hidden while loading)
     expect(store.hasMenu('dashboard')).toBeFalse();

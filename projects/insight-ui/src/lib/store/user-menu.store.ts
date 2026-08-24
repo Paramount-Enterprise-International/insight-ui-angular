@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { forkJoin, map, Observable, of } from 'rxjs';
-import { catchError, switchMap, tap } from 'rxjs/operators';
+import { catchError, filter, finalize, shareReplay, switchMap, take, tap } from 'rxjs/operators';
 
 import { IMenu, IUser } from '../host';
 import { ISessionService } from '../session/session.service';
@@ -59,9 +59,12 @@ export class IUserMenuStore {
   readonly roles$ = toObservable(this.roles);
   readonly initializing$ = toObservable(this.initializing);
 
-  /** First navigable leaf route — a sensible post-login default landing. */
+  /**
+   * Post-login default landing (when no return URL is present).
+   * Order: (1) first navigable favorite route, (2) first navigable menu route.
+   */
   get defaultRoute(): string | null {
-    return findFirstLeafRoute(this.menus());
+    return findFirstLeafRoute(this.favorites()) ?? findFirstLeafRoute(this.menus());
   }
 
   /** Finds a menu node's display name by id (recursive), or null. */
@@ -72,23 +75,41 @@ export class IUserMenuStore {
   /**
    * Cold-start: fetch user + menus + favorites concurrently. A failure in one
    * branch does not block the others; `initializing` clears once all settle.
+   *
+   * Returns an observable that completes when the load settles, so callers can
+   * await it (e.g. to navigate to `defaultRoute` after login). The load starts
+   * immediately even if the caller ignores the returned observable — a shared
+   * source is kept alive by an internal subscribe (fire-and-forget compatible).
    */
-  load(): void {
+  load(): Observable<void> {
     if (this.initializing()) {
-      return;
+      return this.initializing$.pipe(
+        filter((init) => !init),
+        take(1),
+        map(() => undefined),
+      );
     }
     this.initializing.set(true);
     this.loadError.set(null);
     this.roles.set(this.session.getRoles());
 
-    forkJoin({
+    const result$ = forkJoin({
       user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err))),
       menus: this.loadMenusInternal().pipe(catchError((err) => this.recordError('menus', err))),
-      favorites: this.loadFavoritesInternal().pipe(catchError((err) => this.recordError('favorites', err))),
-    }).subscribe({
-      next: () => this.initializing.set(false),
-      error: () => this.initializing.set(false),
-    });
+      favorites: this.loadFavoritesInternal().pipe(
+        catchError((err) => this.recordError('favorites', err)),
+      ),
+    }).pipe(
+      map(() => undefined),
+      catchError(() => of(undefined)),
+      finalize(() => this.initializing.set(false)),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+
+    // Fire-and-forget: always start the load even if the caller ignores the result.
+    result$.subscribe();
+
+    return result$;
   }
 
   /** Refresh roles from the current access token (call after login / token change). */
@@ -116,7 +137,9 @@ export class IUserMenuStore {
 
   /** Pin (`isFavorite: true`) or unpin a menu item, then refreshes favorites. */
   toggleFavorite(menuId: string | number, isFavorite: boolean): Observable<void> {
-    const call = isFavorite ? this.menuService.addFavorite(menuId) : this.menuService.removeFavorite(menuId);
+    const call = isFavorite
+      ? this.menuService.addFavorite(menuId)
+      : this.menuService.removeFavorite(menuId);
     return call.pipe(switchMap(() => this.reloadFavorites()));
   }
 
