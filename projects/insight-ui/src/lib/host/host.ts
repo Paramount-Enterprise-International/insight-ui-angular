@@ -55,6 +55,7 @@ import {
   Subscription,
   tap,
 } from 'rxjs';
+import { IAvatar } from '../avatar';
 import { IHighlightSearchPipe } from '../highlight-search.pipe';
 
 export type IRoute = Omit<Route, 'data' | 'children'> & {
@@ -144,6 +145,8 @@ export type IMenu = {
   application?: IMenuApplication | null;
   companies?: IMenuCompany[];
   isFavorite?: boolean;
+  /** Backend menu code — used by menu-mode permission checks (`ihHasMn` / `ihNotHasMn`). */
+  menuCode?: string | null;
 
   /* ── Legacy ── */
   menuId?: number;
@@ -1027,13 +1030,13 @@ export class IHMenu implements OnChanges {
 
 @Component({
   selector: 'ih-sidebar',
-  imports: [AsyncPipe, IHMenu, ReactiveFormsModule],
+  imports: [AsyncPipe, IAvatar, IHMenu, ReactiveFormsModule],
   template: `
     @let user = user$ | async;
     <div class="ih-sidebar-header">
       @if (user) {
         <div class="user-image">
-          <img alt="User Image" [src]="user.userImagePath" />
+          <i-avatar [alt]="user.fullName" [size]="28" [src]="user.userImagePath" />
         </div>
 
         <div class="user-info">

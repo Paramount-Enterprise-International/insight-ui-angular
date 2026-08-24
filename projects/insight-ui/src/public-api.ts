@@ -8,7 +8,6 @@ export * from './lib/code-viewer';
 export * from './lib/datepicker';
 export * from './lib/dialog';
 export * from './lib/grid';
-export * from './lib/grid';
 export * from './lib/highlight-search.pipe';
 export * from './lib/host';
 export * from './lib/icon';
@@ -22,3 +21,29 @@ export * from './lib/textarea';
 export * from './lib/toggle';
 export * from './lib/ui';
 export * from './lib/avatar';
+
+// Shared SSO / auth package (IApiService, ISessionService, ICsrfService,
+// authGuard, authInterceptor, IEnvironment-style config, auth-callback helper)
+export * from './lib/auth';
+export * from './lib/csrf';
+export * from './lib/api';
+export * from './lib/session';
+export * from './lib/guards';
+export * from './lib/interceptors';
+
+// Current-user navigation & favorites data layer (API services + mappers)
+export * from './lib/user';
+
+// Session storage + session-expired overlay state
+export * from './lib/storage';
+export * from './lib/session-expired';
+
+// In-memory sidebar/user/menu store + permission checks
+export * from './lib/store';
+
+// Permission directives (ihHasMn / ihNotHasMn — async, menu or role source)
+export * from './lib/directives';
+
+// Default environment (single env; mirrors iam-web environment.dev.ts)
+export * from './environments/environment.interface';
+export * from './environments/environment';
