@@ -1,13 +1,14 @@
 import * as i0 from '@angular/core';
-import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, ViewChildren } from '@angular/core';
+import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, ViewChildren, makeEnvironmentProviders } from '@angular/core';
 import * as i1$1 from '@angular/common';
 import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom, Subject, BehaviorSubject, map, filter, startWith, shareReplay, of, Observable, tap, combineLatest } from 'rxjs';
+import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom, Subject, BehaviorSubject, map, filter, startWith, shareReplay, of, Observable, tap, combineLatest, throwError, timeout, lastValueFrom, forkJoin, distinctUntilChanged } from 'rxjs';
 import * as i1 from '@angular/forms';
 import { Validators, NG_VALUE_ACCESSOR, NgControl, FormGroupDirective, FormBuilder, FormControl, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { debounceTime } from 'rxjs/operators';
+import { debounceTime, tap as tap$1, map as map$1, catchError, shareReplay as shareReplay$1, switchMap, filter as filter$1, take, finalize } from 'rxjs/operators';
+import { toObservable } from '@angular/core/rxjs-interop';
 
 /**
  * IIcon
@@ -9562,6 +9563,167 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 }]
         }] });
 
+/**
+ * IAvatar
+ * Version: 1.0.0
+ * <i-avatar />
+ *
+ * Displays a user photo in a circle, square, or rounded-square container.
+ * Falls back to a FontAwesome user icon when no image is available.
+ */
+// ─── Size Mapping ────────────────────────────────────────────────────────────
+const SIZE_PRESETS = {
+    '3xs': 12,
+    '2xs': 16,
+    xs: 20,
+    sm: 32,
+    md: 48,
+    lg: 64,
+    xl: 96,
+    '2xl': 128,
+    '3xl': 160,
+    '4xl': 200,
+};
+/**
+ * Resolve the best IIconSize for a given avatar pixel size.
+ * The icon should fill roughly 50–60% of the container.
+ */
+function resolveIconSizeFromPx(px) {
+    if (px <= 24)
+        return 'sm';
+    if (px <= 40)
+        return 'md';
+    if (px <= 64)
+        return 'lg';
+    if (px <= 96)
+        return 'xl';
+    if (px <= 128)
+        return '2xl';
+    if (px <= 160)
+        return '3xl';
+    return '4xl';
+}
+// ─── Component ───────────────────────────────────────────────────────────────
+class IAvatar {
+    // ─── Inputs ────────────────────────────────────────────────────────────
+    /** Image URL. When empty or on error, falls back to fallbackSrc or icon. */
+    src;
+    /** Alt text for the image. */
+    alt;
+    /**
+     * Container size.
+     * - `number` → treated as pixels (e.g. `200` = 200px)
+     * - `IIconSize` string → uses a preset mapping (e.g. `'lg'` = 64px)
+     * @default 40
+     */
+    size = 40;
+    /**
+     * Container shape.
+     * @default 'circle'
+     */
+    shape = 'circle';
+    /** Fallback image URL. Used when `src` fails to load. If not set (or also fails), shows the user icon. */
+    fallbackSrc;
+    /** Additional CSS classes to inject onto the host element (e.g. `"border-2 border-primary"`). */
+    className;
+    // ─── Internal state ────────────────────────────────────────────────────
+    /** Whether the primary `src` image failed to load. */
+    hasError = false;
+    /** Whether the `fallbackSrc` image also failed to load. */
+    hasFallbackError = false;
+    // ─── Host bindings ─────────────────────────────────────────────────────
+    baseClass = true;
+    get attrShape() {
+        return this.shape ?? 'circle';
+    }
+    get resolvedSizePx() {
+        if (typeof this.size === 'number')
+            return this.size;
+        return SIZE_PRESETS[this.size] ?? 40;
+    }
+    get hostClass() {
+        return this.className;
+    }
+    // ─── Computed ──────────────────────────────────────────────────────────
+    /** Icon size for the fallback `<i-icon>`. */
+    get resolvedIconSize() {
+        if (typeof this.size === 'string')
+            return this.size;
+        return resolveIconSizeFromPx(this.size);
+    }
+    // ─── Event handlers ────────────────────────────────────────────────────
+    onImgError() {
+        this.hasError = true;
+    }
+    onFallbackError() {
+        this.hasFallbackError = true;
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAvatar, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IAvatar, isStandalone: true, selector: "i-avatar", inputs: { src: "src", alt: "alt", size: "size", shape: "shape", fallbackSrc: "fallbackSrc", className: "className" }, host: { properties: { "class.i-avatar": "this.baseClass", "attr.data-shape": "this.attrShape", "style.width.px": "this.resolvedSizePx", "style.height.px": "this.resolvedSizePx", "class": "this.hostClass" } }, ngImport: i0, template: `
+    <!-- Primary image -->
+    @if (!hasError && src) {
+      <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
+    }
+    <!-- Fallback image -->
+    @else if (fallbackSrc && !hasFallbackError) {
+      <img [alt]="alt ?? ''" [src]="fallbackSrc" (error)="onFallbackError()" />
+    }
+    <!-- Ultimate fallback: user icon -->
+    @else {
+      <i-icon icon="user" [size]="resolvedIconSize" />
+    }
+  `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }] });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAvatar, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-avatar',
+                    standalone: true,
+                    imports: [IIcon],
+                    template: `
+    <!-- Primary image -->
+    @if (!hasError && src) {
+      <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
+    }
+    <!-- Fallback image -->
+    @else if (fallbackSrc && !hasFallbackError) {
+      <img [alt]="alt ?? ''" [src]="fallbackSrc" (error)="onFallbackError()" />
+    }
+    <!-- Ultimate fallback: user icon -->
+    @else {
+      <i-icon icon="user" [size]="resolvedIconSize" />
+    }
+  `,
+                }]
+        }], propDecorators: { src: [{
+                type: Input
+            }], alt: [{
+                type: Input
+            }], size: [{
+                type: Input
+            }], shape: [{
+                type: Input
+            }], fallbackSrc: [{
+                type: Input
+            }], className: [{
+                type: Input
+            }], baseClass: [{
+                type: HostBinding,
+                args: ['class.i-avatar']
+            }], attrShape: [{
+                type: HostBinding,
+                args: ['attr.data-shape']
+            }], resolvedSizePx: [{
+                type: HostBinding,
+                args: ['style.width.px']
+            }, {
+                type: HostBinding,
+                args: ['style.height.px']
+            }], hostClass: [{
+                type: HostBinding,
+                args: ['class']
+            }] } });
+
 /* =========================================================
  * host.ts (insight-ui-angular)
  * ✅ Includes:
@@ -11121,7 +11283,7 @@ class IHSidebar {
     <div class="ih-sidebar-header">
       @if (user) {
         <div class="user-image">
-          <img alt="User Image" [src]="user.userImagePath" />
+          <i-avatar [alt]="user.fullName" [size]="28" [src]="user.userImagePath" />
         </div>
 
         <div class="user-info">
@@ -11195,19 +11357,19 @@ class IHSidebar {
     <div class="ih-sidebar-footer">
       <small>{{ footerText }}</small>
     </div>
-  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication"], outputs: ["clicked", "favoriteToggle"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.DefaultValueAccessor, selector: "input:not([type=checkbox])[formControlName],textarea[formControlName],input:not([type=checkbox])[formControl],textarea[formControl],input:not([type=checkbox])[ngModel],textarea[ngModel],[ngDefaultControl]" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.FormControlDirective, selector: "[formControl]", inputs: ["formControl", "disabled", "ngModel"], outputs: ["ngModelChange"], exportAs: ["ngForm"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
+  `, isInline: true, dependencies: [{ kind: "component", type: IAvatar, selector: "i-avatar", inputs: ["src", "alt", "size", "shape", "fallbackSrc", "className"] }, { kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication"], outputs: ["clicked", "favoriteToggle"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.DefaultValueAccessor, selector: "input:not([type=checkbox])[formControlName],textarea[formControlName],input:not([type=checkbox])[formControl],textarea[formControl],input:not([type=checkbox])[ngModel],textarea[ngModel],[ngDefaultControl]" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.FormControlDirective, selector: "[formControl]", inputs: ["formControl", "disabled", "ngModel"], outputs: ["ngModelChange"], exportAs: ["ngForm"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHSidebar, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-sidebar',
-                    imports: [AsyncPipe, IHMenu, ReactiveFormsModule],
+                    imports: [AsyncPipe, IAvatar, IHMenu, ReactiveFormsModule],
                     template: `
     @let user = user$ | async;
     <div class="ih-sidebar-header">
       @if (user) {
         <div class="user-image">
-          <img alt="User Image" [src]="user.userImagePath" />
+          <i-avatar [alt]="user.fullName" [size]="28" [src]="user.userImagePath" />
         </div>
 
         <div class="user-info">
@@ -12358,167 +12520,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 args: ['click', ['$event']]
             }] } });
 
-/**
- * IAvatar
- * Version: 1.0.0
- * <i-avatar />
- *
- * Displays a user photo in a circle, square, or rounded-square container.
- * Falls back to a FontAwesome user icon when no image is available.
- */
-// ─── Size Mapping ────────────────────────────────────────────────────────────
-const SIZE_PRESETS = {
-    '3xs': 12,
-    '2xs': 16,
-    xs: 20,
-    sm: 32,
-    md: 48,
-    lg: 64,
-    xl: 96,
-    '2xl': 128,
-    '3xl': 160,
-    '4xl': 200,
-};
-/**
- * Resolve the best IIconSize for a given avatar pixel size.
- * The icon should fill roughly 50–60% of the container.
- */
-function resolveIconSizeFromPx(px) {
-    if (px <= 24)
-        return 'sm';
-    if (px <= 40)
-        return 'md';
-    if (px <= 64)
-        return 'lg';
-    if (px <= 96)
-        return 'xl';
-    if (px <= 128)
-        return '2xl';
-    if (px <= 160)
-        return '3xl';
-    return '4xl';
-}
-// ─── Component ───────────────────────────────────────────────────────────────
-class IAvatar {
-    // ─── Inputs ────────────────────────────────────────────────────────────
-    /** Image URL. When empty or on error, falls back to fallbackSrc or icon. */
-    src;
-    /** Alt text for the image. */
-    alt;
-    /**
-     * Container size.
-     * - `number` → treated as pixels (e.g. `200` = 200px)
-     * - `IIconSize` string → uses a preset mapping (e.g. `'lg'` = 64px)
-     * @default 40
-     */
-    size = 40;
-    /**
-     * Container shape.
-     * @default 'circle'
-     */
-    shape = 'circle';
-    /** Fallback image URL. Used when `src` fails to load. If not set (or also fails), shows the user icon. */
-    fallbackSrc;
-    /** Additional CSS classes to inject onto the host element (e.g. `"border-2 border-primary"`). */
-    className;
-    // ─── Internal state ────────────────────────────────────────────────────
-    /** Whether the primary `src` image failed to load. */
-    hasError = false;
-    /** Whether the `fallbackSrc` image also failed to load. */
-    hasFallbackError = false;
-    // ─── Host bindings ─────────────────────────────────────────────────────
-    baseClass = true;
-    get attrShape() {
-        return this.shape ?? 'circle';
-    }
-    get resolvedSizePx() {
-        if (typeof this.size === 'number')
-            return this.size;
-        return SIZE_PRESETS[this.size] ?? 40;
-    }
-    get hostClass() {
-        return this.className;
-    }
-    // ─── Computed ──────────────────────────────────────────────────────────
-    /** Icon size for the fallback `<i-icon>`. */
-    get resolvedIconSize() {
-        if (typeof this.size === 'string')
-            return this.size;
-        return resolveIconSizeFromPx(this.size);
-    }
-    // ─── Event handlers ────────────────────────────────────────────────────
-    onImgError() {
-        this.hasError = true;
-    }
-    onFallbackError() {
-        this.hasFallbackError = true;
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAvatar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IAvatar, isStandalone: true, selector: "i-avatar", inputs: { src: "src", alt: "alt", size: "size", shape: "shape", fallbackSrc: "fallbackSrc", className: "className" }, host: { properties: { "class.i-avatar": "this.baseClass", "attr.data-shape": "this.attrShape", "style.width.px": "this.resolvedSizePx", "style.height.px": "this.resolvedSizePx", "class": "this.hostClass" } }, ngImport: i0, template: `
-    <!-- Primary image -->
-    @if (!hasError && src) {
-      <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
-    }
-    <!-- Fallback image -->
-    @else if (fallbackSrc && !hasFallbackError) {
-      <img [alt]="alt ?? ''" [src]="fallbackSrc" (error)="onFallbackError()" />
-    }
-    <!-- Ultimate fallback: user icon -->
-    @else {
-      <i-icon icon="user" [size]="resolvedIconSize" />
-    }
-  `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }] });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAvatar, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-avatar',
-                    standalone: true,
-                    imports: [IIcon],
-                    template: `
-    <!-- Primary image -->
-    @if (!hasError && src) {
-      <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
-    }
-    <!-- Fallback image -->
-    @else if (fallbackSrc && !hasFallbackError) {
-      <img [alt]="alt ?? ''" [src]="fallbackSrc" (error)="onFallbackError()" />
-    }
-    <!-- Ultimate fallback: user icon -->
-    @else {
-      <i-icon icon="user" [size]="resolvedIconSize" />
-    }
-  `,
-                }]
-        }], propDecorators: { src: [{
-                type: Input
-            }], alt: [{
-                type: Input
-            }], size: [{
-                type: Input
-            }], shape: [{
-                type: Input
-            }], fallbackSrc: [{
-                type: Input
-            }], className: [{
-                type: Input
-            }], baseClass: [{
-                type: HostBinding,
-                args: ['class.i-avatar']
-            }], attrShape: [{
-                type: HostBinding,
-                args: ['attr.data-shape']
-            }], resolvedSizePx: [{
-                type: HostBinding,
-                args: ['style.width.px']
-            }, {
-                type: HostBinding,
-                args: ['style.height.px']
-            }], hostClass: [{
-                type: HostBinding,
-                args: ['class']
-            }] } });
-
 class IUI {
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUI, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
     static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.29", ngImport: i0, type: IUI, imports: [IAvatar,
@@ -12623,6 +12624,1552 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 }]
         }] });
 
+/**
+ * Default environment for `@insight/ui`'s shared data layer.
+ *
+ * These are the library-wide defaults for the SSO / sidebar / user data
+ * layer. Consumer apps override any field at bootstrap via
+ * `provideInsightAuth()`.
+ */
+const environment = {
+    production: false,
+    releaseStage: 'development',
+    appName: 'Insight UI',
+    version: '1.0.2',
+    api: {
+        identity: 'https://account-dev.paramountenterprise.co.id/api',
+        user: 'https://account-dev.paramountenterprise.co.id/api/v1/users',
+        configuration: 'https://account-dev.paramountenterprise.co.id/api/v1',
+        application: 'https://account-dev.paramountenterprise.co.id/api/v1/applications',
+    },
+    signinUrl: 'https://account-dev.paramountenterprise.co.id/signin',
+    authCallbackUrl: 'https://account-dev.paramountenterprise.co.id/auth',
+    cookieDomain: '.paramountenterprise.co.id',
+    securityMode: true,
+    tokenLifespan: {
+        accessTokenSeconds: 3600,
+        refreshTokenSeconds: 7200,
+        ssoSessionMaxSeconds: 54000,
+    },
+    cookieSecure: true,
+    csrfTokenMaxAgeSeconds: 7170,
+    mfaChallengeSessionTimeoutSeconds: 300,
+    allowedReturnOrigins: [
+        'https://account-dev.paramountenterprise.co.id',
+        'https://*.paramountenterprise.co.id',
+    ],
+};
+
+/**
+ * Default `IInsightAuthConfig`, sourced from the library's default environment
+ * file (`environments/environment.ts`). Consumer apps override any field via
+ * `provideInsightAuth({ ... })`.
+ *
+ * `allowedReturnOrigins` defaults to this app's own origin (the common case —
+ * a callback only ever needs to trust redirecting back to itself) and
+ * `cookieDomain` defaults to the current hostname (informational only, the
+ * frontend never reads/sets this cookie) — both computed at call time since
+ * they depend on `window.location`.
+ */
+function getDefaultInsightAuthConfig() {
+    return {
+        api: {
+            identity: environment.api.identity,
+            user: environment.api.user,
+            configuration: environment.api.configuration,
+            application: environment.api.application,
+        },
+        signinUrl: environment.signinUrl,
+        callbackPath: '/auth/callback',
+        allowedReturnOrigins: [window.location.origin],
+        cookieDomain: window.location.hostname,
+        tokenLifespan: { ...environment.tokenLifespan },
+        csrfTokenMaxAgeSeconds: environment.csrfTokenMaxAgeSeconds,
+    };
+}
+/**
+ * Injection token carrying the consumer app's `IInsightAuthConfig`. Provided via
+ * `provideInsightAuth()`. Has a root-level default (`getDefaultInsightAuthConfig()`)
+ * so the library services never break when a consumer forgets to call
+ * `provideInsightAuth()` — consumers override it explicitly.
+ */
+const INSIGHT_AUTH_CONFIG = new InjectionToken('INSIGHT_AUTH_CONFIG', {
+    providedIn: 'root',
+    factory: () => getDefaultInsightAuthConfig(),
+});
+
+/**
+ * Validate and sanitize a `returnUrl` for post-login / post-callback redirect.
+ * Ported from iam-web's `signin.ts::sanitizeReturnUrl()` — behavior is kept
+ * identical so consumer apps and iam-web enforce the exact same open-redirect
+ * protection:
+ *
+ * - Relative paths (starting with `/`) are always allowed.
+ * - Protocol-relative URLs (`//`) are rejected — always fall back to `/`.
+ * - Absolute URLs are checked against `allowedReturnOrigins` (wildcard
+ *   supported, e.g. `https://*.paramount-land.com`).
+ * - Anything else (invalid URL, untrusted origin, unknown scheme) falls back to `/`.
+ *
+ * `isExternal: true` means the caller must do a full `window.location.href`
+ * navigation, not an in-app router navigation.
+ */
+function sanitizeReturnUrl(url, allowedReturnOrigins) {
+    if (!url) {
+        return { returnUrl: '/', isExternal: false };
+    }
+    // Block protocol-relative URLs (//evil.com)
+    if (url.startsWith('//')) {
+        return { returnUrl: '/', isExternal: false };
+    }
+    // Relative path — always safe
+    if (url.startsWith('/')) {
+        return { returnUrl: url, isExternal: false };
+    }
+    // Absolute URL — validate against trusted origins
+    if (/^https?:\/\//i.test(url)) {
+        try {
+            const parsed = new URL(url);
+            if (isAllowedOrigin(parsed.origin, allowedReturnOrigins)) {
+                return { returnUrl: url, isExternal: true };
+            }
+        }
+        catch {
+            // Invalid URL — reject
+        }
+    }
+    // Unknown scheme or untrusted origin — fall back to home
+    return { returnUrl: '/', isExternal: false };
+}
+/** Check whether an origin matches the `allowedReturnOrigins` whitelist (wildcard supported). */
+function isAllowedOrigin(origin, allowedReturnOrigins) {
+    const allowed = allowedReturnOrigins ?? [];
+    return allowed.some((pattern) => {
+        // Convert wildcard pattern to regex: https://*.example.com → ^https:\/\/[^.]+\.example\.com$
+        // Escape each literal segment separately so `*` itself is never escaped away.
+        const regexStr = pattern
+            .split('*')
+            .map((segment) => segment.replace(/[.+^${}()|[\]\\]/g, '\\$&')) // escape regex specials
+            .join('[^.]+'); // * matches a single subdomain label
+        try {
+            return new RegExp(`^${regexStr}$`, 'i').test(origin);
+        }
+        catch {
+            return origin === pattern; // fallback: exact match
+        }
+    });
+}
+
+/**
+ * Build the full external URL to iam-web's signin page for a cross-domain SSO
+ * redirect, routing the eventual handoff through THIS APP'S OWN callback
+ * route (`config.callbackPath`, default `/auth/callback`) — never through the
+ * page the user originally tried to visit.
+ *
+ * This is deliberate and fixes a real redirect loop: if the guard/interceptor
+ * used `window.location.href` (the current page) as the returnUrl directly,
+ * iam-web's handoff would append `#at=<token>` to THAT SAME page. Since that
+ * page still doesn't have a stored session yet at the moment it re-renders,
+ * the guard would fire again, capture `window.location.href` again — which
+ * NOW ALREADY CONTAINS the previous `#at=` fragment — and redirect back to
+ * iam-web with an ever-growing `returnUrl`, eventually overflowing header
+ * size limits (HTTP 431).
+ *
+ * Routing through a dedicated callback route breaks the loop: the callback
+ * page (`IAuthCallback`) consumes and strips the token BEFORE navigating
+ * (via the in-app router, not a full reload) to `targetPath` — so the guard
+ * only ever sees a clean, token-free URL on its next check.
+ */
+function buildExternalSigninUrl(config, targetPath) {
+    const callbackPath = config.callbackPath ?? '/auth/callback';
+    const callbackUrl = `${window.location.origin}${callbackPath}?returnUrl=${encodeURIComponent(targetPath)}`;
+    return `${config.signinUrl}?returnUrl=${encodeURIComponent(callbackUrl)}`;
+}
+
+/**
+ * Registers the @insight/ui shared auth package (`IApiService`,
+ * `ISessionService`, `ICsrfService`, `authGuard`) for a consumer app.
+ *
+ * Zero-config by default — sensible local-dev defaults are baked in (see
+ * `getDefaultInsightAuthConfig()`), matching iam-web's own local
+ * environment. Consumer apps only need to pass `overrides` for whatever
+ * differs from the defaults — typically `api.identity` and `signinUrl` when
+ * deploying to staging/production. Every field can be overridden
+ * individually, down to a single nested `api.*` or `tokenLifespan.*` entry;
+ * anything not overridden falls back to the default.
+ *
+ * Consumers must still register `authInterceptor` themselves via
+ * `provideHttpClient(withInterceptors([authInterceptor]))` in their own
+ * `app.config.ts` — matches iam-web's existing pattern of wiring the
+ * interceptor explicitly rather than hiding it inside a provider function.
+ *
+ * Usage (zero-config — local dev):
+ * ```ts
+ * export const config: ApplicationConfig = {
+ *   providers: [
+ *     provideInsightAuth(),
+ *     provideHttpClient(withInterceptors([authInterceptor])),
+ *     provideRouter(routes),
+ *   ],
+ * };
+ * ```
+ *
+ * Usage (override for staging/production):
+ * ```ts
+ * provideInsightAuth({
+ *   api: { identity: 'https://iam-identity.paramount-land.com/api' },
+ *   signinUrl: 'https://iam.paramount-land.com/signin',
+ * });
+ * ```
+ */
+function provideInsightAuth(overrides) {
+    const defaults = getDefaultInsightAuthConfig();
+    const config = {
+        ...defaults,
+        ...overrides,
+        // Cast needed: `Partial<...>`'s index signature widens to `string | undefined`,
+        // but real callers only ever pass actual string URLs, never `undefined` values.
+        api: { ...defaults.api, ...overrides?.api },
+        tokenLifespan: { ...defaults.tokenLifespan, ...overrides?.tokenLifespan },
+    };
+    return makeEnvironmentProviders([{ provide: INSIGHT_AUTH_CONFIG, useValue: config }]);
+}
+
+/**
+ * CSRF token management — cookie-to-header pattern for @insight/ui consumer apps.
+ * Mirrors iam-web's `ICsrfService`:
+ *
+ *   1. FE calls GET {api.identity}/auth/csrf.
+ *   2. Backend returns `{ csrfToken }` in the JSON body AND sets a `csrf_token` cookie.
+ *   3. FE stores the token in memory (JS cannot read cross-origin cookies).
+ *   4. FE sends the token back as `X-CSRF-Token` header on mutating requests.
+ *   5. Backend validates: header value === cookie value.
+ *
+ * Token expiration mirrors the backend cookie maxAge (minus a safety buffer,
+ * configured via `csrfTokenMaxAgeSeconds`) so the FE transparently re-fetches
+ * before the server-side cookie actually expires.
+ */
+class ICsrfService {
+    http = inject(HttpClient);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    /** In-memory CSRF token — retrieved from the backend response body, never from document.cookie directly. */
+    token = null;
+    tokenFetchedAt = null;
+    /**
+     * Return the in-memory CSRF token, or `null` if never fetched or expired
+     * (expiry triggers callers to re-invoke `ensureToken()`).
+     */
+    getToken() {
+        if (this.token && this.isTokenExpired()) {
+            return null;
+        }
+        return this.token;
+    }
+    /** Whether the in-memory token has exceeded its TTL (`csrfTokenMaxAgeSeconds`). */
+    isTokenExpired() {
+        if (this.tokenFetchedAt === null) {
+            return false;
+        }
+        const maxAgeMs = (this.config.csrfTokenMaxAgeSeconds ?? 7170) * 1000;
+        return Date.now() - this.tokenFetchedAt >= maxAgeMs;
+    }
+    /**
+     * Fetch a fresh CSRF token from `iam-identity-api` and store it in memory.
+     * On failure the error is propagated (callers that want best-effort behavior
+     * can catch it) — a failed fetch must not be silently swallowed, e.g. so the
+     * `retryOnCsrfError` pattern can re-trigger the fetch.
+     */
+    ensureToken() {
+        return this.http
+            .get(`${this.config.api.identity}/auth/csrf`, { withCredentials: true })
+            .pipe(tap$1((res) => {
+            this.token = res.csrfToken ?? null;
+            this.tokenFetchedAt = Date.now();
+        }), map$1(() => undefined), catchError((err) => {
+            // Never log the token itself — status code only.
+            console.warn('[@insight/ui][CSRF] Failed to fetch CSRF token', err?.status);
+            return throwError(() => err);
+        }));
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICsrfService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICsrfService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICsrfService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Standardized HTTP client for @insight/ui consumer apps.
+ * Mirrors iam-web's `IApiService`: `withCredentials: true` on every request
+ * (required for the CSRF cookie and the HttpOnly refresh cookie to flow),
+ * automatic `X-CSRF-Token` header injection, transparent response typing
+ * (`T`, no wrapper), and RFC 9457 Problem Details error enrichment matching
+ * the exact shape iam-web already produces (`status`/`detail`/`retryAfter`)
+ * so consumer apps can reuse the `err?.detail ?? 'fallback'` convention.
+ */
+class IApiService {
+    http = inject(HttpClient);
+    csrf = inject(ICsrfService);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    get headers() {
+        const base = {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        };
+        const csrfToken = this.csrf.getToken();
+        if (csrfToken) {
+            base['X-CSRF-Token'] = csrfToken;
+        }
+        return base;
+    }
+    /**
+     * Normalize a raw `HttpErrorResponse` into a consistent shape:
+     * `{ status, detail, retryAfter, ...rest }`. `retryAfter` is read from the
+     * body or the `Retry-After` header, so 429/423 responses surface it
+     * untouched for rate-limit/lockout UX.
+     */
+    enrichError(err) {
+        const body = err?.error;
+        if (body && typeof body === 'object' && !Array.isArray(body)) {
+            const retryAfterFromHeader = err?.headers?.get?.('Retry-After');
+            const parsedHeader = retryAfterFromHeader ? Number(retryAfterFromHeader) : NaN;
+            const retryAfter = (typeof body.retryAfter === 'number' ? body.retryAfter : undefined) ??
+                (Number.isFinite(parsedHeader) ? parsedHeader : undefined);
+            return throwError(() => ({
+                ...body,
+                status: err?.status ?? body.status,
+                message: err?.message ?? body.message,
+                detail: body.detail ?? body.title ?? err?.message ?? 'An error occurred',
+                retryAfter,
+            }));
+        }
+        return throwError(() => err);
+    }
+    get(path, params, options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const mergedHeaders = { ...this.headers, ...options?.headers };
+        return this.http
+            .get(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders })
+            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+    }
+    post(path, body = {}, options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const mergedHeaders = { ...this.headers, ...options?.headers };
+        return this.http
+            .post(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
+            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+    }
+    put(path, body = {}, options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const mergedHeaders = { ...this.headers, ...options?.headers };
+        return this.http
+            .put(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
+            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+    }
+    delete(path, options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const mergedHeaders = { ...this.headers, ...options?.headers };
+        // Fastify rejects Content-Type: application/json with an empty body
+        if (!options?.body) {
+            delete mergedHeaders['Content-Type'];
+        }
+        return this.http
+            .delete(`${baseUrl}${path}`, {
+            withCredentials: true,
+            headers: mergedHeaders,
+            body: options?.body,
+        })
+            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+    }
+    getBlob(path, params, options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const mergedHeaders = { ...this.headers, ...options?.headers };
+        return this.http
+            .get(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders, responseType: 'blob' })
+            .pipe(catchError((err) => this.enrichError(err)));
+    }
+    upload(path, file, options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const body = file instanceof FormData
+            ? file
+            : (() => {
+                const fd = new FormData();
+                fd.append('file', file);
+                return fd;
+            })();
+        // Content-Type intentionally omitted — the browser sets the multipart boundary automatically.
+        const headers = { ...options?.headers };
+        const csrfToken = this.csrf.getToken();
+        if (csrfToken) {
+            headers['X-CSRF-Token'] = csrfToken;
+        }
+        return this.http
+            .post(`${baseUrl}${path}`, body, { withCredentials: true, headers })
+            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IApiService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IApiService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IApiService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Login lockout constants (local, client-side supplement to Keycloak
+ * brute-force protection). 5 failed attempts → 1-minute suspend; counter
+ * resets after 12h idle or a successful login.
+ */
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 1 * 60 * 1000;
+const IDLE_RESET_MS = 12 * 60 * 60 * 1000;
+const LOCK_STORAGE_KEY = 'iam.mock.login_lockout';
+/**
+ * iam-identity-api auth facade (Mode 2 proxy — Keycloak is never exposed to the
+ * frontend). Base URL = `{api.identity}` from the resolved auth config.
+ *
+ * @overridable — consumers may provide `{ provide: IAuthService, useClass: ... }`.
+ */
+class IAuthService {
+    api = inject(IApiService);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    get identityUrl() {
+        return this.config.api.identity;
+    }
+    login(username, password, recaptchaToken, isChallengeResponse) {
+        const cleanUsername = username.trim().toLowerCase();
+        const lockData = this.getLockoutData(cleanUsername);
+        if (lockData.lockedUntil && lockData.lockedUntil > Date.now()) {
+            const retryAfter = Math.ceil((lockData.lockedUntil - Date.now()) / 1000);
+            return throwError(() => ({
+                status: 423,
+                message: 'Login access is temporarily restricted. Please try again in a few moments.',
+                detail: 'Login access is temporarily restricted. Please try again in a few moments.',
+                retryAfter,
+            }));
+        }
+        return this.api
+            .post('/auth/login', {
+            username,
+            password,
+            recaptchaToken,
+            isChallengeResponse: isChallengeResponse ?? false,
+        })
+            .pipe(tap$1((res) => {
+            if (res.accessToken || res.mfaRequired || res.passwordExpired) {
+                this.resetLockout(cleanUsername);
+            }
+        }), catchError((err) => {
+            if (err?.status === 401 || err?.status === 423) {
+                this.recordFailedAttempt(cleanUsername);
+            }
+            return throwError(() => err);
+        }));
+    }
+    /** Silently refresh the access token via the HttpOnly refresh-token cookie. */
+    refresh() {
+        return this.api.post('/auth/refresh', {});
+    }
+    /** Clear the server-side session and expire the HttpOnly refresh cookie. */
+    logout(refreshToken) {
+        return this.api.post('/auth/logout', { refreshToken }).pipe(map$1(() => undefined));
+    }
+    /** Exchange a short-lived `at=` auth token for a full session (cross-app handoff). */
+    exchangeAuthToken(authToken) {
+        return this.api.post('/auth/exchange', {}, { headers: { Authorization: authToken } });
+    }
+    /** Verify the MFA TOTP code during a login challenge. */
+    verifyMfaChallenge(mfaSessionId, totpCode) {
+        return this.api.post('/auth/mfa/verify', { mfaSessionId, totpCode });
+    }
+    /** Verify the TOTP code during first-time MFA enrollment (forced at login). */
+    verifyMfaEnroll(mfaSessionId, totpCode) {
+        return this.api.post('/auth/mfa/enroll/verify', { mfaSessionId, totpCode });
+    }
+    /** Self-service MFA — check enrollment status (`GET /profile/mfa`). */
+    selfServiceGetStatus() {
+        return this.api.get('/profile/mfa');
+    }
+    /** Self-service MFA — initiate enrollment to get the QR & session id (`POST /profile/mfa/enroll`). */
+    selfServiceEnrollInitiate() {
+        return this.api.post('/profile/mfa/enroll', {});
+    }
+    /** Self-service MFA — verify OTP and complete enrollment (`POST /profile/mfa/enroll/verify`). */
+    selfServiceEnrollVerify(enrollmentSessionId, totpCode) {
+        return this.api
+            .post('/profile/mfa/enroll/verify', { enrollmentSessionId, totpCode })
+            .pipe(map$1(() => undefined));
+    }
+    /** Self-service reset (un-enroll) MFA for the current user — requires password (`DELETE /profile/mfa`). */
+    selfServiceResetMfa(userSub, password) {
+        return this.api
+            .delete('/profile/mfa', { apiUrl: this.identityUrl, body: { password } })
+            .pipe(map$1(() => undefined));
+    }
+    /**
+     * Change password when it has expired (forced change flow). Uses a short-lived
+     * `changePasswordToken` (10 min, scope `change_password_only`) as the Bearer
+     * header. Backend returns a full accessToken on success so the user continues
+     * seamlessly without re-login.
+     */
+    changePassword(changePasswordToken, newPassword, confirmPassword) {
+        return this.api.post('/auth/change-password', { newPassword, confirmPassword }, { headers: { Authorization: `Bearer ${changePasswordToken}` } });
+    }
+    /** Request a password-reset link via email or WhatsApp (`POST /auth/forgot-password`). */
+    forgotPassword(identifier, mode) {
+        return this.api.post('/auth/forgot-password', {
+            identifier,
+            method: mode,
+        });
+    }
+    /** Validate a reset token before showing the reset form (`GET /auth/reset-password/validate`). */
+    validateResetToken(token) {
+        return this.api.get('/auth/reset-password/validate', new HttpParams().set('token', token));
+    }
+    /** Submit a new password using the reset token (`POST /auth/reset-password`). */
+    resetPassword(token, newPassword, confirmPassword) {
+        return this.api.post('/auth/reset-password', { token, newPassword, confirmPassword });
+    }
+    // ─── Login lockout helpers (sessionStorage per-username) ─────────────────────
+    getLockoutData(username) {
+        try {
+            const raw = sessionStorage.getItem(`${LOCK_STORAGE_KEY}_${username}`);
+            const data = raw ? JSON.parse(raw) : { attempts: 0, lockedUntil: null, lastAttemptAt: null };
+            if (data.lastAttemptAt && Date.now() - data.lastAttemptAt >= IDLE_RESET_MS) {
+                return { attempts: 0, lockedUntil: null, lastAttemptAt: null };
+            }
+            return data;
+        }
+        catch {
+            return { attempts: 0, lockedUntil: null, lastAttemptAt: null };
+        }
+    }
+    recordFailedAttempt(username) {
+        const data = this.getLockoutData(username);
+        data.attempts += 1;
+        data.lastAttemptAt = Date.now();
+        if (data.attempts >= MAX_LOGIN_ATTEMPTS - 1) {
+            data.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+        }
+        sessionStorage.setItem(`${LOCK_STORAGE_KEY}_${username}`, JSON.stringify(data));
+    }
+    resetLockout(username) {
+        sessionStorage.removeItem(`${LOCK_STORAGE_KEY}_${username}`);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAuthService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAuthService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAuthService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+const valueAt = (value, key) => {
+    if (typeof value !== 'object' || value === null) {
+        return undefined;
+    }
+    const candidate = value[key];
+    return typeof candidate === 'string' && candidate.length > 0 ? candidate : undefined;
+};
+/** Supports normalized Problem Details errors and raw legacy HTTP error bodies. */
+const extractProblemDetailsErrorCode = (error) => {
+    if (error === null || error === undefined) {
+        return undefined;
+    }
+    const problem = error;
+    return (problem.errorCode ??
+        problem.code ??
+        valueAt(error?.error, 'errorCode') ??
+        valueAt(error?.error, 'code'));
+};
+/** Maps current backend and legacy error codes to the session-expired UI states. */
+const toSessionExpiredReason = (errorCode) => {
+    switch (errorCode) {
+        case 'AUTH_TOKEN_EXPIRED':
+        case 'TOKEN_EXPIRED':
+        case 'AUTH_NO_SESSION':
+            return 'TOKEN_EXPIRED';
+        case 'AUTH_SESSION_REVOKED':
+        case 'SESSION_REVOKED':
+            return 'SESSION_REVOKED';
+        case 'AUTH_SESSION_REPLACED':
+        case 'SESSION_REPLACED':
+            return 'SESSION_REPLACED';
+        default:
+            return undefined;
+    }
+};
+/**
+ * True when an error is semantically a session-expiry event (HTTP 401/498 or a
+ * recognized session-related error code). Other statuses are business/transport
+ * errors and must be handled by the caller instead of forcing a logout.
+ */
+const isSessionExpiredError = (error) => {
+    if (error instanceof HttpErrorResponse) {
+        if (error.status === 401 || error.status === 498) {
+            return true;
+        }
+    }
+    if (error?.status === 401 || error?.status === 498) {
+        return true;
+    }
+    return toSessionExpiredReason(extractProblemDetailsErrorCode(error)) !== undefined;
+};
+/**
+ * In-memory overlay state for the session-expired UI.
+ *
+ * @overridable — consumers may provide `{ provide: SessionExpiredService, useClass: ... }`.
+ */
+class SessionExpiredService {
+    visible = signal(false, ...(ngDevMode ? [{ debugName: "visible" }] : []));
+    returnUrl = signal('/', ...(ngDevMode ? [{ debugName: "returnUrl" }] : []));
+    reason = signal(undefined, ...(ngDevMode ? [{ debugName: "reason" }] : []));
+    show(returnUrl, reason) {
+        this.returnUrl.set(returnUrl || '/');
+        this.reason.set(reason);
+        this.visible.set(true);
+    }
+    hide() {
+        this.visible.set(false);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: SessionExpiredService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: SessionExpiredService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: SessionExpiredService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/** Hard timeout for the single-flight refresh call (ms). */
+const REFRESH_TIMEOUT_MS = 30_000;
+/**
+ * Minimal inline JWT payload decode — deliberately NOT using
+ * `@auth0/angular-jwt` to avoid forcing a new dependency onto every
+ * @insight/ui consumer. Returns `null` on any decode failure.
+ */
+function decodeJwtPayload(token) {
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) {
+            return null;
+        }
+        const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+        const json = decodeURIComponent(atob(padded)
+            .split('')
+            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join(''));
+        return JSON.parse(json);
+    }
+    catch {
+        return null;
+    }
+}
+/** Decodes an `IAuthUser` from the token's Keycloak claims. */
+function decodeUser(accessToken) {
+    const decoded = decodeJwtPayload(accessToken);
+    const realmAccess = decoded?.['realm_access'];
+    const roles = Array.isArray(realmAccess?.roles) ? realmAccess.roles : [];
+    return {
+        sub: typeof decoded?.['sub'] === 'string' ? decoded['sub'] : '',
+        email: typeof decoded?.['email'] === 'string' ? decoded['email'] : '',
+        name: typeof decoded?.['name'] === 'string' ? decoded['name'] : '',
+        roles,
+        userType: decoded?.['user_type'] === 'external' ? 'external' : 'internal',
+    };
+}
+/**
+ * Session management for @insight/ui consumer apps.
+ *
+ * Access token: stored IN MEMORY only (never Web Storage). Refresh token:
+ * HttpOnly cookie managed exclusively by iam-identity-api; this service never
+ * reads or stores it directly (an in-memory `refreshToken` is kept only for
+ * server-side logout).
+ *
+ * Superset of the basic SSO session (used by remote apps via `setAccessToken` /
+ * `authGuard` / `IAuthCallback`) and the richer iam-web session (session
+ * restore, password-expiry, change-password token, proactive validation,
+ * session-expired overlay).
+ *
+ * @overridable — consumers may provide `{ provide: ISessionService, useClass: ... }`.
+ */
+class ISessionService {
+    authService = inject(IAuthService);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    sessionExpiredService = inject(SessionExpiredService);
+    // In-memory token storage — intentionally NOT persisted to Web Storage.
+    accessToken = null;
+    _refreshToken = null;
+    expiresAt = null;
+    sessionStartedAt = null;
+    currentUser = null;
+    passwordExpired = false;
+    changePasswordTokenValue = null;
+    lastVerifiedAt = 0;
+    /** True while the app is restoring/validating the session on load. Consumer apps may use this to show a loading state. */
+    initializing = signal(false, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
+    // Single-flight refresh: one in-flight /auth/refresh shared by all callers,
+    // retained until it completes/errors so a cancelled caller cannot abort it.
+    refreshInFlight = null;
+    isAuth() {
+        return !!this.accessToken && !this.isTokenExpired() && !this.isSsoSessionExpired();
+    }
+    isTokenExpired() {
+        if (!this.accessToken || this.expiresAt === null) {
+            return true;
+        }
+        return Date.now() >= this.expiresAt;
+    }
+    /**
+     * Whether the max SSO session duration has been exceeded (default 15h,
+     * configured via `tokenLifespan.ssoSessionMaxSeconds`). After this, the
+     * user must re-authenticate regardless of token state.
+     */
+    isSsoSessionExpired() {
+        if (this.sessionStartedAt === null) {
+            return false;
+        }
+        const maxDurationMs = this.config.tokenLifespan.ssoSessionMaxSeconds * 1000;
+        return Date.now() - this.sessionStartedAt >= maxDurationMs;
+    }
+    isPasswordExpired() {
+        return this.passwordExpired;
+    }
+    clearPasswordExpired() {
+        this.passwordExpired = false;
+    }
+    setPasswordExpired() {
+        this.passwordExpired = true;
+    }
+    setChangePasswordToken(token) {
+        this.changePasswordTokenValue = token;
+        sessionStorage.setItem('iam.changePasswordToken', token);
+    }
+    getChangePasswordToken() {
+        if (this.changePasswordTokenValue) {
+            return this.changePasswordTokenValue;
+        }
+        const stored = sessionStorage.getItem('iam.changePasswordToken');
+        if (stored) {
+            this.changePasswordTokenValue = stored;
+            return stored;
+        }
+        return null;
+    }
+    clearChangePasswordToken() {
+        this.changePasswordTokenValue = null;
+        sessionStorage.removeItem('iam.changePasswordToken');
+    }
+    getAccessToken() {
+        return this.accessToken;
+    }
+    getRefreshToken() {
+        return this._refreshToken;
+    }
+    getUser() {
+        return this.currentUser;
+    }
+    /** Role-membership check against the decoded token roles (ANY match). */
+    hasMn(mn) {
+        const roles = this.getRoles();
+        if (Array.isArray(mn)) {
+            return mn.some((m) => roles.includes(m));
+        }
+        return roles.includes(mn);
+    }
+    /**
+     * Roles claimed by the current access token (Keycloak `realm_access.roles`).
+     * Returns an empty array while no token is set. Used by role-mode permission
+     * checks (`ihHasMn` / `ihNotHasMn` with `source: 'role'`).
+     */
+    getRoles() {
+        if (!this.accessToken) {
+            return [];
+        }
+        const decoded = decodeJwtPayload(this.accessToken);
+        const roles = decoded?.realm_access?.roles;
+        return Array.isArray(roles) ? roles.filter((role) => typeof role === 'string') : [];
+    }
+    /** True if the current access token claims ANY of the given roles. */
+    hasRole(code) {
+        const roles = this.getRoles();
+        if (Array.isArray(code)) {
+            return code.some((role) => roles.includes(role));
+        }
+        return roles.includes(code);
+    }
+    /**
+     * Store the access token received from the SSO handoff (URL hash fragment)
+     * or from a refresh response. `expiresIn` (seconds) defaults to the token's
+     * own `exp` claim, then falls back to the configured `accessTokenSeconds`.
+     */
+    setAccessToken(accessToken, expiresIn) {
+        this.accessToken = accessToken;
+        const effectiveExpiresIn = expiresIn ?? this.readExpiresInFromToken(accessToken) ?? this.config.tokenLifespan.accessTokenSeconds;
+        // 30-second buffer to avoid edge cases, matches iam-web's convention.
+        this.expiresAt = Date.now() + (effectiveExpiresIn - 30) * 1000;
+        if (this.sessionStartedAt === null) {
+            this.sessionStartedAt = Date.now();
+        }
+    }
+    /**
+     * Full session establishment (login / MFA / exchange / refresh). Sets the
+     * user, decodes password-expiry claims, stamps the last-verified time, and
+     * marks an active session so `tryRestoreSession()` can distinguish a cold
+     * start from a refresh-after-revocation.
+     */
+    setSession(accessToken, expiresIn, user, refreshToken) {
+        this.accessToken = accessToken;
+        if (refreshToken) {
+            this._refreshToken = refreshToken;
+        }
+        this.expiresAt = Date.now() + (expiresIn - 30) * 1000;
+        this.currentUser = user;
+        this.sessionStartedAt = Date.now();
+        const decoded = decodeJwtPayload(accessToken);
+        const neverExpired = decoded?.['never_expired'] === true;
+        const pwdExpired = decoded?.['pwd_expired'] === true;
+        this.passwordExpired = !neverExpired && pwdExpired;
+        sessionStorage.setItem('iam.session.active', 'true');
+        this.lastVerifiedAt = Date.now();
+    }
+    clearSession() {
+        this.accessToken = null;
+        this._refreshToken = null;
+        this.expiresAt = null;
+        this.currentUser = null;
+        this.passwordExpired = false;
+        this.sessionStartedAt = null;
+        this.changePasswordTokenValue = null;
+        sessionStorage.removeItem('iam.changePasswordToken');
+        // NOTE: `iam.session.active` is intentionally NOT cleared here — it must
+        // survive mid-session revocation so `tryRestoreSession()` can detect
+        // "refresh after revocation" on the next load; explicit logout clears it.
+    }
+    logout() {
+        this.clearSession();
+    }
+    /**
+     * Silently refresh the access token via the HttpOnly refresh cookie
+     * (`POST {api.identity}/auth/refresh`, `withCredentials: true`).
+     * Single-flight: concurrent callers share the in-flight refresh; the shared
+     * observable is retained until it completes/errors so a cancelled caller
+     * cannot abort the fetch.
+     */
+    refreshToken() {
+        let inFlight = this.refreshInFlight;
+        if (!inFlight) {
+            const source = this.authService.refresh().pipe(timeout({
+                each: REFRESH_TIMEOUT_MS,
+                with: () => throwError(() => new Error(`Refresh request timed out after ${REFRESH_TIMEOUT_MS}ms`)),
+            }), tap$1((res) => {
+                this.setSession(res.accessToken, res.expiresIn, this.currentUser ?? decodeUser(res.accessToken), res.refreshToken);
+            }), map$1((res) => res.accessToken), catchError((err) => {
+                console.warn('[@insight/ui][SESSION] silent refresh failed', {
+                    status: err?.status,
+                    errorCode: extractProblemDetailsErrorCode(err),
+                });
+                return throwError(() => err);
+            }), shareReplay$1({ bufferSize: 1, refCount: true }));
+            inFlight = source;
+            this.refreshInFlight = source;
+            source.subscribe({
+                error: () => {
+                    this.refreshInFlight = null;
+                },
+                complete: () => {
+                    this.refreshInFlight = null;
+                },
+            });
+        }
+        return inFlight;
+    }
+    /** True if the session was verified against the backend within `cooldownMs` (default 30s). */
+    isRecentlyVerified(cooldownMs = 30_000) {
+        return !!this.accessToken && Date.now() - this.lastVerifiedAt < cooldownMs;
+    }
+    /**
+     * Proactive session validation for guards. Refreshes the token to check
+     * session validity WITHOUT resetting the SSO session timer. Skips the refresh
+     * if the last check was within 30 seconds. Throws if the session was revoked
+     * (e.g. `SESSION_REPLACED`).
+     */
+    proactiveValidate() {
+        if (this.isRecentlyVerified()) {
+            return of(this.accessToken);
+        }
+        const savedStartedAt = this.sessionStartedAt;
+        return this.refreshToken().pipe(tap$1(() => {
+            this.sessionStartedAt = savedStartedAt;
+        }));
+    }
+    /**
+     * Cold-start session restore from the HttpOnly cookie (called on app load).
+     * Skips auth sub-pages unless the signin page carries an ABSOLUTE (external)
+     * `returnUrl` (a cross-app SSO handoff). Shows the session-expired overlay
+     * when refreshing after a previously-active session. Returns the reason (if
+     * any) extracted from the error so the guard can decide overlay vs. signin.
+     */
+    tryRestoreSession() {
+        const pathname = window.location.pathname ?? '';
+        const isSigninPage = /^\/auth\/signin$|^\/signin$/i.test(pathname);
+        const isOtherAuthPage = /^\/auth(\/|$)|^\/forgot-password|^\/reset-password/i.test(pathname) && !isSigninPage;
+        const returnUrlParam = new URLSearchParams(window.location.search).get('returnUrl');
+        const hasExternalReturnUrl = !!returnUrlParam && /^https?:\/\//i.test(returnUrlParam);
+        if (isOtherAuthPage || (isSigninPage && !hasExternalReturnUrl)) {
+            this.initializing.set(false);
+            return Promise.resolve({});
+        }
+        const restorePromise = lastValueFrom(this.authService.refresh().pipe(tap$1((res) => {
+            this.setSession(res.accessToken, res.expiresIn, decodeUser(res.accessToken), res.refreshToken);
+        }), map$1(() => ({}))), { defaultValue: {} }).catch((err) => {
+            console.debug('[@insight/ui][SESSION] tryRestoreSession: FAILED', {
+                status: err?.status,
+            });
+            const code = toSessionExpiredReason(extractProblemDetailsErrorCode(err));
+            const wasActive = sessionStorage.getItem('iam.session.active') === 'true';
+            if (wasActive && isSessionExpiredError(err)) {
+                this.sessionExpiredService.show(window.location.pathname, code ?? 'TOKEN_EXPIRED');
+            }
+            if (isSessionExpiredError(err)) {
+                this.authService.logout().subscribe({ error: () => void 0 });
+            }
+            return { reason: code };
+        });
+        const safetyTimer = new Promise((r) => setTimeout(() => r({}), 10_000));
+        return Promise.race([restorePromise, safetyTimer]).finally(() => {
+            this.initializing.set(false);
+        });
+    }
+    readExpiresInFromToken(token) {
+        const decoded = decodeJwtPayload(token);
+        if (!decoded || typeof decoded['exp'] !== 'number') {
+            return null;
+        }
+        return Math.max(0, decoded['exp'] - Math.floor(Date.now() / 1000));
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISessionService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISessionService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISessionService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Extract the access token appended by iam-web after a successful external
+ * SSO redirect. Reads the URL HASH FRAGMENT (`#at=<token>`) — deliberately
+ * NOT a query parameter — so the token is never sent to the server and never
+ * appears in access/gateway logs (fragments are browser-only and are
+ * unconditionally stripped from the `Referer` header).
+ */
+function extractAccessTokenFromHash() {
+    const hash = window.location.hash;
+    if (!hash || hash.length < 2) {
+        return null;
+    }
+    const params = new URLSearchParams(hash.substring(1));
+    return params.get('at');
+}
+/**
+ * Reusable SSO callback route component for @insight/ui consumer apps.
+ * Register it at whatever route path is used as the `returnUrl` when
+ * redirecting to iam-web's signin page, e.g.
+ * `{ path: 'auth/callback', component: IAuthCallback }`.
+ *
+ * Flow:
+ *  1. Extract the `at` token from the URL hash fragment.
+ *  2. Store it via `ISessionService` (in-memory only).
+ *  3. Clear the fragment from the URL immediately (never leave the token
+ *     sitting in browser history).
+ *  4. Validate & redirect to the original in-app `returnUrl` (query param
+ *     `returnUrl`, defaulting to `/`), using the same `sanitizeReturnUrl`
+ *     rules as iam-web.
+ */
+class IAuthCallback {
+    session = inject(ISessionService);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    router = inject(Router);
+    ngOnInit() {
+        const accessToken = extractAccessTokenFromHash();
+        // Clear the fragment immediately regardless of outcome — the token must
+        // never remain visible in the URL / browser history.
+        if (window.location.hash) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+        if (!accessToken) {
+            window.location.href = this.config.signinUrl;
+            return;
+        }
+        this.session.setAccessToken(accessToken);
+        const rawReturnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/';
+        const { returnUrl, isExternal } = sanitizeReturnUrl(rawReturnUrl, this.config.allowedReturnOrigins);
+        // Self-redirect loop guard — a relative returnUrl must never point back
+        // at this app's own callback route.
+        const callbackPath = this.config.callbackPath ?? '/auth/callback';
+        const safeReturnUrl = !isExternal && returnUrl.startsWith(callbackPath) ? '/' : returnUrl;
+        if (isExternal) {
+            window.location.href = returnUrl;
+        }
+        else {
+            this.router.navigateByUrl(safeReturnUrl);
+        }
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAuthCallback, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: IAuthCallback, isStandalone: true, selector: "i-auth-callback", ngImport: i0, template: '', isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAuthCallback, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-auth-callback',
+                    standalone: true,
+                    template: '',
+                }]
+        }] });
+
+/**
+ * Cross-domain auth guard for @insight/ui consumer apps.
+ *
+ * Unlike iam-web's internal Router-based guard, this performs a FULL PAGE
+ * redirect to iam-web's signin page when unauthenticated, since the consumer
+ * app and iam-web are separate applications/domains — not routes within the
+ * same Angular router. The redirect is routed through this app's OWN
+ * callback route (not the page the user was trying to visit) — see
+ * `buildExternalSigninUrl()` for why that's required to avoid a redirect loop.
+ */
+const authGuard = (_route, state) => {
+    const session = inject(ISessionService);
+    const config = inject(INSIGHT_AUTH_CONFIG);
+    if (session.isAuth()) {
+        return true;
+    }
+    window.location.href = buildExternalSigninUrl(config, state.url);
+    return false;
+};
+
+// Endpoints that must never receive a Bearer header (would be circular / not yet authenticated).
+const AUTH_SKIP_URLS = ['/auth/csrf', '/auth/refresh'];
+const isAuthSkipUrl = (url) => AUTH_SKIP_URLS.some((skip) => url.includes(skip));
+const addAuthHeader = (req, token) => req.clone({ headers: req.headers.set('Authorization', `Bearer ${token}`) });
+/**
+ * Auth HTTP interceptor for @insight/ui consumer apps.
+ *
+ * Attaches the in-memory access token as a Bearer header. On 401, attempts a
+ * single silent refresh (via the HttpOnly refresh cookie) and retries once;
+ * on refresh failure, clears the session and redirects to iam-web's signin
+ * page. 429 (rate-limit) and 423 (lockout) responses are passed through
+ * untouched — `IApiService.enrichError()` already surfaces `retryAfter` for
+ * consumer apps to build the same UX as iam-web.
+ */
+const authInterceptor = (req, next) => {
+    const session = inject(ISessionService);
+    const config = inject(INSIGHT_AUTH_CONFIG);
+    if (isAuthSkipUrl(req.url)) {
+        return next(req);
+    }
+    const token = session.getAccessToken();
+    const outgoing = token ? addAuthHeader(req, token) : req;
+    return next(outgoing).pipe(catchError((err) => {
+        if (!(err instanceof HttpErrorResponse) || err.status !== 401) {
+            return throwError(() => err);
+        }
+        return session.refreshToken().pipe(switchMap((newToken) => next(addAuthHeader(req, newToken))), catchError((refreshErr) => {
+            session.clearSession();
+            // Use the current path (no hash/token) as the target to return to —
+            // routed through the callback route, same as authGuard, to avoid a
+            // redirect loop.
+            const targetPath = window.location.pathname + window.location.search;
+            window.location.href = buildExternalSigninUrl(config, targetPath);
+            return throwError(() => refreshErr);
+        }));
+    }));
+};
+
+/**
+ * Types for the current-user navigation & favorites data, matched to the
+ * iam-user-api user-menu service contract (`GET {api.user}/me/menus*` and
+ * `GET {api.user}/users/user`). These are the raw backend shapes; the library
+ * maps them onto the UI-facing `IMenu` / `IUser` contracts via `user.mapper.ts`.
+ */
+
+/**
+ * Maps the backend current-user DTO to `@insight/ui`'s sidebar `IUser` shape
+ * (`employeeCode` / `fullName` / `userImagePath`), falling back to `username`.
+ * `userImagePath` is `''` when no photo exists — the sidebar renders it with
+ * `i-avatar`, which falls back to a user icon when the image is empty/errors.
+ */
+function mapToSidebarUser(user) {
+    return {
+        employeeCode: user.employeeCode ?? user.username ?? '',
+        fullName: user.fullName ?? user.username ?? '',
+        userImagePath: user.photoUrl ?? '',
+    };
+}
+/** Maps a backend effective-menu node onto the UI-facing `IMenu` (modern shape). */
+function toIMenu(node) {
+    return {
+        id: node.id,
+        name: node.name,
+        type: node.type,
+        menuCode: node.menuCode,
+        route: node.route,
+        icon: node.icon,
+        openIn: node.openIn,
+        application: node.application ? { ...node.application } : null,
+        companies: node.companies?.map((company) => ({ ...company })) ?? [],
+        isFavorite: node.isFavorite,
+        children: node.children?.map(toIMenu) ?? [],
+    };
+}
+/** Maps an array of backend effective-menu nodes onto `IMenu[]`. */
+function toIMenus(nodes) {
+    return (nodes ?? []).map(toIMenu);
+}
+/** Maps a backend favorite item onto the UI-facing `IMenu` (modern shape). */
+function toIMenuFavorite(item) {
+    return {
+        id: item.id,
+        name: item.name,
+        menuCode: item.menuCode,
+        route: item.route,
+        icon: item.icon,
+        openIn: item.openIn,
+        application: item.application ? { ...item.application } : null,
+        companies: item.companies?.map((company) => ({ ...company })) ?? [],
+        isFavorite: true,
+    };
+}
+/** Recursively collects every non-null `menuCode` across a menu tree (deduplicated, order preserved). */
+function collectMenuCodes(menus) {
+    const codes = new Set();
+    const walk = (nodes) => {
+        for (const node of nodes) {
+            if (node.menuCode) {
+                codes.add(node.menuCode);
+            }
+            walk(getMenuChildren(node));
+        }
+    };
+    walk(menus);
+    return [...codes];
+}
+/**
+ * Menu-mode permission check: returns true if the user's loaded menus contain
+ * ANY of the given menu codes. An empty set of menus (not yet loaded) always
+ * returns `false` — gated UI renders only once the store has data.
+ */
+function hasAnyMenuCode(menus, code) {
+    const codes = new Set(collectMenuCodes(menus));
+    if (Array.isArray(code)) {
+        return code.some((item) => codes.has(item));
+    }
+    return codes.has(code);
+}
+/** First navigable leaf route in a menu tree — a sensible post-login default landing. */
+function findFirstLeafRoute(menus) {
+    for (const menu of menus) {
+        if (isLeafItem(menu)) {
+            const route = getMenuRoute(menu);
+            if (route) {
+                return route;
+            }
+        }
+        const childRoute = findFirstLeafRoute(getMenuChildren(menu));
+        if (childRoute) {
+            return childRoute;
+        }
+    }
+    return null;
+}
+/** Finds a menu node's display name by id (recursive), or null. */
+function findMenuNameById(menus, menuId) {
+    for (const menu of menus) {
+        if (getMenuKey(menu) === menuId) {
+            const label = getMenuLabel(menu);
+            return label || null;
+        }
+        const child = findMenuNameById(getMenuChildren(menu), menuId);
+        if (child) {
+            return child;
+        }
+    }
+    return null;
+}
+
+/**
+ * Current-user navigation & favorites service — calls iam-user-api's
+ * `/me/menus*` endpoints (user-menu service contract). These endpoints return
+ * a `{ meta, data }` envelope; this service unwraps `.data` so callers keep
+ * the app-wide body-as-data convention.
+ *
+ * Base URL: `{api.user}` from the resolved auth config (defaults to the
+ * library environment file). Consumer apps override via
+ * `provideInsightAuth({ api: { user: '...' } })`.
+ */
+class IUserMenuService {
+    api = inject(IApiService);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    get baseUrl() {
+        return this.config.api['user'] ?? environment.api.user;
+    }
+    /** GET `{api.user}/me/menus` — effective navigation tree for one or all active applications. Output type overridable via `T`. */
+    getEffectiveMenus(applicationId) {
+        const params = applicationId ? new HttpParams({ fromObject: { applicationId } }) : undefined;
+        return this.api
+            .get('/me/menus', params, { apiUrl: this.baseUrl })
+            .pipe(map((response) => response.data));
+    }
+    /** GET `{api.user}/me/menus/favorites` — effective favorite items, sorted by name. Output type overridable via `T`. */
+    getFavorites(applicationId) {
+        const params = applicationId ? new HttpParams({ fromObject: { applicationId } }) : undefined;
+        return this.api
+            .get('/me/menus/favorites', params, { apiUrl: this.baseUrl })
+            .pipe(map((response) => response.data));
+    }
+    /** PUT `{api.user}/me/menus/{menuId}/favorite` — pin an effective menu item (204 No Content). */
+    addFavorite(menuId) {
+        return this.api.put(`/me/menus/${menuId}/favorite`, {}, { apiUrl: this.baseUrl });
+    }
+    /** DELETE `{api.user}/me/menus/{menuId}/favorite` — unpin a menu item (204 No Content). */
+    removeFavorite(menuId) {
+        return this.api.delete(`/me/menus/${menuId}/favorite`, { apiUrl: this.baseUrl });
+    }
+    /**
+     * PUT `{api.user}/me/menus/favorites` — atomically replace the complete
+     * favorite collection after a drag-drop. `displayOrder` values form the
+     * complete sequence 1..n. Returns 204 No Content.
+     */
+    reorderFavorites(menuIds) {
+        const items = menuIds.map((menuId, index) => ({
+            menuId: String(menuId),
+            displayOrder: index + 1,
+        }));
+        return this.api.put('/me/menus/favorites', { items }, { apiUrl: this.baseUrl });
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUserMenuService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUserMenuService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUserMenuService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Current-user profile service — calls iam-user-api's `GET {api.user}/users/user`
+ * endpoint (`CurrentUserDto`). The sidebar-shaped mapping (`IUser`) lives in
+ * `user.mapper.ts` (`mapToSidebarUser`).
+ *
+ * Base URL: `{api.user}` from the resolved auth config (defaults to the
+ * library environment file). Output type overridable via the generic — the
+ * library default is the raw `IInsightCurrentUser` DTO.
+ */
+class ICurrentUserService {
+    api = inject(IApiService);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    get baseUrl() {
+        return this.config.api['user'] ?? environment.api.user;
+    }
+    /** GET `{api.user}/users/user` — raw current-user DTO. Override `T` to use your own response type. */
+    getCurrentUser() {
+        return this.api.get('/users/user', undefined, { apiUrl: this.baseUrl });
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICurrentUserService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICurrentUserService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICurrentUserService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Session-storage wrapper for non-sensitive UI state (returnUrl, nonce/state).
+ * Tokens are NEVER stored here — the access token lives in-memory
+ * (`ISessionService`) and the refresh token lives in an HttpOnly cookie set by
+ * iam-identity-api.
+ *
+ * @overridable — consumers may provide `{ provide: IStorageService, useClass: ... }`.
+ */
+class IStorageService {
+    storageKey = '@insight/ui';
+    get(key) {
+        const session = JSON.parse(sessionStorage.getItem(this.storageKey) || '{}') || {};
+        return session[key] ?? '';
+    }
+    set(key, value) {
+        const session = JSON.parse(sessionStorage.getItem(this.storageKey) || '{}') || {};
+        session[key] = value;
+        sessionStorage.setItem(this.storageKey, JSON.stringify(session));
+    }
+    delete(key) {
+        const session = JSON.parse(sessionStorage.getItem(this.storageKey) || '{}') || {};
+        delete session[key];
+        sessionStorage.setItem(this.storageKey, JSON.stringify(session));
+    }
+    clear() {
+        sessionStorage.removeItem(this.storageKey);
+    }
+    /** Save the return URL for post-login/post-password-change redirect (keyed `ru`). */
+    setReturnUrl(url) {
+        this.set('ru', url);
+    }
+    /** Retrieve and clear the saved return URL. Returns `'/'` when none is saved. */
+    getReturnUrl() {
+        const url = this.get('ru');
+        this.delete('ru');
+        return url || '/';
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IStorageService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IStorageService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IStorageService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * In-memory store for the current user's sidebar data — user profile, effective
+ * navigation menus, favorites — and permission checks.
+ *
+ * Everything lives in memory (signals); NOTHING is persisted to Web Storage.
+ * On a cold start (page load) consumers call `load()` to re-fetch user, menus
+ * and favorites; the store then re-emits so gated UI (`ihHasMn` /
+ * `ihNotHasMn`) re-renders reactively once data is available (async-aware).
+ */
+class IUserMenuStore {
+    currentUserService = inject(ICurrentUserService);
+    menuService = inject(IUserMenuService);
+    session = inject(ISessionService);
+    /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
+    currentUser = signal(null, ...(ngDevMode ? [{ debugName: "currentUser" }] : []));
+    /** Raw current-user DTO as returned by the backend — `null` until loaded. */
+    rawCurrentUser = signal(null, ...(ngDevMode ? [{ debugName: "rawCurrentUser" }] : []));
+    /** Effective navigation tree (`IMenu` modern shape). */
+    menus = signal([], ...(ngDevMode ? [{ debugName: "menus" }] : []));
+    /** Favorite menus (`IMenu` modern shape). */
+    favorites = signal([], ...(ngDevMode ? [{ debugName: "favorites" }] : []));
+    /** Roles decoded from the access token (for `source: 'role'` permission checks). */
+    roles = signal([], ...(ngDevMode ? [{ debugName: "roles" }] : []));
+    /** True while the cold-start `load()` is in flight. */
+    initializing = signal(false, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
+    /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
+    loadError = signal(null, ...(ngDevMode ? [{ debugName: "loadError" }] : []));
+    // Reactive observable projections (used by directives/components that prefer
+    // observables over signals).
+    currentUser$ = toObservable(this.currentUser);
+    menus$ = toObservable(this.menus);
+    favorites$ = toObservable(this.favorites);
+    roles$ = toObservable(this.roles);
+    initializing$ = toObservable(this.initializing);
+    /**
+     * Post-login default landing (when no return URL is present).
+     * Order: (1) first navigable favorite route, (2) first navigable menu route.
+     */
+    get defaultRoute() {
+        return findFirstLeafRoute(this.favorites()) ?? findFirstLeafRoute(this.menus());
+    }
+    /** Finds a menu node's display name by id (recursive), or null. */
+    findMenuName(menuId) {
+        return findMenuNameById(this.menus(), menuId);
+    }
+    /**
+     * Cold-start: fetch user + menus + favorites concurrently. A failure in one
+     * branch does not block the others; `initializing` clears once all settle.
+     *
+     * Returns an observable that completes when the load settles, so callers can
+     * await it (e.g. to navigate to `defaultRoute` after login). The load starts
+     * immediately even if the caller ignores the returned observable — a shared
+     * source is kept alive by an internal subscribe (fire-and-forget compatible).
+     */
+    load() {
+        if (this.initializing()) {
+            return this.initializing$.pipe(filter$1((init) => !init), take(1), map(() => undefined));
+        }
+        this.initializing.set(true);
+        this.loadError.set(null);
+        this.roles.set(this.session.getRoles());
+        const result$ = forkJoin({
+            user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err))),
+            menus: this.loadMenusInternal().pipe(catchError((err) => this.recordError('menus', err))),
+            favorites: this.loadFavoritesInternal().pipe(catchError((err) => this.recordError('favorites', err))),
+        }).pipe(map(() => undefined), catchError(() => of(undefined)), finalize(() => this.initializing.set(false)), shareReplay$1({ bufferSize: 1, refCount: false }));
+        // Fire-and-forget: always start the load even if the caller ignores the result.
+        result$.subscribe();
+        return result$;
+    }
+    /** Refresh roles from the current access token (call after login / token change). */
+    syncRoles() {
+        this.roles.set(this.session.getRoles());
+    }
+    /**
+     * Menu-mode permission check against the in-memory menu codes (ANY match).
+     * Returns `false` while menus are not yet loaded — gated UI renders only
+     * after the store has data (async-aware via the reactive directives).
+     */
+    hasMenu(code) {
+        return hasAnyMenuCode(this.menus(), code);
+    }
+    /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
+    hasRole(code) {
+        const roles = this.roles();
+        if (Array.isArray(code)) {
+            return code.some((role) => roles.includes(role));
+        }
+        return roles.includes(code);
+    }
+    /** Pin (`isFavorite: true`) or unpin a menu item, then refreshes favorites. */
+    toggleFavorite(menuId, isFavorite) {
+        const call = isFavorite
+            ? this.menuService.addFavorite(menuId)
+            : this.menuService.removeFavorite(menuId);
+        return call.pipe(switchMap(() => this.reloadFavorites()));
+    }
+    /** Persists the new favorite order after a drag-drop, then refreshes favorites. */
+    reorderFavorites(menuIds) {
+        return this.menuService.reorderFavorites(menuIds).pipe(switchMap(() => this.reloadFavorites()));
+    }
+    /** Re-fetches the favorites from the backend into the in-memory `favorites` signal. */
+    reloadFavorites() {
+        return this.loadFavoritesInternal().pipe(map(() => undefined));
+    }
+    loadUserInternal() {
+        return this.currentUserService.getCurrentUser().pipe(tap$1((raw) => {
+            this.rawCurrentUser.set(raw);
+            this.currentUser.set(mapToSidebarUser(raw));
+        }), map(() => null));
+    }
+    loadMenusInternal() {
+        return this.menuService.getEffectiveMenus().pipe(tap$1((nodes) => this.menus.set(toIMenus(nodes))), map(() => null));
+    }
+    loadFavoritesInternal() {
+        return this.menuService.getFavorites().pipe(tap$1((items) => this.favorites.set(items.map(toIMenuFavorite))), map(() => null));
+    }
+    recordError(source, err) {
+        const detail = err?.detail ?? 'Failed to load';
+        this.loadError.set(`${source}: ${detail}`);
+        // Never log sensitive data — only the load source and error detail.
+        console.error(`[@insight/ui][STORE] load "${source}" failed`, err);
+        return of(null);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUserMenuStore, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUserMenuStore, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUserMenuStore, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/** Resolves an input into a concrete `{ source, codes }` pair (or `null`). */
+function resolvePermission(value) {
+    if (!value) {
+        return null;
+    }
+    if (typeof value === 'object' && !Array.isArray(value)) {
+        return { source: value.source, codes: value.value };
+    }
+    return { source: 'menu', codes: value };
+}
+/**
+ * Base structural permission directive shared by `IHHasMnDirective` and
+ * `IHNotHasMnDirective`.
+ *
+ * ASYNC-AWARE: instead of a one-shot input setter, it subscribes to the
+ * `IUserMenuStore`'s reactive menu/role state (`menus$` / `roles$`) and
+ * re-renders the embedded view whenever the permission resolves or changes —
+ * e.g. while the store cold-starts (menus not yet loaded) the view stays
+ * hidden, then appears as soon as the data arrives, and disappears again if a
+ * role/menu change revokes access.
+ */
+class IHMenuGateDirective {
+    store = inject(IUserMenuStore);
+    templateRef = inject((TemplateRef));
+    viewContainer = inject(ViewContainerRef);
+    value$ = new BehaviorSubject(null);
+    viewCreated = false;
+    subscription;
+    ngOnInit() {
+        this.subscription = combineLatest([this.value$, this.store.menus$, this.store.roles$])
+            .pipe(map(([value]) => this.evaluate(value)), distinctUntilChanged())
+            .subscribe((allowed) => this.renderView(allowed));
+    }
+    ngOnDestroy() {
+        this.subscription?.unsubscribe();
+    }
+    evaluate(value) {
+        const resolved = resolvePermission(value);
+        if (!resolved) {
+            return false;
+        }
+        return resolved.source === 'role' ? this.store.hasRole(resolved.codes) : this.store.hasMenu(resolved.codes);
+    }
+    renderView(allowed) {
+        const show = this.invert ? !allowed : allowed;
+        if (show && !this.viewCreated) {
+            this.viewContainer.createEmbeddedView(this.templateRef);
+            this.viewCreated = true;
+        }
+        else if (!show && this.viewCreated) {
+            this.viewContainer.clear();
+            this.viewCreated = false;
+        }
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHMenuGateDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IHMenuGateDirective, isStandalone: true, ngImport: i0 });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHMenuGateDirective, decorators: [{
+            type: Directive,
+            args: [{ standalone: true }]
+        }] });
+/**
+ * Structural directive `*ihHasMn` — renders the element only while the current
+ * user has the given menu code / role.
+ *
+ * Usage:
+ * ```html
+ * <button *ihHasMn="'admin'">Admin only</button>                 <!-- menu mode (default) -->
+ * <div *ihHasMn="['read', 'write']">R/W</div>
+ * <i *ihHasMn="{ source: 'role', value: 'iam-admin' }">Role check</i>
+ * ```
+ */
+class IHHasMnDirective extends IHMenuGateDirective {
+    invert = false;
+    set ihHasMn(value) {
+        this.value$.next(value);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IHHasMnDirective, isStandalone: true, selector: "[ihHasMn]", inputs: { ihHasMn: "ihHasMn" }, usesInheritance: true, ngImport: i0 });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHHasMnDirective, decorators: [{
+            type: Directive,
+            args: [{ selector: '[ihHasMn]', standalone: true }]
+        }], propDecorators: { ihHasMn: [{
+                type: Input
+            }] } });
+
+/**
+ * Structural directive `*ihNotHasMn` — the inverse of `ihHasMn`: renders the
+ * element only while the current user does NOT have the given menu code / role.
+ *
+ * Usage:
+ * ```html
+ * <div *ihNotHasMn="'super-admin'">Everyone except super-admin</div>
+ * <i *ihNotHasMn="{ source: 'role', value: 'iam-admin' }">Non-admin</i>
+ * ```
+ */
+class IHNotHasMnDirective extends IHMenuGateDirective {
+    invert = true;
+    set ihNotHasMn(value) {
+        this.value$.next(value);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHNotHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IHNotHasMnDirective, isStandalone: true, selector: "[ihNotHasMn]", inputs: { ihNotHasMn: "ihNotHasMn" }, usesInheritance: true, ngImport: i0 });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHNotHasMnDirective, decorators: [{
+            type: Directive,
+            args: [{ selector: '[ihNotHasMn]', standalone: true }]
+        }], propDecorators: { ihNotHasMn: [{
+                type: Input
+            }] } });
+
 /*
  * Public API Surface of insight-ui
  */
@@ -12631,5 +14178,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { IAlert, IAlertService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSpaMenu, normalizeMenuTree, resolveControlErrorMessage };
+export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeMenuTree, provideInsightAuth, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
 //# sourceMappingURL=insight-ui.mjs.map

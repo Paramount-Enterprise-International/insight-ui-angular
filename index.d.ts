@@ -1,8 +1,9 @@
 import * as i0 from '@angular/core';
-import { EventEmitter, OnInit, OnDestroy, ElementRef, OnChanges, SimpleChanges, AfterViewInit, AfterContentInit, AfterViewChecked, TemplateRef, Type, Injector, InjectionToken, QueryList, PipeTransform } from '@angular/core';
+import { EventEmitter, OnInit, OnDestroy, ElementRef, OnChanges, SimpleChanges, AfterViewInit, AfterContentInit, AfterViewChecked, TemplateRef, Type, Injector, InjectionToken, QueryList, PipeTransform, EnvironmentProviders } from '@angular/core';
 import { AbstractControl, NgControl, ControlValueAccessor, FormBuilder, FormControl, FormGroup, FormGroupDirective } from '@angular/forms';
-import { Observable } from 'rxjs';
-import { Route } from '@angular/router';
+import { Observable, BehaviorSubject } from 'rxjs';
+import { Route, CanActivateFn } from '@angular/router';
+import { HttpParams, HttpInterceptorFn } from '@angular/common/http';
 
 declare const I_ICON_NAMES: {
     readonly add: "fa-solid fa-plus";
@@ -1596,6 +1597,8 @@ type IMenu = {
     application?: IMenuApplication | null;
     companies?: IMenuCompany[];
     isFavorite?: boolean;
+    /** Backend menu code — used by menu-mode permission checks (`ihHasMn` / `ihNotHasMn`). */
+    menuCode?: string | null;
     menuId?: number;
     menuName?: string;
     menuTypeId?: number;
@@ -2182,5 +2185,944 @@ declare class IUI {
     static ɵinj: i0.ɵɵInjectorDeclaration<IUI>;
 }
 
-export { IAlert, IAlertService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSpaMenu, normalizeMenuTree, resolveControlErrorMessage };
-export type { IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IMenuApplication, IMenuCompany, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuOpenIn, IPaginatorState, IPillSize, IPillVariant, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser };
+/**
+ * Token lifespan configuration (seconds). Mirrors the platform-wide AC used by
+ * iam-web: Access Token 1h, Refresh Token 2h, Max SSO Session 15h. Consumer
+ * apps should reuse the exact same values as iam-web for consistency, not
+ * invent their own policy.
+ */
+type IInsightTokenLifespan = {
+    accessTokenSeconds: number;
+    refreshTokenSeconds: number;
+    ssoSessionMaxSeconds: number;
+};
+/**
+ * Configuration required by @insight/ui's shared auth package
+ * (IApiService, ISessionService, ICsrfService, authGuard, authInterceptor).
+ *
+ * Consumer apps provide this via `provideInsightAuth(config)` in their
+ * `app.config.ts` / bootstrap `ApplicationConfig`.
+ */
+type IInsightAuthConfig = {
+    /** API base URLs grouped by backend service. `identity` (iam-identity-api) is required — all auth calls (csrf, refresh) go through it. */
+    api: {
+        identity: string;
+        [key: string]: string;
+    };
+    /** Full URL of iam-web's signin page — consumer apps redirect here when unauthenticated. */
+    signinUrl: string;
+    /**
+     * This app's own SSO callback route, e.g. `/auth/callback` (default).
+     * `authGuard`/`authInterceptor` always redirect through this route (never
+     * through the page the user was originally trying to visit) so the
+     * `#at=<token>` handoff has a dedicated place to be consumed and stripped
+     * before the user is sent on to their original destination. See
+     * `build-signin-redirect-url.ts` for why this matters (redirect-loop / HTTP
+     * 431 prevention).
+     */
+    callbackPath?: string;
+    /**
+     * Trusted origins for post-callback/return redirects. Absolute URLs matching
+     * any origin here are allowed; all others fall back to '/'. Wildcards are
+     * supported (e.g. `https://*.paramount-land.com`). Relative paths (starting
+     * with `/`) are always allowed regardless of this list.
+     */
+    allowedReturnOrigins: string[];
+    /**
+     * Cookie domain used by iam-identity-api for the HttpOnly refresh token
+     * cookie. Informational only — the frontend never reads or sets this cookie.
+     */
+    cookieDomain: string;
+    tokenLifespan: IInsightTokenLifespan;
+    /** CSRF token max age in seconds (backend cookie maxAge minus a safety buffer). */
+    csrfTokenMaxAgeSeconds: number;
+};
+/**
+ * Overrides accepted by `provideInsightAuth()`. Every field is optional and
+ * merged on top of `getDefaultInsightAuthConfig()` — including individual
+ * `api.*` and `tokenLifespan.*` entries, so a consumer app can override just
+ * `api.identity` (e.g. for staging/production) without having to restate the
+ * rest of the config.
+ *
+ * Deliberately NOT an open/arbitrary shape (no index signature at this
+ * level) — `IInsightAuthConfig` is a narrow, well-defined auth contract, not
+ * a general app environment object. The one exception is `api`, which is
+ * intentionally open-ended (a named registry of backend base URLs) since
+ * consumer apps may need to register additional service URLs beyond
+ * `identity`.
+ */
+type IInsightAuthConfigOverrides = Partial<Omit<IInsightAuthConfig, 'api' | 'tokenLifespan'>> & {
+    api?: Partial<IInsightAuthConfig['api']>;
+    tokenLifespan?: Partial<IInsightTokenLifespan>;
+};
+/**
+ * Default `IInsightAuthConfig`, sourced from the library's default environment
+ * file (`environments/environment.ts`). Consumer apps override any field via
+ * `provideInsightAuth({ ... })`.
+ *
+ * `allowedReturnOrigins` defaults to this app's own origin (the common case —
+ * a callback only ever needs to trust redirecting back to itself) and
+ * `cookieDomain` defaults to the current hostname (informational only, the
+ * frontend never reads/sets this cookie) — both computed at call time since
+ * they depend on `window.location`.
+ */
+declare function getDefaultInsightAuthConfig(): IInsightAuthConfig;
+/**
+ * Injection token carrying the consumer app's `IInsightAuthConfig`. Provided via
+ * `provideInsightAuth()`. Has a root-level default (`getDefaultInsightAuthConfig()`)
+ * so the library services never break when a consumer forgets to call
+ * `provideInsightAuth()` — consumers override it explicitly.
+ */
+declare const INSIGHT_AUTH_CONFIG: InjectionToken<IInsightAuthConfig>;
+
+type ISanitizedReturnUrl = {
+    returnUrl: string;
+    isExternal: boolean;
+};
+/**
+ * Validate and sanitize a `returnUrl` for post-login / post-callback redirect.
+ * Ported from iam-web's `signin.ts::sanitizeReturnUrl()` — behavior is kept
+ * identical so consumer apps and iam-web enforce the exact same open-redirect
+ * protection:
+ *
+ * - Relative paths (starting with `/`) are always allowed.
+ * - Protocol-relative URLs (`//`) are rejected — always fall back to `/`.
+ * - Absolute URLs are checked against `allowedReturnOrigins` (wildcard
+ *   supported, e.g. `https://*.paramount-land.com`).
+ * - Anything else (invalid URL, untrusted origin, unknown scheme) falls back to `/`.
+ *
+ * `isExternal: true` means the caller must do a full `window.location.href`
+ * navigation, not an in-app router navigation.
+ */
+declare function sanitizeReturnUrl(url: string | null | undefined, allowedReturnOrigins: string[]): ISanitizedReturnUrl;
+
+/**
+ * Build the full external URL to iam-web's signin page for a cross-domain SSO
+ * redirect, routing the eventual handoff through THIS APP'S OWN callback
+ * route (`config.callbackPath`, default `/auth/callback`) — never through the
+ * page the user originally tried to visit.
+ *
+ * This is deliberate and fixes a real redirect loop: if the guard/interceptor
+ * used `window.location.href` (the current page) as the returnUrl directly,
+ * iam-web's handoff would append `#at=<token>` to THAT SAME page. Since that
+ * page still doesn't have a stored session yet at the moment it re-renders,
+ * the guard would fire again, capture `window.location.href` again — which
+ * NOW ALREADY CONTAINS the previous `#at=` fragment — and redirect back to
+ * iam-web with an ever-growing `returnUrl`, eventually overflowing header
+ * size limits (HTTP 431).
+ *
+ * Routing through a dedicated callback route breaks the loop: the callback
+ * page (`IAuthCallback`) consumes and strips the token BEFORE navigating
+ * (via the in-app router, not a full reload) to `targetPath` — so the guard
+ * only ever sees a clean, token-free URL on its next check.
+ */
+declare function buildExternalSigninUrl(config: IInsightAuthConfig, targetPath: string): string;
+
+/**
+ * Registers the @insight/ui shared auth package (`IApiService`,
+ * `ISessionService`, `ICsrfService`, `authGuard`) for a consumer app.
+ *
+ * Zero-config by default — sensible local-dev defaults are baked in (see
+ * `getDefaultInsightAuthConfig()`), matching iam-web's own local
+ * environment. Consumer apps only need to pass `overrides` for whatever
+ * differs from the defaults — typically `api.identity` and `signinUrl` when
+ * deploying to staging/production. Every field can be overridden
+ * individually, down to a single nested `api.*` or `tokenLifespan.*` entry;
+ * anything not overridden falls back to the default.
+ *
+ * Consumers must still register `authInterceptor` themselves via
+ * `provideHttpClient(withInterceptors([authInterceptor]))` in their own
+ * `app.config.ts` — matches iam-web's existing pattern of wiring the
+ * interceptor explicitly rather than hiding it inside a provider function.
+ *
+ * Usage (zero-config — local dev):
+ * ```ts
+ * export const config: ApplicationConfig = {
+ *   providers: [
+ *     provideInsightAuth(),
+ *     provideHttpClient(withInterceptors([authInterceptor])),
+ *     provideRouter(routes),
+ *   ],
+ * };
+ * ```
+ *
+ * Usage (override for staging/production):
+ * ```ts
+ * provideInsightAuth({
+ *   api: { identity: 'https://iam-identity.paramount-land.com/api' },
+ *   signinUrl: 'https://iam.paramount-land.com/signin',
+ * });
+ * ```
+ */
+declare function provideInsightAuth(overrides?: IInsightAuthConfigOverrides): EnvironmentProviders;
+
+/**
+ * Extract the access token appended by iam-web after a successful external
+ * SSO redirect. Reads the URL HASH FRAGMENT (`#at=<token>`) — deliberately
+ * NOT a query parameter — so the token is never sent to the server and never
+ * appears in access/gateway logs (fragments are browser-only and are
+ * unconditionally stripped from the `Referer` header).
+ */
+declare function extractAccessTokenFromHash(): string | null;
+/**
+ * Reusable SSO callback route component for @insight/ui consumer apps.
+ * Register it at whatever route path is used as the `returnUrl` when
+ * redirecting to iam-web's signin page, e.g.
+ * `{ path: 'auth/callback', component: IAuthCallback }`.
+ *
+ * Flow:
+ *  1. Extract the `at` token from the URL hash fragment.
+ *  2. Store it via `ISessionService` (in-memory only).
+ *  3. Clear the fragment from the URL immediately (never leave the token
+ *     sitting in browser history).
+ *  4. Validate & redirect to the original in-app `returnUrl` (query param
+ *     `returnUrl`, defaulting to `/`), using the same `sanitizeReturnUrl`
+ *     rules as iam-web.
+ */
+declare class IAuthCallback implements OnInit {
+    private readonly session;
+    private readonly config;
+    private readonly router;
+    ngOnInit(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IAuthCallback, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IAuthCallback, "i-auth-callback", never, {}, {}, never, never, true, never>;
+}
+
+/**
+ * Unified login response. When MFA is required, only `mfa*` fields are set and
+ * `accessToken` is absent. Once MFA is verified, `accessToken`/`expiresIn`/
+ * `user` are populated and `mfaRequired` is false/absent.
+ */
+type ILoginResponse = {
+    accessToken?: string;
+    refreshToken?: string;
+    expiresIn?: number;
+    user?: IAuthUser;
+    mfaRequired?: boolean;
+    mfaStep?: 'CHALLENGE' | 'ENROLL';
+    mfaSessionId?: string;
+    qrCodeUri?: string;
+    secret?: string;
+    passwordExpired?: boolean;
+    changePasswordToken?: string;
+    requiresV2Challenge?: boolean;
+};
+type IMfaChallengeResponse = {
+    accessToken: string;
+    refreshToken?: string;
+    expiresIn: number;
+    user: IAuthUser;
+};
+type IRefreshResponse = {
+    accessToken: string;
+    refreshToken?: string;
+    expiresIn: number;
+};
+/** User claims decoded from the access token / returned by the backend. */
+type IAuthUser = {
+    sub: string;
+    email: string;
+    name: string;
+    roles: string[];
+    userType: 'internal' | 'external';
+};
+type IForgotPasswordResponse = {
+    message: string;
+    token?: string;
+    link?: string;
+};
+type IValidateResetTokenResponse = {
+    valid: boolean;
+    reason?: 'invalid' | 'expired' | 'used';
+    email?: string;
+};
+type IResetPasswordResponse = {
+    success: boolean;
+    message: string;
+    reason?: 'invalid' | 'expired' | 'used' | 'history';
+};
+/**
+ * iam-identity-api auth facade (Mode 2 proxy — Keycloak is never exposed to the
+ * frontend). Base URL = `{api.identity}` from the resolved auth config.
+ *
+ * @overridable — consumers may provide `{ provide: IAuthService, useClass: ... }`.
+ */
+declare class IAuthService {
+    private readonly api;
+    private readonly config;
+    private get identityUrl();
+    login(username: string, password: string, recaptchaToken?: string, isChallengeResponse?: boolean): Observable<ILoginResponse>;
+    /** Silently refresh the access token via the HttpOnly refresh-token cookie. */
+    refresh(): Observable<IRefreshResponse>;
+    /** Clear the server-side session and expire the HttpOnly refresh cookie. */
+    logout(refreshToken?: string): Observable<void>;
+    /** Exchange a short-lived `at=` auth token for a full session (cross-app handoff). */
+    exchangeAuthToken(authToken: string): Observable<ILoginResponse>;
+    /** Verify the MFA TOTP code during a login challenge. */
+    verifyMfaChallenge(mfaSessionId: string, totpCode: string): Observable<IMfaChallengeResponse>;
+    /** Verify the TOTP code during first-time MFA enrollment (forced at login). */
+    verifyMfaEnroll(mfaSessionId: string, totpCode: string): Observable<IMfaChallengeResponse>;
+    /** Self-service MFA — check enrollment status (`GET /profile/mfa`). */
+    selfServiceGetStatus(): Observable<{
+        enrolled: boolean;
+        createdAt?: string;
+        lastUsedAt?: string;
+    }>;
+    /** Self-service MFA — initiate enrollment to get the QR & session id (`POST /profile/mfa/enroll`). */
+    selfServiceEnrollInitiate(): Observable<{
+        qrCodeUri: string;
+        secret: string;
+        enrollmentSessionId: string;
+    }>;
+    /** Self-service MFA — verify OTP and complete enrollment (`POST /profile/mfa/enroll/verify`). */
+    selfServiceEnrollVerify(enrollmentSessionId: string, totpCode: string): Observable<void>;
+    /** Self-service reset (un-enroll) MFA for the current user — requires password (`DELETE /profile/mfa`). */
+    selfServiceResetMfa(userSub: string, password: string): Observable<void>;
+    /**
+     * Change password when it has expired (forced change flow). Uses a short-lived
+     * `changePasswordToken` (10 min, scope `change_password_only`) as the Bearer
+     * header. Backend returns a full accessToken on success so the user continues
+     * seamlessly without re-login.
+     */
+    changePassword(changePasswordToken: string, newPassword: string, confirmPassword: string): Observable<{
+        success: boolean;
+        accessToken?: string;
+        refreshToken?: string;
+        expiresIn?: number;
+    }>;
+    /** Request a password-reset link via email or WhatsApp (`POST /auth/forgot-password`). */
+    forgotPassword(identifier: string, mode: 'email' | 'whatsapp'): Observable<IForgotPasswordResponse>;
+    /** Validate a reset token before showing the reset form (`GET /auth/reset-password/validate`). */
+    validateResetToken(token: string): Observable<IValidateResetTokenResponse>;
+    /** Submit a new password using the reset token (`POST /auth/reset-password`). */
+    resetPassword(token: string, newPassword: string, confirmPassword: string): Observable<IResetPasswordResponse>;
+    private getLockoutData;
+    private recordFailedAttempt;
+    private resetLockout;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IAuthService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IAuthService>;
+}
+
+/**
+ * CSRF token management — cookie-to-header pattern for @insight/ui consumer apps.
+ * Mirrors iam-web's `ICsrfService`:
+ *
+ *   1. FE calls GET {api.identity}/auth/csrf.
+ *   2. Backend returns `{ csrfToken }` in the JSON body AND sets a `csrf_token` cookie.
+ *   3. FE stores the token in memory (JS cannot read cross-origin cookies).
+ *   4. FE sends the token back as `X-CSRF-Token` header on mutating requests.
+ *   5. Backend validates: header value === cookie value.
+ *
+ * Token expiration mirrors the backend cookie maxAge (minus a safety buffer,
+ * configured via `csrfTokenMaxAgeSeconds`) so the FE transparently re-fetches
+ * before the server-side cookie actually expires.
+ */
+declare class ICsrfService {
+    private readonly http;
+    private readonly config;
+    /** In-memory CSRF token — retrieved from the backend response body, never from document.cookie directly. */
+    private token;
+    private tokenFetchedAt;
+    /**
+     * Return the in-memory CSRF token, or `null` if never fetched or expired
+     * (expiry triggers callers to re-invoke `ensureToken()`).
+     */
+    getToken(): string | null;
+    /** Whether the in-memory token has exceeded its TTL (`csrfTokenMaxAgeSeconds`). */
+    isTokenExpired(): boolean;
+    /**
+     * Fetch a fresh CSRF token from `iam-identity-api` and store it in memory.
+     * On failure the error is propagated (callers that want best-effort behavior
+     * can catch it) — a failed fetch must not be silently swallowed, e.g. so the
+     * `retryOnCsrfError` pattern can re-trigger the fetch.
+     */
+    ensureToken(): Observable<void>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ICsrfService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<ICsrfService>;
+}
+
+/** Response type is transparent — no `{ meta, data }` wrapper. */
+type IApiResponse<T = any> = T;
+/** Options for individual HTTP calls. */
+type IApiOptions = {
+    /** Override the default API base URL (e.g. to call a different backend service). */
+    apiUrl?: string;
+    /** Additional headers to merge with the defaults. */
+    headers?: Record<string, string>;
+    /** Request body (only used by DELETE requests that send a payload). */
+    body?: any;
+};
+/**
+ * Standardized HTTP client for @insight/ui consumer apps.
+ * Mirrors iam-web's `IApiService`: `withCredentials: true` on every request
+ * (required for the CSRF cookie and the HttpOnly refresh cookie to flow),
+ * automatic `X-CSRF-Token` header injection, transparent response typing
+ * (`T`, no wrapper), and RFC 9457 Problem Details error enrichment matching
+ * the exact shape iam-web already produces (`status`/`detail`/`retryAfter`)
+ * so consumer apps can reuse the `err?.detail ?? 'fallback'` convention.
+ */
+declare class IApiService {
+    private readonly http;
+    private readonly csrf;
+    private readonly config;
+    private get headers();
+    /**
+     * Normalize a raw `HttpErrorResponse` into a consistent shape:
+     * `{ status, detail, retryAfter, ...rest }`. `retryAfter` is read from the
+     * body or the `Retry-After` header, so 429/423 responses surface it
+     * untouched for rate-limit/lockout UX.
+     */
+    private enrichError;
+    get<T = any>(path: string, params?: HttpParams, options?: IApiOptions): Observable<T>;
+    post<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
+    put<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
+    delete<T = any>(path: string, options?: IApiOptions): Observable<T>;
+    getBlob(path: string, params?: HttpParams, options?: IApiOptions): Observable<Blob>;
+    upload<T = any>(path: string, file: File | FormData, options?: IApiOptions): Observable<T>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IApiService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IApiService>;
+}
+
+type SessionExpiredReason = 'TOKEN_EXPIRED' | 'SESSION_REVOKED' | 'SESSION_REPLACED';
+/** Supports normalized Problem Details errors and raw legacy HTTP error bodies. */
+declare const extractProblemDetailsErrorCode: (error: unknown) => string | undefined;
+/** Maps current backend and legacy error codes to the session-expired UI states. */
+declare const toSessionExpiredReason: (errorCode: string | undefined) => SessionExpiredReason | undefined;
+/**
+ * True when an error is semantically a session-expiry event (HTTP 401/498 or a
+ * recognized session-related error code). Other statuses are business/transport
+ * errors and must be handled by the caller instead of forcing a logout.
+ */
+declare const isSessionExpiredError: (error: unknown) => boolean;
+/**
+ * In-memory overlay state for the session-expired UI.
+ *
+ * @overridable — consumers may provide `{ provide: SessionExpiredService, useClass: ... }`.
+ */
+declare class SessionExpiredService {
+    readonly visible: i0.WritableSignal<boolean>;
+    readonly returnUrl: i0.WritableSignal<string>;
+    readonly reason: i0.WritableSignal<SessionExpiredReason | undefined>;
+    show(returnUrl: string, reason?: SessionExpiredReason): void;
+    hide(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<SessionExpiredService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<SessionExpiredService>;
+}
+
+/** User derived from Keycloak JWT claims. */
+type ISessionUser = {
+    sub: string;
+    email: string;
+    name: string;
+    roles: string[];
+    userType: 'internal' | 'external';
+};
+/**
+ * Session management for @insight/ui consumer apps.
+ *
+ * Access token: stored IN MEMORY only (never Web Storage). Refresh token:
+ * HttpOnly cookie managed exclusively by iam-identity-api; this service never
+ * reads or stores it directly (an in-memory `refreshToken` is kept only for
+ * server-side logout).
+ *
+ * Superset of the basic SSO session (used by remote apps via `setAccessToken` /
+ * `authGuard` / `IAuthCallback`) and the richer iam-web session (session
+ * restore, password-expiry, change-password token, proactive validation,
+ * session-expired overlay).
+ *
+ * @overridable — consumers may provide `{ provide: ISessionService, useClass: ... }`.
+ */
+declare class ISessionService {
+    private readonly authService;
+    private readonly config;
+    private readonly sessionExpiredService;
+    private accessToken;
+    private _refreshToken;
+    private expiresAt;
+    private sessionStartedAt;
+    private currentUser;
+    private passwordExpired;
+    private changePasswordTokenValue;
+    private lastVerifiedAt;
+    /** True while the app is restoring/validating the session on load. Consumer apps may use this to show a loading state. */
+    readonly initializing: i0.WritableSignal<boolean>;
+    private refreshInFlight;
+    isAuth(): boolean;
+    isTokenExpired(): boolean;
+    /**
+     * Whether the max SSO session duration has been exceeded (default 15h,
+     * configured via `tokenLifespan.ssoSessionMaxSeconds`). After this, the
+     * user must re-authenticate regardless of token state.
+     */
+    isSsoSessionExpired(): boolean;
+    isPasswordExpired(): boolean;
+    clearPasswordExpired(): void;
+    setPasswordExpired(): void;
+    setChangePasswordToken(token: string): void;
+    getChangePasswordToken(): string | null;
+    clearChangePasswordToken(): void;
+    getAccessToken(): string | null;
+    getRefreshToken(): string | null;
+    getUser(): ISessionUser | null;
+    /** Role-membership check against the decoded token roles (ANY match). */
+    hasMn(mn: string | string[]): boolean;
+    /**
+     * Roles claimed by the current access token (Keycloak `realm_access.roles`).
+     * Returns an empty array while no token is set. Used by role-mode permission
+     * checks (`ihHasMn` / `ihNotHasMn` with `source: 'role'`).
+     */
+    getRoles(): string[];
+    /** True if the current access token claims ANY of the given roles. */
+    hasRole(code: string | string[]): boolean;
+    /**
+     * Store the access token received from the SSO handoff (URL hash fragment)
+     * or from a refresh response. `expiresIn` (seconds) defaults to the token's
+     * own `exp` claim, then falls back to the configured `accessTokenSeconds`.
+     */
+    setAccessToken(accessToken: string, expiresIn?: number): void;
+    /**
+     * Full session establishment (login / MFA / exchange / refresh). Sets the
+     * user, decodes password-expiry claims, stamps the last-verified time, and
+     * marks an active session so `tryRestoreSession()` can distinguish a cold
+     * start from a refresh-after-revocation.
+     */
+    setSession(accessToken: string, expiresIn: number, user: IAuthUser, refreshToken?: string): void;
+    clearSession(): void;
+    logout(): void;
+    /**
+     * Silently refresh the access token via the HttpOnly refresh cookie
+     * (`POST {api.identity}/auth/refresh`, `withCredentials: true`).
+     * Single-flight: concurrent callers share the in-flight refresh; the shared
+     * observable is retained until it completes/errors so a cancelled caller
+     * cannot abort the fetch.
+     */
+    refreshToken(): Observable<string>;
+    /** True if the session was verified against the backend within `cooldownMs` (default 30s). */
+    isRecentlyVerified(cooldownMs?: number): boolean;
+    /**
+     * Proactive session validation for guards. Refreshes the token to check
+     * session validity WITHOUT resetting the SSO session timer. Skips the refresh
+     * if the last check was within 30 seconds. Throws if the session was revoked
+     * (e.g. `SESSION_REPLACED`).
+     */
+    proactiveValidate(): Observable<string>;
+    /**
+     * Cold-start session restore from the HttpOnly cookie (called on app load).
+     * Skips auth sub-pages unless the signin page carries an ABSOLUTE (external)
+     * `returnUrl` (a cross-app SSO handoff). Shows the session-expired overlay
+     * when refreshing after a previously-active session. Returns the reason (if
+     * any) extracted from the error so the guard can decide overlay vs. signin.
+     */
+    tryRestoreSession(): Promise<{
+        reason?: SessionExpiredReason;
+    }>;
+    private readExpiresInFromToken;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<ISessionService>;
+}
+
+/**
+ * Cross-domain auth guard for @insight/ui consumer apps.
+ *
+ * Unlike iam-web's internal Router-based guard, this performs a FULL PAGE
+ * redirect to iam-web's signin page when unauthenticated, since the consumer
+ * app and iam-web are separate applications/domains — not routes within the
+ * same Angular router. The redirect is routed through this app's OWN
+ * callback route (not the page the user was trying to visit) — see
+ * `buildExternalSigninUrl()` for why that's required to avoid a redirect loop.
+ */
+declare const authGuard: CanActivateFn;
+
+/**
+ * Auth HTTP interceptor for @insight/ui consumer apps.
+ *
+ * Attaches the in-memory access token as a Bearer header. On 401, attempts a
+ * single silent refresh (via the HttpOnly refresh cookie) and retries once;
+ * on refresh failure, clears the session and redirects to iam-web's signin
+ * page. 429 (rate-limit) and 423 (lockout) responses are passed through
+ * untouched — `IApiService.enrichError()` already surfaces `retryAfter` for
+ * consumer apps to build the same UX as iam-web.
+ */
+declare const authInterceptor: HttpInterceptorFn;
+
+/**
+ * Types for the current-user navigation & favorites data, matched to the
+ * iam-user-api user-menu service contract (`GET {api.user}/me/menus*` and
+ * `GET {api.user}/users/user`). These are the raw backend shapes; the library
+ * maps them onto the UI-facing `IMenu` / `IUser` contracts via `user.mapper.ts`.
+ */
+/** Standard `{ meta, data }` response envelope used by the user-menu endpoints. */
+type IInsightUserMenuEnvelope<T> = {
+    meta: {
+        timestamp: string;
+    };
+    data: T;
+};
+/** Navigation target for a menu node. */
+type IInsightMenuOpenIn = 'CURRENT_TAB' | 'NEW_TAB' | 'NEW_WINDOW';
+/** Owning application reference for a menu node. */
+type IInsightMenuApplication = {
+    id: string;
+    code: string;
+    name: string;
+    url: string | null;
+    version: string | null;
+};
+/** Effective company access for a menu node. */
+type IInsightMenuCompany = {
+    id: string;
+    code: string;
+    name: string;
+};
+/** Effective menu node returned by `GET {api.user}/me/menus` (user-menu contract). */
+type IInsightMenuNode = {
+    id: string;
+    name: string;
+    type: 'group' | 'item';
+    menuCode: string | null;
+    parentId: string | null;
+    route: string | null;
+    icon: string | null;
+    openIn: IInsightMenuOpenIn | null;
+    sequence: number;
+    application: IInsightMenuApplication;
+    companies: IInsightMenuCompany[];
+    isFavorite: boolean;
+    children: IInsightMenuNode[];
+};
+/** Favorite item returned by `GET {api.user}/me/menus/favorites`. */
+type IInsightFavoriteMenuItem = {
+    id: string;
+    name: string;
+    /** User-controlled display order (1..n). */
+    displayOrder: number;
+    menuCode: string | null;
+    route: string | null;
+    icon: string | null;
+    openIn: IInsightMenuOpenIn | null;
+    application: IInsightMenuApplication;
+    companies: IInsightMenuCompany[];
+};
+/** One entry of the reorder payload for `PUT {api.user}/me/menus/favorites`. */
+type IInsightFavoriteOrderItem = {
+    menuId: string;
+    displayOrder: number;
+};
+/** Current user returned by `GET {api.user}/users/user` (iam-user-api `CurrentUserDto`). */
+type IInsightCurrentUser = {
+    userId: string;
+    username: string;
+    fullName: string;
+    employeeCode: string | null;
+    email: string;
+    photoUrl: string | null;
+    userType: 'internal' | 'external';
+    occupationName: string | null;
+    departmentName: string | null;
+    enabled: boolean;
+};
+
+/**
+ * Maps the backend current-user DTO to `@insight/ui`'s sidebar `IUser` shape
+ * (`employeeCode` / `fullName` / `userImagePath`), falling back to `username`.
+ * `userImagePath` is `''` when no photo exists — the sidebar renders it with
+ * `i-avatar`, which falls back to a user icon when the image is empty/errors.
+ */
+declare function mapToSidebarUser(user: IInsightCurrentUser): IUser;
+/** Maps a backend effective-menu node onto the UI-facing `IMenu` (modern shape). */
+declare function toIMenu(node: IInsightMenuNode): IMenu;
+/** Maps an array of backend effective-menu nodes onto `IMenu[]`. */
+declare function toIMenus(nodes: IInsightMenuNode[]): IMenu[];
+/** Maps a backend favorite item onto the UI-facing `IMenu` (modern shape). */
+declare function toIMenuFavorite(item: IInsightFavoriteMenuItem): IMenu;
+/** Recursively collects every non-null `menuCode` across a menu tree (deduplicated, order preserved). */
+declare function collectMenuCodes(menus: IMenu[]): string[];
+/**
+ * Menu-mode permission check: returns true if the user's loaded menus contain
+ * ANY of the given menu codes. An empty set of menus (not yet loaded) always
+ * returns `false` — gated UI renders only once the store has data.
+ */
+declare function hasAnyMenuCode(menus: IMenu[], code: string | string[]): boolean;
+/** First navigable leaf route in a menu tree — a sensible post-login default landing. */
+declare function findFirstLeafRoute(menus: IMenu[]): string | null;
+/** Finds a menu node's display name by id (recursive), or null. */
+declare function findMenuNameById(menus: IMenu[], menuId: string | number): string | null;
+
+/**
+ * Current-user navigation & favorites service — calls iam-user-api's
+ * `/me/menus*` endpoints (user-menu service contract). These endpoints return
+ * a `{ meta, data }` envelope; this service unwraps `.data` so callers keep
+ * the app-wide body-as-data convention.
+ *
+ * Base URL: `{api.user}` from the resolved auth config (defaults to the
+ * library environment file). Consumer apps override via
+ * `provideInsightAuth({ api: { user: '...' } })`.
+ */
+declare class IUserMenuService {
+    private readonly api;
+    private readonly config;
+    private get baseUrl();
+    /** GET `{api.user}/me/menus` — effective navigation tree for one or all active applications. Output type overridable via `T`. */
+    getEffectiveMenus<T = IInsightMenuNode[]>(applicationId?: string): Observable<T>;
+    /** GET `{api.user}/me/menus/favorites` — effective favorite items, sorted by name. Output type overridable via `T`. */
+    getFavorites<T = IInsightFavoriteMenuItem[]>(applicationId?: string): Observable<T>;
+    /** PUT `{api.user}/me/menus/{menuId}/favorite` — pin an effective menu item (204 No Content). */
+    addFavorite(menuId: string | number): Observable<void>;
+    /** DELETE `{api.user}/me/menus/{menuId}/favorite` — unpin a menu item (204 No Content). */
+    removeFavorite(menuId: string | number): Observable<void>;
+    /**
+     * PUT `{api.user}/me/menus/favorites` — atomically replace the complete
+     * favorite collection after a drag-drop. `displayOrder` values form the
+     * complete sequence 1..n. Returns 204 No Content.
+     */
+    reorderFavorites(menuIds: (string | number)[]): Observable<void>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IUserMenuService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IUserMenuService>;
+}
+
+/**
+ * Current-user profile service — calls iam-user-api's `GET {api.user}/users/user`
+ * endpoint (`CurrentUserDto`). The sidebar-shaped mapping (`IUser`) lives in
+ * `user.mapper.ts` (`mapToSidebarUser`).
+ *
+ * Base URL: `{api.user}` from the resolved auth config (defaults to the
+ * library environment file). Output type overridable via the generic — the
+ * library default is the raw `IInsightCurrentUser` DTO.
+ */
+declare class ICurrentUserService {
+    private readonly api;
+    private readonly config;
+    private get baseUrl();
+    /** GET `{api.user}/users/user` — raw current-user DTO. Override `T` to use your own response type. */
+    getCurrentUser<T = IInsightCurrentUser>(): Observable<T>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ICurrentUserService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<ICurrentUserService>;
+}
+
+/**
+ * Session-storage wrapper for non-sensitive UI state (returnUrl, nonce/state).
+ * Tokens are NEVER stored here — the access token lives in-memory
+ * (`ISessionService`) and the refresh token lives in an HttpOnly cookie set by
+ * iam-identity-api.
+ *
+ * @overridable — consumers may provide `{ provide: IStorageService, useClass: ... }`.
+ */
+declare class IStorageService {
+    private readonly storageKey;
+    get(key: string): string;
+    set(key: string, value: string): void;
+    delete(key: string): void;
+    clear(): void;
+    /** Save the return URL for post-login/post-password-change redirect (keyed `ru`). */
+    setReturnUrl(url: string): void;
+    /** Retrieve and clear the saved return URL. Returns `'/'` when none is saved. */
+    getReturnUrl(): string;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IStorageService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IStorageService>;
+}
+
+/**
+ * In-memory store for the current user's sidebar data — user profile, effective
+ * navigation menus, favorites — and permission checks.
+ *
+ * Everything lives in memory (signals); NOTHING is persisted to Web Storage.
+ * On a cold start (page load) consumers call `load()` to re-fetch user, menus
+ * and favorites; the store then re-emits so gated UI (`ihHasMn` /
+ * `ihNotHasMn`) re-renders reactively once data is available (async-aware).
+ */
+declare class IUserMenuStore {
+    private readonly currentUserService;
+    private readonly menuService;
+    private readonly session;
+    /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
+    readonly currentUser: i0.WritableSignal<IUser | null>;
+    /** Raw current-user DTO as returned by the backend — `null` until loaded. */
+    readonly rawCurrentUser: i0.WritableSignal<IInsightCurrentUser | null>;
+    /** Effective navigation tree (`IMenu` modern shape). */
+    readonly menus: i0.WritableSignal<IMenu[]>;
+    /** Favorite menus (`IMenu` modern shape). */
+    readonly favorites: i0.WritableSignal<IMenu[]>;
+    /** Roles decoded from the access token (for `source: 'role'` permission checks). */
+    readonly roles: i0.WritableSignal<string[]>;
+    /** True while the cold-start `load()` is in flight. */
+    readonly initializing: i0.WritableSignal<boolean>;
+    /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
+    readonly loadError: i0.WritableSignal<string | null>;
+    readonly currentUser$: Observable<IUser | null>;
+    readonly menus$: Observable<IMenu[]>;
+    readonly favorites$: Observable<IMenu[]>;
+    readonly roles$: Observable<string[]>;
+    readonly initializing$: Observable<boolean>;
+    /**
+     * Post-login default landing (when no return URL is present).
+     * Order: (1) first navigable favorite route, (2) first navigable menu route.
+     */
+    get defaultRoute(): string | null;
+    /** Finds a menu node's display name by id (recursive), or null. */
+    findMenuName(menuId: string | number): string | null;
+    /**
+     * Cold-start: fetch user + menus + favorites concurrently. A failure in one
+     * branch does not block the others; `initializing` clears once all settle.
+     *
+     * Returns an observable that completes when the load settles, so callers can
+     * await it (e.g. to navigate to `defaultRoute` after login). The load starts
+     * immediately even if the caller ignores the returned observable — a shared
+     * source is kept alive by an internal subscribe (fire-and-forget compatible).
+     */
+    load(): Observable<void>;
+    /** Refresh roles from the current access token (call after login / token change). */
+    syncRoles(): void;
+    /**
+     * Menu-mode permission check against the in-memory menu codes (ANY match).
+     * Returns `false` while menus are not yet loaded — gated UI renders only
+     * after the store has data (async-aware via the reactive directives).
+     */
+    hasMenu(code: string | string[]): boolean;
+    /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
+    hasRole(code: string | string[]): boolean;
+    /** Pin (`isFavorite: true`) or unpin a menu item, then refreshes favorites. */
+    toggleFavorite(menuId: string | number, isFavorite: boolean): Observable<void>;
+    /** Persists the new favorite order after a drag-drop, then refreshes favorites. */
+    reorderFavorites(menuIds: (string | number)[]): Observable<void>;
+    /** Re-fetches the favorites from the backend into the in-memory `favorites` signal. */
+    reloadFavorites(): Observable<void>;
+    private loadUserInternal;
+    private loadMenusInternal;
+    private loadFavoritesInternal;
+    private recordError;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IUserMenuStore, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IUserMenuStore>;
+}
+
+/** Permission source selector used by `ihHasMn` / `ihNotHasMn`. */
+type IInsightPermissionSource = 'menu' | 'role';
+/** Object form: inline source + value. */
+type IInsightPermission = {
+    source: IInsightPermissionSource;
+    value: string | string[];
+};
+/**
+ * Accepted input for the permission directives:
+ * - a plain `string | string[]` → menu-mode check (default), or
+ * - an object `{ source, value }` to select the source explicitly.
+ */
+type IInsightPermissionInput = string | string[] | IInsightPermission;
+/** Resolves an input into a concrete `{ source, codes }` pair (or `null`). */
+declare function resolvePermission(value: IInsightPermissionInput | null): {
+    source: IInsightPermissionSource;
+    codes: string | string[];
+} | null;
+/**
+ * Base structural permission directive shared by `IHHasMnDirective` and
+ * `IHNotHasMnDirective`.
+ *
+ * ASYNC-AWARE: instead of a one-shot input setter, it subscribes to the
+ * `IUserMenuStore`'s reactive menu/role state (`menus$` / `roles$`) and
+ * re-renders the embedded view whenever the permission resolves or changes —
+ * e.g. while the store cold-starts (menus not yet loaded) the view stays
+ * hidden, then appears as soon as the data arrives, and disappears again if a
+ * role/menu change revokes access.
+ */
+declare abstract class IHMenuGateDirective implements OnInit, OnDestroy {
+    /** `false` for `ihHasMn` (show when allowed), `true` for `ihNotHasMn` (show when denied). */
+    protected abstract readonly invert: boolean;
+    protected readonly store: IUserMenuStore;
+    private readonly templateRef;
+    private readonly viewContainer;
+    protected readonly value$: BehaviorSubject<IInsightPermissionInput | null>;
+    private viewCreated;
+    private subscription?;
+    ngOnInit(): void;
+    ngOnDestroy(): void;
+    private evaluate;
+    private renderView;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHMenuGateDirective, never>;
+    static ɵdir: i0.ɵɵDirectiveDeclaration<IHMenuGateDirective, never, never, {}, {}, never, never, true, never>;
+}
+/**
+ * Structural directive `*ihHasMn` — renders the element only while the current
+ * user has the given menu code / role.
+ *
+ * Usage:
+ * ```html
+ * <button *ihHasMn="'admin'">Admin only</button>                 <!-- menu mode (default) -->
+ * <div *ihHasMn="['read', 'write']">R/W</div>
+ * <i *ihHasMn="{ source: 'role', value: 'iam-admin' }">Role check</i>
+ * ```
+ */
+declare class IHHasMnDirective extends IHMenuGateDirective {
+    protected readonly invert = false;
+    set ihHasMn(value: IInsightPermissionInput);
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHHasMnDirective, never>;
+    static ɵdir: i0.ɵɵDirectiveDeclaration<IHHasMnDirective, "[ihHasMn]", never, { "ihHasMn": { "alias": "ihHasMn"; "required": false; }; }, {}, never, never, true, never>;
+}
+
+/**
+ * Structural directive `*ihNotHasMn` — the inverse of `ihHasMn`: renders the
+ * element only while the current user does NOT have the given menu code / role.
+ *
+ * Usage:
+ * ```html
+ * <div *ihNotHasMn="'super-admin'">Everyone except super-admin</div>
+ * <i *ihNotHasMn="{ source: 'role', value: 'iam-admin' }">Non-admin</i>
+ * ```
+ */
+declare class IHNotHasMnDirective extends IHMenuGateDirective {
+    protected readonly invert = true;
+    set ihNotHasMn(value: IInsightPermissionInput);
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHNotHasMnDirective, never>;
+    static ɵdir: i0.ɵɵDirectiveDeclaration<IHNotHasMnDirective, "[ihNotHasMn]", never, { "ihNotHasMn": { "alias": "ihNotHasMn"; "required": false; }; }, {}, never, never, true, never>;
+}
+
+/**
+ * Shape of `@insight/ui`'s default environment.
+ *
+ * The library's services read a subset of these fields. `api` is an open-ended
+ * registry of backend base URLs so consumer apps can register additional
+ * service endpoints.
+ */
+type IEnvironment = {
+    production: boolean;
+    releaseStage: string;
+    appName: string;
+    version: string;
+    /** API base URLs grouped by backend service. `identity` + `user` are read by the library data layer. */
+    api: {
+        identity: string;
+        user: string;
+        configuration: string;
+        application: string;
+        [key: string]: string;
+    };
+    /** Full URL of iam-web's signin page. */
+    signinUrl: string;
+    /** Full URL of iam-web's own auth callback (informational for consumers). */
+    authCallbackUrl: string;
+    /** Cookie domain used for the HttpOnly refresh token cookie (informational). */
+    cookieDomain: string;
+    securityMode: boolean;
+    tokenLifespan: {
+        accessTokenSeconds: number;
+        refreshTokenSeconds: number;
+        ssoSessionMaxSeconds: number;
+    };
+    cookieSecure: boolean;
+    /** CSRF token max age in seconds (backend cookie maxAge minus a safety buffer). */
+    csrfTokenMaxAgeSeconds: number;
+    /** MFA challenge session timeout (seconds). */
+    mfaChallengeSessionTimeoutSeconds?: number;
+    /** Origins iam-web's signin page trusts for post-login redirects (informational). */
+    allowedReturnOrigins: string[];
+};
+
+/**
+ * Default environment for `@insight/ui`'s shared data layer.
+ *
+ * These are the library-wide defaults for the SSO / sidebar / user data
+ * layer. Consumer apps override any field at bootstrap via
+ * `provideInsightAuth()`.
+ */
+declare const environment: IEnvironment;
+
+export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeMenuTree, provideInsightAuth, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
+export type { IAlertData, IApiOptions, IApiResponse, IAuthUser, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEnvironment, IErrorContext, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IInsightAuthConfig, IInsightAuthConfigOverrides, IInsightCurrentUser, IInsightFavoriteMenuItem, IInsightFavoriteOrderItem, IInsightMenuApplication, IInsightMenuCompany, IInsightMenuNode, IInsightMenuOpenIn, IInsightPermission, IInsightPermissionInput, IInsightPermissionSource, IInsightTokenLifespan, IInsightUserMenuEnvelope, ILoginResponse, IMenu, IMenuApplication, IMenuCompany, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuOpenIn, IMfaChallengeResponse, IPaginatorState, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser, IValidateResetTokenResponse, SessionExpiredReason };
