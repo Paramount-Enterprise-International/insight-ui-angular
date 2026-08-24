@@ -37,7 +37,7 @@ export function extractAccessTokenFromHash(): string | null {
  *     rules as iam-web.
  */
 @Component({
-  selector: 'insight-auth-callback',
+  selector: 'i-auth-callback',
   standalone: true,
   template: '',
 })

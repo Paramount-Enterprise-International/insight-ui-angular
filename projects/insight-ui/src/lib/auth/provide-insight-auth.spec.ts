@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
+import { environment as defaultEnvironment } from '../../environments/environment';
 import { INSIGHT_AUTH_CONFIG } from './auth-config';
 import { provideInsightAuth } from './provide-insight-auth';
 
@@ -11,16 +12,13 @@ describe('provideInsightAuth', () => {
 
     const config = TestBed.inject(INSIGHT_AUTH_CONFIG);
 
-    expect(config.api.identity).toBe('http://localhost:3001/api');
-    expect(config.signinUrl).toBe('http://localhost:4200/signin');
+    expect(config.api.identity).toBe(defaultEnvironment.api.identity);
+    expect(config.api['user']).toBe(defaultEnvironment.api.user);
+    expect(config.signinUrl).toBe(defaultEnvironment.signinUrl);
     expect(config.callbackPath).toBe('/auth/callback');
     expect(config.allowedReturnOrigins).toEqual([window.location.origin]);
-    expect(config.tokenLifespan).toEqual({
-      accessTokenSeconds: 3600,
-      refreshTokenSeconds: 7200,
-      ssoSessionMaxSeconds: 54000,
-    });
-    expect(config.csrfTokenMaxAgeSeconds).toBe(7170);
+    expect(config.tokenLifespan).toEqual(defaultEnvironment.tokenLifespan);
+    expect(config.csrfTokenMaxAgeSeconds).toBe(defaultEnvironment.csrfTokenMaxAgeSeconds);
   });
 
   it('overrides only the specified top-level field, keeping the rest at their defaults', () => {
@@ -31,7 +29,7 @@ describe('provideInsightAuth', () => {
     const config = TestBed.inject(INSIGHT_AUTH_CONFIG);
 
     expect(config.signinUrl).toBe('https://iam.paramount-land.com/signin');
-    expect(config.api.identity).toBe('http://localhost:3001/api');
+    expect(config.api.identity).toBe(defaultEnvironment.api.identity);
   });
 
   it('deep-merges a partial `api` override without dropping the default identity URL semantics', () => {
@@ -50,6 +48,7 @@ describe('provideInsightAuth', () => {
 
     expect(config.api.identity).toBe('https://iam-identity.paramount-land.com/api');
     expect(config.api['product']).toBe('https://product.paramount-land.com/api');
+    expect(config.api['user']).toBe(defaultEnvironment.api.user);
   });
 
   it('deep-merges a partial `tokenLifespan` override, keeping the other lifespan defaults', () => {

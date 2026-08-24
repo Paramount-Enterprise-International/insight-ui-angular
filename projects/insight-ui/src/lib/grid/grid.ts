@@ -153,7 +153,7 @@ export type IGridServerSideConfig<T = any> = {
   onFilterChange?: (filter: string) => void;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 export type IGridDataSourceConfig<T = any> = {
   sort?: ISortConfig;
   filter?: IGridFilter;

@@ -76,7 +76,10 @@ describe('IApiService', () => {
 
     httpMock
       .expectOne(`${testConfig.api.identity}/users`)
-      .flush({ title: 'Too Many Requests', detail: 'Too many requests', retryAfter: 30 }, { status: 429, statusText: 'Too Many Requests' });
+      .flush(
+        { title: 'Too Many Requests', detail: 'Too many requests', retryAfter: 30 },
+        { status: 429, statusText: 'Too Many Requests' },
+      );
   });
 
   it('resolves an apiUrl override instead of the default identity base URL', () => {

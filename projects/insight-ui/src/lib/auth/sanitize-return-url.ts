@@ -1,4 +1,4 @@
-export interface ISanitizedReturnUrl {
+export type ISanitizedReturnUrl = {
   returnUrl: string;
   isExternal: boolean;
 }

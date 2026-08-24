@@ -30,3 +30,20 @@ export * from './lib/api';
 export * from './lib/session';
 export * from './lib/guards';
 export * from './lib/interceptors';
+
+// Current-user navigation & favorites data layer (API services + mappers)
+export * from './lib/user';
+
+// Session storage + session-expired overlay state
+export * from './lib/storage';
+export * from './lib/session-expired';
+
+// In-memory sidebar/user/menu store + permission checks
+export * from './lib/store';
+
+// Permission directives (ihHasMn / ihNotHasMn — async, menu or role source)
+export * from './lib/directives';
+
+// Default environment (single env; mirrors iam-web environment.dev.ts)
+export * from './environments/environment.interface';
+export * from './environments/environment';

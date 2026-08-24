@@ -20,7 +20,11 @@ describe('ICsrfService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: INSIGHT_AUTH_CONFIG, useValue: testConfig }],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: INSIGHT_AUTH_CONFIG, useValue: testConfig },
+      ],
     });
     service = TestBed.inject(ICsrfService);
     httpMock = TestBed.inject(HttpTestingController);
@@ -57,14 +61,14 @@ describe('ICsrfService', () => {
     jasmine.clock().uninstall();
   });
 
-  it('does not throw when the fetch fails (non-fatal)', () => {
-    let completed = false;
-    service.ensureToken().subscribe({ next: () => (completed = true) });
+  it('propagates the error when the fetch fails', () => {
+    let receivedError: unknown;
+    service.ensureToken().subscribe({ error: (error) => (receivedError = error) });
 
     const req = httpMock.expectOne(`${testConfig.api.identity}/auth/csrf`);
     req.flush('error', { status: 500, statusText: 'Server Error' });
 
-    expect(completed).toBeTrue();
+    expect(receivedError).toBeTruthy();
     expect(service.getToken()).toBeNull();
   });
 });

@@ -10,7 +10,7 @@ import { ICsrfService } from '../csrf/csrf.service';
 export type IApiResponse<T = any> = T;
 
 /** Options for individual HTTP calls. */
-export interface IApiOptions {
+export type IApiOptions = {
   /** Override the default API base URL (e.g. to call a different backend service). */
   apiUrl?: string;
   /** Additional headers to merge with the defaults. */
@@ -114,7 +114,11 @@ export class IApiService {
     }
 
     return this.http
-      .delete<IApiResponse<T>>(`${baseUrl}${path}`, { withCredentials: true, headers: mergedHeaders, body: options?.body })
+      .delete<IApiResponse<T>>(`${baseUrl}${path}`, {
+        withCredentials: true,
+        headers: mergedHeaders,
+        body: options?.body,
+      })
       .pipe(
         map((res) => res as T),
         catchError((err) => this.enrichError(err)),
@@ -134,7 +138,7 @@ export class IApiService {
     const body =
       file instanceof FormData
         ? file
-        : (() => {
+        : ((): FormData => {
             const fd = new FormData();
             fd.append('file', file);
             return fd;

@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
 import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
@@ -50,11 +50,14 @@ export class ICsrfService {
 
   /**
    * Fetch a fresh CSRF token from `iam-identity-api` and store it in memory.
-   * Non-fatal on failure — subsequent mutating requests will fail with 403 if
-   * the token is missing, surfaced via `IApiService`'s error enrichment.
+   * On failure the error is propagated (callers that want best-effort behavior
+   * can catch it) — a failed fetch must not be silently swallowed, e.g. so the
+   * `retryOnCsrfError` pattern can re-trigger the fetch.
    */
   ensureToken(): Observable<void> {
-    return this.http.get<{ csrfToken: string }>(`${this.config.api.identity}/auth/csrf`, { withCredentials: true }).pipe(
+    return this.http
+      .get<{ csrfToken: string }>(`${this.config.api.identity}/auth/csrf`, { withCredentials: true })
+      .pipe(
       tap((res) => {
         this.token = res.csrfToken ?? null;
         this.tokenFetchedAt = Date.now();
@@ -63,7 +66,7 @@ export class ICsrfService {
       catchError((err) => {
         // Never log the token itself — status code only.
         console.warn('[@insight/ui][CSRF] Failed to fetch CSRF token', err?.status);
-        return of(undefined);
+        return throwError(() => err);
       }),
     );
   }

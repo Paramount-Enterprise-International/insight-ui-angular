@@ -1,6 +1,11 @@
 import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
 
-import { getDefaultInsightAuthConfig, IInsightAuthConfig, IInsightAuthConfigOverrides, INSIGHT_AUTH_CONFIG } from './auth-config';
+import {
+  getDefaultInsightAuthConfig,
+  IInsightAuthConfig,
+  IInsightAuthConfigOverrides,
+  INSIGHT_AUTH_CONFIG,
+} from './auth-config';
 
 /**
  * Registers the @insight/ui shared auth package (`IApiService`,

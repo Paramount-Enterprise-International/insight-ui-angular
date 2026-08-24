@@ -1,12 +1,14 @@
 import { InjectionToken } from '@angular/core';
 
+import { environment as defaultEnvironment } from '../../environments/environment';
+
 /**
  * Token lifespan configuration (seconds). Mirrors the platform-wide AC used by
  * iam-web: Access Token 1h, Refresh Token 2h, Max SSO Session 15h. Consumer
  * apps should reuse the exact same values as iam-web for consistency, not
  * invent their own policy.
  */
-export interface IInsightTokenLifespan {
+export type IInsightTokenLifespan = {
   accessTokenSeconds: number;
   refreshTokenSeconds: number;
   ssoSessionMaxSeconds: number;
@@ -19,7 +21,7 @@ export interface IInsightTokenLifespan {
  * Consumer apps provide this via `provideInsightAuth(config)` in their
  * `app.config.ts` / bootstrap `ApplicationConfig`.
  */
-export interface IInsightAuthConfig {
+export type IInsightAuthConfig = {
   /** API base URLs grouped by backend service. `identity` (iam-identity-api) is required — all auth calls (csrf, refresh) go through it. */
   api: {
     identity: string;
@@ -74,15 +76,9 @@ export type IInsightAuthConfigOverrides = Partial<Omit<IInsightAuthConfig, 'api'
 };
 
 /**
- * Local-dev-oriented defaults for `IInsightAuthConfig`. These match iam-web's
- * own local `environment.ts` values, so a consumer app's SSO setup works out
- * of the box with ZERO configuration during local development —
- * `provideInsightAuth()` can be called with no arguments at all.
- *
- * `api.identity` and `signinUrl` are the two fields most likely to need
- * overriding per deployment target — staging/production point at real
- * domains, not localhost. Override them via
- * `provideInsightAuth({ api: { identity: '...' }, signinUrl: '...' })`.
+ * Default `IInsightAuthConfig`, sourced from the library's default environment
+ * file (`environments/environment.ts`). Consumer apps override any field via
+ * `provideInsightAuth({ ... })`.
  *
  * `allowedReturnOrigins` defaults to this app's own origin (the common case —
  * a callback only ever needs to trust redirecting back to itself) and
@@ -93,20 +89,27 @@ export type IInsightAuthConfigOverrides = Partial<Omit<IInsightAuthConfig, 'api'
 export function getDefaultInsightAuthConfig(): IInsightAuthConfig {
   return {
     api: {
-      identity: 'http://localhost:3001/api',
+      identity: defaultEnvironment.api.identity,
+      user: defaultEnvironment.api.user,
+      configuration: defaultEnvironment.api.configuration,
+      application: defaultEnvironment.api.application,
     },
-    signinUrl: 'http://localhost:4200/signin',
+    signinUrl: defaultEnvironment.signinUrl,
     callbackPath: '/auth/callback',
     allowedReturnOrigins: [window.location.origin],
     cookieDomain: window.location.hostname,
-    tokenLifespan: {
-      accessTokenSeconds: 3600,
-      refreshTokenSeconds: 7200,
-      ssoSessionMaxSeconds: 54000,
-    },
-    csrfTokenMaxAgeSeconds: 7170,
+    tokenLifespan: { ...defaultEnvironment.tokenLifespan },
+    csrfTokenMaxAgeSeconds: defaultEnvironment.csrfTokenMaxAgeSeconds,
   };
 }
 
-/** Injection token carrying the consumer app's `IInsightAuthConfig`. Provided via `provideInsightAuth()`. */
-export const INSIGHT_AUTH_CONFIG = new InjectionToken<IInsightAuthConfig>('INSIGHT_AUTH_CONFIG');
+/**
+ * Injection token carrying the consumer app's `IInsightAuthConfig`. Provided via
+ * `provideInsightAuth()`. Has a root-level default (`getDefaultInsightAuthConfig()`)
+ * so the library services never break when a consumer forgets to call
+ * `provideInsightAuth()` — consumers override it explicitly.
+ */
+export const INSIGHT_AUTH_CONFIG = new InjectionToken<IInsightAuthConfig>('INSIGHT_AUTH_CONFIG', {
+  providedIn: 'root',
+  factory: (): IInsightAuthConfig => getDefaultInsightAuthConfig(),
+});
