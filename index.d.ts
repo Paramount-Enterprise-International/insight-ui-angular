@@ -1561,6 +1561,15 @@ type IMenuFavoriteToggleEvent = {
     id: string | number;
     isFavorite: boolean;
 };
+/**
+ * Emitted by `IHSidebar` after the user drag-drops a favorite into a new
+ * position. Carries the ordered favorite menu ids so the host app can persist
+ * the new display order via the favorites reorder API.
+ */
+type IMenuFavoriteReorderEvent = {
+    /** Favorite menu ids in their new display order (top to bottom). */
+    menuIds: (string | number)[];
+};
 type IMenuGroup = {
     key: string;
     label: string;
@@ -1712,6 +1721,10 @@ declare class IHMenu implements OnChanges {
     /** Nesting depth from the sidebar root (0 = top level). Drives indentation and
         the top-level "no group icon" rule — independent of the data's `level`. */
     depth: number;
+    /** When true, leaf items render with `cdkDrag` so the parent `cdkDropList` can reorder them (used for the Favorites section). */
+    dragEnabled: boolean;
+    /** When true, leaf items render their owning application name next to the label (used for the Favorites section). */
+    showApplication: boolean;
     readonly clicked: EventEmitter<any>;
     readonly favoriteToggle: EventEmitter<IMenuFavoriteToggleEvent>;
     menus: QueryList<IHMenu>;
@@ -1730,7 +1743,7 @@ declare class IHMenu implements OnChanges {
     get isModuleNode(): boolean;
     /** Structural group header (non-leaf container). Modules are handled by `isModuleNode`. */
     get isGroupNode(): boolean;
-    /** Group is expanded unless explicitly marked collapsed. */
+    /** Group is expanded unless explicitly marked collapsed (manual toggle wins). */
     get isGroupExpanded(): boolean;
     /** The synthetic Favorites group — keeps its icon at the top level. */
     get isFavoritesGroup(): boolean;
@@ -1761,10 +1774,11 @@ declare class IHMenu implements OnChanges {
     onChildFavoriteToggle(event: IMenuFavoriteToggleEvent): void;
     hrefWithMenuFilter(raw: string): string;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHMenu, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "depth": { "alias": "depth"; "required": false; }; }, { "clicked": "clicked"; "favoriteToggle": "favoriteToggle"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "depth": { "alias": "depth"; "required": false; }; "dragEnabled": { "alias": "dragEnabled"; "required": false; }; "showApplication": { "alias": "showApplication"; "required": false; }; }, { "clicked": "clicked"; "favoriteToggle": "favoriteToggle"; }, never, never, true, never>;
 }
-declare class IHSidebar implements OnInit, OnChanges {
+declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private router;
+    private hostElement;
     user$: Observable<IUser>;
     menusInput$: Observable<IMenu[]>;
     visible: boolean;
@@ -1779,6 +1793,8 @@ declare class IHSidebar implements OnInit, OnChanges {
     collapsible: boolean;
     /** Bubbled up from leaf pin toggles — the host app persists via the favorites API. */
     readonly onFavoriteToggle: EventEmitter<IMenuFavoriteToggleEvent>;
+    /** Emitted after a favorites drag-drop with the ordered favorite menu ids — the host app persists via the reorder API. */
+    readonly onFavoriteReorder: EventEmitter<IMenuFavoriteReorderEvent>;
     menus$: Observable<IMenu[]>;
     queryParams: any;
     menuSearch: FormControl<string | null>;
@@ -1786,14 +1802,38 @@ declare class IHSidebar implements OnInit, OnChanges {
     keyboardNavActive: i0.WritableSignal<boolean>;
     selectedIndex: i0.WritableSignal<number | null>;
     selectedMenuId: i0.WritableSignal<string | number | null>;
+    /** Index the dragged favorite would land at — drives the drop placeholder + cursor. */
+    readonly dragOverIndex: i0.WritableSignal<number | null>;
     /** Template-bound helper for stable `@for` tracking. */
     readonly getMenuKey: typeof getMenuKey;
     private favoritesGroupCache;
+    /** Latest favorites array mirrored from `favorites$` — source of truth for drag reorder. */
+    readonly favoriteItems: i0.WritableSignal<IMenu[]>;
+    private favoritesSubscription;
     private navigableMenus;
     private originalMenus$;
     get sidebarVisibility(): boolean;
     ngOnInit(): void;
     ngOnChanges(changes: SimpleChanges): void;
+    ngOnDestroy(): void;
+    /** Mirrors the `favorites$` input into the local `favoriteItems` signal. */
+    private subscribeFavorites;
+    private dragState;
+    /** Document mousemove during an active favorites drag (live reorder preview). */
+    private onDocumentMouseMove;
+    /** Document mouseup — finalize (emit) or cancel the favorites drag. */
+    private onDocumentMouseUp;
+    /** Begins a favorites drag from a leaf inside the favorites list. */
+    onFavoritesMouseDown(event: MouseEvent): void;
+    /** Live-reorders the favorites so the target position is previewed while dragging. */
+    private reorderFavoriteLive;
+    /** Cleans up listeners, classes, and state after a favorites drag ends/cancels. */
+    private cleanupFavoriteDrag;
+    /**
+     * Returns the index (0..n) a drop at `clientY` would land at, based on the
+     * vertical midpoints of the currently rendered favorite leaves.
+     */
+    private computeFavoriteDropIndex;
     /**
      * Normalizes modern (contract-aligned) menu nodes into the legacy `IMenu`
      * shape on ingestion. Legacy menus pass through untouched.
@@ -1824,7 +1864,7 @@ declare class IHSidebar implements OnInit, OnChanges {
     private navigateToMenu;
     updateUrl(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHSidebar, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "favorites$": { "alias": "favorites$"; "required": false; }; "groupByApplication": { "alias": "groupByApplication"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; }, { "onFavoriteToggle": "onFavoriteToggle"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "favorites$": { "alias": "favorites$"; "required": false; }; "groupByApplication": { "alias": "groupByApplication"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; }, { "onFavoriteToggle": "onFavoriteToggle"; "onFavoriteReorder": "onFavoriteReorder"; }, never, never, true, never>;
 }
 
 declare class ILoading {
@@ -2143,4 +2183,4 @@ declare class IUI {
 }
 
 export { IAlert, IAlertService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ITextArea, IToggle, IUI, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSpaMenu, normalizeMenuTree, resolveControlErrorMessage };
-export type { IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IMenuApplication, IMenuCompany, IMenuFavoriteToggleEvent, IMenuGroup, IMenuOpenIn, IPaginatorState, IPillSize, IPillVariant, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser };
+export type { IAlertData, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IErrorContext, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IMenu, IMenuApplication, IMenuCompany, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuOpenIn, IPaginatorState, IPillSize, IPillVariant, IRoute, IRoutes, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser };
