@@ -95,8 +95,13 @@ export class ISessionService {
   private changePasswordTokenValue: string | null = null;
   private lastVerifiedAt = 0;
 
-  /** True while the app is restoring/validating the session on load. Consumer apps may use this to show a loading state. */
-  readonly initializing = signal(false);
+  /**
+   * True while the app is restoring/validating the session on load (starts
+   * `true` on cold start so guards can allow navigation during the restore and
+   * consumer apps can show a loading state). Cleared once the session is
+   * established (`setAccessToken`/`setSession`) or `tryRestoreSession()` settles.
+   */
+  readonly initializing = signal(true);
 
   // Single-flight refresh: one in-flight /auth/refresh shared by all callers,
   // retained until it completes/errors so a cancelled caller cannot abort it.
@@ -218,6 +223,7 @@ export class ISessionService {
     if (this.sessionStartedAt === null) {
       this.sessionStartedAt = Date.now();
     }
+    this.initializing.set(false);
   }
 
   /**
@@ -240,6 +246,7 @@ export class ISessionService {
     this.passwordExpired = !neverExpired && pwdExpired;
     sessionStorage.setItem('iam.session.active', 'true');
     this.lastVerifiedAt = Date.now();
+    this.initializing.set(false);
   }
 
   clearSession(): void {
