@@ -392,10 +392,18 @@ export class ISessionService {
       console.debug('[@insight/ui][SESSION] tryRestoreSession: FAILED', {
         status: (err as HttpErrorResponse)?.status,
       });
-      const code = toSessionExpiredReason(extractProblemDetailsErrorCode(err));
+      const rawErrorCode = extractProblemDetailsErrorCode(err);
+      const code = toSessionExpiredReason(rawErrorCode);
       const wasActive = sessionStorage.getItem('iam.session.active') === 'true';
       if (wasActive && isSessionExpiredError(err)) {
-        this.sessionExpiredService.show(window.location.pathname, code ?? 'TOKEN_EXPIRED');
+        // Pass the raw backend error code + detail through so the consumer app
+        // can resolve a localized message from its own error-catalog service.
+        this.sessionExpiredService.show(
+          window.location.pathname,
+          code ?? 'TOKEN_EXPIRED',
+          rawErrorCode,
+          (err as { detail?: string })?.detail,
+        );
       }
       if (isSessionExpiredError(err)) {
         this.authService.logout().subscribe({ error: () => void 0 });

@@ -70,6 +70,11 @@ export const isSessionExpiredError = (error: unknown): boolean => {
 /**
  * In-memory overlay state for the session-expired UI.
  *
+ * Besides the derived `reason`, the service also exposes the RAW backend error
+ * code and Problem Details `detail` so consumer apps (e.g. iam-web) can resolve
+ * a localized display message from their own error-catalog service without the
+ * library ever calling the configuration API.
+ *
  * @overridable — consumers may provide `{ provide: SessionExpiredService, useClass: ... }`.
  */
 @Injectable({ providedIn: 'root' })
@@ -77,10 +82,21 @@ export class SessionExpiredService {
   readonly visible = signal(false);
   readonly returnUrl = signal('/');
   readonly reason = signal<SessionExpiredReason | undefined>(undefined);
+  /** Raw error code from the backend Problem Details response (e.g. `AUTH_TOKEN_EXPIRED`). */
+  readonly errorCode = signal<string | null>(null);
+  /** Backend-provided `detail` message from the Problem Details response — display fallback. */
+  readonly detail = signal<string | null>(null);
 
-  show(returnUrl: string, reason?: SessionExpiredReason): void {
+  show(
+    returnUrl: string,
+    reason?: SessionExpiredReason,
+    errorCode?: string | null,
+    detail?: string | null,
+  ): void {
     this.returnUrl.set(returnUrl || '/');
     this.reason.set(reason);
+    this.errorCode.set(errorCode ?? null);
+    this.detail.set(detail ?? null);
     this.visible.set(true);
   }
 
