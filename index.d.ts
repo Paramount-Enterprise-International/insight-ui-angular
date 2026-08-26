@@ -1754,8 +1754,12 @@ declare class IHMenu implements OnChanges {
     /**
      * Icon classes for the row icon. Appends FontAwesome's `fa-fw` (fixed-width)
      * so icons with different glyph widths (e.g. fa-users vs fa-bars) still keep
-     * the menu title aligned. Returns `fa-fw` even when the menu has no icon so
-     * the title position is identical either way.
+     * the menu title aligned.
+     *
+     * Falls back to `MENU_ICON_FALLBACK` (`fa-brands fa-microsoft`) when the menu
+     * has no icon or the icon is not a valid FontAwesome class (e.g. legacy named
+     * icons like `home`, `dashboard` that contain no `fa-*` token and would render
+     * as an empty glyph).
      */
     get menuIcon(): string | null;
     /** 0-based nesting level; top-level groups are always 0 (never negative). */
@@ -2597,13 +2601,22 @@ declare const isSessionExpiredError: (error: unknown) => boolean;
 /**
  * In-memory overlay state for the session-expired UI.
  *
+ * Besides the derived `reason`, the service also exposes the RAW backend error
+ * code and Problem Details `detail` so consumer apps (e.g. iam-web) can resolve
+ * a localized display message from their own error-catalog service without the
+ * library ever calling the configuration API.
+ *
  * @overridable — consumers may provide `{ provide: SessionExpiredService, useClass: ... }`.
  */
 declare class SessionExpiredService {
     readonly visible: i0.WritableSignal<boolean>;
     readonly returnUrl: i0.WritableSignal<string>;
     readonly reason: i0.WritableSignal<SessionExpiredReason | undefined>;
-    show(returnUrl: string, reason?: SessionExpiredReason): void;
+    /** Raw error code from the backend Problem Details response (e.g. `AUTH_TOKEN_EXPIRED`). */
+    readonly errorCode: i0.WritableSignal<string | null>;
+    /** Backend-provided `detail` message from the Problem Details response — display fallback. */
+    readonly detail: i0.WritableSignal<string | null>;
+    show(returnUrl: string, reason?: SessionExpiredReason, errorCode?: string | null, detail?: string | null): void;
     hide(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<SessionExpiredService, never>;
     static ɵprov: i0.ɵɵInjectableDeclaration<SessionExpiredService>;
@@ -2636,6 +2649,7 @@ declare class ISessionService {
     private readonly authService;
     private readonly config;
     private readonly sessionExpiredService;
+    private readonly csrf;
     private accessToken;
     private _refreshToken;
     private expiresAt;
@@ -2644,9 +2658,15 @@ declare class ISessionService {
     private passwordExpired;
     private changePasswordTokenValue;
     private lastVerifiedAt;
-    /** True while the app is restoring/validating the session on load. Consumer apps may use this to show a loading state. */
+    /**
+     * True while the app is restoring/validating the session on load (starts
+     * `true` on cold start so guards can allow navigation during the restore and
+     * consumer apps can show a loading state). Cleared once the session is
+     * established (`setAccessToken`/`setSession`) or `tryRestoreSession()` settles.
+     */
     readonly initializing: i0.WritableSignal<boolean>;
     private refreshInFlight;
+    private restoreInFlight;
     isAuth(): boolean;
     isTokenExpired(): boolean;
     /**
@@ -2688,7 +2708,13 @@ declare class ISessionService {
      */
     setSession(accessToken: string, expiresIn: number, user: IAuthUser, refreshToken?: string): void;
     clearSession(): void;
-    logout(): void;
+    /**
+     * Clears the client-side session AND invalidates the server-side session
+     * by revoking the refresh token. Returns an observable that completes after
+     * the server logout call finishes (or fails — failures are swallowed so the
+     * user is never stuck on a logout page).
+     */
+    logout(): Observable<void>;
     /**
      * Silently refresh the access token via the HttpOnly refresh cookie
      * (`POST {api.identity}/auth/refresh`, `withCredentials: true`).
@@ -2708,10 +2734,15 @@ declare class ISessionService {
     proactiveValidate(): Observable<string>;
     /**
      * Cold-start session restore from the HttpOnly cookie (called on app load).
-     * Skips auth sub-pages unless the signin page carries an ABSOLUTE (external)
-     * `returnUrl` (a cross-app SSO handoff). Shows the session-expired overlay
-     * when refreshing after a previously-active session. Returns the reason (if
-     * any) extracted from the error so the guard can decide overlay vs. signin.
+     * Skips non-signin auth sub-pages (forgot/reset password, MFA, callback).
+     * The signin page ALWAYS attempts the silent refresh: when the shared SSO
+     * cookie is still valid (e.g. after logging in via another app), restoring
+     * lets the signin page auto-redirect to the returnUrl / authenticated
+     * landing; when there is no session the refresh fails and the login form
+     * shows. (Explicit logout clears the cookie, so a bare signin after logout
+     * still ends up on the login form.) Shows the session-expired overlay when
+     * refreshing after a previously-active session. Returns the reason (if any)
+     * extracted from the error so the guard can decide overlay vs. signin.
      */
     tryRestoreSession(): Promise<{
         reason?: SessionExpiredReason;
@@ -2980,12 +3011,32 @@ declare class IUserMenuStore {
     hasMenu(code: string | string[]): boolean;
     /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
     hasRole(code: string | string[]): boolean;
-    /** Pin (`isFavorite: true`) or unpin a menu item, then refreshes favorites. */
+    /**
+     * Pin (`isFavorite: true`) or unpin a menu item. Flips the star icon in the
+     * `menus` tree immediately (optimistic), calls the backend, then re-fetches
+     * favorites so the server remains the source of truth for the favorites
+     * section. The menu-star change is reverted on error.
+     */
     toggleFavorite(menuId: string | number, isFavorite: boolean): Observable<void>;
-    /** Persists the new favorite order after a drag-drop, then refreshes favorites. */
+    /**
+     * Persists the new favorite order after a drag-drop. Reorders the in-memory
+     * `favorites` signal locally (optimistic) and calls the backend — no GET
+     * refetch after the write. The local change is reverted on error.
+     */
     reorderFavorites(menuIds: (string | number)[]): Observable<void>;
-    /** Re-fetches the favorites from the backend into the in-memory `favorites` signal. */
+    /** Re-fetches the favorites from the backend (manual refresh). */
     reloadFavorites(): Observable<void>;
+    /**
+     * Loads the effective navigation tree into `menus` — for one application
+     * (`applicationId`) or all active applications when omitted. Returns the
+     * mapped `IMenu[]`.
+     */
+    loadMenus(applicationId?: string): Observable<IMenu[]>;
+    /** Loads favorites into `favorites` — optionally for a single application. Returns the mapped `IMenu[]`. */
+    loadFavorites(applicationId?: string): Observable<IMenu[]>;
+    /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
+    private applyMenuFavorite;
+    private applyFavoriteReorder;
     private loadUserInternal;
     private loadMenusInternal;
     private loadFavoritesInternal;

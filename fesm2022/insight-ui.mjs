@@ -1,5 +1,5 @@
 import * as i0 from '@angular/core';
-import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, ViewChildren, makeEnvironmentProviders } from '@angular/core';
+import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER } from '@angular/core';
 import * as i1$1 from '@angular/common';
 import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
@@ -7,7 +7,7 @@ import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http'
 import { firstValueFrom, Subject, BehaviorSubject, map, filter, startWith, shareReplay, of, Observable, tap, combineLatest, throwError, timeout, lastValueFrom, forkJoin, distinctUntilChanged } from 'rxjs';
 import * as i1 from '@angular/forms';
 import { Validators, NG_VALUE_ACCESSOR, NgControl, FormGroupDirective, FormBuilder, FormControl, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { debounceTime, tap as tap$1, map as map$1, catchError, shareReplay as shareReplay$1, switchMap, filter as filter$1, take, finalize } from 'rxjs/operators';
+import { debounceTime, tap as tap$1, map as map$1, catchError, switchMap, shareReplay as shareReplay$1, filter as filter$1, take, finalize } from 'rxjs/operators';
 import { toObservable } from '@angular/core/rxjs-interop';
 
 /**
@@ -9857,6 +9857,11 @@ function normalizeMenuTree(menus) {
 }
 /** Synthetic group id used by the sidebar's Favorites section — keeps its icon. */
 const SIDEBAR_FAVORITES_GROUP_ID = 'favorites';
+/**
+ * Fallback FontAwesome classes used by the sidebar row icon when a menu has no
+ * icon or the icon is not a valid FontAwesome class
+ */
+const MENU_ICON_FALLBACK = 'fa-brands fa-microsoft';
 class IHTitleBreadcrumbService {
     /**
      * null = use normal (route-based) title/breadcrumbs
@@ -10296,12 +10301,17 @@ class IHMenu {
     /**
      * Icon classes for the row icon. Appends FontAwesome's `fa-fw` (fixed-width)
      * so icons with different glyph widths (e.g. fa-users vs fa-bars) still keep
-     * the menu title aligned. Returns `fa-fw` even when the menu has no icon so
-     * the title position is identical either way.
+     * the menu title aligned.
+     *
+     * Falls back to `MENU_ICON_FALLBACK` (`fa-brands fa-microsoft`) when the menu
+     * has no icon or the icon is not a valid FontAwesome class (e.g. legacy named
+     * icons like `home`, `dashboard` that contain no `fa-*` token and would render
+     * as an empty glyph).
      */
     get menuIcon() {
         const icon = this.menu?.icon?.trim();
-        return icon ? `${icon} fa-fw` : 'fa-fw';
+        const isValidFa = !!icon && /(?:^|\s)fa-[a-z0-9-]+(?:\s|$)/i.test(icon);
+        return `${isValidFa ? icon : MENU_ICON_FALLBACK} fa-fw`;
     }
     /** 0-based nesting level; top-level groups are always 0 (never negative). */
     get menuLevel() {
@@ -12786,55 +12796,6 @@ function buildExternalSigninUrl(config, targetPath) {
 }
 
 /**
- * Registers the @insight/ui shared auth package (`IApiService`,
- * `ISessionService`, `ICsrfService`, `authGuard`) for a consumer app.
- *
- * Zero-config by default — sensible local-dev defaults are baked in (see
- * `getDefaultInsightAuthConfig()`), matching iam-web's own local
- * environment. Consumer apps only need to pass `overrides` for whatever
- * differs from the defaults — typically `api.identity` and `signinUrl` when
- * deploying to staging/production. Every field can be overridden
- * individually, down to a single nested `api.*` or `tokenLifespan.*` entry;
- * anything not overridden falls back to the default.
- *
- * Consumers must still register `authInterceptor` themselves via
- * `provideHttpClient(withInterceptors([authInterceptor]))` in their own
- * `app.config.ts` — matches iam-web's existing pattern of wiring the
- * interceptor explicitly rather than hiding it inside a provider function.
- *
- * Usage (zero-config — local dev):
- * ```ts
- * export const config: ApplicationConfig = {
- *   providers: [
- *     provideInsightAuth(),
- *     provideHttpClient(withInterceptors([authInterceptor])),
- *     provideRouter(routes),
- *   ],
- * };
- * ```
- *
- * Usage (override for staging/production):
- * ```ts
- * provideInsightAuth({
- *   api: { identity: 'https://iam-identity.paramount-land.com/api' },
- *   signinUrl: 'https://iam.paramount-land.com/signin',
- * });
- * ```
- */
-function provideInsightAuth(overrides) {
-    const defaults = getDefaultInsightAuthConfig();
-    const config = {
-        ...defaults,
-        ...overrides,
-        // Cast needed: `Partial<...>`'s index signature widens to `string | undefined`,
-        // but real callers only ever pass actual string URLs, never `undefined` values.
-        api: { ...defaults.api, ...overrides?.api },
-        tokenLifespan: { ...defaults.tokenLifespan, ...overrides?.tokenLifespan },
-    };
-    return makeEnvironmentProviders([{ provide: INSIGHT_AUTH_CONFIG, useValue: config }]);
-}
-
-/**
  * CSRF token management — cookie-to-header pattern for @insight/ui consumer apps.
  * Mirrors iam-web's `ICsrfService`:
  *
@@ -13218,15 +13179,26 @@ const isSessionExpiredError = (error) => {
 /**
  * In-memory overlay state for the session-expired UI.
  *
+ * Besides the derived `reason`, the service also exposes the RAW backend error
+ * code and Problem Details `detail` so consumer apps (e.g. iam-web) can resolve
+ * a localized display message from their own error-catalog service without the
+ * library ever calling the configuration API.
+ *
  * @overridable — consumers may provide `{ provide: SessionExpiredService, useClass: ... }`.
  */
 class SessionExpiredService {
     visible = signal(false, ...(ngDevMode ? [{ debugName: "visible" }] : []));
     returnUrl = signal('/', ...(ngDevMode ? [{ debugName: "returnUrl" }] : []));
     reason = signal(undefined, ...(ngDevMode ? [{ debugName: "reason" }] : []));
-    show(returnUrl, reason) {
+    /** Raw error code from the backend Problem Details response (e.g. `AUTH_TOKEN_EXPIRED`). */
+    errorCode = signal(null, ...(ngDevMode ? [{ debugName: "errorCode" }] : []));
+    /** Backend-provided `detail` message from the Problem Details response — display fallback. */
+    detail = signal(null, ...(ngDevMode ? [{ debugName: "detail" }] : []));
+    show(returnUrl, reason, errorCode, detail) {
         this.returnUrl.set(returnUrl || '/');
         this.reason.set(reason);
+        this.errorCode.set(errorCode ?? null);
+        this.detail.set(detail ?? null);
         this.visible.set(true);
     }
     hide() {
@@ -13297,6 +13269,7 @@ class ISessionService {
     authService = inject(IAuthService);
     config = inject(INSIGHT_AUTH_CONFIG);
     sessionExpiredService = inject(SessionExpiredService);
+    csrf = inject(ICsrfService);
     // In-memory token storage — intentionally NOT persisted to Web Storage.
     accessToken = null;
     _refreshToken = null;
@@ -13306,11 +13279,20 @@ class ISessionService {
     passwordExpired = false;
     changePasswordTokenValue = null;
     lastVerifiedAt = 0;
-    /** True while the app is restoring/validating the session on load. Consumer apps may use this to show a loading state. */
-    initializing = signal(false, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
+    /**
+     * True while the app is restoring/validating the session on load (starts
+     * `true` on cold start so guards can allow navigation during the restore and
+     * consumer apps can show a loading state). Cleared once the session is
+     * established (`setAccessToken`/`setSession`) or `tryRestoreSession()` settles.
+     */
+    initializing = signal(true, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
     // Single-flight refresh: one in-flight /auth/refresh shared by all callers,
     // retained until it completes/errors so a cancelled caller cannot abort it.
     refreshInFlight = null;
+    // Single-flight cold-start restore so multiple callers (e.g. provideInsightAuth()
+    // via APP_INITIALIZER and a consumer's root component) never trigger duplicate
+    // /auth/refresh requests.
+    restoreInFlight = null;
     isAuth() {
         return !!this.accessToken && !this.isTokenExpired() && !this.isSsoSessionExpired();
     }
@@ -13411,6 +13393,7 @@ class ISessionService {
         if (this.sessionStartedAt === null) {
             this.sessionStartedAt = Date.now();
         }
+        this.initializing.set(false);
     }
     /**
      * Full session establishment (login / MFA / exchange / refresh). Sets the
@@ -13432,6 +13415,7 @@ class ISessionService {
         this.passwordExpired = !neverExpired && pwdExpired;
         sessionStorage.setItem('iam.session.active', 'true');
         this.lastVerifiedAt = Date.now();
+        this.initializing.set(false);
     }
     clearSession() {
         this.accessToken = null;
@@ -13446,8 +13430,26 @@ class ISessionService {
         // survive mid-session revocation so `tryRestoreSession()` can detect
         // "refresh after revocation" on the next load; explicit logout clears it.
     }
+    /**
+     * Clears the client-side session AND invalidates the server-side session
+     * by revoking the refresh token. Returns an observable that completes after
+     * the server logout call finishes (or fails — failures are swallowed so the
+     * user is never stuck on a logout page).
+     */
     logout() {
+        const refreshToken = this._refreshToken ?? undefined;
         this.clearSession();
+        // Explicit logout also clears the "active session" flag so a later
+        // tryRestoreSession() treats the next load as a cold start, not a
+        // refresh-after-revocation.
+        sessionStorage.removeItem('iam.session.active');
+        // Ensure a valid CSRF token first: the backend CsrfGuard requires
+        // X-CSRF-Token on POST /auth/logout. Consumers that only hold the access
+        // token (e.g. `#at=` handoff) never fetched a CSRF token, so without this
+        // their logout is rejected with 403 and the shared HttpOnly refresh cookie
+        // is never cleared — other apps in the browser stay logged in.
+        return this.csrf.ensureToken().pipe(catchError(() => of(undefined)), // best-effort: still attempt the logout
+        switchMap(() => this.authService.logout(refreshToken)), catchError(() => of(undefined)), map$1(() => undefined));
     }
     /**
      * Silently refresh the access token via the HttpOnly refresh cookie
@@ -13505,18 +13507,24 @@ class ISessionService {
     }
     /**
      * Cold-start session restore from the HttpOnly cookie (called on app load).
-     * Skips auth sub-pages unless the signin page carries an ABSOLUTE (external)
-     * `returnUrl` (a cross-app SSO handoff). Shows the session-expired overlay
-     * when refreshing after a previously-active session. Returns the reason (if
-     * any) extracted from the error so the guard can decide overlay vs. signin.
+     * Skips non-signin auth sub-pages (forgot/reset password, MFA, callback).
+     * The signin page ALWAYS attempts the silent refresh: when the shared SSO
+     * cookie is still valid (e.g. after logging in via another app), restoring
+     * lets the signin page auto-redirect to the returnUrl / authenticated
+     * landing; when there is no session the refresh fails and the login form
+     * shows. (Explicit logout clears the cookie, so a bare signin after logout
+     * still ends up on the login form.) Shows the session-expired overlay when
+     * refreshing after a previously-active session. Returns the reason (if any)
+     * extracted from the error so the guard can decide overlay vs. signin.
      */
     tryRestoreSession() {
+        if (this.restoreInFlight) {
+            return this.restoreInFlight;
+        }
         const pathname = window.location.pathname ?? '';
         const isSigninPage = /^\/auth\/signin$|^\/signin$/i.test(pathname);
         const isOtherAuthPage = /^\/auth(\/|$)|^\/forgot-password|^\/reset-password/i.test(pathname) && !isSigninPage;
-        const returnUrlParam = new URLSearchParams(window.location.search).get('returnUrl');
-        const hasExternalReturnUrl = !!returnUrlParam && /^https?:\/\//i.test(returnUrlParam);
-        if (isOtherAuthPage || (isSigninPage && !hasExternalReturnUrl)) {
+        if (isOtherAuthPage) {
             this.initializing.set(false);
             return Promise.resolve({});
         }
@@ -13526,10 +13534,21 @@ class ISessionService {
             console.debug('[@insight/ui][SESSION] tryRestoreSession: FAILED', {
                 status: err?.status,
             });
-            const code = toSessionExpiredReason(extractProblemDetailsErrorCode(err));
+            const rawErrorCode = extractProblemDetailsErrorCode(err);
+            const code = toSessionExpiredReason(rawErrorCode);
             const wasActive = sessionStorage.getItem('iam.session.active') === 'true';
-            if (wasActive && isSessionExpiredError(err)) {
-                this.sessionExpiredService.show(window.location.pathname, code ?? 'TOKEN_EXPIRED');
+            // The session-expired overlay is only for mid-session revocation while the
+            // user is browsing the app. NEVER show it over an auth/signin page — a
+            // failed restore there simply means "show the login form". This matters
+            // for cross-app logouts: `iam.session.active` lives in THIS origin's
+            // sessionStorage and is NOT cleared when the user logs out from another
+            // SSO app (e.g. atlas-web), so without this guard the stale flag would
+            // wrongly pop the overlay on the signin page after an external logout.
+            const isAuthPage = /^\/auth(\/|$)|^\/signin$|^\/logout$/i.test(pathname);
+            if (wasActive && !isAuthPage && isSessionExpiredError(err)) {
+                // Pass the raw backend error code + detail through so the consumer app
+                // can resolve a localized message from its own error-catalog service.
+                this.sessionExpiredService.show(pathname, code ?? 'TOKEN_EXPIRED', rawErrorCode, err?.detail);
             }
             if (isSessionExpiredError(err)) {
                 this.authService.logout().subscribe({ error: () => void 0 });
@@ -13537,9 +13556,10 @@ class ISessionService {
             return { reason: code };
         });
         const safetyTimer = new Promise((r) => setTimeout(() => r({}), 10_000));
-        return Promise.race([restorePromise, safetyTimer]).finally(() => {
+        this.restoreInFlight = Promise.race([restorePromise, safetyTimer]).finally(() => {
             this.initializing.set(false);
         });
+        return this.restoreInFlight;
     }
     readExpiresInFromToken(token) {
         const decoded = decodeJwtPayload(token);
@@ -13555,6 +13575,65 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
+
+/**
+ * Registers the @insight/ui shared auth package (`IApiService`,
+ * `ISessionService`, `ICsrfService`, `authGuard`) for a consumer app.
+ *
+ * Zero-config by default — sensible local-dev defaults are baked in (see
+ * `getDefaultInsightAuthConfig()`), matching iam-web's own local
+ * environment. Consumer apps only need to pass `overrides` for whatever
+ * differs from the defaults — typically `api.identity` and `signinUrl` when
+ * deploying to staging/production. Every field can be overridden
+ * individually, down to a single nested `api.*` or `tokenLifespan.*` entry;
+ * anything not overridden falls back to the default.
+ *
+ * Consumers must still register `authInterceptor` themselves via
+ * `provideHttpClient(withInterceptors([authInterceptor]))` in their own
+ * `app.config.ts` — matches iam-web's existing pattern of wiring the
+ * interceptor explicitly rather than hiding it inside a provider function.
+ *
+ * Usage (zero-config — local dev):
+ * ```ts
+ * export const config: ApplicationConfig = {
+ *   providers: [
+ *     provideInsightAuth(),
+ *     provideHttpClient(withInterceptors([authInterceptor])),
+ *     provideRouter(routes),
+ *   ],
+ * };
+ * ```
+ *
+ * Usage (override for staging/production):
+ * ```ts
+ * provideInsightAuth({
+ *   api: { identity: 'https://iam-identity.paramount-land.com/api' },
+ *   signinUrl: 'https://iam.paramount-land.com/signin',
+ * });
+ * ```
+ */
+function provideInsightAuth(overrides) {
+    const defaults = getDefaultInsightAuthConfig();
+    const config = {
+        ...defaults,
+        ...overrides,
+        // Cast needed: `Partial<...>`'s index signature widens to `string | undefined`,
+        // but real callers only ever pass actual string URLs, never `undefined` values.
+        api: { ...defaults.api, ...overrides?.api },
+        tokenLifespan: { ...defaults.tokenLifespan, ...overrides?.tokenLifespan },
+    };
+    return makeEnvironmentProviders([
+        { provide: INSIGHT_AUTH_CONFIG, useValue: config },
+        {
+            provide: APP_INITIALIZER,
+            multi: true,
+            useFactory: () => {
+                const session = inject(ISessionService);
+                return () => session.tryRestoreSession();
+            },
+        },
+    ]);
+}
 
 /**
  * Extract the access token appended by iam-web after a successful external
@@ -13640,6 +13719,15 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
 const authGuard = (_route, state) => {
     const session = inject(ISessionService);
     const config = inject(INSIGHT_AUTH_CONFIG);
+    // provideInsightAuth() registers an APP_INITIALIZER that calls
+    // tryRestoreSession(), so by the time the router runs this guard
+    // initializing() should already be false. If a consumer bypasses
+    // provideInsightAuth() or the guard runs earlier, allow navigation to
+    // proceed — the consumer's root component is responsible for gating the
+    // outlet with session.initializing().
+    if (session.initializing()) {
+        return true;
+    }
     if (session.isAuth()) {
         return true;
     }
@@ -14016,20 +14104,84 @@ class IUserMenuStore {
         }
         return roles.includes(code);
     }
-    /** Pin (`isFavorite: true`) or unpin a menu item, then refreshes favorites. */
+    /**
+     * Pin (`isFavorite: true`) or unpin a menu item. Flips the star icon in the
+     * `menus` tree immediately (optimistic), calls the backend, then re-fetches
+     * favorites so the server remains the source of truth for the favorites
+     * section. The menu-star change is reverted on error.
+     */
     toggleFavorite(menuId, isFavorite) {
+        const previousMenus = this.menus();
+        this.menus.set(this.applyMenuFavorite(previousMenus, menuId, isFavorite));
         const call = isFavorite
             ? this.menuService.addFavorite(menuId)
             : this.menuService.removeFavorite(menuId);
-        return call.pipe(switchMap(() => this.reloadFavorites()));
+        return call.pipe(switchMap(() => this.reloadFavorites()), catchError((err) => {
+            this.menus.set(previousMenus);
+            return throwError(() => err);
+        }));
     }
-    /** Persists the new favorite order after a drag-drop, then refreshes favorites. */
+    /**
+     * Persists the new favorite order after a drag-drop. Reorders the in-memory
+     * `favorites` signal locally (optimistic) and calls the backend — no GET
+     * refetch after the write. The local change is reverted on error.
+     */
     reorderFavorites(menuIds) {
-        return this.menuService.reorderFavorites(menuIds).pipe(switchMap(() => this.reloadFavorites()));
+        const previous = this.favorites();
+        this.favorites.set(this.applyFavoriteReorder(previous, menuIds));
+        return this.menuService.reorderFavorites(menuIds).pipe(catchError((err) => {
+            this.favorites.set(previous);
+            return throwError(() => err);
+        }));
     }
-    /** Re-fetches the favorites from the backend into the in-memory `favorites` signal. */
+    /** Re-fetches the favorites from the backend (manual refresh). */
     reloadFavorites() {
         return this.loadFavoritesInternal().pipe(map(() => undefined));
+    }
+    /**
+     * Loads the effective navigation tree into `menus` — for one application
+     * (`applicationId`) or all active applications when omitted. Returns the
+     * mapped `IMenu[]`.
+     */
+    loadMenus(applicationId) {
+        return this.menuService.getEffectiveMenus(applicationId).pipe(tap$1((nodes) => this.menus.set(toIMenus(nodes))), map((nodes) => toIMenus(nodes)));
+    }
+    /** Loads favorites into `favorites` — optionally for a single application. Returns the mapped `IMenu[]`. */
+    loadFavorites(applicationId) {
+        return this.menuService.getFavorites(applicationId).pipe(tap$1((items) => this.favorites.set(items.map(toIMenuFavorite))), map((items) => items.map(toIMenuFavorite)));
+    }
+    /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
+    applyMenuFavorite(menus, menuId, isFavorite) {
+        return menus.map((menu) => {
+            if (getMenuKey(menu) === menuId) {
+                return { ...menu, isFavorite };
+            }
+            if (menu.children?.length) {
+                return { ...menu, children: this.applyMenuFavorite(menu.children, menuId, isFavorite) };
+            }
+            if (menu.child?.length) {
+                return { ...menu, child: this.applyMenuFavorite(menu.child, menuId, isFavorite) };
+            }
+            return menu;
+        });
+    }
+    applyFavoriteReorder(favorites, menuIds) {
+        const byId = new Map(favorites.map((favorite) => [String(getMenuKey(favorite)), favorite]));
+        const ordered = [];
+        const seen = new Set();
+        for (const id of menuIds) {
+            const item = byId.get(String(id));
+            if (item) {
+                ordered.push(item);
+                seen.add(String(id));
+            }
+        }
+        for (const favorite of favorites) {
+            if (!seen.has(String(getMenuKey(favorite)))) {
+                ordered.push(favorite);
+            }
+        }
+        return ordered;
     }
     loadUserInternal() {
         return this.currentUserService.getCurrentUser().pipe(tap$1((raw) => {
@@ -14038,10 +14190,10 @@ class IUserMenuStore {
         }), map(() => null));
     }
     loadMenusInternal() {
-        return this.menuService.getEffectiveMenus().pipe(tap$1((nodes) => this.menus.set(toIMenus(nodes))), map(() => null));
+        return this.loadMenus().pipe(map(() => null));
     }
     loadFavoritesInternal() {
-        return this.menuService.getFavorites().pipe(tap$1((items) => this.favorites.set(items.map(toIMenuFavorite))), map(() => null));
+        return this.loadFavorites().pipe(map(() => null));
     }
     recordError(source, err) {
         const detail = err?.detail ?? 'Failed to load';
