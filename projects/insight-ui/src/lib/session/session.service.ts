@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { lastValueFrom, Observable, of, throwError, timeout } from 'rxjs';
-import { catchError, map, shareReplay, tap } from 'rxjs/operators';
+import { catchError, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 
 import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
 import { IAuthService, IAuthUser } from '../auth/auth.service';
+import { ICsrfService } from '../csrf/csrf.service';
 import {
   extractProblemDetailsErrorCode,
   isSessionExpiredError,
@@ -84,6 +85,7 @@ export class ISessionService {
   private readonly authService = inject(IAuthService);
   private readonly config = inject(INSIGHT_AUTH_CONFIG);
   private readonly sessionExpiredService = inject(SessionExpiredService);
+  private readonly csrf = inject(ICsrfService);
 
   // In-memory token storage — intentionally NOT persisted to Web Storage.
   private accessToken: string | null = null;
@@ -281,7 +283,14 @@ export class ISessionService {
     // tryRestoreSession() treats the next load as a cold start, not a
     // refresh-after-revocation.
     sessionStorage.removeItem('iam.session.active');
-    return this.authService.logout(refreshToken).pipe(
+    // Ensure a valid CSRF token first: the backend CsrfGuard requires
+    // X-CSRF-Token on POST /auth/logout. Consumers that only hold the access
+    // token (e.g. `#at=` handoff) never fetched a CSRF token, so without this
+    // their logout is rejected with 403 and the shared HttpOnly refresh cookie
+    // is never cleared — other apps in the browser stay logged in.
+    return this.csrf.ensureToken().pipe(
+      catchError(() => of(undefined)), // best-effort: still attempt the logout
+      switchMap(() => this.authService.logout(refreshToken)),
       catchError(() => of(undefined)),
       map(() => undefined),
     );
@@ -359,10 +368,15 @@ export class ISessionService {
 
   /**
    * Cold-start session restore from the HttpOnly cookie (called on app load).
-   * Skips auth sub-pages unless the signin page carries an ABSOLUTE (external)
-   * `returnUrl` (a cross-app SSO handoff). Shows the session-expired overlay
-   * when refreshing after a previously-active session. Returns the reason (if
-   * any) extracted from the error so the guard can decide overlay vs. signin.
+   * Skips non-signin auth sub-pages (forgot/reset password, MFA, callback).
+   * The signin page ALWAYS attempts the silent refresh: when the shared SSO
+   * cookie is still valid (e.g. after logging in via another app), restoring
+   * lets the signin page auto-redirect to the returnUrl / authenticated
+   * landing; when there is no session the refresh fails and the login form
+   * shows. (Explicit logout clears the cookie, so a bare signin after logout
+   * still ends up on the login form.) Shows the session-expired overlay when
+   * refreshing after a previously-active session. Returns the reason (if any)
+   * extracted from the error so the guard can decide overlay vs. signin.
    */
   tryRestoreSession(): Promise<{ reason?: SessionExpiredReason }> {
     if (this.restoreInFlight) {
@@ -372,10 +386,8 @@ export class ISessionService {
     const pathname = window.location.pathname ?? '';
     const isSigninPage = /^\/auth\/signin$|^\/signin$/i.test(pathname);
     const isOtherAuthPage = /^\/auth(\/|$)|^\/forgot-password|^\/reset-password/i.test(pathname) && !isSigninPage;
-    const returnUrlParam = new URLSearchParams(window.location.search).get('returnUrl');
-    const hasExternalReturnUrl = !!returnUrlParam && /^https?:\/\//i.test(returnUrlParam);
 
-    if (isOtherAuthPage || (isSigninPage && !hasExternalReturnUrl)) {
+    if (isOtherAuthPage) {
       this.initializing.set(false);
       return Promise.resolve({});
     }
@@ -395,11 +407,19 @@ export class ISessionService {
       const rawErrorCode = extractProblemDetailsErrorCode(err);
       const code = toSessionExpiredReason(rawErrorCode);
       const wasActive = sessionStorage.getItem('iam.session.active') === 'true';
-      if (wasActive && isSessionExpiredError(err)) {
+      // The session-expired overlay is only for mid-session revocation while the
+      // user is browsing the app. NEVER show it over an auth/signin page — a
+      // failed restore there simply means "show the login form". This matters
+      // for cross-app logouts: `iam.session.active` lives in THIS origin's
+      // sessionStorage and is NOT cleared when the user logs out from another
+      // SSO app (e.g. atlas-web), so without this guard the stale flag would
+      // wrongly pop the overlay on the signin page after an external logout.
+      const isAuthPage = /^\/auth(\/|$)|^\/signin$|^\/logout$/i.test(pathname);
+      if (wasActive && !isAuthPage && isSessionExpiredError(err)) {
         // Pass the raw backend error code + detail through so the consumer app
         // can resolve a localized message from its own error-catalog service.
         this.sessionExpiredService.show(
-          window.location.pathname,
+          pathname,
           code ?? 'TOKEN_EXPIRED',
           rawErrorCode,
           (err as { detail?: string })?.detail,
