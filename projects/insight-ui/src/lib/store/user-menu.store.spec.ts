@@ -161,26 +161,59 @@ describe('IUserMenuStore', () => {
     expect(store.hasRole('nope')).toBeFalse();
   });
 
-  it('toggleFavorite pins/unpins via the menu service then refreshes favorites', () => {
+  it('toggleFavorite flips the menu star, then refetches favorites after the write', () => {
+    store.menus.set([
+      { id: 'm1', name: 'Dashboard', type: 'item', menuCode: 'dashboard', route: '/dashboard', isFavorite: false },
+    ]);
+    store.favorites.set([]);
     menuSpy.addFavorite.and.returnValue(of(undefined));
     menuSpy.removeFavorite.and.returnValue(of(undefined));
     menuSpy.getFavorites.and.returnValue(of(favorites));
 
     store.toggleFavorite('m1', true).subscribe();
     expect(menuSpy.addFavorite).toHaveBeenCalledWith('m1');
+    // The menu star flips immediately (optimistic).
+    expect(store.menus()[0].isFavorite).toBeTrue();
+    // Favorites are re-fetched after the write (server = source of truth).
+    expect(menuSpy.getFavorites).toHaveBeenCalled();
     expect(store.favorites().length).toBe(1);
 
     store.toggleFavorite('m1', false).subscribe();
     expect(menuSpy.removeFavorite).toHaveBeenCalledWith('m1');
+    expect(store.menus()[0].isFavorite).toBeFalse();
   });
 
-  it('reorderFavorites persists the new order then refreshes favorites', () => {
+  it('reorderFavorites reorders locally and does not refetch after the write', () => {
+    store.favorites.set([
+      { id: 'm1', name: 'Dashboard', type: 'item', menuCode: 'dashboard', route: '/dashboard', isFavorite: true },
+      { id: 'm2', name: 'Reports', type: 'item', menuCode: 'reports', route: '/reports', isFavorite: true },
+    ]);
     menuSpy.reorderFavorites.and.returnValue(of(undefined));
+
+    store.reorderFavorites(['m2', 'm1']).subscribe();
+    expect(menuSpy.reorderFavorites).toHaveBeenCalledWith(['m2', 'm1']);
+    expect(menuSpy.getFavorites).not.toHaveBeenCalled();
+    expect(store.favorites().map((f) => f.id)).toEqual(['m2', 'm1']);
+  });
+
+  it('loadMenus passes the applicationId filter and sets the menus signal', () => {
+    menuSpy.getEffectiveMenus.and.returnValue(of(nodes));
+
+    store.loadMenus('app-1').subscribe((menus) => {
+      expect(menuSpy.getEffectiveMenus).toHaveBeenCalledWith('app-1');
+      expect(menus.length).toBe(1);
+      expect(store.menus().length).toBe(1);
+    });
+  });
+
+  it('loadFavorites passes the applicationId filter and sets the favorites signal', () => {
     menuSpy.getFavorites.and.returnValue(of(favorites));
 
-    store.reorderFavorites(['m1', 'm2']).subscribe();
-    expect(menuSpy.reorderFavorites).toHaveBeenCalledWith(['m1', 'm2']);
-    expect(store.favorites().length).toBe(1);
+    store.loadFavorites('app-1').subscribe((items) => {
+      expect(menuSpy.getFavorites).toHaveBeenCalledWith('app-1');
+      expect(items.length).toBe(1);
+      expect(store.favorites().length).toBe(1);
+    });
   });
 
   it('keeps initializing true while a branch is pending, then clears', () => {
