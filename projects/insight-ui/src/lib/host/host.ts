@@ -305,6 +305,12 @@ export function normalizeMenuTree(menus: IMenu[] | null | undefined): IMenu[] {
 /** Synthetic group id used by the sidebar's Favorites section — keeps its icon. */
 const SIDEBAR_FAVORITES_GROUP_ID = 'favorites';
 
+/**
+ * Fallback FontAwesome classes used by the sidebar row icon when a menu has no
+ * icon or the icon is not a valid FontAwesome class
+ */
+const MENU_ICON_FALLBACK = 'fa-brands fa-microsoft';
+
 export type IHNavigationSnapshot = {
   fullUrl: string;
   basePath: string;
@@ -919,12 +925,17 @@ export class IHMenu implements OnChanges {
   /**
    * Icon classes for the row icon. Appends FontAwesome's `fa-fw` (fixed-width)
    * so icons with different glyph widths (e.g. fa-users vs fa-bars) still keep
-   * the menu title aligned. Returns `fa-fw` even when the menu has no icon so
-   * the title position is identical either way.
+   * the menu title aligned.
+   *
+   * Falls back to `MENU_ICON_FALLBACK` (`fa-brands fa-microsoft`) when the menu
+   * has no icon or the icon is not a valid FontAwesome class (e.g. legacy named
+   * icons like `home`, `dashboard` that contain no `fa-*` token and would render
+   * as an empty glyph).
    */
   get menuIcon(): string | null {
     const icon = this.menu?.icon?.trim();
-    return icon ? `${icon} fa-fw` : 'fa-fw';
+    const isValidFa = !!icon && /(?:^|\s)fa-[a-z0-9-]+(?:\s|$)/i.test(icon);
+    return `${isValidFa ? icon : MENU_ICON_FALLBACK} fa-fw`;
   }
 
   /** 0-based nesting level; top-level groups are always 0 (never negative). */
