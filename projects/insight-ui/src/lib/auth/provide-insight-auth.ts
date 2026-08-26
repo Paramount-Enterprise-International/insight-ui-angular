@@ -1,4 +1,4 @@
-import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
+import { APP_INITIALIZER, EnvironmentProviders, inject, makeEnvironmentProviders } from '@angular/core';
 
 import {
   getDefaultInsightAuthConfig,
@@ -6,6 +6,7 @@ import {
   IInsightAuthConfigOverrides,
   INSIGHT_AUTH_CONFIG,
 } from './auth-config';
+import { ISessionService } from '../session/session.service';
 
 /**
  * Registers the @insight/ui shared auth package (`IApiService`,
@@ -53,5 +54,15 @@ export function provideInsightAuth(overrides?: IInsightAuthConfigOverrides): Env
     api: { ...defaults.api, ...overrides?.api } as IInsightAuthConfig['api'],
     tokenLifespan: { ...defaults.tokenLifespan, ...overrides?.tokenLifespan },
   };
-  return makeEnvironmentProviders([{ provide: INSIGHT_AUTH_CONFIG, useValue: config }]);
+  return makeEnvironmentProviders([
+    { provide: INSIGHT_AUTH_CONFIG, useValue: config },
+    {
+      provide: APP_INITIALIZER,
+      multi: true,
+      useFactory: () => {
+        const session = inject(ISessionService);
+        return () => session.tryRestoreSession();
+      },
+    },
+  ]);
 }

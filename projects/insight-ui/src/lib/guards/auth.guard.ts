@@ -19,6 +19,16 @@ export const authGuard: CanActivateFn = (_route, state) => {
   const session = inject(ISessionService);
   const config = inject(INSIGHT_AUTH_CONFIG);
 
+  // provideInsightAuth() registers an APP_INITIALIZER that calls
+  // tryRestoreSession(), so by the time the router runs this guard
+  // initializing() should already be false. If a consumer bypasses
+  // provideInsightAuth() or the guard runs earlier, allow navigation to
+  // proceed — the consumer's root component is responsible for gating the
+  // outlet with session.initializing().
+  if (session.initializing()) {
+    return true;
+  }
+
   if (session.isAuth()) {
     return true;
   }

@@ -440,3 +440,67 @@ describe('IHSidebar (modern menus + favorites)', () => {
   });
 });
 
+/* ── Menu icon fallback (missing / non-FontAwesome) ──────────────────────── */
+
+@Component({
+  standalone: true,
+  imports: [IHSidebar],
+  template: `
+    <ih-sidebar [menusInput$]="menus$" [user$]="user$" />
+  `,
+})
+class FallbackIconHost {
+  user$: Observable<IUser> = of(USER);
+  menus$: Observable<IMenu[]> = of([
+    { id: 'a', name: 'No Icon', type: 'item', route: '/a', icon: null },
+    { id: 'b', name: 'Legacy Icon', type: 'item', route: '/b', icon: 'home' },
+    { id: 'c', name: 'Valid Icon', type: 'item', route: '/c', icon: 'fas fa-users' },
+  ]);
+}
+
+describe('IHMenu icon fallback', () => {
+  let fixture: ComponentFixture<FallbackIconHost>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [FallbackIconHost, RouterTestingModule],
+      providers: [{ provide: APP_BASE_HREF, useValue: '/' }],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(FallbackIconHost);
+    fixture.detectChanges();
+  });
+
+  /** Returns the row `<i>` icon element for the menu whose label is `label`. */
+  function iconFor(label: string): HTMLElement | null {
+    const el = fixture.nativeElement as HTMLElement;
+    const a = Array.from(el.querySelectorAll<HTMLElement>('a')).find((node) =>
+      node.textContent?.includes(label),
+    );
+    return a?.querySelector<HTMLElement>('i') ?? null;
+  }
+
+  it('falls back to fa-brands fa-microsoft when the menu has no icon', () => {
+    const icon = iconFor('No Icon');
+    expect(icon).toBeTruthy();
+    expect(icon!.classList.contains('fa-brands')).toBe(true);
+    expect(icon!.classList.contains('fa-microsoft')).toBe(true);
+  });
+
+  it('falls back to fa-brands fa-microsoft for a non-FontAwesome (legacy named) icon', () => {
+    const icon = iconFor('Legacy Icon');
+    expect(icon).toBeTruthy();
+    expect(icon!.classList.contains('fa-brands')).toBe(true);
+    expect(icon!.classList.contains('fa-microsoft')).toBe(true);
+  });
+
+  it('keeps a valid FontAwesome icon and still appends fa-fw', () => {
+    const icon = iconFor('Valid Icon');
+    expect(icon).toBeTruthy();
+    expect(icon!.classList.contains('fas')).toBe(true);
+    expect(icon!.classList.contains('fa-users')).toBe(true);
+    expect(icon!.classList.contains('fa-fw')).toBe(true);
+    expect(icon!.classList.contains('fa-brands')).toBe(false);
+  });
+});
+

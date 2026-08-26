@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { lastValueFrom, Observable, of, throwError, timeout } from 'rxjs';
-import { catchError, map, shareReplay, tap } from 'rxjs/operators';
+import { catchError, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 
 import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
 import { IAuthService, IAuthUser } from '../auth/auth.service';
+import { ICsrfService } from '../csrf/csrf.service';
 import {
   extractProblemDetailsErrorCode,
   isSessionExpiredError,
@@ -84,6 +85,7 @@ export class ISessionService {
   private readonly authService = inject(IAuthService);
   private readonly config = inject(INSIGHT_AUTH_CONFIG);
   private readonly sessionExpiredService = inject(SessionExpiredService);
+  private readonly csrf = inject(ICsrfService);
 
   // In-memory token storage — intentionally NOT persisted to Web Storage.
   private accessToken: string | null = null;
@@ -95,12 +97,22 @@ export class ISessionService {
   private changePasswordTokenValue: string | null = null;
   private lastVerifiedAt = 0;
 
-  /** True while the app is restoring/validating the session on load. Consumer apps may use this to show a loading state. */
-  readonly initializing = signal(false);
+  /**
+   * True while the app is restoring/validating the session on load (starts
+   * `true` on cold start so guards can allow navigation during the restore and
+   * consumer apps can show a loading state). Cleared once the session is
+   * established (`setAccessToken`/`setSession`) or `tryRestoreSession()` settles.
+   */
+  readonly initializing = signal(true);
 
   // Single-flight refresh: one in-flight /auth/refresh shared by all callers,
   // retained until it completes/errors so a cancelled caller cannot abort it.
   private refreshInFlight: Observable<string> | null = null;
+
+  // Single-flight cold-start restore so multiple callers (e.g. provideInsightAuth()
+  // via APP_INITIALIZER and a consumer's root component) never trigger duplicate
+  // /auth/refresh requests.
+  private restoreInFlight: Promise<{ reason?: SessionExpiredReason }> | null = null;
 
   isAuth(): boolean {
     return !!this.accessToken && !this.isTokenExpired() && !this.isSsoSessionExpired();
@@ -218,6 +230,7 @@ export class ISessionService {
     if (this.sessionStartedAt === null) {
       this.sessionStartedAt = Date.now();
     }
+    this.initializing.set(false);
   }
 
   /**
@@ -240,6 +253,7 @@ export class ISessionService {
     this.passwordExpired = !neverExpired && pwdExpired;
     sessionStorage.setItem('iam.session.active', 'true');
     this.lastVerifiedAt = Date.now();
+    this.initializing.set(false);
   }
 
   clearSession(): void {
@@ -256,8 +270,30 @@ export class ISessionService {
     // "refresh after revocation" on the next load; explicit logout clears it.
   }
 
-  logout(): void {
+  /**
+   * Clears the client-side session AND invalidates the server-side session
+   * by revoking the refresh token. Returns an observable that completes after
+   * the server logout call finishes (or fails — failures are swallowed so the
+   * user is never stuck on a logout page).
+   */
+  logout(): Observable<void> {
+    const refreshToken = this._refreshToken ?? undefined;
     this.clearSession();
+    // Explicit logout also clears the "active session" flag so a later
+    // tryRestoreSession() treats the next load as a cold start, not a
+    // refresh-after-revocation.
+    sessionStorage.removeItem('iam.session.active');
+    // Ensure a valid CSRF token first: the backend CsrfGuard requires
+    // X-CSRF-Token on POST /auth/logout. Consumers that only hold the access
+    // token (e.g. `#at=` handoff) never fetched a CSRF token, so without this
+    // their logout is rejected with 403 and the shared HttpOnly refresh cookie
+    // is never cleared — other apps in the browser stay logged in.
+    return this.csrf.ensureToken().pipe(
+      catchError(() => of(undefined)), // best-effort: still attempt the logout
+      switchMap(() => this.authService.logout(refreshToken)),
+      catchError(() => of(undefined)),
+      map(() => undefined),
+    );
   }
 
   /**
@@ -332,19 +368,26 @@ export class ISessionService {
 
   /**
    * Cold-start session restore from the HttpOnly cookie (called on app load).
-   * Skips auth sub-pages unless the signin page carries an ABSOLUTE (external)
-   * `returnUrl` (a cross-app SSO handoff). Shows the session-expired overlay
-   * when refreshing after a previously-active session. Returns the reason (if
-   * any) extracted from the error so the guard can decide overlay vs. signin.
+   * Skips non-signin auth sub-pages (forgot/reset password, MFA, callback).
+   * The signin page ALWAYS attempts the silent refresh: when the shared SSO
+   * cookie is still valid (e.g. after logging in via another app), restoring
+   * lets the signin page auto-redirect to the returnUrl / authenticated
+   * landing; when there is no session the refresh fails and the login form
+   * shows. (Explicit logout clears the cookie, so a bare signin after logout
+   * still ends up on the login form.) Shows the session-expired overlay when
+   * refreshing after a previously-active session. Returns the reason (if any)
+   * extracted from the error so the guard can decide overlay vs. signin.
    */
   tryRestoreSession(): Promise<{ reason?: SessionExpiredReason }> {
+    if (this.restoreInFlight) {
+      return this.restoreInFlight;
+    }
+
     const pathname = window.location.pathname ?? '';
     const isSigninPage = /^\/auth\/signin$|^\/signin$/i.test(pathname);
     const isOtherAuthPage = /^\/auth(\/|$)|^\/forgot-password|^\/reset-password/i.test(pathname) && !isSigninPage;
-    const returnUrlParam = new URLSearchParams(window.location.search).get('returnUrl');
-    const hasExternalReturnUrl = !!returnUrlParam && /^https?:\/\//i.test(returnUrlParam);
 
-    if (isOtherAuthPage || (isSigninPage && !hasExternalReturnUrl)) {
+    if (isOtherAuthPage) {
       this.initializing.set(false);
       return Promise.resolve({});
     }
@@ -361,10 +404,26 @@ export class ISessionService {
       console.debug('[@insight/ui][SESSION] tryRestoreSession: FAILED', {
         status: (err as HttpErrorResponse)?.status,
       });
-      const code = toSessionExpiredReason(extractProblemDetailsErrorCode(err));
+      const rawErrorCode = extractProblemDetailsErrorCode(err);
+      const code = toSessionExpiredReason(rawErrorCode);
       const wasActive = sessionStorage.getItem('iam.session.active') === 'true';
-      if (wasActive && isSessionExpiredError(err)) {
-        this.sessionExpiredService.show(window.location.pathname, code ?? 'TOKEN_EXPIRED');
+      // The session-expired overlay is only for mid-session revocation while the
+      // user is browsing the app. NEVER show it over an auth/signin page — a
+      // failed restore there simply means "show the login form". This matters
+      // for cross-app logouts: `iam.session.active` lives in THIS origin's
+      // sessionStorage and is NOT cleared when the user logs out from another
+      // SSO app (e.g. atlas-web), so without this guard the stale flag would
+      // wrongly pop the overlay on the signin page after an external logout.
+      const isAuthPage = /^\/auth(\/|$)|^\/signin$|^\/logout$/i.test(pathname);
+      if (wasActive && !isAuthPage && isSessionExpiredError(err)) {
+        // Pass the raw backend error code + detail through so the consumer app
+        // can resolve a localized message from its own error-catalog service.
+        this.sessionExpiredService.show(
+          pathname,
+          code ?? 'TOKEN_EXPIRED',
+          rawErrorCode,
+          (err as { detail?: string })?.detail,
+        );
       }
       if (isSessionExpiredError(err)) {
         this.authService.logout().subscribe({ error: () => void 0 });
@@ -373,9 +432,10 @@ export class ISessionService {
     });
 
     const safetyTimer = new Promise<{ reason?: SessionExpiredReason }>((r) => setTimeout(() => r({}), 10_000));
-    return Promise.race([restorePromise, safetyTimer]).finally(() => {
+    this.restoreInFlight = Promise.race([restorePromise, safetyTimer]).finally(() => {
       this.initializing.set(false);
     });
+    return this.restoreInFlight;
   }
 
   private readExpiresInFromToken(token: string): number | null {

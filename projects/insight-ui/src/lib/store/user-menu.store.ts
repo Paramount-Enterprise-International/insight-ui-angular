@@ -1,9 +1,9 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { forkJoin, map, Observable, of } from 'rxjs';
+import { forkJoin, map, Observable, of, throwError } from 'rxjs';
 import { catchError, filter, finalize, shareReplay, switchMap, take, tap } from 'rxjs/operators';
 
-import { IMenu, IUser } from '../host';
+import { getMenuKey, IMenu, IUser } from '../host';
 import { ISessionService } from '../session/session.service';
 import {
   ICurrentUserService,
@@ -135,22 +135,101 @@ export class IUserMenuStore {
     return roles.includes(code);
   }
 
-  /** Pin (`isFavorite: true`) or unpin a menu item, then refreshes favorites. */
+  /**
+   * Pin (`isFavorite: true`) or unpin a menu item. Flips the star icon in the
+   * `menus` tree immediately (optimistic), calls the backend, then re-fetches
+   * favorites so the server remains the source of truth for the favorites
+   * section. The menu-star change is reverted on error.
+   */
   toggleFavorite(menuId: string | number, isFavorite: boolean): Observable<void> {
+    const previousMenus = this.menus();
+    this.menus.set(this.applyMenuFavorite(previousMenus, menuId, isFavorite));
     const call = isFavorite
       ? this.menuService.addFavorite(menuId)
       : this.menuService.removeFavorite(menuId);
-    return call.pipe(switchMap(() => this.reloadFavorites()));
+    return call.pipe(
+      switchMap(() => this.reloadFavorites()),
+      catchError((err) => {
+        this.menus.set(previousMenus);
+        return throwError(() => err);
+      }),
+    );
   }
 
-  /** Persists the new favorite order after a drag-drop, then refreshes favorites. */
+  /**
+   * Persists the new favorite order after a drag-drop. Reorders the in-memory
+   * `favorites` signal locally (optimistic) and calls the backend — no GET
+   * refetch after the write. The local change is reverted on error.
+   */
   reorderFavorites(menuIds: (string | number)[]): Observable<void> {
-    return this.menuService.reorderFavorites(menuIds).pipe(switchMap(() => this.reloadFavorites()));
+    const previous = this.favorites();
+    this.favorites.set(this.applyFavoriteReorder(previous, menuIds));
+    return this.menuService.reorderFavorites(menuIds).pipe(
+      catchError((err) => {
+        this.favorites.set(previous);
+        return throwError(() => err);
+      }),
+    );
   }
 
-  /** Re-fetches the favorites from the backend into the in-memory `favorites` signal. */
+  /** Re-fetches the favorites from the backend (manual refresh). */
   reloadFavorites(): Observable<void> {
     return this.loadFavoritesInternal().pipe(map(() => undefined));
+  }
+
+  /**
+   * Loads the effective navigation tree into `menus` — for one application
+   * (`applicationId`) or all active applications when omitted. Returns the
+   * mapped `IMenu[]`.
+   */
+  loadMenus(applicationId?: string): Observable<IMenu[]> {
+    return this.menuService.getEffectiveMenus<IInsightMenuNode[]>(applicationId).pipe(
+      tap((nodes) => this.menus.set(toIMenus(nodes))),
+      map((nodes) => toIMenus(nodes)),
+    );
+  }
+
+  /** Loads favorites into `favorites` — optionally for a single application. Returns the mapped `IMenu[]`. */
+  loadFavorites(applicationId?: string): Observable<IMenu[]> {
+    return this.menuService.getFavorites<IInsightFavoriteMenuItem[]>(applicationId).pipe(
+      tap((items) => this.favorites.set(items.map(toIMenuFavorite))),
+      map((items) => items.map(toIMenuFavorite)),
+    );
+  }
+
+  /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
+  private applyMenuFavorite(menus: IMenu[], menuId: string | number, isFavorite: boolean): IMenu[] {
+    return menus.map((menu) => {
+      if (getMenuKey(menu) === menuId) {
+        return { ...menu, isFavorite };
+      }
+      if (menu.children?.length) {
+        return { ...menu, children: this.applyMenuFavorite(menu.children, menuId, isFavorite) };
+      }
+      if (menu.child?.length) {
+        return { ...menu, child: this.applyMenuFavorite(menu.child, menuId, isFavorite) };
+      }
+      return menu;
+    });
+  }
+
+  private applyFavoriteReorder(favorites: IMenu[], menuIds: (string | number)[]): IMenu[] {
+    const byId = new Map(favorites.map((favorite) => [String(getMenuKey(favorite)), favorite]));
+    const ordered: IMenu[] = [];
+    const seen = new Set<string>();
+    for (const id of menuIds) {
+      const item = byId.get(String(id));
+      if (item) {
+        ordered.push(item);
+        seen.add(String(id));
+      }
+    }
+    for (const favorite of favorites) {
+      if (!seen.has(String(getMenuKey(favorite)))) {
+        ordered.push(favorite);
+      }
+    }
+    return ordered;
   }
 
   private loadUserInternal(): Observable<null> {
@@ -164,17 +243,11 @@ export class IUserMenuStore {
   }
 
   private loadMenusInternal(): Observable<null> {
-    return this.menuService.getEffectiveMenus<IInsightMenuNode[]>().pipe(
-      tap((nodes) => this.menus.set(toIMenus(nodes))),
-      map(() => null),
-    );
+    return this.loadMenus().pipe(map(() => null));
   }
 
   private loadFavoritesInternal(): Observable<null> {
-    return this.menuService.getFavorites<IInsightFavoriteMenuItem[]>().pipe(
-      tap((items) => this.favorites.set(items.map(toIMenuFavorite))),
-      map(() => null),
-    );
+    return this.loadFavorites().pipe(map(() => null));
   }
 
   private recordError(source: string, err: unknown): Observable<null> {

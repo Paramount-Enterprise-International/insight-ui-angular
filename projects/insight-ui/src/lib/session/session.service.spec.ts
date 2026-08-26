@@ -4,6 +4,7 @@ import { of, Subject, throwError } from 'rxjs';
 import { ISessionService } from './session.service';
 import { IAuthService, IRefreshResponse } from '../auth/auth.service';
 import { IInsightAuthConfig, INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { ICsrfService } from '../csrf/csrf.service';
 import { SessionExpiredService } from '../session-expired/session-expired.service';
 
 const testConfig: IInsightAuthConfig = {
@@ -31,6 +32,10 @@ describe('ISessionService', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: IAuthService, useValue: authSpy },
+        {
+          provide: ICsrfService,
+          useValue: { ensureToken: jasmine.createSpy('ensureToken').and.returnValue(of(undefined)) },
+        },
         {
           provide: SessionExpiredService,
           useValue: { show: jasmine.createSpy('show'), hide: jasmine.createSpy('hide') },
