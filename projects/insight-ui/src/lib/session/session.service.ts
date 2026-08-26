@@ -107,6 +107,11 @@ export class ISessionService {
   // retained until it completes/errors so a cancelled caller cannot abort it.
   private refreshInFlight: Observable<string> | null = null;
 
+  // Single-flight cold-start restore so multiple callers (e.g. provideInsightAuth()
+  // via APP_INITIALIZER and a consumer's root component) never trigger duplicate
+  // /auth/refresh requests.
+  private restoreInFlight: Promise<{ reason?: SessionExpiredReason }> | null = null;
+
   isAuth(): boolean {
     return !!this.accessToken && !this.isTokenExpired() && !this.isSsoSessionExpired();
   }
@@ -263,8 +268,23 @@ export class ISessionService {
     // "refresh after revocation" on the next load; explicit logout clears it.
   }
 
-  logout(): void {
+  /**
+   * Clears the client-side session AND invalidates the server-side session
+   * by revoking the refresh token. Returns an observable that completes after
+   * the server logout call finishes (or fails — failures are swallowed so the
+   * user is never stuck on a logout page).
+   */
+  logout(): Observable<void> {
+    const refreshToken = this._refreshToken ?? undefined;
     this.clearSession();
+    // Explicit logout also clears the "active session" flag so a later
+    // tryRestoreSession() treats the next load as a cold start, not a
+    // refresh-after-revocation.
+    sessionStorage.removeItem('iam.session.active');
+    return this.authService.logout(refreshToken).pipe(
+      catchError(() => of(undefined)),
+      map(() => undefined),
+    );
   }
 
   /**
@@ -345,6 +365,10 @@ export class ISessionService {
    * any) extracted from the error so the guard can decide overlay vs. signin.
    */
   tryRestoreSession(): Promise<{ reason?: SessionExpiredReason }> {
+    if (this.restoreInFlight) {
+      return this.restoreInFlight;
+    }
+
     const pathname = window.location.pathname ?? '';
     const isSigninPage = /^\/auth\/signin$|^\/signin$/i.test(pathname);
     const isOtherAuthPage = /^\/auth(\/|$)|^\/forgot-password|^\/reset-password/i.test(pathname) && !isSigninPage;
@@ -380,9 +404,10 @@ export class ISessionService {
     });
 
     const safetyTimer = new Promise<{ reason?: SessionExpiredReason }>((r) => setTimeout(() => r({}), 10_000));
-    return Promise.race([restorePromise, safetyTimer]).finally(() => {
+    this.restoreInFlight = Promise.race([restorePromise, safetyTimer]).finally(() => {
       this.initializing.set(false);
     });
+    return this.restoreInFlight;
   }
 
   private readExpiresInFromToken(token: string): number | null {
