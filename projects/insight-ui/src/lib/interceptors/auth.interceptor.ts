@@ -7,7 +7,13 @@ import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
 import { ISessionService } from '../session/session.service';
 
-// Endpoints that must never receive a Bearer header (would be circular / not yet authenticated).
+// Sentinel header set by `IApiService` when a call opts out of the Bearer
+// header (`IApiOptions.skipBearer`). Read and stripped by this interceptor so
+// it never reaches the server.
+export const IH_SKIP_BEARER_HEADER = 'X-IH-Skip-Bearer';
+
+// Endpoints that must never receive a Bearer header (would be circular / not
+// yet authenticated) — CSRF + silent refresh are called before a token exists.
 const AUTH_SKIP_URLS = ['/auth/csrf', '/auth/refresh'];
 
 const isAuthSkipUrl = (url: string): boolean => AUTH_SKIP_URLS.some((skip) => url.includes(skip));
@@ -31,6 +37,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEv
 
   if (isAuthSkipUrl(req.url)) {
     return next(req);
+  }
+
+  // Per-request opt-out (IApiService `skipBearer`): strip the sentinel header
+  // and forward the request without an Authorization header.
+  if (req.headers.has(IH_SKIP_BEARER_HEADER)) {
+    return next(req.clone({ headers: req.headers.delete(IH_SKIP_BEARER_HEADER) }));
   }
 
   const token = session.getAccessToken();

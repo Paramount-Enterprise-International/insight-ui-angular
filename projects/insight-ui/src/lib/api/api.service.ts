@@ -5,6 +5,7 @@ import { catchError, map } from 'rxjs/operators';
 
 import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
 import { ICsrfService } from '../csrf/csrf.service';
+import { IH_SKIP_BEARER_HEADER } from '../interceptors/auth.interceptor';
 
 /** Response type is transparent — no `{ meta, data }` wrapper. */
 export type IApiResponse<T = any> = T;
@@ -17,6 +18,12 @@ export type IApiOptions = {
   headers?: Record<string, string>;
   /** Request body (only used by DELETE requests that send a payload). */
   body?: any;
+  /**
+   * Skip attaching the `Authorization: Bearer` header for this call. The flag
+   * is conveyed to the auth interceptor via a sentinel header that is stripped
+   * before the request leaves the browser.
+   */
+  skipBearer?: boolean;
 }
 
 /**
@@ -43,7 +50,19 @@ export class IApiService {
     if (csrfToken) {
       base['X-CSRF-Token'] = csrfToken;
     }
+    if (this.config.apiKey) {
+      base['Api-Key'] = this.config.apiKey;
+    }
     return base;
+  }
+
+  /** Merge default headers with per-call overrides, adding the skip-bearer sentinel when requested. */
+  private mergeHeaders(options?: IApiOptions): Record<string, string> {
+    const merged = { ...this.headers, ...options?.headers };
+    if (options?.skipBearer) {
+      merged[IH_SKIP_BEARER_HEADER] = 'true';
+    }
+    return merged;
   }
 
   /**
@@ -73,7 +92,7 @@ export class IApiService {
 
   get<T = any>(path: string, params?: HttpParams, options?: IApiOptions): Observable<T> {
     const baseUrl = options?.apiUrl ?? this.config.api.identity;
-    const mergedHeaders = { ...this.headers, ...options?.headers };
+    const mergedHeaders = this.mergeHeaders(options);
     return this.http
       .get<IApiResponse<T>>(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders })
       .pipe(
@@ -84,7 +103,7 @@ export class IApiService {
 
   post<T = any>(path: string, body: any = {}, options?: IApiOptions): Observable<T> {
     const baseUrl = options?.apiUrl ?? this.config.api.identity;
-    const mergedHeaders = { ...this.headers, ...options?.headers };
+    const mergedHeaders = this.mergeHeaders(options);
     return this.http
       .post<IApiResponse<T>>(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
       .pipe(
@@ -95,7 +114,7 @@ export class IApiService {
 
   put<T = any>(path: string, body: any = {}, options?: IApiOptions): Observable<T> {
     const baseUrl = options?.apiUrl ?? this.config.api.identity;
-    const mergedHeaders = { ...this.headers, ...options?.headers };
+    const mergedHeaders = this.mergeHeaders(options);
     return this.http
       .put<IApiResponse<T>>(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
       .pipe(
@@ -106,7 +125,7 @@ export class IApiService {
 
   delete<T = any>(path: string, options?: IApiOptions): Observable<T> {
     const baseUrl = options?.apiUrl ?? this.config.api.identity;
-    const mergedHeaders = { ...this.headers, ...options?.headers };
+    const mergedHeaders = this.mergeHeaders(options);
 
     // Fastify rejects Content-Type: application/json with an empty body
     if (!options?.body) {
@@ -127,7 +146,7 @@ export class IApiService {
 
   getBlob(path: string, params?: HttpParams, options?: IApiOptions): Observable<Blob> {
     const baseUrl = options?.apiUrl ?? this.config.api.identity;
-    const mergedHeaders = { ...this.headers, ...options?.headers };
+    const mergedHeaders = this.mergeHeaders(options);
     return this.http
       .get(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders, responseType: 'blob' })
       .pipe(catchError((err) => this.enrichError(err)));
@@ -149,6 +168,12 @@ export class IApiService {
     const csrfToken = this.csrf.getToken();
     if (csrfToken) {
       headers['X-CSRF-Token'] = csrfToken;
+    }
+    if (this.config.apiKey) {
+      headers['Api-Key'] = this.config.apiKey;
+    }
+    if (options?.skipBearer) {
+      headers[IH_SKIP_BEARER_HEADER] = 'true';
     }
 
     return this.http
