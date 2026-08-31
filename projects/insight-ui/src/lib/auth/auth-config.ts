@@ -66,6 +66,19 @@ export type IInsightAuthConfig = {
    * all-applications behaviour.
    */
   appId?: string;
+  /**
+   * How the auth interceptor handles a failed session refresh:
+   * - `'dialog'`: show the library session-expired dialog (default).
+   * - `'redirect'`: legacy behaviour — full-page redirect to the signin page.
+   * When `onUnauthorized` is provided it takes precedence and disables both.
+   */
+  unauthorizedHandling?: 'dialog' | 'redirect';
+  /**
+   * Optional consumer-owned handler invoked when a session refresh fails.
+   * Overrides `unauthorizedHandling` — neither the dialog nor the redirect
+   * runs when this is provided.
+   */
+  onUnauthorized?: (error: unknown) => void;
 }
 
 /**
@@ -114,6 +127,7 @@ export function getDefaultInsightAuthConfig(): IInsightAuthConfig {
     csrfTokenMaxAgeSeconds: defaultEnvironment.csrfTokenMaxAgeSeconds,
     apiKey: defaultEnvironment.apiKey,
     appId: defaultEnvironment.appId,
+    unauthorizedHandling: 'dialog',
   };
 }
 

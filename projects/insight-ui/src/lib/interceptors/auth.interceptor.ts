@@ -6,6 +6,11 @@ import { catchError, switchMap } from 'rxjs/operators';
 import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
 import { ISessionService } from '../session/session.service';
+import {
+  extractProblemDetailsErrorCode,
+  SessionExpiredService,
+  toSessionExpiredReason,
+} from '../session-expired/session-expired.service';
 
 // Sentinel header set by `IApiService` when a call opts out of the Bearer
 // header (`IApiOptions.skipBearer`). Read and stripped by this interceptor so
@@ -34,6 +39,7 @@ const addAuthHeader = (req: HttpRequest<unknown>, token: string): HttpRequest<un
 export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEvent<unknown>> => {
   const session = inject(ISessionService);
   const config = inject(INSIGHT_AUTH_CONFIG);
+  const sessionExpired = inject(SessionExpiredService);
 
   if (isAuthSkipUrl(req.url)) {
     return next(req);
@@ -58,11 +64,29 @@ export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEv
         switchMap((newToken) => next(addAuthHeader(req, newToken))),
         catchError((refreshErr: unknown) => {
           session.clearSession();
-          // Use the current path (no hash/token) as the target to return to —
-          // routed through the callback route, same as authGuard, to avoid a
-          // redirect loop.
-          const targetPath = window.location.pathname + window.location.search;
-          window.location.href = buildExternalSigninUrl(config, targetPath);
+
+          if (config.onUnauthorized) {
+            // Consumer-provided handler takes full control of the unauthorized flow.
+            config.onUnauthorized(refreshErr);
+          } else if ((config.unauthorizedHandling ?? 'dialog') === 'dialog') {
+            // Default: surface the library session-expired overlay (rendered by
+            // the consumer app) instead of leaving the page.
+            const errorCode = extractProblemDetailsErrorCode(refreshErr);
+            const reason = toSessionExpiredReason(errorCode);
+            const targetPath = window.location.pathname + window.location.search;
+            sessionExpired.show(
+              targetPath,
+              reason,
+              errorCode,
+              (refreshErr as { detail?: string })?.detail,
+            );
+          } else {
+            // Legacy: full-page redirect to iam-web's signin page. Use the
+            // current path (no hash/token) as the target, routed through the
+            // callback route, same as authGuard, to avoid a redirect loop.
+            const targetPath = window.location.pathname + window.location.search;
+            window.location.href = buildExternalSigninUrl(config, targetPath);
+          }
           return throwError(() => refreshErr);
         }),
       );
