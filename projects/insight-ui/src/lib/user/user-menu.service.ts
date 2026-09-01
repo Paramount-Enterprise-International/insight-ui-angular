@@ -34,7 +34,8 @@ export class IUserMenuService {
 
   /** GET `{api.user}/me/menus` — effective navigation tree for one or all active applications. Output type overridable via `T`. */
   getEffectiveMenus<T = IInsightMenuNode[]>(applicationId?: string): Observable<T> {
-    const params = applicationId ? new HttpParams({ fromObject: { applicationId } }) : undefined;
+    const id = applicationId ?? this.config.appId;
+    const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
     return this.api
       .get<IInsightUserMenuEnvelope<T>>('/me/menus', params, { apiUrl: this.baseUrl })
       .pipe(map((response) => response.data));
@@ -42,7 +43,8 @@ export class IUserMenuService {
 
   /** GET `{api.user}/me/menus/favorites` — effective favorite items, sorted by name. Output type overridable via `T`. */
   getFavorites<T = IInsightFavoriteMenuItem[]>(applicationId?: string): Observable<T> {
-    const params = applicationId ? new HttpParams({ fromObject: { applicationId } }) : undefined;
+    const id = applicationId ?? this.config.appId;
+    const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
     return this.api
       .get<IInsightUserMenuEnvelope<T>>('/me/menus/favorites', params, { apiUrl: this.baseUrl })
       .pipe(map((response) => response.data));
