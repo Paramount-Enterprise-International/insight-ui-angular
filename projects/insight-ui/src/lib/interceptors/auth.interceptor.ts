@@ -5,6 +5,7 @@ import { catchError, switchMap } from 'rxjs/operators';
 
 import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
+import { normalizeApiError } from '../api/api-error';
 import { ISessionService } from '../session/session.service';
 import {
   extractProblemDetailsErrorCode,
@@ -32,9 +33,8 @@ const addAuthHeader = (req: HttpRequest<unknown>, token: string): HttpRequest<un
  * Attaches the in-memory access token as a Bearer header. On 401, attempts a
  * single silent refresh (via the HttpOnly refresh cookie) and retries once;
  * on refresh failure, clears the session and redirects to iam-web's signin
- * page. 429 (rate-limit) and 423 (lockout) responses are passed through
- * untouched — `IApiService.enrichError()` already surfaces `retryAfter` for
- * consumer apps to build the same UX as iam-web.
+ * page. 429 (rate-limit) and 423 (lockout) responses are passed through;
+ * `IApiService` normalizes their current or legacy backend error fields.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEvent<unknown>> => {
   const session = inject(ISessionService);
@@ -71,14 +71,17 @@ export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEv
           } else if ((config.unauthorizedHandling ?? 'dialog') === 'dialog') {
             // Default: surface the library session-expired overlay (rendered by
             // the consumer app) instead of leaving the page.
-            const errorCode = extractProblemDetailsErrorCode(refreshErr);
+            const apiError = normalizeApiError(refreshErr);
+            const errorCode = extractProblemDetailsErrorCode(apiError);
             const reason = toSessionExpiredReason(errorCode);
             const targetPath = window.location.pathname + window.location.search;
             sessionExpired.show(
               targetPath,
               reason,
               errorCode,
-              (refreshErr as { detail?: string })?.detail,
+              apiError.detail,
+              apiError.message,
+              apiError,
             );
           } else {
             // Legacy: full-page redirect to iam-web's signin page. Use the

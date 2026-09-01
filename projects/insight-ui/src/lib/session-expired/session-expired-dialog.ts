@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
 import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
+import { INormalizedApiError, resolveApiErrorDisplayMessage } from '../api/api-error';
 import { SessionExpiredService } from './session-expired.service';
 
 /**
@@ -122,6 +123,16 @@ export class ISessionExpiredDialog {
   }
 
   protected message(): string {
+    const localFallback = this.localFallbackMessage();
+    const error: INormalizedApiError = this.sessionExpired.apiError() ?? {
+      errorCode: this.sessionExpired.errorCode() ?? undefined,
+      message: this.sessionExpired.message() ?? undefined,
+      detail: this.sessionExpired.detail() ?? undefined,
+    };
+    return resolveApiErrorDisplayMessage(error, localFallback, this.config.errorCatalogResolver);
+  }
+
+  private localFallbackMessage(): string {
     switch (this.sessionExpired.reason()) {
       case 'TOKEN_EXPIRED':
         return 'Your session has expired. Please log in again to continue.';

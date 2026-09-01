@@ -6,6 +6,7 @@ import { catchError, map } from 'rxjs/operators';
 import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
 import { ICsrfService } from '../csrf/csrf.service';
 import { IH_SKIP_BEARER_HEADER } from '../interceptors/auth.interceptor';
+import { normalizeApiError } from './api-error';
 
 /** Response type is transparent — no `{ meta, data }` wrapper. */
 export type IApiResponse<T = any> = T;
@@ -31,9 +32,9 @@ export type IApiOptions = {
  * Mirrors iam-web's `IApiService`: `withCredentials: true` on every request
  * (required for the CSRF cookie and the HttpOnly refresh cookie to flow),
  * automatic `X-CSRF-Token` header injection, transparent response typing
- * (`T`, no wrapper), and RFC 9457 Problem Details error enrichment matching
- * the exact shape iam-web already produces (`status`/`detail`/`retryAfter`)
- * so consumer apps can reuse the `err?.detail ?? 'fallback'` convention.
+ * (`T`, no wrapper), and normalized current/legacy backend errors. New
+ * `errorCode`/`message`/`revision` responses and safe extensions are retained,
+ * while legacy Problem Details `detail`/`title`/`code` remains compatible.
  */
 @Injectable({ providedIn: 'root' })
 export class IApiService {
@@ -65,29 +66,9 @@ export class IApiService {
     return merged;
   }
 
-  /**
-   * Normalize a raw `HttpErrorResponse` into a consistent shape:
-   * `{ status, detail, retryAfter, ...rest }`. `retryAfter` is read from the
-   * body or the `Retry-After` header, so 429/423 responses surface it
-   * untouched for rate-limit/lockout UX.
-   */
-  private enrichError(err: any): Observable<never> {
-    const body = err?.error;
-    if (body && typeof body === 'object' && !Array.isArray(body)) {
-      const retryAfterFromHeader = err?.headers?.get?.('Retry-After');
-      const parsedHeader = retryAfterFromHeader ? Number(retryAfterFromHeader) : NaN;
-      const retryAfter: number | undefined =
-        (typeof body.retryAfter === 'number' ? body.retryAfter : undefined) ??
-        (Number.isFinite(parsedHeader) ? parsedHeader : undefined);
-      return throwError(() => ({
-        ...body,
-        status: err?.status ?? body.status,
-        message: err?.message ?? body.message,
-        detail: body.detail ?? body.title ?? err?.message ?? 'An error occurred',
-        retryAfter,
-      }));
-    }
-    return throwError(() => err);
+  /** Normalize current, legacy, and raw transport errors without losing safe extensions. */
+  private enrichError(err: unknown): Observable<never> {
+    return throwError(() => normalizeApiError(err));
   }
 
   get<T = any>(path: string, params?: HttpParams, options?: IApiOptions): Observable<T> {
