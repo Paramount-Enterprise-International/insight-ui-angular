@@ -1,13 +1,13 @@
 import * as i0 from '@angular/core';
-import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER } from '@angular/core';
+import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, effect, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER } from '@angular/core';
 import * as i1$1 from '@angular/common';
 import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
-import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom, Subject, BehaviorSubject, map, filter, startWith, shareReplay, of, Observable, tap, combineLatest, throwError, timeout, lastValueFrom, forkJoin, distinctUntilChanged } from 'rxjs';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { firstValueFrom, Subject, BehaviorSubject, map, throwError, of, timeout, lastValueFrom, forkJoin, filter as filter$1, startWith, shareReplay as shareReplay$1, Observable, tap as tap$1, combineLatest, distinctUntilChanged } from 'rxjs';
 import * as i1 from '@angular/forms';
 import { Validators, NG_VALUE_ACCESSOR, NgControl, FormGroupDirective, FormBuilder, FormControl, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { debounceTime, tap as tap$1, map as map$1, catchError, switchMap, shareReplay as shareReplay$1, filter as filter$1, take, finalize } from 'rxjs/operators';
+import { debounceTime, tap, map as map$1, catchError, switchMap, shareReplay, filter, take, finalize } from 'rxjs/operators';
 import { toObservable } from '@angular/core/rxjs-interop';
 
 /**
@@ -80,10 +80,10 @@ class IIcon {
     get iconClass() {
         return `${I_ICON_NAMES[this.icon] || this.icon} ${this.iconSize}`;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IIcon, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: IIcon, isStandalone: true, selector: "i-icon", inputs: { icon: "icon", size: "size" }, ngImport: i0, template: `<i [ngClass]="iconClass"></i>`, isInline: true, dependencies: [{ kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }] });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IIcon, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: IIcon, isStandalone: true, selector: "i-icon", inputs: { icon: "icon", size: "size" }, ngImport: i0, template: `<i [ngClass]="iconClass"></i>`, isInline: true, dependencies: [{ kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IIcon, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IIcon, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-icon',
@@ -107,15 +107,15 @@ class ILoading {
     get isLight() {
         return this.light;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ILoading, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ILoading, isStandalone: true, selector: "i-loading", inputs: { label: "label", light: "light" }, host: { properties: { "attr.light": "this.isLight" } }, ngImport: i0, template: `<div
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ILoading, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ILoading, isStandalone: true, selector: "i-loading", inputs: { label: "label", light: "light" }, host: { properties: { "attr.light": "this.isLight" } }, ngImport: i0, template: `<div
       class="spinner-border spinner-border-sm"
       role="status"
       [class.light]="light"
     ></div>
     {{ label }}`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ILoading, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ILoading, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-loading',
@@ -195,8 +195,8 @@ class IButton {
         }
         this.onClick.emit(event);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IButton, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IButton, isStandalone: true, selector: "i-button", inputs: { disabled: ["disabled", "disabled", booleanAttribute], loading: ["loading", "loading", booleanAttribute], type: "type", loadingText: "loadingText", variant: "variant", size: "size", icon: "icon", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", state: "state", href: "href", target: "target", rel: "rel" }, outputs: { onClick: "onClick" }, host: { properties: { "attr.variant": "this.hostVariant", "attr.size": "this.hostSize", "attr.aria-disabled": "this.ariaDisabled", "attr.aria-busy": "this.ariaBusy", "attr.data-mode": "this.mode" } }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IButton, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IButton, isStandalone: true, selector: "i-button", inputs: { disabled: ["disabled", "disabled", booleanAttribute], loading: ["loading", "loading", booleanAttribute], type: "type", loadingText: "loadingText", variant: "variant", size: "size", icon: "icon", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", state: "state", href: "href", target: "target", rel: "rel" }, outputs: { onClick: "onClick" }, host: { properties: { "attr.variant": "this.hostVariant", "attr.size": "this.hostSize", "attr.aria-disabled": "this.ariaDisabled", "attr.aria-busy": "this.ariaBusy", "attr.data-mode": "this.mode" } }, ngImport: i0, template: `
     <!-- ROUTER LINK -->
     @if (routerLink) {
       <a
@@ -253,7 +253,7 @@ class IButton {
     </ng-template>
   `, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IButton, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IButton, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-button',
@@ -462,8 +462,8 @@ class ICard {
             ev.preventDefault();
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICard, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: ICard, isStandalone: true, selector: "i-card", inputs: { href: "href", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", replaceUrl: "replaceUrl", skipLocationChange: "skipLocationChange", state: "state", target: "target", rel: "rel", disabled: "disabled" }, outputs: { onClick: "onClick" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICard, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: ICard, isStandalone: true, selector: "i-card", inputs: { href: "href", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", replaceUrl: "replaceUrl", skipLocationChange: "skipLocationChange", state: "state", target: "target", rel: "rel", disabled: "disabled" }, outputs: { onClick: "onClick" }, ngImport: i0, template: `
     <ng-template #content>
       <ng-content />
     </ng-template>
@@ -500,7 +500,7 @@ class ICard {
     }
   `, isInline: true, dependencies: [{ kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICard, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICard, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-card',
@@ -569,10 +569,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
             }] } });
 class ICardImage {
     src;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICardImage, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ICardImage, isStandalone: true, selector: "i-card-image", inputs: { src: "src" }, ngImport: i0, template: `<img alt="card-image" [src]="src" />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICardImage, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ICardImage, isStandalone: true, selector: "i-card-image", inputs: { src: "src" }, ngImport: i0, template: `<img alt="card-image" [src]="src" />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICardImage, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICardImage, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-card-image',
@@ -583,10 +583,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 type: Input
             }] } });
 class ICardBody {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICardBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ICardBody, isStandalone: true, selector: "i-card-body", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICardBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ICardBody, isStandalone: true, selector: "i-card-body", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICardBody, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICardBody, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-card-body',
@@ -595,10 +595,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 }]
         }] });
 class ICardFooter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICardFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ICardFooter, isStandalone: true, selector: "i-card-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICardFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ICardFooter, isStandalone: true, selector: "i-card-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICardFooter, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICardFooter, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-card-footer',
@@ -607,11 +607,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 }]
         }] });
 class ICardModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICardModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.29", ngImport: i0, type: ICardModule, imports: [ICard, ICardBody, ICardFooter, ICardImage], exports: [ICard, ICardBody, ICardFooter, ICardImage] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICardModule });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICardModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.30", ngImport: i0, type: ICardModule, imports: [ICard, ICardBody, ICardFooter, ICardImage], exports: [ICard, ICardBody, ICardFooter, ICardImage] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICardModule });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICardModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICardModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [ICard, ICardBody, ICardFooter, ICardImage],
@@ -973,8 +973,8 @@ class ICodeViewer {
             // ignore
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICodeViewer, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: ICodeViewer, isStandalone: true, selector: "i-code-viewer", inputs: { language: "language", file: "file", code: "code", wrap: ["wrap", "wrap", coerceBool], compact: ["compact", "compact", coerceBool], lineNumbers: ["lineNumbers", "lineNumbers", coerceBool], overlay: ["overlay", "overlay", coerceBool], showFileType: ["showFileType", "showFileType", coerceBool], copy: ["copy", "copy", coerceBool], scroll: ["scroll", "scroll", coerceBool], height: "height", highlighter: "highlighter" }, outputs: { onFileLoaded: "onFileLoaded" }, viewQueries: [{ propertyName: "projectedTpl", first: true, predicate: ["projected"], descendants: true, static: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICodeViewer, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: ICodeViewer, isStandalone: true, selector: "i-code-viewer", inputs: { language: "language", file: "file", code: "code", wrap: ["wrap", "wrap", coerceBool], compact: ["compact", "compact", coerceBool], lineNumbers: ["lineNumbers", "lineNumbers", coerceBool], overlay: ["overlay", "overlay", coerceBool], showFileType: ["showFileType", "showFileType", coerceBool], copy: ["copy", "copy", coerceBool], scroll: ["scroll", "scroll", coerceBool], height: "height", highlighter: "highlighter" }, outputs: { onFileLoaded: "onFileLoaded" }, viewQueries: [{ propertyName: "projectedTpl", first: true, predicate: ["projected"], descendants: true, static: true }], ngImport: i0, template: `
     <ng-template #projected>
       <ng-content />
     </ng-template>
@@ -1035,7 +1035,7 @@ class ICodeViewer {
     </div>
   `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICodeViewer, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICodeViewer, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-code-viewer',
@@ -1141,11 +1141,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 type: Output
             }] } });
 class ICodeViewerModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICodeViewerModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.29", ngImport: i0, type: ICodeViewerModule, imports: [ICodeViewer], exports: [ICodeViewer] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICodeViewerModule, imports: [ICodeViewer] });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICodeViewerModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.30", ngImport: i0, type: ICodeViewerModule, imports: [ICodeViewer], exports: [ICodeViewer] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICodeViewerModule, imports: [ICodeViewer] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICodeViewerModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICodeViewerModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [ICodeViewer],
@@ -1237,8 +1237,8 @@ class IInputAddon {
     get addonKind() {
         return this.addon?.type + '';
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IInputAddon, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IInputAddon, isStandalone: true, selector: "i-input-addon", inputs: { addon: "addon" }, host: { properties: { "attr.kind": "this.addonKind" } }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IInputAddon, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IInputAddon, isStandalone: true, selector: "i-input-addon", inputs: { addon: "addon" }, host: { properties: { "attr.kind": "this.addonKind" } }, ngImport: i0, template: `
     @if (!addon || addon.visible === false) {
       <!-- render nothing -->
     } @else if (addon.type === 'button') {
@@ -1268,7 +1268,7 @@ class IInputAddon {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IInputAddon, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IInputAddon, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-input-addon',
@@ -2708,10 +2708,10 @@ class IInputMaskDirective {
             this.safeSetSelectionRange(el, next.length, next.length);
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IInputMaskDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IInputMaskDirective, isStandalone: true, selector: "[iInputMask]", inputs: { mask: ["iInputMask", "mask"], autoDefault: "autoDefault" }, host: { listeners: { "input": "onInput()", "blur": "onBlur()", "focus": "onFocus()", "keydown": "onKeydown($event)", "paste": "onPaste($event)" } }, usesOnChanges: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IInputMaskDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.30", type: IInputMaskDirective, isStandalone: true, selector: "[iInputMask]", inputs: { mask: ["iInputMask", "mask"], autoDefault: "autoDefault" }, host: { listeners: { "input": "onInput()", "blur": "onBlur()", "focus": "onFocus()", "keydown": "onKeydown($event)", "paste": "onPaste($event)" } }, usesOnChanges: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IInputMaskDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IInputMaskDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iInputMask]',
@@ -2822,8 +2822,8 @@ class IInput {
         }
         return Array.isArray(this.append) ? this.append : [this.append];
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IInput, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IInput, isStandalone: true, selector: "i-input", inputs: { type: "type", placeholder: "placeholder", autocomplete: "autocomplete", readonly: "readonly", invalid: "invalid", mask: "mask", value: "value", prepend: "prepend", append: "append", disabled: "disabled" }, host: { listeners: { "click": "handleHostClick($event)" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IInput, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IInput, isStandalone: true, selector: "i-input", inputs: { type: "type", placeholder: "placeholder", autocomplete: "autocomplete", readonly: "readonly", invalid: "invalid", mask: "mask", value: "value", prepend: "prepend", append: "append", disabled: "disabled" }, host: { listeners: { "click": "handleHostClick($event)" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => IInput),
@@ -2849,7 +2849,7 @@ class IInput {
       <i-input-addon [addon]="i" />
     }`, isInline: true, dependencies: [{ kind: "component", type: IInputAddon, selector: "i-input-addon", inputs: ["addon"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask", "autoDefault"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IInput, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IInput, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-input',
@@ -3012,8 +3012,8 @@ class IFCInput {
     get resolvedErrorText() {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IFCInput, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IFCInput, isStandalone: true, selector: "i-fc-input", inputs: { label: "label", placeholder: "placeholder", autocomplete: "autocomplete", readonly: "readonly", type: "type", mask: "mask", prepend: "prepend", append: "append", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerInput", first: true, predicate: IInput, descendants: true }], ngImport: i0, template: `@if (label) {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IFCInput, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IFCInput, isStandalone: true, selector: "i-fc-input", inputs: { label: "label", placeholder: "placeholder", autocomplete: "autocomplete", readonly: "readonly", type: "type", mask: "mask", prepend: "prepend", append: "append", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerInput", first: true, predicate: IInput, descendants: true }], ngImport: i0, template: `@if (label) {
       <label class="i-fc-input__label" (click)="focusInnerInput()">
         {{ label }} :
         @if (required) {
@@ -3043,7 +3043,7 @@ class IFCInput {
       </div>
     }`, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IFCInput, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IFCInput, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-fc-input',
@@ -3106,11 +3106,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 type: Input
             }] } });
 class IInputModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IInputModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.29", ngImport: i0, type: IInputModule, imports: [IInput, IFCInput, IInputAddon, IInputMaskDirective], exports: [IInput, IFCInput, IInputAddon, IInputMaskDirective] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IInputModule });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IInputModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.30", ngImport: i0, type: IInputModule, imports: [IInput, IFCInput, IInputAddon, IInputMaskDirective], exports: [IInput, IFCInput, IInputAddon, IInputMaskDirective] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IInputModule });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IInputModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IInputModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [IInput, IFCInput, IInputAddon, IInputMaskDirective],
@@ -3130,10 +3130,10 @@ class IHighlightSearchPipe {
             return `<span class="highlight-search">${match}</span>`;
         });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHighlightSearchPipe, deps: [], target: i0.ɵɵFactoryTarget.Pipe });
-    static ɵpipe = i0.ɵɵngDeclarePipe({ minVersion: "14.0.0", version: "20.3.29", ngImport: i0, type: IHighlightSearchPipe, isStandalone: true, name: "highlightSearch" });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHighlightSearchPipe, deps: [], target: i0.ɵɵFactoryTarget.Pipe });
+    static ɵpipe = i0.ɵɵngDeclarePipe({ minVersion: "14.0.0", version: "20.3.30", ngImport: i0, type: IHighlightSearchPipe, isStandalone: true, name: "highlightSearch" });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHighlightSearchPipe, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHighlightSearchPipe, decorators: [{
             type: Pipe,
             args: [{
                     name: 'highlightSearch',
@@ -3161,10 +3161,10 @@ class ISelectOptionDefDirective {
     set iSelectOption(_value) {
         // not used, needed for structural directive syntax
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISelectOptionDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: ISelectOptionDefDirective, isStandalone: true, selector: "[iSelectOption]", inputs: { iSelectOption: "iSelectOption" }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISelectOptionDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.30", type: ISelectOptionDefDirective, isStandalone: true, selector: "[iSelectOption]", inputs: { iSelectOption: "iSelectOption" }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISelectOptionDefDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISelectOptionDefDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iSelectOption]',
@@ -3882,8 +3882,8 @@ class ISelect {
             this.repositionRaf = 0;
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: ISelect, isStandalone: true, selector: "i-select", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", options: "options", options$: "options$", displayWith: "displayWith", filterPredicate: "filterPredicate", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, host: { listeners: { "keydown": "handleKeydown($event)", "input": "onHostInput($event)", "document:click": "onDocumentClick($event)" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: ISelect, isStandalone: true, selector: "i-select", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", options: "options", options$: "options$", displayWith: "displayWith", filterPredicate: "filterPredicate", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, host: { listeners: { "keydown": "handleKeydown($event)", "input": "onHostInput($event)", "document:click": "onDocumentClick($event)" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => ISelect),
@@ -3932,7 +3932,7 @@ class ISelect {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISelect, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISelect, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-select',
@@ -4148,8 +4148,8 @@ class IFCSelect {
     get resolvedErrorText() {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IFCSelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IFCSelect, isStandalone: true, selector: "i-fc-select", inputs: { label: "label", placeholder: "placeholder", options: "options", options$: "options$", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", panelOffset: "panelOffset", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", errorMessage: "errorMessage", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IFCSelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IFCSelect, isStandalone: true, selector: "i-fc-select", inputs: { label: "label", placeholder: "placeholder", options: "options", options$: "options$", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", panelOffset: "panelOffset", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", errorMessage: "errorMessage", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `
     @if (label) {
       <label class="i-fc-select__label" (click)="focusInnerSelect()">
         {{ label }} :
@@ -4184,7 +4184,7 @@ class IFCSelect {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IFCSelect, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IFCSelect, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-fc-select',
@@ -4944,8 +4944,8 @@ class IDatepicker {
         this.closePanel();
         this.cdr.markForCheck();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IDatepicker, isStandalone: true, selector: "i-datepicker", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", format: "format", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", panelOffset: "panelOffset", value: "value" }, outputs: { onChanged: "onChanged" }, host: { listeners: { "input": "onHostInput($event)", "focusout": "onHostFocusOut()", "document:click": "onDocumentClick($event)" }, properties: { "class.i-datepicker--disabled": "this.disabledHostClass" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IDatepicker, isStandalone: true, selector: "i-datepicker", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", format: "format", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", panelOffset: "panelOffset", value: "value" }, outputs: { onChanged: "onChanged" }, host: { listeners: { "input": "onHostInput($event)", "focusout": "onHostFocusOut()", "document:click": "onDocumentClick($event)" }, properties: { "class.i-datepicker--disabled": "this.disabledHostClass" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => IDatepicker),
@@ -5016,7 +5016,7 @@ class IDatepicker {
     </i-datepicker-panel>
   `, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask", "autoDefault"] }, { kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDatepicker, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDatepicker, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-datepicker',
@@ -5297,8 +5297,8 @@ class IFCDatepicker {
     get resolvedErrorText() {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IFCDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IFCDatepicker, isStandalone: true, selector: "i-fc-datepicker", inputs: { label: "label", placeholder: "placeholder", format: "format", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", errorMessage: "errorMessage", value: "value", _smartFocusHook: "_smartFocusHook" }, viewQueries: [{ propertyName: "innerDatepicker", first: true, predicate: ["inner"], descendants: true, static: true }], ngImport: i0, template: `@if (label) {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IFCDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IFCDatepicker, isStandalone: true, selector: "i-fc-datepicker", inputs: { label: "label", placeholder: "placeholder", format: "format", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", errorMessage: "errorMessage", value: "value", _smartFocusHook: "_smartFocusHook" }, viewQueries: [{ propertyName: "innerDatepicker", first: true, predicate: ["inner"], descendants: true, static: true }], ngImport: i0, template: `@if (label) {
       <label class="i-fc-datepicker__label" (click)="focusInnerDatepicker()">
         {{ label }} :
         @if (required) {
@@ -5329,7 +5329,7 @@ class IFCDatepicker {
       </div>
     }`, isInline: true, dependencies: [{ kind: "component", type: IDatepicker, selector: "i-datepicker", inputs: ["placeholder", "disabled", "invalid", "format", "panelPosition", "minYear", "maxYear", "minYearRange", "maxYearRange", "portalToBody", "matchTriggerWidth", "panelOffset", "value"], outputs: ["onChanged"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IFCDatepicker, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IFCDatepicker, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-fc-datepicker',
@@ -5466,8 +5466,8 @@ class ITextArea {
             this.textareaRef.nativeElement.focus();
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ITextArea, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ITextArea, isStandalone: true, selector: "i-textarea", inputs: { placeholder: "placeholder", readonly: "readonly", rows: "rows", invalid: "invalid", value: "value", disabled: "disabled" }, host: { listeners: { "click": "handleHostClick()" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ITextArea, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ITextArea, isStandalone: true, selector: "i-textarea", inputs: { placeholder: "placeholder", readonly: "readonly", rows: "rows", invalid: "invalid", value: "value", disabled: "disabled" }, host: { listeners: { "click": "handleHostClick()" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => ITextArea),
@@ -5485,7 +5485,7 @@ class ITextArea {
     (input)="handleInput($event)"
   ></textarea>`, isInline: true, changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ITextArea, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ITextArea, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-textarea',
@@ -5621,8 +5621,8 @@ class IFCTextArea {
     get resolvedErrorText() {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IFCTextArea, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IFCTextArea, isStandalone: true, selector: "i-fc-textarea", inputs: { label: "label", placeholder: "placeholder", readonly: "readonly", rows: "rows", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerTextarea", first: true, predicate: ITextArea, descendants: true }], ngImport: i0, template: `@if (label) {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IFCTextArea, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IFCTextArea, isStandalone: true, selector: "i-fc-textarea", inputs: { label: "label", placeholder: "placeholder", readonly: "readonly", rows: "rows", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerTextarea", first: true, predicate: ITextArea, descendants: true }], ngImport: i0, template: `@if (label) {
       <label class="i-fc-textarea__label" (click)="focusInnerTextarea()">
         {{ label }} :
         @if (required) {
@@ -5648,7 +5648,7 @@ class IFCTextArea {
       </div>
     }`, isInline: true, dependencies: [{ kind: "component", type: ITextArea, selector: "i-textarea", inputs: ["placeholder", "readonly", "rows", "invalid", "value", "disabled"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IFCTextArea, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IFCTextArea, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-fc-textarea',
@@ -5755,10 +5755,10 @@ class IDialogService {
     closeAll() {
         this._dialogs$.value.forEach((d) => d.ref.close());
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialogService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialogService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialogService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialogService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialogService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialogService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -5802,15 +5802,15 @@ class IDialogContainer {
             this.instance.ref.close();
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialogContainer, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: IDialogContainer, isStandalone: true, selector: "i-dialog-container", inputs: { instance: "instance", isTopMost: "isTopMost" }, host: { listeners: { "document:keydown.escape": "onEscKey()" } }, usesOnChanges: true, ngImport: i0, template: `<div class="i-dialog-backdrop" (click)="onBackdropClick()"></div>
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialogContainer, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: IDialogContainer, isStandalone: true, selector: "i-dialog-container", inputs: { instance: "instance", isTopMost: "isTopMost" }, host: { listeners: { "document:keydown.escape": "onEscKey()" } }, usesOnChanges: true, ngImport: i0, template: `<div class="i-dialog-backdrop" (click)="onBackdropClick()"></div>
     <div class="i-dialog-wrapper">
       <div class="i-dialog-panel" [ngStyle]="panelStyles">
         <ng-container *ngComponentOutlet="instance.component; injector: dialogInjector" />
       </div>
     </div> `, isInline: true, dependencies: [{ kind: "directive", type: NgComponentOutlet, selector: "[ngComponentOutlet]", inputs: ["ngComponentOutlet", "ngComponentOutletInputs", "ngComponentOutletInjector", "ngComponentOutletEnvironmentInjector", "ngComponentOutletContent", "ngComponentOutletNgModule", "ngComponentOutletNgModuleFactory"], exportAs: ["ngComponentOutlet"] }, { kind: "directive", type: NgStyle, selector: "[ngStyle]", inputs: ["ngStyle"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialogContainer, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialogContainer, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-dialog-container',
@@ -5838,14 +5838,14 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
 class IDialogOutlet {
     dialogService = inject(IDialogService);
     dialogs$ = this.dialogService.dialogs$;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialogOutlet, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IDialogOutlet, isStandalone: true, selector: "i-dialog-outlet", ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialogOutlet, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IDialogOutlet, isStandalone: true, selector: "i-dialog-outlet", ngImport: i0, template: `
     @for (dialog of (dialogs$ | async) ?? []; track dialog.id; let last = $last) {
       <i-dialog-container [instance]="dialog" [isTopMost]="last" />
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IDialogContainer, selector: "i-dialog-container", inputs: ["instance", "isTopMost"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialogOutlet, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialogOutlet, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-dialog-outlet',
@@ -5874,10 +5874,10 @@ class IDialogCloseDirective {
         event.preventDefault();
         this.dialogRef.close(this.result);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialogCloseDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IDialogCloseDirective, isStandalone: true, selector: "[i-dialog-close], [iDialogClose]", inputs: { result: ["iDialogClose", "result"] }, host: { listeners: { "click": "onClick($event)" } }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialogCloseDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.30", type: IDialogCloseDirective, isStandalone: true, selector: "[i-dialog-close], [iDialogClose]", inputs: { result: ["iDialogClose", "result"] }, host: { listeners: { "click": "onClick($event)" } }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialogCloseDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialogCloseDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[i-dialog-close], [iDialogClose]',
@@ -5927,8 +5927,8 @@ class IDialog {
     onCustomActionClick(a) {
         this.onCustomAction.emit(a);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IDialog, isStandalone: true, selector: "i-dialog", inputs: { title: "title", actions: "actions" }, outputs: { onOk: "onOk", onConfirm: "onConfirm", onSave: "onSave", onCustomAction: "onCustomAction" }, ngImport: i0, template: `@if (title) {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IDialog, isStandalone: true, selector: "i-dialog", inputs: { title: "title", actions: "actions" }, outputs: { onOk: "onOk", onConfirm: "onConfirm", onSave: "onSave", onCustomAction: "onCustomAction" }, ngImport: i0, template: `@if (title) {
       <h4 class="i-dialog-title">{{ title }}</h4>
     }
     <div class="i-dialog-content">
@@ -6006,7 +6006,7 @@ class IDialog {
       </div>
     } `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: IDialogCloseDirective, selector: "[i-dialog-close], [iDialogClose]", inputs: ["iDialogClose"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialog, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialog, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-dialog',
@@ -6112,8 +6112,8 @@ class IAlert {
     submit() {
         this.dialog.close();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAlert, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IAlert, isStandalone: true, selector: "i-alert", ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAlert, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IAlert, isStandalone: true, selector: "i-alert", ngImport: i0, template: `
     <i-dialog
       [actions]="[
         {
@@ -6141,7 +6141,7 @@ class IAlert {
     </i-dialog>
   `, isInline: true, dependencies: [{ kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: IDialog, selector: "i-dialog", inputs: ["title", "actions"], outputs: ["onOk", "onConfirm", "onSave", "onCustomAction"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAlert, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAlert, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-alert',
@@ -6203,10 +6203,10 @@ class IAlertService {
     danger(title, description) {
         return this.show({ title, description, type: 'danger' });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAlertService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAlertService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAlertService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAlertService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAlertService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAlertService, decorators: [{
             type: Injectable,
             args: [{
                     providedIn: 'root',
@@ -6237,8 +6237,8 @@ class IConfirm {
         }
         this.dialog.close(this.reason.value);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IConfirm, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IConfirm, isStandalone: true, selector: "i-confirm", viewQueries: [{ propertyName: "formGroupDir", first: true, predicate: FormGroupDirective, descendants: true }], ngImport: i0, template: `<i-dialog
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IConfirm, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IConfirm, isStandalone: true, selector: "i-confirm", viewQueries: [{ propertyName: "formGroupDir", first: true, predicate: FormGroupDirective, descendants: true }], ngImport: i0, template: `<i-dialog
     [actions]="[
       {
         type: 'confirm',
@@ -6281,7 +6281,7 @@ class IConfirm {
     }
   </i-dialog>`, isInline: true, dependencies: [{ kind: "component", type: IDialog, selector: "i-dialog", inputs: ["title", "actions"], outputs: ["onOk", "onConfirm", "onSave", "onCustomAction"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: IFCTextArea, selector: "i-fc-textarea", inputs: ["label", "placeholder", "readonly", "rows", "errorMessage", "value"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.ɵNgNoValidate, selector: "form:not([ngNoForm]):not([ngNativeValidate])" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.NgControlStatusGroup, selector: "[formGroupName],[formArrayName],[ngModelGroup],[formGroup],form:not([ngNoForm]),[ngForm]" }, { kind: "directive", type: i1.FormGroupDirective, selector: "[formGroup]", inputs: ["formGroup"], outputs: ["ngSubmit"], exportAs: ["ngForm"] }, { kind: "directive", type: i1.FormControlName, selector: "[formControlName]", inputs: ["formControlName", "disabled", "ngModel"], outputs: ["ngModelChange"] }, { kind: "ngmodule", type: FormsModule }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IConfirm, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IConfirm, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-confirm',
@@ -6360,21 +6360,21 @@ class IConfirmService {
     danger(title, description, reason) {
         return this.show({ title, description, type: 'danger', reason });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IConfirmService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IConfirmService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IConfirmService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IConfirmService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IConfirmService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IConfirmService, decorators: [{
             type: Injectable,
             args: [{
                     providedIn: 'root',
                 }]
         }] });
 class IDialogModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialogModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.29", ngImport: i0, type: IDialogModule, imports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm], exports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialogModule, imports: [IConfirm] });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialogModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.30", ngImport: i0, type: IDialogModule, imports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm], exports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialogModule, imports: [IConfirm] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IDialogModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IDialogModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm],
@@ -6497,8 +6497,8 @@ class IPaginator {
         this.pageIndex = Math.floor(firstItemIndex / newSize);
         this.emit();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IPaginator, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IPaginator, isStandalone: true, selector: "i-paginator", inputs: { length: "length", pageIndex: "pageIndex", pageSize: "pageSize", pageSizeOptions: "pageSizeOptions" }, outputs: { onPageChange: "onPageChange" }, host: { classAttribute: "i-paginator" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IPaginator, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IPaginator, isStandalone: true, selector: "i-paginator", inputs: { length: "length", pageIndex: "pageIndex", pageSize: "pageSize", pageSizeOptions: "pageSizeOptions" }, outputs: { onPageChange: "onPageChange" }, host: { classAttribute: "i-paginator" }, ngImport: i0, template: `
     <div class="i-paginator flex align-center gap-md flex-fill">
       <!-- Page size -->
       @for (size of pageSizeOptions; track size) {
@@ -6529,7 +6529,7 @@ class IPaginator {
     </div>
   `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IPaginator, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IPaginator, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-paginator',
@@ -6605,10 +6605,10 @@ class ITruncatedTooltipDirective {
     ngOnDestroy() {
         this.observer?.disconnect();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ITruncatedTooltipDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "16.1.0", version: "20.3.29", type: ITruncatedTooltipDirective, isStandalone: true, selector: "[truncatedTooltip]", inputs: { enabled: ["truncatedTooltip", "enabled", booleanAttribute] }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ITruncatedTooltipDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "16.1.0", version: "20.3.30", type: ITruncatedTooltipDirective, isStandalone: true, selector: "[truncatedTooltip]", inputs: { enabled: ["truncatedTooltip", "enabled", booleanAttribute] }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ITruncatedTooltipDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ITruncatedTooltipDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[truncatedTooltip]',
@@ -7009,10 +7009,10 @@ class IGridDataSource {
  * ---------------------------------------------------- */
 class IGridHeaderCellDefDirective {
     template = inject((TemplateRef));
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridHeaderCellDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IGridHeaderCellDefDirective, isStandalone: true, selector: "[iHeaderCellDef]", ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridHeaderCellDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.30", type: IGridHeaderCellDefDirective, isStandalone: true, selector: "[iHeaderCellDef]", ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridHeaderCellDefDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridHeaderCellDefDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iHeaderCellDef]',
@@ -7021,10 +7021,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
         }] });
 class IGridCellDefDirective {
     template = inject((TemplateRef));
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridCellDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IGridCellDefDirective, isStandalone: true, selector: "[iCellDef]", ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridCellDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.30", type: IGridCellDefDirective, isStandalone: true, selector: "[iCellDef]", ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridCellDefDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridCellDefDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iCellDef]',
@@ -7045,10 +7045,10 @@ class IGridRowDefDirective {
     static ngTemplateContextGuard(_dir, _ctx) {
         return true;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridRowDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IGridRowDefDirective, isStandalone: true, selector: "[iRowDef]", inputs: { iRowDefExpandSingle: "iRowDefExpandSingle" }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridRowDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.30", type: IGridRowDefDirective, isStandalone: true, selector: "[iRowDef]", inputs: { iRowDefExpandSingle: "iRowDefExpandSingle" }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridRowDefDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridRowDefDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iRowDef]',
@@ -7058,10 +7058,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 type: Input
             }] } });
 class IGridExpandableRow {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridExpandableRow, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: IGridExpandableRow, isStandalone: true, selector: "i-grid-expandable-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-expandable-row flex" }, ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridExpandableRow, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: IGridExpandableRow, isStandalone: true, selector: "i-grid-expandable-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-expandable-row flex" }, ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridExpandableRow, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridExpandableRow, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-expandable-row',
@@ -7077,10 +7077,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
  * ROW DIRECTIVES
  * ---------------------------------------------------- */
 class IGridHeaderRowDirective {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridHeaderRowDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IGridHeaderRowDirective, isStandalone: true, selector: "i-grid-header-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-header-row" }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridHeaderRowDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.30", type: IGridHeaderRowDirective, isStandalone: true, selector: "i-grid-header-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-header-row" }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridHeaderRowDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridHeaderRowDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: 'i-grid-header-row',
@@ -7092,10 +7092,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 }]
         }] });
 class IGridRowDirective {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridRowDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IGridRowDirective, isStandalone: true, selector: "i-grid-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-row" }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridRowDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.30", type: IGridRowDirective, isStandalone: true, selector: "i-grid-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-row" }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridRowDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridRowDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: 'i-grid-row',
@@ -7110,10 +7110,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
  * HEADER GROUP TAGS (internal render tags)
  * ---------------------------------------------------- */
 class IGridHeaderCellGroup {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridHeaderCellGroup, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: IGridHeaderCellGroup, isStandalone: true, selector: "i-grid-header-cell-group", host: { attributes: { "role": "presentation" }, classAttribute: "i-grid-header-cell-group" }, ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridHeaderCellGroup, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: IGridHeaderCellGroup, isStandalone: true, selector: "i-grid-header-cell-group", host: { attributes: { "role": "presentation" }, classAttribute: "i-grid-header-cell-group" }, ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridHeaderCellGroup, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridHeaderCellGroup, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-header-cell-group',
@@ -7126,10 +7126,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 }]
         }] });
 class IGridHeaderCellGroupColumns {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridHeaderCellGroupColumns, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: IGridHeaderCellGroupColumns, isStandalone: true, selector: "i-grid-header-cell-group-columns", host: { attributes: { "role": "presentation" }, classAttribute: "i-grid-header-cell-group-columns" }, ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridHeaderCellGroupColumns, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: IGridHeaderCellGroupColumns, isStandalone: true, selector: "i-grid-header-cell-group-columns", host: { attributes: { "role": "presentation" }, classAttribute: "i-grid-header-cell-group-columns" }, ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridHeaderCellGroupColumns, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridHeaderCellGroupColumns, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-header-cell-group-columns',
@@ -7154,10 +7154,10 @@ class IGridColumn {
     headerDef;
     cellDef;
     isAuto;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.29", type: IGridColumn, isStandalone: true, selector: "i-grid-column", inputs: { fieldName: "fieldName", title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.30", type: IGridColumn, isStandalone: true, selector: "i-grid-column", inputs: { fieldName: "fieldName", title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridColumn, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridColumn, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-column',
@@ -7198,10 +7198,10 @@ class IGridCustomColumn {
     headerDef;
     cellDef;
     isAuto;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridCustomColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.29", type: IGridCustomColumn, isStandalone: true, selector: "i-grid-custom-column", inputs: { title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridCustomColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.30", type: IGridCustomColumn, isStandalone: true, selector: "i-grid-custom-column", inputs: { title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridCustomColumn, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridCustomColumn, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-custom-column',
@@ -7234,10 +7234,10 @@ class IGridColumnGroup {
     title = '';
     columns;
     customColumns;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridColumnGroup, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: IGridColumnGroup, isStandalone: true, selector: "i-grid-column-group", inputs: { title: "title" }, queries: [{ propertyName: "columns", predicate: IGridColumn }, { propertyName: "customColumns", predicate: IGridCustomColumn }], ngImport: i0, template: '', isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridColumnGroup, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: IGridColumnGroup, isStandalone: true, selector: "i-grid-column-group", inputs: { title: "title" }, queries: [{ propertyName: "columns", predicate: IGridColumn }, { propertyName: "customColumns", predicate: IGridCustomColumn }], ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridColumnGroup, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridColumnGroup, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-column-group',
@@ -7298,10 +7298,10 @@ class IGridCell {
     get stickyZ() {
         return this._isFrozen ? 2 : null;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: IGridCell, isStandalone: true, selector: "i-grid-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "cell" }, properties: { "style.flex": "this.flex", "class.i-grid-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-cell" }, ngImport: i0, template: ` <ng-content /> `, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: IGridCell, isStandalone: true, selector: "i-grid-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "cell" }, properties: { "style.flex": "this.flex", "class.i-grid-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-cell" }, ngImport: i0, template: ` <ng-content /> `, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridCell, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridCell, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-cell',
@@ -7472,8 +7472,8 @@ class IGridHeaderCell {
             this._isResizing = false;
         }, 0);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridHeaderCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IGridHeaderCell, isStandalone: true, selector: "i-grid-header-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "columnheader" }, listeners: { "click": "onClick()", "document:mousemove": "onDocumentMouseMove($event)", "document:mouseup": "onDocumentMouseUp()" }, properties: { "style.flex": "this.flex", "class.i-grid-header-cell--sortable": "this.sortable", "class.i-grid-header-cell--sorted": "this.isSorted", "class.i-grid-header-cell--sorted-asc": "this.isSortedAsc", "class.i-grid-header-cell--sorted-desc": "this.isSortedDesc", "class.i-grid-header-cell--resizable": "this.isResizableClass", "class.i-grid-header-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-header-cell" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridHeaderCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IGridHeaderCell, isStandalone: true, selector: "i-grid-header-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "columnheader" }, listeners: { "click": "onClick()", "document:mousemove": "onDocumentMouseMove($event)", "document:mouseup": "onDocumentMouseUp()" }, properties: { "style.flex": "this.flex", "class.i-grid-header-cell--sortable": "this.sortable", "class.i-grid-header-cell--sorted": "this.isSorted", "class.i-grid-header-cell--sorted-asc": "this.isSortedAsc", "class.i-grid-header-cell--sorted-desc": "this.isSortedDesc", "class.i-grid-header-cell--resizable": "this.isResizableClass", "class.i-grid-header-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-header-cell" }, ngImport: i0, template: `
     <span class="i-grid-header-cell__content" truncatedTooltip>
       <ng-content />
     </span>
@@ -7487,7 +7487,7 @@ class IGridHeaderCell {
     <span class="i-grid-header-cell__resize-handle" (mousedown)="onResizeMouseDown($event)"> </span>
   `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridHeaderCell, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridHeaderCell, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-header-cell',
@@ -7556,10 +7556,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 args: ['document:mouseup']
             }] } });
 class IGridViewport {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridViewport, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: IGridViewport, isStandalone: true, selector: "i-grid-viewport", host: { classAttribute: "i-grid-viewport" }, ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridViewport, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: IGridViewport, isStandalone: true, selector: "i-grid-viewport", host: { classAttribute: "i-grid-viewport" }, ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridViewport, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridViewport, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-viewport',
@@ -8795,8 +8795,8 @@ class IGrid {
         const groups = this.columnGroupDefs?.toArray?.() ?? [];
         return groups.length > 0 || directCols.length > 0 || directCustom.length > 0;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGrid, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IGrid, isStandalone: true, selector: "i-grid", inputs: { dataSource: "dataSource", selectionMode: "selectionMode", selectionRowHidden: "selectionRowHidden", selectionRowDisabled: "selectionRowDisabled", tree: "tree", treeIndent: "treeIndent", trackBy: "trackBy", treeColumn: "treeColumn", treeInitialExpandLevel: "treeInitialExpandLevel", showNumberColumn: ["showNumberColumn", "showNumberColumn", booleanAttribute], sortMode: "sortMode" }, outputs: { onSelectionChange: "onSelectionChange", onRowClick: "onRowClick", onRowExpandChange: "onRowExpandChange", onExpandedRowsChange: "onExpandedRowsChange", onServerSortChange: "onServerSortChange", onServerPageChange: "onServerPageChange", onServerFilterChange: "onServerFilterChange" }, host: { attributes: { "role": "table" }, classAttribute: "i-grid" }, queries: [{ propertyName: "expandableRowDef", first: true, predicate: IGridRowDefDirective, descendants: true }, { propertyName: "columnDefs", predicate: IGridColumn }, { propertyName: "customColumnDefs", predicate: IGridCustomColumn }, { propertyName: "columnGroupDefs", predicate: IGridColumnGroup }], exportAs: ["iGrid"], usesOnChanges: true, ngImport: i0, template: `<i-grid-viewport>
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGrid, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IGrid, isStandalone: true, selector: "i-grid", inputs: { dataSource: "dataSource", selectionMode: "selectionMode", selectionRowHidden: "selectionRowHidden", selectionRowDisabled: "selectionRowDisabled", tree: "tree", treeIndent: "treeIndent", trackBy: "trackBy", treeColumn: "treeColumn", treeInitialExpandLevel: "treeInitialExpandLevel", showNumberColumn: ["showNumberColumn", "showNumberColumn", booleanAttribute], sortMode: "sortMode" }, outputs: { onSelectionChange: "onSelectionChange", onRowClick: "onRowClick", onRowExpandChange: "onRowExpandChange", onExpandedRowsChange: "onExpandedRowsChange", onServerSortChange: "onServerSortChange", onServerPageChange: "onServerPageChange", onServerFilterChange: "onServerFilterChange" }, host: { attributes: { "role": "table" }, classAttribute: "i-grid" }, queries: [{ propertyName: "expandableRowDef", first: true, predicate: IGridRowDefDirective, descendants: true }, { propertyName: "columnDefs", predicate: IGridColumn }, { propertyName: "customColumnDefs", predicate: IGridCustomColumn }, { propertyName: "columnGroupDefs", predicate: IGridColumnGroup }], exportAs: ["iGrid"], usesOnChanges: true, ngImport: i0, template: `<i-grid-viewport>
       <!-- HEADER -->
       @if (headerItems.length) {
         <i-grid-header-row>
@@ -9126,7 +9126,7 @@ class IGrid {
       </div>
     }`, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: IGridHeaderRowDirective, selector: "i-grid-header-row" }, { kind: "directive", type: IGridRowDirective, selector: "i-grid-row" }, { kind: "component", type: IGridHeaderCell, selector: "i-grid-header-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IGridCell, selector: "i-grid-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IPaginator, selector: "i-paginator", inputs: ["length", "pageIndex", "pageSize", "pageSizeOptions"], outputs: ["onPageChange"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: ITruncatedTooltipDirective, selector: "[truncatedTooltip]", inputs: ["truncatedTooltip"] }, { kind: "component", type: IGridHeaderCellGroup, selector: "i-grid-header-cell-group" }, { kind: "component", type: IGridHeaderCellGroupColumns, selector: "i-grid-header-cell-group-columns" }, { kind: "component", type: IGridViewport, selector: "i-grid-viewport" }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGrid, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGrid, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid',
@@ -9551,11 +9551,11 @@ const I_GRID_DECLARATIONS = [
     IGridHeaderCellGroupColumns,
 ];
 class IGridModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.29", ngImport: i0, type: IGridModule, imports: [IGrid, IGridViewport, IGridColumn, IGridCustomColumn, IGridColumnGroup, IGridHeaderCellDefDirective, IGridCellDefDirective, IGridRowDefDirective, IGridExpandableRow, IGridHeaderCell, IGridCell, IGridHeaderRowDirective, IGridRowDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IPaginator], exports: [IGrid, IGridViewport, IGridColumn, IGridCustomColumn, IGridColumnGroup, IGridHeaderCellDefDirective, IGridCellDefDirective, IGridRowDefDirective, IGridExpandableRow, IGridHeaderCell, IGridCell, IGridHeaderRowDirective, IGridRowDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IPaginator] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridModule });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.30", ngImport: i0, type: IGridModule, imports: [IGrid, IGridViewport, IGridColumn, IGridCustomColumn, IGridColumnGroup, IGridHeaderCellDefDirective, IGridCellDefDirective, IGridRowDefDirective, IGridExpandableRow, IGridHeaderCell, IGridCell, IGridHeaderRowDirective, IGridRowDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IPaginator], exports: [IGrid, IGridViewport, IGridColumn, IGridCustomColumn, IGridColumnGroup, IGridHeaderCellDefDirective, IGridCellDefDirective, IGridRowDefDirective, IGridExpandableRow, IGridHeaderCell, IGridCell, IGridHeaderRowDirective, IGridRowDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IPaginator] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridModule });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IGridModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IGridModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [...I_GRID_DECLARATIONS, IPaginator],
@@ -9658,8 +9658,8 @@ class IAvatar {
     onFallbackError() {
         this.hasFallbackError = true;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAvatar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IAvatar, isStandalone: true, selector: "i-avatar", inputs: { src: "src", alt: "alt", size: "size", shape: "shape", fallbackSrc: "fallbackSrc", className: "className" }, host: { properties: { "class.i-avatar": "this.baseClass", "attr.data-shape": "this.attrShape", "style.width.px": "this.resolvedSizePx", "style.height.px": "this.resolvedSizePx", "class": "this.hostClass" } }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAvatar, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IAvatar, isStandalone: true, selector: "i-avatar", inputs: { src: "src", alt: "alt", size: "size", shape: "shape", fallbackSrc: "fallbackSrc", className: "className" }, host: { properties: { "class.i-avatar": "this.baseClass", "attr.data-shape": "this.attrShape", "style.width.px": "this.resolvedSizePx", "style.height.px": "this.resolvedSizePx", "class": "this.hostClass" } }, ngImport: i0, template: `
     <!-- Primary image -->
     @if (!hasError && src) {
       <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
@@ -9674,7 +9674,7 @@ class IAvatar {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAvatar, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAvatar, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-avatar',
@@ -9723,6 +9723,1364 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 type: HostBinding,
                 args: ['class']
             }] } });
+
+/**
+ * Default environment for `@insight/ui`'s shared data layer.
+ *
+ * These are the library-wide defaults for the SSO / sidebar / user data
+ * layer. Consumer apps override any field at bootstrap via
+ * `provideInsightAuth()`.
+ */
+const environment = {
+    production: false,
+    releaseStage: 'development',
+    appName: 'Insight UI',
+    version: '1.0.2',
+    api: {
+        identity: 'https://account-dev.paramountenterprise.co.id/api',
+        user: 'https://account-dev.paramountenterprise.co.id/api/v1/users',
+        configuration: 'https://account-dev.paramountenterprise.co.id/api/v1',
+        application: 'https://account-dev.paramountenterprise.co.id/api/v1/applications',
+    },
+    signinUrl: 'https://account-dev.paramountenterprise.co.id/signin',
+    authCallbackUrl: 'https://account-dev.paramountenterprise.co.id/auth',
+    cookieDomain: '.paramountenterprise.co.id',
+    securityMode: true,
+    tokenLifespan: {
+        accessTokenSeconds: 3600,
+        refreshTokenSeconds: 7200,
+        ssoSessionMaxSeconds: 54000,
+    },
+    cookieSecure: true,
+    csrfTokenMaxAgeSeconds: 7170,
+    mfaChallengeSessionTimeoutSeconds: 300,
+    allowedReturnOrigins: [
+        'https://account-dev.paramountenterprise.co.id',
+        'https://*.paramountenterprise.co.id',
+    ],
+};
+
+/**
+ * Default `IInsightAuthConfig`, sourced from the library's default environment
+ * file (`environments/environment.ts`). Consumer apps override any field via
+ * `provideInsightAuth({ ... })`.
+ *
+ * `allowedReturnOrigins` defaults to this app's own origin (the common case —
+ * a callback only ever needs to trust redirecting back to itself) and
+ * `cookieDomain` defaults to the current hostname (informational only, the
+ * frontend never reads/sets this cookie) — both computed at call time since
+ * they depend on `window.location`.
+ */
+function getDefaultInsightAuthConfig() {
+    return {
+        api: {
+            identity: environment.api.identity,
+            user: environment.api.user,
+            configuration: environment.api.configuration,
+            application: environment.api.application,
+        },
+        signinUrl: environment.signinUrl,
+        callbackPath: '/auth/callback',
+        allowedReturnOrigins: [window.location.origin],
+        cookieDomain: window.location.hostname,
+        tokenLifespan: { ...environment.tokenLifespan },
+        csrfTokenMaxAgeSeconds: environment.csrfTokenMaxAgeSeconds,
+        apiKey: environment.apiKey,
+        appId: environment.appId,
+        unauthorizedHandling: 'dialog',
+    };
+}
+/**
+ * Injection token carrying the consumer app's `IInsightAuthConfig`. Provided via
+ * `provideInsightAuth()`. Has a root-level default (`getDefaultInsightAuthConfig()`)
+ * so the library services never break when a consumer forgets to call
+ * `provideInsightAuth()` — consumers override it explicitly.
+ */
+const INSIGHT_AUTH_CONFIG = new InjectionToken('INSIGHT_AUTH_CONFIG', {
+    providedIn: 'root',
+    factory: () => getDefaultInsightAuthConfig(),
+});
+
+/**
+ * CSRF token management — cookie-to-header pattern for @insight/ui consumer apps.
+ * Mirrors iam-web's `ICsrfService`:
+ *
+ *   1. FE calls GET {api.identity}/auth/csrf.
+ *   2. Backend returns `{ csrfToken }` in the JSON body AND sets a `csrf_token` cookie.
+ *   3. FE stores the token in memory (JS cannot read cross-origin cookies).
+ *   4. FE sends the token back as `X-CSRF-Token` header on mutating requests.
+ *   5. Backend validates: header value === cookie value.
+ *
+ * Token expiration mirrors the backend cookie maxAge (minus a safety buffer,
+ * configured via `csrfTokenMaxAgeSeconds`) so the FE transparently re-fetches
+ * before the server-side cookie actually expires.
+ */
+class ICsrfService {
+    http = inject(HttpClient);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    /** In-memory CSRF token — retrieved from the backend response body, never from document.cookie directly. */
+    token = null;
+    tokenFetchedAt = null;
+    /**
+     * Return the in-memory CSRF token, or `null` if never fetched or expired
+     * (expiry triggers callers to re-invoke `ensureToken()`).
+     */
+    getToken() {
+        if (this.token && this.isTokenExpired()) {
+            return null;
+        }
+        return this.token;
+    }
+    /** Whether the in-memory token has exceeded its TTL (`csrfTokenMaxAgeSeconds`). */
+    isTokenExpired() {
+        if (this.tokenFetchedAt === null) {
+            return false;
+        }
+        const maxAgeMs = (this.config.csrfTokenMaxAgeSeconds ?? 7170) * 1000;
+        return Date.now() - this.tokenFetchedAt >= maxAgeMs;
+    }
+    /**
+     * Fetch a fresh CSRF token from `iam-identity-api` and store it in memory.
+     * On failure the error is propagated (callers that want best-effort behavior
+     * can catch it) — a failed fetch must not be silently swallowed, e.g. so the
+     * `retryOnCsrfError` pattern can re-trigger the fetch.
+     */
+    ensureToken() {
+        return this.http
+            .get(`${this.config.api.identity}/auth/csrf`, { withCredentials: true })
+            .pipe(tap((res) => {
+            this.token = res.csrfToken ?? null;
+            this.tokenFetchedAt = Date.now();
+        }), map$1(() => undefined), catchError((err) => {
+            // Never log the token itself — status code only.
+            console.warn('[@insight/ui][CSRF] Failed to fetch CSRF token', err?.status);
+            return throwError(() => err);
+        }));
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICsrfService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICsrfService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICsrfService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Build the full external URL to iam-web's signin page for a cross-domain SSO
+ * redirect, routing the eventual handoff through THIS APP'S OWN callback
+ * route (`config.callbackPath`, default `/auth/callback`) — never through the
+ * page the user originally tried to visit.
+ *
+ * This is deliberate and fixes a real redirect loop: if the guard/interceptor
+ * used `window.location.href` (the current page) as the returnUrl directly,
+ * iam-web's handoff would append `#at=<token>` to THAT SAME page. Since that
+ * page still doesn't have a stored session yet at the moment it re-renders,
+ * the guard would fire again, capture `window.location.href` again — which
+ * NOW ALREADY CONTAINS the previous `#at=` fragment — and redirect back to
+ * iam-web with an ever-growing `returnUrl`, eventually overflowing header
+ * size limits (HTTP 431).
+ *
+ * Routing through a dedicated callback route breaks the loop: the callback
+ * page (`IAuthCallback`) consumes and strips the token BEFORE navigating
+ * (via the in-app router, not a full reload) to `targetPath` — so the guard
+ * only ever sees a clean, token-free URL on its next check.
+ */
+function buildExternalSigninUrl(config, targetPath) {
+    const callbackPath = config.callbackPath ?? '/auth/callback';
+    const callbackUrl = `${window.location.origin}${callbackPath}?returnUrl=${encodeURIComponent(targetPath)}`;
+    return `${config.signinUrl}?returnUrl=${encodeURIComponent(callbackUrl)}`;
+}
+
+const valueAt = (value, key) => {
+    if (typeof value !== 'object' || value === null) {
+        return undefined;
+    }
+    const candidate = value[key];
+    return typeof candidate === 'string' && candidate.length > 0 ? candidate : undefined;
+};
+/** Supports normalized Problem Details errors and raw legacy HTTP error bodies. */
+const extractProblemDetailsErrorCode = (error) => {
+    if (error === null || error === undefined) {
+        return undefined;
+    }
+    const problem = error;
+    return (problem.errorCode ??
+        problem.code ??
+        valueAt(error?.error, 'errorCode') ??
+        valueAt(error?.error, 'code'));
+};
+/** Maps current backend and legacy error codes to the session-expired UI states. */
+const toSessionExpiredReason = (errorCode) => {
+    switch (errorCode) {
+        case 'AUTH_TOKEN_EXPIRED':
+        case 'TOKEN_EXPIRED':
+        case 'AUTH_NO_SESSION':
+            return 'TOKEN_EXPIRED';
+        case 'AUTH_SESSION_REVOKED':
+        case 'SESSION_REVOKED':
+            return 'SESSION_REVOKED';
+        case 'AUTH_SESSION_REPLACED':
+        case 'SESSION_REPLACED':
+            return 'SESSION_REPLACED';
+        default:
+            return undefined;
+    }
+};
+/**
+ * True when an error is semantically a session-expiry event (HTTP 401/498 or a
+ * recognized session-related error code). Other statuses are business/transport
+ * errors and must be handled by the caller instead of forcing a logout.
+ */
+const isSessionExpiredError = (error) => {
+    if (error instanceof HttpErrorResponse) {
+        if (error.status === 401 || error.status === 498) {
+            return true;
+        }
+    }
+    if (error?.status === 401 || error?.status === 498) {
+        return true;
+    }
+    return toSessionExpiredReason(extractProblemDetailsErrorCode(error)) !== undefined;
+};
+/**
+ * In-memory overlay state for the session-expired UI.
+ *
+ * Besides the derived `reason`, the service also exposes the RAW backend error
+ * code and Problem Details `detail` so consumer apps (e.g. iam-web) can resolve
+ * a localized display message from their own error-catalog service without the
+ * library ever calling the configuration API.
+ *
+ * @overridable — consumers may provide `{ provide: SessionExpiredService, useClass: ... }`.
+ */
+class SessionExpiredService {
+    visible = signal(false, ...(ngDevMode ? [{ debugName: "visible" }] : []));
+    returnUrl = signal('/', ...(ngDevMode ? [{ debugName: "returnUrl" }] : []));
+    reason = signal(undefined, ...(ngDevMode ? [{ debugName: "reason" }] : []));
+    /** Raw error code from the backend Problem Details response (e.g. `AUTH_TOKEN_EXPIRED`). */
+    errorCode = signal(null, ...(ngDevMode ? [{ debugName: "errorCode" }] : []));
+    /** Backend-provided `detail` message from the Problem Details response — display fallback. */
+    detail = signal(null, ...(ngDevMode ? [{ debugName: "detail" }] : []));
+    show(returnUrl, reason, errorCode, detail) {
+        this.returnUrl.set(returnUrl || '/');
+        this.reason.set(reason);
+        this.errorCode.set(errorCode ?? null);
+        this.detail.set(detail ?? null);
+        this.visible.set(true);
+    }
+    hide() {
+        this.visible.set(false);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: SessionExpiredService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: SessionExpiredService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: SessionExpiredService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+// Sentinel header set by `IApiService` when a call opts out of the Bearer
+// header (`IApiOptions.skipBearer`). Read and stripped by this interceptor so
+// it never reaches the server.
+const IH_SKIP_BEARER_HEADER = 'X-IH-Skip-Bearer';
+// Endpoints that must never receive a Bearer header (would be circular / not
+// yet authenticated) — CSRF + silent refresh are called before a token exists.
+const AUTH_SKIP_URLS = ['/auth/csrf', '/auth/refresh'];
+const isAuthSkipUrl = (url) => AUTH_SKIP_URLS.some((skip) => url.includes(skip));
+const addAuthHeader = (req, token) => req.clone({ headers: req.headers.set('Authorization', `Bearer ${token}`) });
+/**
+ * Auth HTTP interceptor for @insight/ui consumer apps.
+ *
+ * Attaches the in-memory access token as a Bearer header. On 401, attempts a
+ * single silent refresh (via the HttpOnly refresh cookie) and retries once;
+ * on refresh failure, clears the session and redirects to iam-web's signin
+ * page. 429 (rate-limit) and 423 (lockout) responses are passed through
+ * untouched — `IApiService.enrichError()` already surfaces `retryAfter` for
+ * consumer apps to build the same UX as iam-web.
+ */
+const authInterceptor = (req, next) => {
+    const session = inject(ISessionService);
+    const config = inject(INSIGHT_AUTH_CONFIG);
+    const sessionExpired = inject(SessionExpiredService);
+    if (isAuthSkipUrl(req.url)) {
+        return next(req);
+    }
+    // Per-request opt-out (IApiService `skipBearer`): strip the sentinel header
+    // and forward the request without an Authorization header.
+    if (req.headers.has(IH_SKIP_BEARER_HEADER)) {
+        return next(req.clone({ headers: req.headers.delete(IH_SKIP_BEARER_HEADER) }));
+    }
+    const token = session.getAccessToken();
+    const outgoing = token ? addAuthHeader(req, token) : req;
+    return next(outgoing).pipe(catchError((err) => {
+        if (!(err instanceof HttpErrorResponse) || err.status !== 401) {
+            return throwError(() => err);
+        }
+        return session.refreshToken().pipe(switchMap((newToken) => next(addAuthHeader(req, newToken))), catchError((refreshErr) => {
+            session.clearSession();
+            if (config.onUnauthorized) {
+                // Consumer-provided handler takes full control of the unauthorized flow.
+                config.onUnauthorized(refreshErr);
+            }
+            else if ((config.unauthorizedHandling ?? 'dialog') === 'dialog') {
+                // Default: surface the library session-expired overlay (rendered by
+                // the consumer app) instead of leaving the page.
+                const errorCode = extractProblemDetailsErrorCode(refreshErr);
+                const reason = toSessionExpiredReason(errorCode);
+                const targetPath = window.location.pathname + window.location.search;
+                sessionExpired.show(targetPath, reason, errorCode, refreshErr?.detail);
+            }
+            else {
+                // Legacy: full-page redirect to iam-web's signin page. Use the
+                // current path (no hash/token) as the target, routed through the
+                // callback route, same as authGuard, to avoid a redirect loop.
+                const targetPath = window.location.pathname + window.location.search;
+                window.location.href = buildExternalSigninUrl(config, targetPath);
+            }
+            return throwError(() => refreshErr);
+        }));
+    }));
+};
+
+/**
+ * Standardized HTTP client for @insight/ui consumer apps.
+ * Mirrors iam-web's `IApiService`: `withCredentials: true` on every request
+ * (required for the CSRF cookie and the HttpOnly refresh cookie to flow),
+ * automatic `X-CSRF-Token` header injection, transparent response typing
+ * (`T`, no wrapper), and RFC 9457 Problem Details error enrichment matching
+ * the exact shape iam-web already produces (`status`/`detail`/`retryAfter`)
+ * so consumer apps can reuse the `err?.detail ?? 'fallback'` convention.
+ */
+class IApiService {
+    http = inject(HttpClient);
+    csrf = inject(ICsrfService);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    get headers() {
+        const base = {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        };
+        const csrfToken = this.csrf.getToken();
+        if (csrfToken) {
+            base['X-CSRF-Token'] = csrfToken;
+        }
+        if (this.config.apiKey) {
+            base['Api-Key'] = this.config.apiKey;
+        }
+        return base;
+    }
+    /** Merge default headers with per-call overrides, adding the skip-bearer sentinel when requested. */
+    mergeHeaders(options) {
+        const merged = { ...this.headers, ...options?.headers };
+        if (options?.skipBearer) {
+            merged[IH_SKIP_BEARER_HEADER] = 'true';
+        }
+        return merged;
+    }
+    /**
+     * Normalize a raw `HttpErrorResponse` into a consistent shape:
+     * `{ status, detail, retryAfter, ...rest }`. `retryAfter` is read from the
+     * body or the `Retry-After` header, so 429/423 responses surface it
+     * untouched for rate-limit/lockout UX.
+     */
+    enrichError(err) {
+        const body = err?.error;
+        if (body && typeof body === 'object' && !Array.isArray(body)) {
+            const retryAfterFromHeader = err?.headers?.get?.('Retry-After');
+            const parsedHeader = retryAfterFromHeader ? Number(retryAfterFromHeader) : NaN;
+            const retryAfter = (typeof body.retryAfter === 'number' ? body.retryAfter : undefined) ??
+                (Number.isFinite(parsedHeader) ? parsedHeader : undefined);
+            return throwError(() => ({
+                ...body,
+                status: err?.status ?? body.status,
+                message: err?.message ?? body.message,
+                detail: body.detail ?? body.title ?? err?.message ?? 'An error occurred',
+                retryAfter,
+            }));
+        }
+        return throwError(() => err);
+    }
+    get(path, params, options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const mergedHeaders = this.mergeHeaders(options);
+        return this.http
+            .get(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders })
+            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+    }
+    post(path, body = {}, options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const mergedHeaders = this.mergeHeaders(options);
+        return this.http
+            .post(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
+            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+    }
+    put(path, body = {}, options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const mergedHeaders = this.mergeHeaders(options);
+        return this.http
+            .put(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
+            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+    }
+    delete(path, options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const mergedHeaders = this.mergeHeaders(options);
+        // Fastify rejects Content-Type: application/json with an empty body
+        if (!options?.body) {
+            delete mergedHeaders['Content-Type'];
+        }
+        return this.http
+            .delete(`${baseUrl}${path}`, {
+            withCredentials: true,
+            headers: mergedHeaders,
+            body: options?.body,
+        })
+            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+    }
+    getBlob(path, params, options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const mergedHeaders = this.mergeHeaders(options);
+        return this.http
+            .get(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders, responseType: 'blob' })
+            .pipe(catchError((err) => this.enrichError(err)));
+    }
+    upload(path, file, options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const body = file instanceof FormData
+            ? file
+            : (() => {
+                const fd = new FormData();
+                fd.append('file', file);
+                return fd;
+            })();
+        // Content-Type intentionally omitted — the browser sets the multipart boundary automatically.
+        const headers = { ...options?.headers };
+        const csrfToken = this.csrf.getToken();
+        if (csrfToken) {
+            headers['X-CSRF-Token'] = csrfToken;
+        }
+        if (this.config.apiKey) {
+            headers['Api-Key'] = this.config.apiKey;
+        }
+        if (options?.skipBearer) {
+            headers[IH_SKIP_BEARER_HEADER] = 'true';
+        }
+        return this.http
+            .post(`${baseUrl}${path}`, body, { withCredentials: true, headers })
+            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IApiService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IApiService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IApiService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Login lockout constants (local, client-side supplement to Keycloak
+ * brute-force protection). 5 failed attempts → 1-minute suspend; counter
+ * resets after 12h idle or a successful login.
+ */
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 1 * 60 * 1000;
+const IDLE_RESET_MS = 12 * 60 * 60 * 1000;
+const LOCK_STORAGE_KEY = 'iam.mock.login_lockout';
+/**
+ * iam-identity-api auth facade (Mode 2 proxy — Keycloak is never exposed to the
+ * frontend). Base URL = `{api.identity}` from the resolved auth config.
+ *
+ * @overridable — consumers may provide `{ provide: IAuthService, useClass: ... }`.
+ */
+class IAuthService {
+    api = inject(IApiService);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    get identityUrl() {
+        return this.config.api.identity;
+    }
+    login(username, password, recaptchaToken, isChallengeResponse) {
+        const cleanUsername = username.trim().toLowerCase();
+        const lockData = this.getLockoutData(cleanUsername);
+        if (lockData.lockedUntil && lockData.lockedUntil > Date.now()) {
+            const retryAfter = Math.ceil((lockData.lockedUntil - Date.now()) / 1000);
+            return throwError(() => ({
+                status: 423,
+                message: 'Login access is temporarily restricted. Please try again in a few moments.',
+                detail: 'Login access is temporarily restricted. Please try again in a few moments.',
+                retryAfter,
+            }));
+        }
+        return this.api
+            .post('/auth/login', {
+            username,
+            password,
+            recaptchaToken,
+            isChallengeResponse: isChallengeResponse ?? false,
+        })
+            .pipe(tap((res) => {
+            if (res.accessToken || res.mfaRequired || res.passwordExpired) {
+                this.resetLockout(cleanUsername);
+            }
+        }), catchError((err) => {
+            if (err?.status === 401 || err?.status === 423) {
+                this.recordFailedAttempt(cleanUsername);
+            }
+            return throwError(() => err);
+        }));
+    }
+    /** Silently refresh the access token via the HttpOnly refresh-token cookie. */
+    refresh() {
+        return this.api.post('/auth/refresh', {});
+    }
+    /** Clear the server-side session and expire the HttpOnly refresh cookie. */
+    logout(refreshToken) {
+        return this.api.post('/auth/logout', { refreshToken }).pipe(map$1(() => undefined));
+    }
+    /** Exchange a short-lived `at=` auth token for a full session (cross-app handoff). */
+    exchangeAuthToken(authToken) {
+        return this.api.post('/auth/exchange', {}, { headers: { Authorization: authToken } });
+    }
+    /** Verify the MFA TOTP code during a login challenge. */
+    verifyMfaChallenge(mfaSessionId, totpCode) {
+        return this.api.post('/auth/mfa/verify', { mfaSessionId, totpCode });
+    }
+    /** Verify the TOTP code during first-time MFA enrollment (forced at login). */
+    verifyMfaEnroll(mfaSessionId, totpCode) {
+        return this.api.post('/auth/mfa/enroll/verify', { mfaSessionId, totpCode });
+    }
+    /** Self-service MFA — check enrollment status (`GET /profile/mfa`). */
+    selfServiceGetStatus() {
+        return this.api.get('/profile/mfa');
+    }
+    /** Self-service MFA — initiate enrollment to get the QR & session id (`POST /profile/mfa/enroll`). */
+    selfServiceEnrollInitiate() {
+        return this.api.post('/profile/mfa/enroll', {});
+    }
+    /** Self-service MFA — verify OTP and complete enrollment (`POST /profile/mfa/enroll/verify`). */
+    selfServiceEnrollVerify(enrollmentSessionId, totpCode) {
+        return this.api
+            .post('/profile/mfa/enroll/verify', { enrollmentSessionId, totpCode })
+            .pipe(map$1(() => undefined));
+    }
+    /** Self-service reset (un-enroll) MFA for the current user — requires password (`DELETE /profile/mfa`). */
+    selfServiceResetMfa(userSub, password) {
+        return this.api
+            .delete('/profile/mfa', { apiUrl: this.identityUrl, body: { password } })
+            .pipe(map$1(() => undefined));
+    }
+    /**
+     * Change password when it has expired (forced change flow). Uses a short-lived
+     * `changePasswordToken` (10 min, scope `change_password_only`) as the Bearer
+     * header. Backend returns a full accessToken on success so the user continues
+     * seamlessly without re-login.
+     */
+    changePassword(changePasswordToken, newPassword, confirmPassword) {
+        return this.api.post('/auth/change-password', { newPassword, confirmPassword }, { headers: { Authorization: `Bearer ${changePasswordToken}` } });
+    }
+    /** Request a password-reset link via email or WhatsApp (`POST /auth/forgot-password`). */
+    forgotPassword(identifier, mode) {
+        return this.api.post('/auth/forgot-password', {
+            identifier,
+            method: mode,
+        });
+    }
+    /** Validate a reset token before showing the reset form (`GET /auth/reset-password/validate`). */
+    validateResetToken(token) {
+        return this.api.get('/auth/reset-password/validate', new HttpParams().set('token', token));
+    }
+    /** Submit a new password using the reset token (`POST /auth/reset-password`). */
+    resetPassword(token, newPassword, confirmPassword) {
+        return this.api.post('/auth/reset-password', { token, newPassword, confirmPassword });
+    }
+    // ─── Login lockout helpers (sessionStorage per-username) ─────────────────────
+    getLockoutData(username) {
+        try {
+            const raw = sessionStorage.getItem(`${LOCK_STORAGE_KEY}_${username}`);
+            const data = raw ? JSON.parse(raw) : { attempts: 0, lockedUntil: null, lastAttemptAt: null };
+            if (data.lastAttemptAt && Date.now() - data.lastAttemptAt >= IDLE_RESET_MS) {
+                return { attempts: 0, lockedUntil: null, lastAttemptAt: null };
+            }
+            return data;
+        }
+        catch {
+            return { attempts: 0, lockedUntil: null, lastAttemptAt: null };
+        }
+    }
+    recordFailedAttempt(username) {
+        const data = this.getLockoutData(username);
+        data.attempts += 1;
+        data.lastAttemptAt = Date.now();
+        if (data.attempts >= MAX_LOGIN_ATTEMPTS - 1) {
+            data.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+        }
+        sessionStorage.setItem(`${LOCK_STORAGE_KEY}_${username}`, JSON.stringify(data));
+    }
+    resetLockout(username) {
+        sessionStorage.removeItem(`${LOCK_STORAGE_KEY}_${username}`);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAuthService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAuthService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAuthService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/** Hard timeout for the single-flight refresh call (ms). */
+const REFRESH_TIMEOUT_MS = 30_000;
+/**
+ * Minimal inline JWT payload decode — deliberately NOT using
+ * `@auth0/angular-jwt` to avoid forcing a new dependency onto every
+ * @insight/ui consumer. Returns `null` on any decode failure.
+ */
+function decodeJwtPayload(token) {
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) {
+            return null;
+        }
+        const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+        const json = decodeURIComponent(atob(padded)
+            .split('')
+            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join(''));
+        return JSON.parse(json);
+    }
+    catch {
+        return null;
+    }
+}
+/** Decodes an `IAuthUser` from the token's Keycloak claims. */
+function decodeUser(accessToken) {
+    const decoded = decodeJwtPayload(accessToken);
+    const realmAccess = decoded?.['realm_access'];
+    const roles = Array.isArray(realmAccess?.roles) ? realmAccess.roles : [];
+    return {
+        sub: typeof decoded?.['sub'] === 'string' ? decoded['sub'] : '',
+        email: typeof decoded?.['email'] === 'string' ? decoded['email'] : '',
+        name: typeof decoded?.['name'] === 'string' ? decoded['name'] : '',
+        roles,
+        userType: decoded?.['user_type'] === 'external' ? 'external' : 'internal',
+    };
+}
+/**
+ * Session management for @insight/ui consumer apps.
+ *
+ * Access token: stored IN MEMORY only (never Web Storage). Refresh token:
+ * HttpOnly cookie managed exclusively by iam-identity-api; this service never
+ * reads or stores it directly (an in-memory `refreshToken` is kept only for
+ * server-side logout).
+ *
+ * Superset of the basic SSO session (used by remote apps via `setAccessToken` /
+ * `authGuard` / `IAuthCallback`) and the richer iam-web session (session
+ * restore, password-expiry, change-password token, proactive validation,
+ * session-expired overlay).
+ *
+ * @overridable — consumers may provide `{ provide: ISessionService, useClass: ... }`.
+ */
+class ISessionService {
+    authService = inject(IAuthService);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    sessionExpiredService = inject(SessionExpiredService);
+    csrf = inject(ICsrfService);
+    // In-memory token storage — intentionally NOT persisted to Web Storage.
+    accessToken = null;
+    _refreshToken = null;
+    expiresAt = null;
+    sessionStartedAt = null;
+    currentUser = null;
+    passwordExpired = false;
+    changePasswordTokenValue = null;
+    lastVerifiedAt = 0;
+    /**
+     * True while the app is restoring/validating the session on load (starts
+     * `true` on cold start so guards can allow navigation during the restore and
+     * consumer apps can show a loading state). Cleared once the session is
+     * established (`setAccessToken`/`setSession`) or `tryRestoreSession()` settles.
+     */
+    initializing = signal(true, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
+    // Single-flight refresh: one in-flight /auth/refresh shared by all callers,
+    // retained until it completes/errors so a cancelled caller cannot abort it.
+    refreshInFlight = null;
+    // Single-flight cold-start restore so multiple callers (e.g. provideInsightAuth()
+    // via APP_INITIALIZER and a consumer's root component) never trigger duplicate
+    // /auth/refresh requests.
+    restoreInFlight = null;
+    isAuth() {
+        return !!this.accessToken && !this.isTokenExpired() && !this.isSsoSessionExpired();
+    }
+    isTokenExpired() {
+        if (!this.accessToken || this.expiresAt === null) {
+            return true;
+        }
+        return Date.now() >= this.expiresAt;
+    }
+    /**
+     * Whether the max SSO session duration has been exceeded (default 15h,
+     * configured via `tokenLifespan.ssoSessionMaxSeconds`). After this, the
+     * user must re-authenticate regardless of token state.
+     */
+    isSsoSessionExpired() {
+        if (this.sessionStartedAt === null) {
+            return false;
+        }
+        const maxDurationMs = this.config.tokenLifespan.ssoSessionMaxSeconds * 1000;
+        return Date.now() - this.sessionStartedAt >= maxDurationMs;
+    }
+    isPasswordExpired() {
+        return this.passwordExpired;
+    }
+    clearPasswordExpired() {
+        this.passwordExpired = false;
+    }
+    setPasswordExpired() {
+        this.passwordExpired = true;
+    }
+    setChangePasswordToken(token) {
+        this.changePasswordTokenValue = token;
+        sessionStorage.setItem('iam.changePasswordToken', token);
+    }
+    getChangePasswordToken() {
+        if (this.changePasswordTokenValue) {
+            return this.changePasswordTokenValue;
+        }
+        const stored = sessionStorage.getItem('iam.changePasswordToken');
+        if (stored) {
+            this.changePasswordTokenValue = stored;
+            return stored;
+        }
+        return null;
+    }
+    clearChangePasswordToken() {
+        this.changePasswordTokenValue = null;
+        sessionStorage.removeItem('iam.changePasswordToken');
+    }
+    getAccessToken() {
+        return this.accessToken;
+    }
+    getRefreshToken() {
+        return this._refreshToken;
+    }
+    getUser() {
+        return this.currentUser;
+    }
+    /** Role-membership check against the decoded token roles (ANY match). */
+    hasMn(mn) {
+        const roles = this.getRoles();
+        if (Array.isArray(mn)) {
+            return mn.some((m) => roles.includes(m));
+        }
+        return roles.includes(mn);
+    }
+    /**
+     * Roles claimed by the current access token (Keycloak `realm_access.roles`).
+     * Returns an empty array while no token is set. Used by role-mode permission
+     * checks (`ihHasMn` / `ihNotHasMn` with `source: 'role'`).
+     */
+    getRoles() {
+        if (!this.accessToken) {
+            return [];
+        }
+        const decoded = decodeJwtPayload(this.accessToken);
+        const roles = decoded?.realm_access?.roles;
+        return Array.isArray(roles) ? roles.filter((role) => typeof role === 'string') : [];
+    }
+    /** True if the current access token claims ANY of the given roles. */
+    hasRole(code) {
+        const roles = this.getRoles();
+        if (Array.isArray(code)) {
+            return code.some((role) => roles.includes(role));
+        }
+        return roles.includes(code);
+    }
+    /**
+     * Store the access token received from the SSO handoff (URL hash fragment)
+     * or from a refresh response. `expiresIn` (seconds) defaults to the token's
+     * own `exp` claim, then falls back to the configured `accessTokenSeconds`.
+     */
+    setAccessToken(accessToken, expiresIn) {
+        this.accessToken = accessToken;
+        const effectiveExpiresIn = expiresIn ?? this.readExpiresInFromToken(accessToken) ?? this.config.tokenLifespan.accessTokenSeconds;
+        // 30-second buffer to avoid edge cases, matches iam-web's convention.
+        this.expiresAt = Date.now() + (effectiveExpiresIn - 30) * 1000;
+        if (this.sessionStartedAt === null) {
+            this.sessionStartedAt = Date.now();
+        }
+        this.initializing.set(false);
+    }
+    /**
+     * Full session establishment (login / MFA / exchange / refresh). Sets the
+     * user, decodes password-expiry claims, stamps the last-verified time, and
+     * marks an active session so `tryRestoreSession()` can distinguish a cold
+     * start from a refresh-after-revocation.
+     */
+    setSession(accessToken, expiresIn, user, refreshToken) {
+        this.accessToken = accessToken;
+        if (refreshToken) {
+            this._refreshToken = refreshToken;
+        }
+        this.expiresAt = Date.now() + (expiresIn - 30) * 1000;
+        this.currentUser = user;
+        this.sessionStartedAt = Date.now();
+        const decoded = decodeJwtPayload(accessToken);
+        const neverExpired = decoded?.['never_expired'] === true;
+        const pwdExpired = decoded?.['pwd_expired'] === true;
+        this.passwordExpired = !neverExpired && pwdExpired;
+        sessionStorage.setItem('iam.session.active', 'true');
+        this.lastVerifiedAt = Date.now();
+        this.initializing.set(false);
+    }
+    clearSession() {
+        this.accessToken = null;
+        this._refreshToken = null;
+        this.expiresAt = null;
+        this.currentUser = null;
+        this.passwordExpired = false;
+        this.sessionStartedAt = null;
+        this.changePasswordTokenValue = null;
+        sessionStorage.removeItem('iam.changePasswordToken');
+        // NOTE: `iam.session.active` is intentionally NOT cleared here — it must
+        // survive mid-session revocation so `tryRestoreSession()` can detect
+        // "refresh after revocation" on the next load; explicit logout clears it.
+    }
+    /**
+     * Clears the client-side session AND invalidates the server-side session
+     * by revoking the refresh token. Returns an observable that completes after
+     * the server logout call finishes (or fails — failures are swallowed so the
+     * user is never stuck on a logout page).
+     */
+    logout() {
+        const refreshToken = this._refreshToken ?? undefined;
+        this.clearSession();
+        // Explicit logout also clears the "active session" flag so a later
+        // tryRestoreSession() treats the next load as a cold start, not a
+        // refresh-after-revocation.
+        sessionStorage.removeItem('iam.session.active');
+        // Ensure a valid CSRF token first: the backend CsrfGuard requires
+        // X-CSRF-Token on POST /auth/logout. Consumers that only hold the access
+        // token (e.g. `#at=` handoff) never fetched a CSRF token, so without this
+        // their logout is rejected with 403 and the shared HttpOnly refresh cookie
+        // is never cleared — other apps in the browser stay logged in.
+        return this.csrf.ensureToken().pipe(catchError(() => of(undefined)), // best-effort: still attempt the logout
+        switchMap(() => this.authService.logout(refreshToken)), catchError(() => of(undefined)), map$1(() => undefined));
+    }
+    /**
+     * Silently refresh the access token via the HttpOnly refresh cookie
+     * (`POST {api.identity}/auth/refresh`, `withCredentials: true`).
+     * Single-flight: concurrent callers share the in-flight refresh; the shared
+     * observable is retained until it completes/errors so a cancelled caller
+     * cannot abort the fetch.
+     */
+    refreshToken() {
+        let inFlight = this.refreshInFlight;
+        if (!inFlight) {
+            const source = this.authService.refresh().pipe(timeout({
+                each: REFRESH_TIMEOUT_MS,
+                with: () => throwError(() => new Error(`Refresh request timed out after ${REFRESH_TIMEOUT_MS}ms`)),
+            }), tap((res) => {
+                this.setSession(res.accessToken, res.expiresIn, this.currentUser ?? decodeUser(res.accessToken), res.refreshToken);
+            }), map$1((res) => res.accessToken), catchError((err) => {
+                console.warn('[@insight/ui][SESSION] silent refresh failed', {
+                    status: err?.status,
+                    errorCode: extractProblemDetailsErrorCode(err),
+                });
+                return throwError(() => err);
+            }), shareReplay({ bufferSize: 1, refCount: true }));
+            inFlight = source;
+            this.refreshInFlight = source;
+            source.subscribe({
+                error: () => {
+                    this.refreshInFlight = null;
+                },
+                complete: () => {
+                    this.refreshInFlight = null;
+                },
+            });
+        }
+        return inFlight;
+    }
+    /** True if the session was verified against the backend within `cooldownMs` (default 30s). */
+    isRecentlyVerified(cooldownMs = 30_000) {
+        return !!this.accessToken && Date.now() - this.lastVerifiedAt < cooldownMs;
+    }
+    /**
+     * Proactive session validation for guards. Refreshes the token to check
+     * session validity WITHOUT resetting the SSO session timer. Skips the refresh
+     * if the last check was within 30 seconds. Throws if the session was revoked
+     * (e.g. `SESSION_REPLACED`).
+     */
+    proactiveValidate() {
+        if (this.isRecentlyVerified()) {
+            return of(this.accessToken);
+        }
+        const savedStartedAt = this.sessionStartedAt;
+        return this.refreshToken().pipe(tap(() => {
+            this.sessionStartedAt = savedStartedAt;
+        }));
+    }
+    /**
+     * Cold-start session restore from the HttpOnly cookie (called on app load).
+     * Skips non-signin auth sub-pages (forgot/reset password, MFA, callback).
+     * The signin page ALWAYS attempts the silent refresh: when the shared SSO
+     * cookie is still valid (e.g. after logging in via another app), restoring
+     * lets the signin page auto-redirect to the returnUrl / authenticated
+     * landing; when there is no session the refresh fails and the login form
+     * shows. (Explicit logout clears the cookie, so a bare signin after logout
+     * still ends up on the login form.) Shows the session-expired overlay when
+     * refreshing after a previously-active session. Returns the reason (if any)
+     * extracted from the error so the guard can decide overlay vs. signin.
+     */
+    tryRestoreSession() {
+        if (this.restoreInFlight) {
+            return this.restoreInFlight;
+        }
+        const pathname = window.location.pathname ?? '';
+        const isSigninPage = /^\/auth\/signin$|^\/signin$/i.test(pathname);
+        const isOtherAuthPage = /^\/auth(\/|$)|^\/forgot-password|^\/reset-password/i.test(pathname) && !isSigninPage;
+        if (isOtherAuthPage) {
+            this.initializing.set(false);
+            return Promise.resolve({});
+        }
+        const restorePromise = lastValueFrom(this.authService.refresh().pipe(tap((res) => {
+            this.setSession(res.accessToken, res.expiresIn, decodeUser(res.accessToken), res.refreshToken);
+        }), map$1(() => ({}))), { defaultValue: {} }).catch((err) => {
+            console.debug('[@insight/ui][SESSION] tryRestoreSession: FAILED', {
+                status: err?.status,
+            });
+            const rawErrorCode = extractProblemDetailsErrorCode(err);
+            const code = toSessionExpiredReason(rawErrorCode);
+            const wasActive = sessionStorage.getItem('iam.session.active') === 'true';
+            // The session-expired overlay is only for mid-session revocation while the
+            // user is browsing the app. NEVER show it over an auth/signin page — a
+            // failed restore there simply means "show the login form". This matters
+            // for cross-app logouts: `iam.session.active` lives in THIS origin's
+            // sessionStorage and is NOT cleared when the user logs out from another
+            // SSO app (e.g. atlas-web), so without this guard the stale flag would
+            // wrongly pop the overlay on the signin page after an external logout.
+            const isAuthPage = /^\/auth(\/|$)|^\/signin$|^\/logout$/i.test(pathname);
+            if (wasActive && !isAuthPage && isSessionExpiredError(err)) {
+                // Pass the raw backend error code + detail through so the consumer app
+                // can resolve a localized message from its own error-catalog service.
+                this.sessionExpiredService.show(pathname, code ?? 'TOKEN_EXPIRED', rawErrorCode, err?.detail);
+            }
+            if (isSessionExpiredError(err)) {
+                this.authService.logout().subscribe({ error: () => void 0 });
+            }
+            return { reason: code };
+        });
+        const safetyTimer = new Promise((r) => setTimeout(() => r({}), 10_000));
+        this.restoreInFlight = Promise.race([restorePromise, safetyTimer]).finally(() => {
+            this.initializing.set(false);
+        });
+        return this.restoreInFlight;
+    }
+    readExpiresInFromToken(token) {
+        const decoded = decodeJwtPayload(token);
+        if (!decoded || typeof decoded['exp'] !== 'number') {
+            return null;
+        }
+        return Math.max(0, decoded['exp'] - Math.floor(Date.now() / 1000));
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISessionService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISessionService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISessionService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Types for the current-user navigation & favorites data, matched to the
+ * iam-user-api user-menu service contract (`GET {api.user}/me/menus*` and
+ * `GET {api.user}/users/user`). These are the raw backend shapes; the library
+ * maps them onto the UI-facing `IMenu` / `IUser` contracts via `user.mapper.ts`.
+ */
+
+/**
+ * Maps the backend current-user DTO to `@insight/ui`'s sidebar `IUser` shape
+ * (`employeeCode` / `fullName` / `userImagePath`), falling back to `username`.
+ * `userImagePath` is `''` when no photo exists — the sidebar renders it with
+ * `i-avatar`, which falls back to a user icon when the image is empty/errors.
+ */
+function mapToSidebarUser(user) {
+    return {
+        employeeCode: user.employeeCode ?? user.username ?? '',
+        fullName: user.fullName ?? user.username ?? '',
+        userImagePath: user.photoUrl ?? '',
+    };
+}
+/** Maps a backend effective-menu node onto the UI-facing `IMenu` (modern shape). */
+function toIMenu(node) {
+    return {
+        id: node.id,
+        name: node.name,
+        type: node.type,
+        menuCode: node.menuCode,
+        route: node.route,
+        icon: node.icon,
+        openIn: node.openIn,
+        application: node.application ? { ...node.application } : null,
+        companies: node.companies?.map((company) => ({ ...company })) ?? [],
+        isFavorite: node.isFavorite,
+        children: node.children?.map(toIMenu) ?? [],
+    };
+}
+/** Maps an array of backend effective-menu nodes onto `IMenu[]`. */
+function toIMenus(nodes) {
+    return (nodes ?? []).map(toIMenu);
+}
+/** Maps a backend favorite item onto the UI-facing `IMenu` (modern shape). */
+function toIMenuFavorite(item) {
+    return {
+        id: item.id,
+        name: item.name,
+        menuCode: item.menuCode,
+        route: item.route,
+        icon: item.icon,
+        openIn: item.openIn,
+        application: item.application ? { ...item.application } : null,
+        companies: item.companies?.map((company) => ({ ...company })) ?? [],
+        isFavorite: true,
+    };
+}
+/** Recursively collects every non-null `menuCode` across a menu tree (deduplicated, order preserved). */
+function collectMenuCodes(menus) {
+    const codes = new Set();
+    const walk = (nodes) => {
+        for (const node of nodes) {
+            if (node.menuCode) {
+                codes.add(node.menuCode);
+            }
+            walk(getMenuChildren(node));
+        }
+    };
+    walk(menus);
+    return [...codes];
+}
+/**
+ * Menu-mode permission check: returns true if the user's loaded menus contain
+ * ANY of the given menu codes. An empty set of menus (not yet loaded) always
+ * returns `false` — gated UI renders only once the store has data.
+ */
+function hasAnyMenuCode(menus, code) {
+    const codes = new Set(collectMenuCodes(menus));
+    if (Array.isArray(code)) {
+        return code.some((item) => codes.has(item));
+    }
+    return codes.has(code);
+}
+/** First navigable leaf route in a menu tree — a sensible post-login default landing. */
+function findFirstLeafRoute(menus) {
+    for (const menu of menus) {
+        if (isLeafItem(menu)) {
+            const route = getMenuRoute(menu);
+            if (route) {
+                return route;
+            }
+        }
+        const childRoute = findFirstLeafRoute(getMenuChildren(menu));
+        if (childRoute) {
+            return childRoute;
+        }
+    }
+    return null;
+}
+/** Finds a menu node's display name by id (recursive), or null. */
+function findMenuNameById(menus, menuId) {
+    for (const menu of menus) {
+        if (getMenuKey(menu) === menuId) {
+            const label = getMenuLabel(menu);
+            return label || null;
+        }
+        const child = findMenuNameById(getMenuChildren(menu), menuId);
+        if (child) {
+            return child;
+        }
+    }
+    return null;
+}
+
+/**
+ * Current-user navigation & favorites service — calls iam-user-api's
+ * `/me/menus*` endpoints (user-menu service contract). These endpoints return
+ * a `{ meta, data }` envelope; this service unwraps `.data` so callers keep
+ * the app-wide body-as-data convention.
+ *
+ * Base URL: `{api.user}` from the resolved auth config (defaults to the
+ * library environment file). Consumer apps override via
+ * `provideInsightAuth({ api: { user: '...' } })`.
+ */
+class IUserMenuService {
+    api = inject(IApiService);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    get baseUrl() {
+        return this.config.api['user'] ?? environment.api.user;
+    }
+    /** GET `{api.user}/me/menus` — effective navigation tree for one or all active applications. Output type overridable via `T`. */
+    getEffectiveMenus(applicationId) {
+        const id = applicationId ?? this.config.appId;
+        const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
+        return this.api
+            .get('/me/menus', params, { apiUrl: this.baseUrl })
+            .pipe(map((response) => response.data));
+    }
+    /** GET `{api.user}/me/menus/favorites` — effective favorite items, sorted by name. Output type overridable via `T`. */
+    getFavorites(applicationId) {
+        const id = applicationId ?? this.config.appId;
+        const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
+        return this.api
+            .get('/me/menus/favorites', params, { apiUrl: this.baseUrl })
+            .pipe(map((response) => response.data));
+    }
+    /** PUT `{api.user}/me/menus/{menuId}/favorite` — pin an effective menu item (204 No Content). */
+    addFavorite(menuId) {
+        return this.api.put(`/me/menus/${menuId}/favorite`, {}, { apiUrl: this.baseUrl });
+    }
+    /** DELETE `{api.user}/me/menus/{menuId}/favorite` — unpin a menu item (204 No Content). */
+    removeFavorite(menuId) {
+        return this.api.delete(`/me/menus/${menuId}/favorite`, { apiUrl: this.baseUrl });
+    }
+    /**
+     * PUT `{api.user}/me/menus/favorites` — atomically replace the complete
+     * favorite collection after a drag-drop. `displayOrder` values form the
+     * complete sequence 1..n. Returns 204 No Content.
+     */
+    reorderFavorites(menuIds) {
+        const items = menuIds.map((menuId, index) => ({
+            menuId: String(menuId),
+            displayOrder: index + 1,
+        }));
+        return this.api.put('/me/menus/favorites', { items }, { apiUrl: this.baseUrl });
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Current-user profile service — calls iam-user-api's `GET {api.user}/users/user`
+ * endpoint (`CurrentUserDto`). The sidebar-shaped mapping (`IUser`) lives in
+ * `user.mapper.ts` (`mapToSidebarUser`).
+ *
+ * Base URL: `{api.user}` from the resolved auth config (defaults to the
+ * library environment file). Output type overridable via the generic — the
+ * library default is the raw `IInsightCurrentUser` DTO.
+ */
+class ICurrentUserService {
+    api = inject(IApiService);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    get baseUrl() {
+        return this.config.api['user'] ?? environment.api.user;
+    }
+    /** GET `{api.user}/users/user` — raw current-user DTO. Override `T` to use your own response type. */
+    getCurrentUser() {
+        return this.api.get('/users/user', undefined, { apiUrl: this.baseUrl });
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICurrentUserService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICurrentUserService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICurrentUserService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * In-memory store for the current user's sidebar data — user profile, effective
+ * navigation menus, favorites — and permission checks.
+ *
+ * Everything lives in memory (signals); NOTHING is persisted to Web Storage.
+ * On a cold start (page load) consumers call `load()` to re-fetch user, menus
+ * and favorites; the store then re-emits so gated UI (`ihHasMn` /
+ * `ihNotHasMn`) re-renders reactively once data is available (async-aware).
+ */
+class IUserMenuStore {
+    currentUserService = inject(ICurrentUserService);
+    menuService = inject(IUserMenuService);
+    session = inject(ISessionService);
+    /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
+    currentUser = signal(null, ...(ngDevMode ? [{ debugName: "currentUser" }] : []));
+    /** Raw current-user DTO as returned by the backend — `null` until loaded. */
+    rawCurrentUser = signal(null, ...(ngDevMode ? [{ debugName: "rawCurrentUser" }] : []));
+    /** Effective navigation tree (`IMenu` modern shape). */
+    menus = signal([], ...(ngDevMode ? [{ debugName: "menus" }] : []));
+    /** Favorite menus (`IMenu` modern shape). */
+    favorites = signal([], ...(ngDevMode ? [{ debugName: "favorites" }] : []));
+    /** Roles decoded from the access token (for `source: 'role'` permission checks). */
+    roles = signal([], ...(ngDevMode ? [{ debugName: "roles" }] : []));
+    /** True while the cold-start `load()` is in flight. */
+    initializing = signal(false, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
+    /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
+    loadError = signal(null, ...(ngDevMode ? [{ debugName: "loadError" }] : []));
+    // Reactive observable projections (used by directives/components that prefer
+    // observables over signals).
+    currentUser$ = toObservable(this.currentUser);
+    menus$ = toObservable(this.menus);
+    favorites$ = toObservable(this.favorites);
+    roles$ = toObservable(this.roles);
+    initializing$ = toObservable(this.initializing);
+    /**
+     * Post-login default landing (when no return URL is present).
+     * Order: (1) first navigable favorite route, (2) first navigable menu route.
+     */
+    get defaultRoute() {
+        return findFirstLeafRoute(this.favorites()) ?? findFirstLeafRoute(this.menus());
+    }
+    /** Finds a menu node's display name by id (recursive), or null. */
+    findMenuName(menuId) {
+        return findMenuNameById(this.menus(), menuId);
+    }
+    /**
+     * Cold-start: fetch user + menus + favorites concurrently. A failure in one
+     * branch does not block the others; `initializing` clears once all settle.
+     *
+     * Returns an observable that completes when the load settles, so callers can
+     * await it (e.g. to navigate to `defaultRoute` after login). The load starts
+     * immediately even if the caller ignores the returned observable — a shared
+     * source is kept alive by an internal subscribe (fire-and-forget compatible).
+     */
+    load() {
+        if (this.initializing()) {
+            return this.initializing$.pipe(filter((init) => !init), take(1), map(() => undefined));
+        }
+        this.initializing.set(true);
+        this.loadError.set(null);
+        this.roles.set(this.session.getRoles());
+        const result$ = forkJoin({
+            user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err))),
+            menus: this.loadMenusInternal().pipe(catchError((err) => this.recordError('menus', err))),
+            favorites: this.loadFavoritesInternal().pipe(catchError((err) => this.recordError('favorites', err))),
+        }).pipe(map(() => undefined), catchError(() => of(undefined)), finalize(() => this.initializing.set(false)), shareReplay({ bufferSize: 1, refCount: false }));
+        // Fire-and-forget: always start the load even if the caller ignores the result.
+        result$.subscribe();
+        return result$;
+    }
+    /** Refresh roles from the current access token (call after login / token change). */
+    syncRoles() {
+        this.roles.set(this.session.getRoles());
+    }
+    /**
+     * Menu-mode permission check against the in-memory menu codes (ANY match).
+     * Returns `false` while menus are not yet loaded — gated UI renders only
+     * after the store has data (async-aware via the reactive directives).
+     */
+    hasMenu(code) {
+        return hasAnyMenuCode(this.menus(), code);
+    }
+    /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
+    hasRole(code) {
+        const roles = this.roles();
+        if (Array.isArray(code)) {
+            return code.some((role) => roles.includes(role));
+        }
+        return roles.includes(code);
+    }
+    /**
+     * Pin (`isFavorite: true`) or unpin a menu item. Flips the star icon in the
+     * `menus` tree immediately (optimistic), calls the backend, then re-fetches
+     * favorites so the server remains the source of truth for the favorites
+     * section. The menu-star change is reverted on error.
+     */
+    toggleFavorite(menuId, isFavorite) {
+        const previousMenus = this.menus();
+        this.menus.set(this.applyMenuFavorite(previousMenus, menuId, isFavorite));
+        const call = isFavorite
+            ? this.menuService.addFavorite(menuId)
+            : this.menuService.removeFavorite(menuId);
+        return call.pipe(switchMap(() => this.reloadFavorites()), catchError((err) => {
+            this.menus.set(previousMenus);
+            return throwError(() => err);
+        }));
+    }
+    /**
+     * Persists the new favorite order after a drag-drop. Reorders the in-memory
+     * `favorites` signal locally (optimistic) and calls the backend — no GET
+     * refetch after the write. The local change is reverted on error.
+     */
+    reorderFavorites(menuIds) {
+        const previous = this.favorites();
+        this.favorites.set(this.applyFavoriteReorder(previous, menuIds));
+        return this.menuService.reorderFavorites(menuIds).pipe(catchError((err) => {
+            this.favorites.set(previous);
+            return throwError(() => err);
+        }));
+    }
+    /** Re-fetches the favorites from the backend (manual refresh). */
+    reloadFavorites() {
+        return this.loadFavoritesInternal().pipe(map(() => undefined));
+    }
+    /**
+     * Loads the effective navigation tree into `menus` — for one application
+     * (`applicationId`) or all active applications when omitted. Returns the
+     * mapped `IMenu[]`.
+     */
+    loadMenus(applicationId) {
+        return this.menuService.getEffectiveMenus(applicationId).pipe(tap((nodes) => this.menus.set(toIMenus(nodes))), map((nodes) => toIMenus(nodes)));
+    }
+    /** Loads favorites into `favorites` — optionally for a single application. Returns the mapped `IMenu[]`. */
+    loadFavorites(applicationId) {
+        return this.menuService.getFavorites(applicationId).pipe(tap((items) => this.favorites.set(items.map(toIMenuFavorite))), map((items) => items.map(toIMenuFavorite)));
+    }
+    /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
+    applyMenuFavorite(menus, menuId, isFavorite) {
+        return menus.map((menu) => {
+            if (getMenuKey(menu) === menuId) {
+                return { ...menu, isFavorite };
+            }
+            if (menu.children?.length) {
+                return { ...menu, children: this.applyMenuFavorite(menu.children, menuId, isFavorite) };
+            }
+            if (menu.child?.length) {
+                return { ...menu, child: this.applyMenuFavorite(menu.child, menuId, isFavorite) };
+            }
+            return menu;
+        });
+    }
+    applyFavoriteReorder(favorites, menuIds) {
+        const byId = new Map(favorites.map((favorite) => [String(getMenuKey(favorite)), favorite]));
+        const ordered = [];
+        const seen = new Set();
+        for (const id of menuIds) {
+            const item = byId.get(String(id));
+            if (item) {
+                ordered.push(item);
+                seen.add(String(id));
+            }
+        }
+        for (const favorite of favorites) {
+            if (!seen.has(String(getMenuKey(favorite)))) {
+                ordered.push(favorite);
+            }
+        }
+        return ordered;
+    }
+    loadUserInternal() {
+        return this.currentUserService.getCurrentUser().pipe(tap((raw) => {
+            this.rawCurrentUser.set(raw);
+            this.currentUser.set(mapToSidebarUser(raw));
+        }), map(() => null));
+    }
+    loadMenusInternal() {
+        return this.loadMenus().pipe(map(() => null));
+    }
+    loadFavoritesInternal() {
+        return this.loadFavorites().pipe(map(() => null));
+    }
+    recordError(source, err) {
+        const detail = err?.detail ?? 'Failed to load';
+        this.loadError.set(`${source}: ${detail}`);
+        // Never log sensitive data — only the load source and error detail.
+        console.error(`[@insight/ui][STORE] load "${source}" failed`, err);
+        return of(null);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuStore, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuStore, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuStore, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
 
 /* =========================================================
  * host.ts (insight-ui-angular)
@@ -9879,10 +11237,10 @@ class IHTitleBreadcrumbService {
         this.titleOverride.set(null);
         this.breadcrumbsOverride.set(null);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHTitleBreadcrumbService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHTitleBreadcrumbService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHTitleBreadcrumbService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHTitleBreadcrumbService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHTitleBreadcrumbService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHTitleBreadcrumbService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -9904,10 +11262,24 @@ class IHContent {
     shell = inject(IHTitleBreadcrumbService);
     sidebarVisibility = true;
     onSidebarToggled = new EventEmitter();
+    session = inject(ISessionService);
+    userMenuStore = inject(IUserMenuStore);
+    /** Aggregated boot loading state — true while session restore or sidebar menu data is loading. */
+    initializing = signal(true, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
+    /** Emits the aggregated loading state so consumer apps can render their own loader. */
+    loading = new EventEmitter();
+    // Push session + menu-store initializing changes through the `loading` output.
+    loadingEffect = effect(() => {
+        const value = this.session.initializing() || this.userMenuStore.initializing();
+        if (value !== this.initializing()) {
+            this.initializing.set(value);
+            this.loading.emit(value);
+        }
+    }, ...(ngDevMode ? [{ debugName: "loadingEffect" }] : []));
     /** route-based breadcrumbs */
-    breadcrumb$ = this.router.events.pipe(filter((e) => e instanceof NavigationEnd), startWith(null), map(() => this.buildBreadcrumb(this.activatedRoute.root)), shareReplay(1));
+    breadcrumb$ = this.router.events.pipe(filter$1((e) => e instanceof NavigationEnd), startWith(null), map(() => this.buildBreadcrumb(this.activatedRoute.root)), shareReplay$1(1));
     /** last breadcrumb label = route-based page title */
-    pageTitle$ = this.breadcrumb$.pipe(map((breadcrumbs) => breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null), shareReplay(1));
+    pageTitle$ = this.breadcrumb$.pipe(map((breadcrumbs) => breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null), shareReplay$1(1));
     buildBreadcrumb(route, url = '', breadcrumbs = []) {
         const routeConfig = route.routeConfig;
         if (routeConfig) {
@@ -10031,8 +11403,8 @@ class IHContent {
         // join
         return `${base}${abs.slice(1)}`.replace(/\/{2,}/g, '/');
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IHContent, isStandalone: true, selector: "ih-content", outputs: { onSidebarToggled: "onSidebarToggled" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IHContent, isStandalone: true, selector: "ih-content", outputs: { onSidebarToggled: "onSidebarToggled", loading: "loading" }, ngImport: i0, template: `
     <div class="ih-content-header">
       <a class="i-clickable" (click)="toggleSidebar()">
         @if (sidebarVisibility) {
@@ -10123,7 +11495,7 @@ class IHContent {
     </div>
   `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHContent, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHContent, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-content',
@@ -10220,6 +11592,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
   `,
                 }]
         }], propDecorators: { onSidebarToggled: [{
+                type: Output
+            }], loading: [{
                 type: Output
             }] } });
 /* =========================================================
@@ -10396,8 +11770,8 @@ class IHMenu {
             return `${u.pathname}${u.search}${u.hash}`;
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHMenu, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter", favoriteMode: "favoriteMode", collapsible: "collapsible", depth: "depth", dragEnabled: "dragEnabled", showApplication: "showApplication" }, outputs: { clicked: "clicked", favoriteToggle: "favoriteToggle" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHMenu, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter", favoriteMode: "favoriteMode", collapsible: "collapsible", depth: "depth", dragEnabled: "dragEnabled", showApplication: "showApplication" }, outputs: { clicked: "clicked", favoriteToggle: "favoriteToggle" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
     @if (menu) {
       @let hasChild = menuHasChildren;
       @let route = menuRoute;
@@ -10596,7 +11970,7 @@ class IHMenu {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication"], outputs: ["clicked", "favoriteToggle"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHMenu, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHMenu, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-menu',
@@ -11035,11 +12409,11 @@ class IHSidebar {
      * shape on ingestion. Legacy menus pass through untouched.
      */
     normalizeMenusStream() {
-        return (this.menusInput$ ?? new Observable()).pipe(map((menus) => normalizeMenuTree(menus)), shareReplay(1));
+        return (this.menusInput$ ?? new Observable()).pipe(map((menus) => normalizeMenuTree(menus)), shareReplay$1(1));
     }
     buildMenusStream() {
         let firstEmission = true;
-        const filter$ = this.menuSearch.valueChanges.pipe(startWith(this.menuSearch.value ?? ''), map((v) => (v ?? '').trim()), tap((term) => {
+        const filter$ = this.menuSearch.valueChanges.pipe(startWith(this.menuSearch.value ?? ''), map((v) => (v ?? '').trim()), tap$1((term) => {
             this.menuFilter.set(term);
             if (firstEmission) {
                 firstEmission = false;
@@ -11047,7 +12421,7 @@ class IHSidebar {
             }
             this.updateUrl();
         }));
-        this.menus$ = combineLatest([this.originalMenus$, filter$]).pipe(map(([menus, term]) => this.filterMenuTree(menus, term)), tap((filteredMenus) => this.updateNavigableMenus(filteredMenus)), shareReplay(1));
+        this.menus$ = combineLatest([this.originalMenus$, filter$]).pipe(map(([menus, term]) => this.filterMenuTree(menus, term)), tap$1((filteredMenus) => this.updateNavigableMenus(filteredMenus)), shareReplay$1(1));
     }
     filterMenuTree(menus, rawTerm) {
         const term = (rawTerm ?? '').trim().toLowerCase();
@@ -11287,8 +12661,8 @@ class IHSidebar {
         });
         this.queryParams = queryParams;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHSidebar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder" }, host: { properties: { "class.hidden": "this.sidebarVisibility" } }, usesOnChanges: true, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHSidebar, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder" }, host: { properties: { "class.hidden": "this.sidebarVisibility" } }, usesOnChanges: true, ngImport: i0, template: `
     @let user = user$ | async;
     <div class="ih-sidebar-header">
       @if (user) {
@@ -11369,7 +12743,7 @@ class IHSidebar {
     </div>
   `, isInline: true, dependencies: [{ kind: "component", type: IAvatar, selector: "i-avatar", inputs: ["src", "alt", "size", "shape", "fallbackSrc", "className"] }, { kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication"], outputs: ["clicked", "favoriteToggle"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.DefaultValueAccessor, selector: "input:not([type=checkbox])[formControlName],textarea[formControlName],input:not([type=checkbox])[formControl],textarea[formControl],input:not([type=checkbox])[ngModel],textarea[ngModel],[ngDefaultControl]" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.FormControlDirective, selector: "[formControl]", inputs: ["formControl", "disabled", "ngModel"], outputs: ["ngModelChange"], exportAs: ["ngForm"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHSidebar, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHSidebar, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-sidebar',
@@ -11537,8 +12911,8 @@ class IPill {
         if (this.hasOnCloseHandler)
             this.onClose.emit(e);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IPill, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: IPill, isStandalone: true, selector: "i-pill", inputs: { icon: "icon", size: "size", variant: "variant", disabled: ["disabled", "disabled", booleanAttribute], closable: ["closable", "closable", booleanAttribute] }, outputs: { onClose: "onClose", onClick: "onClick" }, host: { listeners: { "click": "handleHostClick($event)" }, properties: { "class.i-pill": "this.baseClass", "attr.size": "this.attrSize", "attr.variant": "this.attrVariant", "attr.aria-disabled": "this.ariaDisabled" } }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IPill, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IPill, isStandalone: true, selector: "i-pill", inputs: { icon: "icon", size: "size", variant: "variant", disabled: ["disabled", "disabled", booleanAttribute], closable: ["closable", "closable", booleanAttribute] }, outputs: { onClose: "onClose", onClick: "onClick" }, host: { listeners: { "click": "handleHostClick($event)" }, properties: { "class.i-pill": "this.baseClass", "attr.size": "this.attrSize", "attr.variant": "this.attrVariant", "attr.aria-disabled": "this.ariaDisabled" } }, ngImport: i0, template: `
     @if (icon) {
       <i-icon [icon]="icon" [size]="size" />
     }
@@ -11560,7 +12934,7 @@ class IPill {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IPill, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IPill, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-pill',
@@ -11697,14 +13071,14 @@ const CHEVRON_WIDTH_MAP = {
 // ─── ISectionTabHeader / ISectionTabContent ─────────────────────────────────
 class ISectionTabHeader {
     tpl;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionTabHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ISectionTabHeader, isStandalone: true, selector: "i-section-tab-header", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionTabHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ISectionTabHeader, isStandalone: true, selector: "i-section-tab-header", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
     <ng-template #tpl>
       <ng-content />
     </ng-template>
   `, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionTabHeader, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionTabHeader, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-tab-header',
@@ -11721,14 +13095,14 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
             }] } });
 class ISectionTabContent {
     tpl;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionTabContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ISectionTabContent, isStandalone: true, selector: "i-section-tab-content", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionTabContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ISectionTabContent, isStandalone: true, selector: "i-section-tab-content", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
     <ng-template #tpl>
       <ng-content />
     </ng-template>
   `, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionTabContent, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionTabContent, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-tab-content',
@@ -11776,8 +13150,8 @@ class ISectionTab {
         this.headerTpl = this.headerCmp?.tpl ?? this.defaultHeaderTpl;
         this.contentTpl = this.contentCmp?.tpl ?? this.defaultContentTpl;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionTab, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: ISectionTab, isStandalone: true, selector: "i-section-tab", inputs: { title: "title", opened: ["opened", "opened", (v) => v !== null && `${v}` !== 'false'], badge: "badge" }, queries: [{ propertyName: "headerCmp", first: true, predicate: ISectionTabHeader, descendants: true }, { propertyName: "contentCmp", first: true, predicate: ISectionTabContent, descendants: true }], viewQueries: [{ propertyName: "defaultHeaderTpl", first: true, predicate: ["defaultHeaderTpl"], descendants: true, static: true }, { propertyName: "defaultContentTpl", first: true, predicate: ["defaultContentTpl"], descendants: true, static: true }], exportAs: ["iSectionTab"], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionTab, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: ISectionTab, isStandalone: true, selector: "i-section-tab", inputs: { title: "title", opened: ["opened", "opened", (v) => v !== null && `${v}` !== 'false'], badge: "badge" }, queries: [{ propertyName: "headerCmp", first: true, predicate: ISectionTabHeader, descendants: true }, { propertyName: "contentCmp", first: true, predicate: ISectionTabContent, descendants: true }], viewQueries: [{ propertyName: "defaultHeaderTpl", first: true, predicate: ["defaultHeaderTpl"], descendants: true, static: true }, { propertyName: "defaultContentTpl", first: true, predicate: ["defaultContentTpl"], descendants: true, static: true }], exportAs: ["iSectionTab"], ngImport: i0, template: `
     <ng-template #defaultHeaderTpl>
       <span class="i-section-tab-title">{{ title }}</span>
 
@@ -11795,7 +13169,7 @@ class ISectionTab {
     </ng-template>
   `, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionTab, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionTab, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-tab',
@@ -11995,8 +13369,8 @@ class ISectionTabs {
     isValidIndex(index) {
         return Number.isInteger(index) && index >= 0 && index < this.tabsArr.length;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionTabs, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.29", type: ISectionTabs, isStandalone: true, selector: "i-section-tabs", inputs: { selectedIndex: "selectedIndex", sticky: ["sticky", "sticky", booleanAttribute], stickyTopOffset: "stickyTopOffset", scrollable: ["scrollable", "scrollable", booleanAttribute], chevronSize: "chevronSize", tabMinHeight: "tabMinHeight", headerClass: "headerClass", tabClass: "tabClass", styleVariant: "styleVariant", height: "height" }, outputs: { onSelectedIndexChange: "onSelectedIndexChange", selectedIndexChange: "selectedIndexChange" }, host: { properties: { "class.i-section-tabs--bar": "styleVariant === 'bar'" } }, queries: [{ propertyName: "tabs", predicate: ISectionTab }], viewQueries: [{ propertyName: "scrollContainer", first: true, predicate: ["scrollContainer"], descendants: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionTabs, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: ISectionTabs, isStandalone: true, selector: "i-section-tabs", inputs: { selectedIndex: "selectedIndex", sticky: ["sticky", "sticky", booleanAttribute], stickyTopOffset: "stickyTopOffset", scrollable: ["scrollable", "scrollable", booleanAttribute], chevronSize: "chevronSize", tabMinHeight: "tabMinHeight", headerClass: "headerClass", tabClass: "tabClass", styleVariant: "styleVariant", height: "height" }, outputs: { onSelectedIndexChange: "onSelectedIndexChange", selectedIndexChange: "selectedIndexChange" }, host: { properties: { "class.i-section-tabs--bar": "styleVariant === 'bar'" } }, queries: [{ propertyName: "tabs", predicate: ISectionTab }], viewQueries: [{ propertyName: "scrollContainer", first: true, predicate: ["scrollContainer"], descendants: true }], ngImport: i0, template: `
     <div
       class="i-section-tabs-headers"
       role="tablist"
@@ -12072,7 +13446,7 @@ class ISectionTabs {
     <ng-content select=":not(i-section-tab)" />
   `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "directive", type: i1$1.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i1$1.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionTabs, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionTabs, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-tabs',
@@ -12205,10 +13579,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
  * </i-section>
  */
 class ISection {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISection, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ISection, isStandalone: true, selector: "i-section", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISection, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ISection, isStandalone: true, selector: "i-section", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISection, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISection, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section',
@@ -12217,10 +13591,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 }]
         }] });
 class ISectionHeader {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ISectionHeader, isStandalone: true, selector: "i-section-header", ngImport: i0, template: `<h4><ng-content /></h4>`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ISectionHeader, isStandalone: true, selector: "i-section-header", ngImport: i0, template: `<h4><ng-content /></h4>`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionHeader, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionHeader, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-header',
@@ -12229,10 +13603,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 }]
         }] });
 class ISectionSubHeader {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionSubHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ISectionSubHeader, isStandalone: true, selector: "i-section-sub-header", ngImport: i0, template: `<h6><ng-content /></h6>`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionSubHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ISectionSubHeader, isStandalone: true, selector: "i-section-sub-header", ngImport: i0, template: `<h6><ng-content /></h6>`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionSubHeader, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionSubHeader, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-sub-header',
@@ -12241,10 +13615,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 }]
         }] });
 class ISectionFilter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionFilter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ISectionFilter, isStandalone: true, selector: "i-section-filter", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionFilter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ISectionFilter, isStandalone: true, selector: "i-section-filter", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionFilter, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionFilter, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-filter',
@@ -12253,10 +13627,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 }]
         }] });
 class ISectionBody {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ISectionBody, isStandalone: true, selector: "i-section-body", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ISectionBody, isStandalone: true, selector: "i-section-body", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionBody, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionBody, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-body',
@@ -12265,10 +13639,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 }]
         }] });
 class ISectionFooter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: ISectionFooter, isStandalone: true, selector: "i-section-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: ISectionFooter, isStandalone: true, selector: "i-section-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionFooter, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionFooter, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-footer',
@@ -12277,17 +13651,17 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                 }]
         }] });
 class ISectionModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.29", ngImport: i0, type: ISectionModule, imports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.30", ngImport: i0, type: ISectionModule, imports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
             ISectionTab,
             ISectionTabHeader,
             ISectionTabContent], exports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
             ISectionTab,
             ISectionTabHeader,
             ISectionTabContent] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionModule, imports: [ISectionTabs] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionModule, imports: [ISectionTabs] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISectionModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISectionModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [
@@ -12435,8 +13809,8 @@ class IToggle {
         // click anywhere else (thumb/label/host) toggles input
         this.inputRef.nativeElement.click();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IToggle, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: IToggle, isStandalone: true, selector: "i-toggle", inputs: { disabled: "disabled", labelPosition: "labelPosition", size: "size" }, outputs: { onChange: "onChange", onTouched: "onTouched" }, host: { listeners: { "click": "onHostClick($event)" }, properties: { "class.i-toggle": "this.baseClass", "class.i-toggle__active": "this.activeClass", "class.i-toggle__disabled": "this.disabledClass", "class.i-toggle__label-left": "this.labelLeftClass", "style.--i-toggle-height": "this.toggleHeight", "style.--i-toggle-width": "this.toggleWidth", "style.--i-toggle-handle-size": "this.toggleHandleSize" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IToggle, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: IToggle, isStandalone: true, selector: "i-toggle", inputs: { disabled: "disabled", labelPosition: "labelPosition", size: "size" }, outputs: { onChange: "onChange", onTouched: "onTouched" }, host: { listeners: { "click": "onHostClick($event)" }, properties: { "class.i-toggle": "this.baseClass", "class.i-toggle__active": "this.activeClass", "class.i-toggle__disabled": "this.disabledClass", "class.i-toggle__label-left": "this.labelLeftClass", "style.--i-toggle-height": "this.toggleHeight", "style.--i-toggle-width": "this.toggleWidth", "style.--i-toggle-handle-size": "this.toggleHandleSize" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => IToggle),
@@ -12460,7 +13834,7 @@ class IToggle {
     </span>
   `, isInline: true, changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IToggle, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IToggle, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-toggle',
@@ -12531,8 +13905,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
             }] } });
 
 class IUI {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUI, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.29", ngImport: i0, type: IUI, imports: [IAvatar,
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUI, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.30", ngImport: i0, type: IUI, imports: [IAvatar,
             IButton,
             ICardModule,
             ICodeViewerModule,
@@ -12571,7 +13945,7 @@ class IUI {
             IFCTextArea,
             IToggle,
             IPill] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUI, imports: [ICardModule,
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUI, imports: [ICardModule,
             ICodeViewerModule,
             IDialogModule,
             IGridModule,
@@ -12584,7 +13958,7 @@ class IUI {
             IInputModule,
             ISectionModule] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUI, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUI, decorators: [{
             type: NgModule,
             args: [{
                     imports: [
@@ -12633,80 +14007,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
                     ],
                 }]
         }] });
-
-/**
- * Default environment for `@insight/ui`'s shared data layer.
- *
- * These are the library-wide defaults for the SSO / sidebar / user data
- * layer. Consumer apps override any field at bootstrap via
- * `provideInsightAuth()`.
- */
-const environment = {
-    production: false,
-    releaseStage: 'development',
-    appName: 'Insight UI',
-    version: '1.0.2',
-    api: {
-        identity: 'https://account-dev.paramountenterprise.co.id/api',
-        user: 'https://account-dev.paramountenterprise.co.id/api/v1/users',
-        configuration: 'https://account-dev.paramountenterprise.co.id/api/v1',
-        application: 'https://account-dev.paramountenterprise.co.id/api/v1/applications',
-    },
-    signinUrl: 'https://account-dev.paramountenterprise.co.id/signin',
-    authCallbackUrl: 'https://account-dev.paramountenterprise.co.id/auth',
-    cookieDomain: '.paramountenterprise.co.id',
-    securityMode: true,
-    tokenLifespan: {
-        accessTokenSeconds: 3600,
-        refreshTokenSeconds: 7200,
-        ssoSessionMaxSeconds: 54000,
-    },
-    cookieSecure: true,
-    csrfTokenMaxAgeSeconds: 7170,
-    mfaChallengeSessionTimeoutSeconds: 300,
-    allowedReturnOrigins: [
-        'https://account-dev.paramountenterprise.co.id',
-        'https://*.paramountenterprise.co.id',
-    ],
-};
-
-/**
- * Default `IInsightAuthConfig`, sourced from the library's default environment
- * file (`environments/environment.ts`). Consumer apps override any field via
- * `provideInsightAuth({ ... })`.
- *
- * `allowedReturnOrigins` defaults to this app's own origin (the common case —
- * a callback only ever needs to trust redirecting back to itself) and
- * `cookieDomain` defaults to the current hostname (informational only, the
- * frontend never reads/sets this cookie) — both computed at call time since
- * they depend on `window.location`.
- */
-function getDefaultInsightAuthConfig() {
-    return {
-        api: {
-            identity: environment.api.identity,
-            user: environment.api.user,
-            configuration: environment.api.configuration,
-            application: environment.api.application,
-        },
-        signinUrl: environment.signinUrl,
-        callbackPath: '/auth/callback',
-        allowedReturnOrigins: [window.location.origin],
-        cookieDomain: window.location.hostname,
-        tokenLifespan: { ...environment.tokenLifespan },
-        csrfTokenMaxAgeSeconds: environment.csrfTokenMaxAgeSeconds,
-    };
-}
-/**
- * Injection token carrying the consumer app's `IInsightAuthConfig`. Provided via
- * `provideInsightAuth()`. Has a root-level default (`getDefaultInsightAuthConfig()`)
- * so the library services never break when a consumer forgets to call
- * `provideInsightAuth()` — consumers override it explicitly.
- */
-const INSIGHT_AUTH_CONFIG = new InjectionToken('INSIGHT_AUTH_CONFIG', {
-    providedIn: 'root',
-    factory: () => getDefaultInsightAuthConfig(),
-});
 
 /**
  * Validate and sanitize a `returnUrl` for post-login / post-callback redirect.
@@ -12768,813 +14068,6 @@ function isAllowedOrigin(origin, allowedReturnOrigins) {
         }
     });
 }
-
-/**
- * Build the full external URL to iam-web's signin page for a cross-domain SSO
- * redirect, routing the eventual handoff through THIS APP'S OWN callback
- * route (`config.callbackPath`, default `/auth/callback`) — never through the
- * page the user originally tried to visit.
- *
- * This is deliberate and fixes a real redirect loop: if the guard/interceptor
- * used `window.location.href` (the current page) as the returnUrl directly,
- * iam-web's handoff would append `#at=<token>` to THAT SAME page. Since that
- * page still doesn't have a stored session yet at the moment it re-renders,
- * the guard would fire again, capture `window.location.href` again — which
- * NOW ALREADY CONTAINS the previous `#at=` fragment — and redirect back to
- * iam-web with an ever-growing `returnUrl`, eventually overflowing header
- * size limits (HTTP 431).
- *
- * Routing through a dedicated callback route breaks the loop: the callback
- * page (`IAuthCallback`) consumes and strips the token BEFORE navigating
- * (via the in-app router, not a full reload) to `targetPath` — so the guard
- * only ever sees a clean, token-free URL on its next check.
- */
-function buildExternalSigninUrl(config, targetPath) {
-    const callbackPath = config.callbackPath ?? '/auth/callback';
-    const callbackUrl = `${window.location.origin}${callbackPath}?returnUrl=${encodeURIComponent(targetPath)}`;
-    return `${config.signinUrl}?returnUrl=${encodeURIComponent(callbackUrl)}`;
-}
-
-/**
- * CSRF token management — cookie-to-header pattern for @insight/ui consumer apps.
- * Mirrors iam-web's `ICsrfService`:
- *
- *   1. FE calls GET {api.identity}/auth/csrf.
- *   2. Backend returns `{ csrfToken }` in the JSON body AND sets a `csrf_token` cookie.
- *   3. FE stores the token in memory (JS cannot read cross-origin cookies).
- *   4. FE sends the token back as `X-CSRF-Token` header on mutating requests.
- *   5. Backend validates: header value === cookie value.
- *
- * Token expiration mirrors the backend cookie maxAge (minus a safety buffer,
- * configured via `csrfTokenMaxAgeSeconds`) so the FE transparently re-fetches
- * before the server-side cookie actually expires.
- */
-class ICsrfService {
-    http = inject(HttpClient);
-    config = inject(INSIGHT_AUTH_CONFIG);
-    /** In-memory CSRF token — retrieved from the backend response body, never from document.cookie directly. */
-    token = null;
-    tokenFetchedAt = null;
-    /**
-     * Return the in-memory CSRF token, or `null` if never fetched or expired
-     * (expiry triggers callers to re-invoke `ensureToken()`).
-     */
-    getToken() {
-        if (this.token && this.isTokenExpired()) {
-            return null;
-        }
-        return this.token;
-    }
-    /** Whether the in-memory token has exceeded its TTL (`csrfTokenMaxAgeSeconds`). */
-    isTokenExpired() {
-        if (this.tokenFetchedAt === null) {
-            return false;
-        }
-        const maxAgeMs = (this.config.csrfTokenMaxAgeSeconds ?? 7170) * 1000;
-        return Date.now() - this.tokenFetchedAt >= maxAgeMs;
-    }
-    /**
-     * Fetch a fresh CSRF token from `iam-identity-api` and store it in memory.
-     * On failure the error is propagated (callers that want best-effort behavior
-     * can catch it) — a failed fetch must not be silently swallowed, e.g. so the
-     * `retryOnCsrfError` pattern can re-trigger the fetch.
-     */
-    ensureToken() {
-        return this.http
-            .get(`${this.config.api.identity}/auth/csrf`, { withCredentials: true })
-            .pipe(tap$1((res) => {
-            this.token = res.csrfToken ?? null;
-            this.tokenFetchedAt = Date.now();
-        }), map$1(() => undefined), catchError((err) => {
-            // Never log the token itself — status code only.
-            console.warn('[@insight/ui][CSRF] Failed to fetch CSRF token', err?.status);
-            return throwError(() => err);
-        }));
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICsrfService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICsrfService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICsrfService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
-
-/**
- * Standardized HTTP client for @insight/ui consumer apps.
- * Mirrors iam-web's `IApiService`: `withCredentials: true` on every request
- * (required for the CSRF cookie and the HttpOnly refresh cookie to flow),
- * automatic `X-CSRF-Token` header injection, transparent response typing
- * (`T`, no wrapper), and RFC 9457 Problem Details error enrichment matching
- * the exact shape iam-web already produces (`status`/`detail`/`retryAfter`)
- * so consumer apps can reuse the `err?.detail ?? 'fallback'` convention.
- */
-class IApiService {
-    http = inject(HttpClient);
-    csrf = inject(ICsrfService);
-    config = inject(INSIGHT_AUTH_CONFIG);
-    get headers() {
-        const base = {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-        };
-        const csrfToken = this.csrf.getToken();
-        if (csrfToken) {
-            base['X-CSRF-Token'] = csrfToken;
-        }
-        return base;
-    }
-    /**
-     * Normalize a raw `HttpErrorResponse` into a consistent shape:
-     * `{ status, detail, retryAfter, ...rest }`. `retryAfter` is read from the
-     * body or the `Retry-After` header, so 429/423 responses surface it
-     * untouched for rate-limit/lockout UX.
-     */
-    enrichError(err) {
-        const body = err?.error;
-        if (body && typeof body === 'object' && !Array.isArray(body)) {
-            const retryAfterFromHeader = err?.headers?.get?.('Retry-After');
-            const parsedHeader = retryAfterFromHeader ? Number(retryAfterFromHeader) : NaN;
-            const retryAfter = (typeof body.retryAfter === 'number' ? body.retryAfter : undefined) ??
-                (Number.isFinite(parsedHeader) ? parsedHeader : undefined);
-            return throwError(() => ({
-                ...body,
-                status: err?.status ?? body.status,
-                message: err?.message ?? body.message,
-                detail: body.detail ?? body.title ?? err?.message ?? 'An error occurred',
-                retryAfter,
-            }));
-        }
-        return throwError(() => err);
-    }
-    get(path, params, options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
-        const mergedHeaders = { ...this.headers, ...options?.headers };
-        return this.http
-            .get(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders })
-            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
-    }
-    post(path, body = {}, options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
-        const mergedHeaders = { ...this.headers, ...options?.headers };
-        return this.http
-            .post(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
-            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
-    }
-    put(path, body = {}, options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
-        const mergedHeaders = { ...this.headers, ...options?.headers };
-        return this.http
-            .put(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
-            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
-    }
-    delete(path, options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
-        const mergedHeaders = { ...this.headers, ...options?.headers };
-        // Fastify rejects Content-Type: application/json with an empty body
-        if (!options?.body) {
-            delete mergedHeaders['Content-Type'];
-        }
-        return this.http
-            .delete(`${baseUrl}${path}`, {
-            withCredentials: true,
-            headers: mergedHeaders,
-            body: options?.body,
-        })
-            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
-    }
-    getBlob(path, params, options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
-        const mergedHeaders = { ...this.headers, ...options?.headers };
-        return this.http
-            .get(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders, responseType: 'blob' })
-            .pipe(catchError((err) => this.enrichError(err)));
-    }
-    upload(path, file, options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
-        const body = file instanceof FormData
-            ? file
-            : (() => {
-                const fd = new FormData();
-                fd.append('file', file);
-                return fd;
-            })();
-        // Content-Type intentionally omitted — the browser sets the multipart boundary automatically.
-        const headers = { ...options?.headers };
-        const csrfToken = this.csrf.getToken();
-        if (csrfToken) {
-            headers['X-CSRF-Token'] = csrfToken;
-        }
-        return this.http
-            .post(`${baseUrl}${path}`, body, { withCredentials: true, headers })
-            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IApiService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IApiService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IApiService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
-
-/**
- * Login lockout constants (local, client-side supplement to Keycloak
- * brute-force protection). 5 failed attempts → 1-minute suspend; counter
- * resets after 12h idle or a successful login.
- */
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 1 * 60 * 1000;
-const IDLE_RESET_MS = 12 * 60 * 60 * 1000;
-const LOCK_STORAGE_KEY = 'iam.mock.login_lockout';
-/**
- * iam-identity-api auth facade (Mode 2 proxy — Keycloak is never exposed to the
- * frontend). Base URL = `{api.identity}` from the resolved auth config.
- *
- * @overridable — consumers may provide `{ provide: IAuthService, useClass: ... }`.
- */
-class IAuthService {
-    api = inject(IApiService);
-    config = inject(INSIGHT_AUTH_CONFIG);
-    get identityUrl() {
-        return this.config.api.identity;
-    }
-    login(username, password, recaptchaToken, isChallengeResponse) {
-        const cleanUsername = username.trim().toLowerCase();
-        const lockData = this.getLockoutData(cleanUsername);
-        if (lockData.lockedUntil && lockData.lockedUntil > Date.now()) {
-            const retryAfter = Math.ceil((lockData.lockedUntil - Date.now()) / 1000);
-            return throwError(() => ({
-                status: 423,
-                message: 'Login access is temporarily restricted. Please try again in a few moments.',
-                detail: 'Login access is temporarily restricted. Please try again in a few moments.',
-                retryAfter,
-            }));
-        }
-        return this.api
-            .post('/auth/login', {
-            username,
-            password,
-            recaptchaToken,
-            isChallengeResponse: isChallengeResponse ?? false,
-        })
-            .pipe(tap$1((res) => {
-            if (res.accessToken || res.mfaRequired || res.passwordExpired) {
-                this.resetLockout(cleanUsername);
-            }
-        }), catchError((err) => {
-            if (err?.status === 401 || err?.status === 423) {
-                this.recordFailedAttempt(cleanUsername);
-            }
-            return throwError(() => err);
-        }));
-    }
-    /** Silently refresh the access token via the HttpOnly refresh-token cookie. */
-    refresh() {
-        return this.api.post('/auth/refresh', {});
-    }
-    /** Clear the server-side session and expire the HttpOnly refresh cookie. */
-    logout(refreshToken) {
-        return this.api.post('/auth/logout', { refreshToken }).pipe(map$1(() => undefined));
-    }
-    /** Exchange a short-lived `at=` auth token for a full session (cross-app handoff). */
-    exchangeAuthToken(authToken) {
-        return this.api.post('/auth/exchange', {}, { headers: { Authorization: authToken } });
-    }
-    /** Verify the MFA TOTP code during a login challenge. */
-    verifyMfaChallenge(mfaSessionId, totpCode) {
-        return this.api.post('/auth/mfa/verify', { mfaSessionId, totpCode });
-    }
-    /** Verify the TOTP code during first-time MFA enrollment (forced at login). */
-    verifyMfaEnroll(mfaSessionId, totpCode) {
-        return this.api.post('/auth/mfa/enroll/verify', { mfaSessionId, totpCode });
-    }
-    /** Self-service MFA — check enrollment status (`GET /profile/mfa`). */
-    selfServiceGetStatus() {
-        return this.api.get('/profile/mfa');
-    }
-    /** Self-service MFA — initiate enrollment to get the QR & session id (`POST /profile/mfa/enroll`). */
-    selfServiceEnrollInitiate() {
-        return this.api.post('/profile/mfa/enroll', {});
-    }
-    /** Self-service MFA — verify OTP and complete enrollment (`POST /profile/mfa/enroll/verify`). */
-    selfServiceEnrollVerify(enrollmentSessionId, totpCode) {
-        return this.api
-            .post('/profile/mfa/enroll/verify', { enrollmentSessionId, totpCode })
-            .pipe(map$1(() => undefined));
-    }
-    /** Self-service reset (un-enroll) MFA for the current user — requires password (`DELETE /profile/mfa`). */
-    selfServiceResetMfa(userSub, password) {
-        return this.api
-            .delete('/profile/mfa', { apiUrl: this.identityUrl, body: { password } })
-            .pipe(map$1(() => undefined));
-    }
-    /**
-     * Change password when it has expired (forced change flow). Uses a short-lived
-     * `changePasswordToken` (10 min, scope `change_password_only`) as the Bearer
-     * header. Backend returns a full accessToken on success so the user continues
-     * seamlessly without re-login.
-     */
-    changePassword(changePasswordToken, newPassword, confirmPassword) {
-        return this.api.post('/auth/change-password', { newPassword, confirmPassword }, { headers: { Authorization: `Bearer ${changePasswordToken}` } });
-    }
-    /** Request a password-reset link via email or WhatsApp (`POST /auth/forgot-password`). */
-    forgotPassword(identifier, mode) {
-        return this.api.post('/auth/forgot-password', {
-            identifier,
-            method: mode,
-        });
-    }
-    /** Validate a reset token before showing the reset form (`GET /auth/reset-password/validate`). */
-    validateResetToken(token) {
-        return this.api.get('/auth/reset-password/validate', new HttpParams().set('token', token));
-    }
-    /** Submit a new password using the reset token (`POST /auth/reset-password`). */
-    resetPassword(token, newPassword, confirmPassword) {
-        return this.api.post('/auth/reset-password', { token, newPassword, confirmPassword });
-    }
-    // ─── Login lockout helpers (sessionStorage per-username) ─────────────────────
-    getLockoutData(username) {
-        try {
-            const raw = sessionStorage.getItem(`${LOCK_STORAGE_KEY}_${username}`);
-            const data = raw ? JSON.parse(raw) : { attempts: 0, lockedUntil: null, lastAttemptAt: null };
-            if (data.lastAttemptAt && Date.now() - data.lastAttemptAt >= IDLE_RESET_MS) {
-                return { attempts: 0, lockedUntil: null, lastAttemptAt: null };
-            }
-            return data;
-        }
-        catch {
-            return { attempts: 0, lockedUntil: null, lastAttemptAt: null };
-        }
-    }
-    recordFailedAttempt(username) {
-        const data = this.getLockoutData(username);
-        data.attempts += 1;
-        data.lastAttemptAt = Date.now();
-        if (data.attempts >= MAX_LOGIN_ATTEMPTS - 1) {
-            data.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
-        }
-        sessionStorage.setItem(`${LOCK_STORAGE_KEY}_${username}`, JSON.stringify(data));
-    }
-    resetLockout(username) {
-        sessionStorage.removeItem(`${LOCK_STORAGE_KEY}_${username}`);
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAuthService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAuthService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAuthService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
-
-const valueAt = (value, key) => {
-    if (typeof value !== 'object' || value === null) {
-        return undefined;
-    }
-    const candidate = value[key];
-    return typeof candidate === 'string' && candidate.length > 0 ? candidate : undefined;
-};
-/** Supports normalized Problem Details errors and raw legacy HTTP error bodies. */
-const extractProblemDetailsErrorCode = (error) => {
-    if (error === null || error === undefined) {
-        return undefined;
-    }
-    const problem = error;
-    return (problem.errorCode ??
-        problem.code ??
-        valueAt(error?.error, 'errorCode') ??
-        valueAt(error?.error, 'code'));
-};
-/** Maps current backend and legacy error codes to the session-expired UI states. */
-const toSessionExpiredReason = (errorCode) => {
-    switch (errorCode) {
-        case 'AUTH_TOKEN_EXPIRED':
-        case 'TOKEN_EXPIRED':
-        case 'AUTH_NO_SESSION':
-            return 'TOKEN_EXPIRED';
-        case 'AUTH_SESSION_REVOKED':
-        case 'SESSION_REVOKED':
-            return 'SESSION_REVOKED';
-        case 'AUTH_SESSION_REPLACED':
-        case 'SESSION_REPLACED':
-            return 'SESSION_REPLACED';
-        default:
-            return undefined;
-    }
-};
-/**
- * True when an error is semantically a session-expiry event (HTTP 401/498 or a
- * recognized session-related error code). Other statuses are business/transport
- * errors and must be handled by the caller instead of forcing a logout.
- */
-const isSessionExpiredError = (error) => {
-    if (error instanceof HttpErrorResponse) {
-        if (error.status === 401 || error.status === 498) {
-            return true;
-        }
-    }
-    if (error?.status === 401 || error?.status === 498) {
-        return true;
-    }
-    return toSessionExpiredReason(extractProblemDetailsErrorCode(error)) !== undefined;
-};
-/**
- * In-memory overlay state for the session-expired UI.
- *
- * Besides the derived `reason`, the service also exposes the RAW backend error
- * code and Problem Details `detail` so consumer apps (e.g. iam-web) can resolve
- * a localized display message from their own error-catalog service without the
- * library ever calling the configuration API.
- *
- * @overridable — consumers may provide `{ provide: SessionExpiredService, useClass: ... }`.
- */
-class SessionExpiredService {
-    visible = signal(false, ...(ngDevMode ? [{ debugName: "visible" }] : []));
-    returnUrl = signal('/', ...(ngDevMode ? [{ debugName: "returnUrl" }] : []));
-    reason = signal(undefined, ...(ngDevMode ? [{ debugName: "reason" }] : []));
-    /** Raw error code from the backend Problem Details response (e.g. `AUTH_TOKEN_EXPIRED`). */
-    errorCode = signal(null, ...(ngDevMode ? [{ debugName: "errorCode" }] : []));
-    /** Backend-provided `detail` message from the Problem Details response — display fallback. */
-    detail = signal(null, ...(ngDevMode ? [{ debugName: "detail" }] : []));
-    show(returnUrl, reason, errorCode, detail) {
-        this.returnUrl.set(returnUrl || '/');
-        this.reason.set(reason);
-        this.errorCode.set(errorCode ?? null);
-        this.detail.set(detail ?? null);
-        this.visible.set(true);
-    }
-    hide() {
-        this.visible.set(false);
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: SessionExpiredService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: SessionExpiredService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: SessionExpiredService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
-
-/** Hard timeout for the single-flight refresh call (ms). */
-const REFRESH_TIMEOUT_MS = 30_000;
-/**
- * Minimal inline JWT payload decode — deliberately NOT using
- * `@auth0/angular-jwt` to avoid forcing a new dependency onto every
- * @insight/ui consumer. Returns `null` on any decode failure.
- */
-function decodeJwtPayload(token) {
-    try {
-        const payload = token.split('.')[1];
-        if (!payload) {
-            return null;
-        }
-        const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-        const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
-        const json = decodeURIComponent(atob(padded)
-            .split('')
-            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-            .join(''));
-        return JSON.parse(json);
-    }
-    catch {
-        return null;
-    }
-}
-/** Decodes an `IAuthUser` from the token's Keycloak claims. */
-function decodeUser(accessToken) {
-    const decoded = decodeJwtPayload(accessToken);
-    const realmAccess = decoded?.['realm_access'];
-    const roles = Array.isArray(realmAccess?.roles) ? realmAccess.roles : [];
-    return {
-        sub: typeof decoded?.['sub'] === 'string' ? decoded['sub'] : '',
-        email: typeof decoded?.['email'] === 'string' ? decoded['email'] : '',
-        name: typeof decoded?.['name'] === 'string' ? decoded['name'] : '',
-        roles,
-        userType: decoded?.['user_type'] === 'external' ? 'external' : 'internal',
-    };
-}
-/**
- * Session management for @insight/ui consumer apps.
- *
- * Access token: stored IN MEMORY only (never Web Storage). Refresh token:
- * HttpOnly cookie managed exclusively by iam-identity-api; this service never
- * reads or stores it directly (an in-memory `refreshToken` is kept only for
- * server-side logout).
- *
- * Superset of the basic SSO session (used by remote apps via `setAccessToken` /
- * `authGuard` / `IAuthCallback`) and the richer iam-web session (session
- * restore, password-expiry, change-password token, proactive validation,
- * session-expired overlay).
- *
- * @overridable — consumers may provide `{ provide: ISessionService, useClass: ... }`.
- */
-class ISessionService {
-    authService = inject(IAuthService);
-    config = inject(INSIGHT_AUTH_CONFIG);
-    sessionExpiredService = inject(SessionExpiredService);
-    csrf = inject(ICsrfService);
-    // In-memory token storage — intentionally NOT persisted to Web Storage.
-    accessToken = null;
-    _refreshToken = null;
-    expiresAt = null;
-    sessionStartedAt = null;
-    currentUser = null;
-    passwordExpired = false;
-    changePasswordTokenValue = null;
-    lastVerifiedAt = 0;
-    /**
-     * True while the app is restoring/validating the session on load (starts
-     * `true` on cold start so guards can allow navigation during the restore and
-     * consumer apps can show a loading state). Cleared once the session is
-     * established (`setAccessToken`/`setSession`) or `tryRestoreSession()` settles.
-     */
-    initializing = signal(true, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
-    // Single-flight refresh: one in-flight /auth/refresh shared by all callers,
-    // retained until it completes/errors so a cancelled caller cannot abort it.
-    refreshInFlight = null;
-    // Single-flight cold-start restore so multiple callers (e.g. provideInsightAuth()
-    // via APP_INITIALIZER and a consumer's root component) never trigger duplicate
-    // /auth/refresh requests.
-    restoreInFlight = null;
-    isAuth() {
-        return !!this.accessToken && !this.isTokenExpired() && !this.isSsoSessionExpired();
-    }
-    isTokenExpired() {
-        if (!this.accessToken || this.expiresAt === null) {
-            return true;
-        }
-        return Date.now() >= this.expiresAt;
-    }
-    /**
-     * Whether the max SSO session duration has been exceeded (default 15h,
-     * configured via `tokenLifespan.ssoSessionMaxSeconds`). After this, the
-     * user must re-authenticate regardless of token state.
-     */
-    isSsoSessionExpired() {
-        if (this.sessionStartedAt === null) {
-            return false;
-        }
-        const maxDurationMs = this.config.tokenLifespan.ssoSessionMaxSeconds * 1000;
-        return Date.now() - this.sessionStartedAt >= maxDurationMs;
-    }
-    isPasswordExpired() {
-        return this.passwordExpired;
-    }
-    clearPasswordExpired() {
-        this.passwordExpired = false;
-    }
-    setPasswordExpired() {
-        this.passwordExpired = true;
-    }
-    setChangePasswordToken(token) {
-        this.changePasswordTokenValue = token;
-        sessionStorage.setItem('iam.changePasswordToken', token);
-    }
-    getChangePasswordToken() {
-        if (this.changePasswordTokenValue) {
-            return this.changePasswordTokenValue;
-        }
-        const stored = sessionStorage.getItem('iam.changePasswordToken');
-        if (stored) {
-            this.changePasswordTokenValue = stored;
-            return stored;
-        }
-        return null;
-    }
-    clearChangePasswordToken() {
-        this.changePasswordTokenValue = null;
-        sessionStorage.removeItem('iam.changePasswordToken');
-    }
-    getAccessToken() {
-        return this.accessToken;
-    }
-    getRefreshToken() {
-        return this._refreshToken;
-    }
-    getUser() {
-        return this.currentUser;
-    }
-    /** Role-membership check against the decoded token roles (ANY match). */
-    hasMn(mn) {
-        const roles = this.getRoles();
-        if (Array.isArray(mn)) {
-            return mn.some((m) => roles.includes(m));
-        }
-        return roles.includes(mn);
-    }
-    /**
-     * Roles claimed by the current access token (Keycloak `realm_access.roles`).
-     * Returns an empty array while no token is set. Used by role-mode permission
-     * checks (`ihHasMn` / `ihNotHasMn` with `source: 'role'`).
-     */
-    getRoles() {
-        if (!this.accessToken) {
-            return [];
-        }
-        const decoded = decodeJwtPayload(this.accessToken);
-        const roles = decoded?.realm_access?.roles;
-        return Array.isArray(roles) ? roles.filter((role) => typeof role === 'string') : [];
-    }
-    /** True if the current access token claims ANY of the given roles. */
-    hasRole(code) {
-        const roles = this.getRoles();
-        if (Array.isArray(code)) {
-            return code.some((role) => roles.includes(role));
-        }
-        return roles.includes(code);
-    }
-    /**
-     * Store the access token received from the SSO handoff (URL hash fragment)
-     * or from a refresh response. `expiresIn` (seconds) defaults to the token's
-     * own `exp` claim, then falls back to the configured `accessTokenSeconds`.
-     */
-    setAccessToken(accessToken, expiresIn) {
-        this.accessToken = accessToken;
-        const effectiveExpiresIn = expiresIn ?? this.readExpiresInFromToken(accessToken) ?? this.config.tokenLifespan.accessTokenSeconds;
-        // 30-second buffer to avoid edge cases, matches iam-web's convention.
-        this.expiresAt = Date.now() + (effectiveExpiresIn - 30) * 1000;
-        if (this.sessionStartedAt === null) {
-            this.sessionStartedAt = Date.now();
-        }
-        this.initializing.set(false);
-    }
-    /**
-     * Full session establishment (login / MFA / exchange / refresh). Sets the
-     * user, decodes password-expiry claims, stamps the last-verified time, and
-     * marks an active session so `tryRestoreSession()` can distinguish a cold
-     * start from a refresh-after-revocation.
-     */
-    setSession(accessToken, expiresIn, user, refreshToken) {
-        this.accessToken = accessToken;
-        if (refreshToken) {
-            this._refreshToken = refreshToken;
-        }
-        this.expiresAt = Date.now() + (expiresIn - 30) * 1000;
-        this.currentUser = user;
-        this.sessionStartedAt = Date.now();
-        const decoded = decodeJwtPayload(accessToken);
-        const neverExpired = decoded?.['never_expired'] === true;
-        const pwdExpired = decoded?.['pwd_expired'] === true;
-        this.passwordExpired = !neverExpired && pwdExpired;
-        sessionStorage.setItem('iam.session.active', 'true');
-        this.lastVerifiedAt = Date.now();
-        this.initializing.set(false);
-    }
-    clearSession() {
-        this.accessToken = null;
-        this._refreshToken = null;
-        this.expiresAt = null;
-        this.currentUser = null;
-        this.passwordExpired = false;
-        this.sessionStartedAt = null;
-        this.changePasswordTokenValue = null;
-        sessionStorage.removeItem('iam.changePasswordToken');
-        // NOTE: `iam.session.active` is intentionally NOT cleared here — it must
-        // survive mid-session revocation so `tryRestoreSession()` can detect
-        // "refresh after revocation" on the next load; explicit logout clears it.
-    }
-    /**
-     * Clears the client-side session AND invalidates the server-side session
-     * by revoking the refresh token. Returns an observable that completes after
-     * the server logout call finishes (or fails — failures are swallowed so the
-     * user is never stuck on a logout page).
-     */
-    logout() {
-        const refreshToken = this._refreshToken ?? undefined;
-        this.clearSession();
-        // Explicit logout also clears the "active session" flag so a later
-        // tryRestoreSession() treats the next load as a cold start, not a
-        // refresh-after-revocation.
-        sessionStorage.removeItem('iam.session.active');
-        // Ensure a valid CSRF token first: the backend CsrfGuard requires
-        // X-CSRF-Token on POST /auth/logout. Consumers that only hold the access
-        // token (e.g. `#at=` handoff) never fetched a CSRF token, so without this
-        // their logout is rejected with 403 and the shared HttpOnly refresh cookie
-        // is never cleared — other apps in the browser stay logged in.
-        return this.csrf.ensureToken().pipe(catchError(() => of(undefined)), // best-effort: still attempt the logout
-        switchMap(() => this.authService.logout(refreshToken)), catchError(() => of(undefined)), map$1(() => undefined));
-    }
-    /**
-     * Silently refresh the access token via the HttpOnly refresh cookie
-     * (`POST {api.identity}/auth/refresh`, `withCredentials: true`).
-     * Single-flight: concurrent callers share the in-flight refresh; the shared
-     * observable is retained until it completes/errors so a cancelled caller
-     * cannot abort the fetch.
-     */
-    refreshToken() {
-        let inFlight = this.refreshInFlight;
-        if (!inFlight) {
-            const source = this.authService.refresh().pipe(timeout({
-                each: REFRESH_TIMEOUT_MS,
-                with: () => throwError(() => new Error(`Refresh request timed out after ${REFRESH_TIMEOUT_MS}ms`)),
-            }), tap$1((res) => {
-                this.setSession(res.accessToken, res.expiresIn, this.currentUser ?? decodeUser(res.accessToken), res.refreshToken);
-            }), map$1((res) => res.accessToken), catchError((err) => {
-                console.warn('[@insight/ui][SESSION] silent refresh failed', {
-                    status: err?.status,
-                    errorCode: extractProblemDetailsErrorCode(err),
-                });
-                return throwError(() => err);
-            }), shareReplay$1({ bufferSize: 1, refCount: true }));
-            inFlight = source;
-            this.refreshInFlight = source;
-            source.subscribe({
-                error: () => {
-                    this.refreshInFlight = null;
-                },
-                complete: () => {
-                    this.refreshInFlight = null;
-                },
-            });
-        }
-        return inFlight;
-    }
-    /** True if the session was verified against the backend within `cooldownMs` (default 30s). */
-    isRecentlyVerified(cooldownMs = 30_000) {
-        return !!this.accessToken && Date.now() - this.lastVerifiedAt < cooldownMs;
-    }
-    /**
-     * Proactive session validation for guards. Refreshes the token to check
-     * session validity WITHOUT resetting the SSO session timer. Skips the refresh
-     * if the last check was within 30 seconds. Throws if the session was revoked
-     * (e.g. `SESSION_REPLACED`).
-     */
-    proactiveValidate() {
-        if (this.isRecentlyVerified()) {
-            return of(this.accessToken);
-        }
-        const savedStartedAt = this.sessionStartedAt;
-        return this.refreshToken().pipe(tap$1(() => {
-            this.sessionStartedAt = savedStartedAt;
-        }));
-    }
-    /**
-     * Cold-start session restore from the HttpOnly cookie (called on app load).
-     * Skips non-signin auth sub-pages (forgot/reset password, MFA, callback).
-     * The signin page ALWAYS attempts the silent refresh: when the shared SSO
-     * cookie is still valid (e.g. after logging in via another app), restoring
-     * lets the signin page auto-redirect to the returnUrl / authenticated
-     * landing; when there is no session the refresh fails and the login form
-     * shows. (Explicit logout clears the cookie, so a bare signin after logout
-     * still ends up on the login form.) Shows the session-expired overlay when
-     * refreshing after a previously-active session. Returns the reason (if any)
-     * extracted from the error so the guard can decide overlay vs. signin.
-     */
-    tryRestoreSession() {
-        if (this.restoreInFlight) {
-            return this.restoreInFlight;
-        }
-        const pathname = window.location.pathname ?? '';
-        const isSigninPage = /^\/auth\/signin$|^\/signin$/i.test(pathname);
-        const isOtherAuthPage = /^\/auth(\/|$)|^\/forgot-password|^\/reset-password/i.test(pathname) && !isSigninPage;
-        if (isOtherAuthPage) {
-            this.initializing.set(false);
-            return Promise.resolve({});
-        }
-        const restorePromise = lastValueFrom(this.authService.refresh().pipe(tap$1((res) => {
-            this.setSession(res.accessToken, res.expiresIn, decodeUser(res.accessToken), res.refreshToken);
-        }), map$1(() => ({}))), { defaultValue: {} }).catch((err) => {
-            console.debug('[@insight/ui][SESSION] tryRestoreSession: FAILED', {
-                status: err?.status,
-            });
-            const rawErrorCode = extractProblemDetailsErrorCode(err);
-            const code = toSessionExpiredReason(rawErrorCode);
-            const wasActive = sessionStorage.getItem('iam.session.active') === 'true';
-            // The session-expired overlay is only for mid-session revocation while the
-            // user is browsing the app. NEVER show it over an auth/signin page — a
-            // failed restore there simply means "show the login form". This matters
-            // for cross-app logouts: `iam.session.active` lives in THIS origin's
-            // sessionStorage and is NOT cleared when the user logs out from another
-            // SSO app (e.g. atlas-web), so without this guard the stale flag would
-            // wrongly pop the overlay on the signin page after an external logout.
-            const isAuthPage = /^\/auth(\/|$)|^\/signin$|^\/logout$/i.test(pathname);
-            if (wasActive && !isAuthPage && isSessionExpiredError(err)) {
-                // Pass the raw backend error code + detail through so the consumer app
-                // can resolve a localized message from its own error-catalog service.
-                this.sessionExpiredService.show(pathname, code ?? 'TOKEN_EXPIRED', rawErrorCode, err?.detail);
-            }
-            if (isSessionExpiredError(err)) {
-                this.authService.logout().subscribe({ error: () => void 0 });
-            }
-            return { reason: code };
-        });
-        const safetyTimer = new Promise((r) => setTimeout(() => r({}), 10_000));
-        this.restoreInFlight = Promise.race([restorePromise, safetyTimer]).finally(() => {
-            this.initializing.set(false);
-        });
-        return this.restoreInFlight;
-    }
-    readExpiresInFromToken(token) {
-        const decoded = decodeJwtPayload(token);
-        if (!decoded || typeof decoded['exp'] !== 'number') {
-            return null;
-        }
-        return Math.max(0, decoded['exp'] - Math.floor(Date.now() / 1000));
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISessionService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISessionService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ISessionService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
 
 /**
  * Registers the @insight/ui shared auth package (`IApiService`,
@@ -13694,10 +14187,10 @@ class IAuthCallback {
             this.router.navigateByUrl(safeReturnUrl);
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAuthCallback, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.29", type: IAuthCallback, isStandalone: true, selector: "i-auth-callback", ngImport: i0, template: '', isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAuthCallback, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: IAuthCallback, isStandalone: true, selector: "i-auth-callback", ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IAuthCallback, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAuthCallback, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-auth-callback',
@@ -13734,240 +14227,6 @@ const authGuard = (_route, state) => {
     window.location.href = buildExternalSigninUrl(config, state.url);
     return false;
 };
-
-// Endpoints that must never receive a Bearer header (would be circular / not yet authenticated).
-const AUTH_SKIP_URLS = ['/auth/csrf', '/auth/refresh'];
-const isAuthSkipUrl = (url) => AUTH_SKIP_URLS.some((skip) => url.includes(skip));
-const addAuthHeader = (req, token) => req.clone({ headers: req.headers.set('Authorization', `Bearer ${token}`) });
-/**
- * Auth HTTP interceptor for @insight/ui consumer apps.
- *
- * Attaches the in-memory access token as a Bearer header. On 401, attempts a
- * single silent refresh (via the HttpOnly refresh cookie) and retries once;
- * on refresh failure, clears the session and redirects to iam-web's signin
- * page. 429 (rate-limit) and 423 (lockout) responses are passed through
- * untouched — `IApiService.enrichError()` already surfaces `retryAfter` for
- * consumer apps to build the same UX as iam-web.
- */
-const authInterceptor = (req, next) => {
-    const session = inject(ISessionService);
-    const config = inject(INSIGHT_AUTH_CONFIG);
-    if (isAuthSkipUrl(req.url)) {
-        return next(req);
-    }
-    const token = session.getAccessToken();
-    const outgoing = token ? addAuthHeader(req, token) : req;
-    return next(outgoing).pipe(catchError((err) => {
-        if (!(err instanceof HttpErrorResponse) || err.status !== 401) {
-            return throwError(() => err);
-        }
-        return session.refreshToken().pipe(switchMap((newToken) => next(addAuthHeader(req, newToken))), catchError((refreshErr) => {
-            session.clearSession();
-            // Use the current path (no hash/token) as the target to return to —
-            // routed through the callback route, same as authGuard, to avoid a
-            // redirect loop.
-            const targetPath = window.location.pathname + window.location.search;
-            window.location.href = buildExternalSigninUrl(config, targetPath);
-            return throwError(() => refreshErr);
-        }));
-    }));
-};
-
-/**
- * Types for the current-user navigation & favorites data, matched to the
- * iam-user-api user-menu service contract (`GET {api.user}/me/menus*` and
- * `GET {api.user}/users/user`). These are the raw backend shapes; the library
- * maps them onto the UI-facing `IMenu` / `IUser` contracts via `user.mapper.ts`.
- */
-
-/**
- * Maps the backend current-user DTO to `@insight/ui`'s sidebar `IUser` shape
- * (`employeeCode` / `fullName` / `userImagePath`), falling back to `username`.
- * `userImagePath` is `''` when no photo exists — the sidebar renders it with
- * `i-avatar`, which falls back to a user icon when the image is empty/errors.
- */
-function mapToSidebarUser(user) {
-    return {
-        employeeCode: user.employeeCode ?? user.username ?? '',
-        fullName: user.fullName ?? user.username ?? '',
-        userImagePath: user.photoUrl ?? '',
-    };
-}
-/** Maps a backend effective-menu node onto the UI-facing `IMenu` (modern shape). */
-function toIMenu(node) {
-    return {
-        id: node.id,
-        name: node.name,
-        type: node.type,
-        menuCode: node.menuCode,
-        route: node.route,
-        icon: node.icon,
-        openIn: node.openIn,
-        application: node.application ? { ...node.application } : null,
-        companies: node.companies?.map((company) => ({ ...company })) ?? [],
-        isFavorite: node.isFavorite,
-        children: node.children?.map(toIMenu) ?? [],
-    };
-}
-/** Maps an array of backend effective-menu nodes onto `IMenu[]`. */
-function toIMenus(nodes) {
-    return (nodes ?? []).map(toIMenu);
-}
-/** Maps a backend favorite item onto the UI-facing `IMenu` (modern shape). */
-function toIMenuFavorite(item) {
-    return {
-        id: item.id,
-        name: item.name,
-        menuCode: item.menuCode,
-        route: item.route,
-        icon: item.icon,
-        openIn: item.openIn,
-        application: item.application ? { ...item.application } : null,
-        companies: item.companies?.map((company) => ({ ...company })) ?? [],
-        isFavorite: true,
-    };
-}
-/** Recursively collects every non-null `menuCode` across a menu tree (deduplicated, order preserved). */
-function collectMenuCodes(menus) {
-    const codes = new Set();
-    const walk = (nodes) => {
-        for (const node of nodes) {
-            if (node.menuCode) {
-                codes.add(node.menuCode);
-            }
-            walk(getMenuChildren(node));
-        }
-    };
-    walk(menus);
-    return [...codes];
-}
-/**
- * Menu-mode permission check: returns true if the user's loaded menus contain
- * ANY of the given menu codes. An empty set of menus (not yet loaded) always
- * returns `false` — gated UI renders only once the store has data.
- */
-function hasAnyMenuCode(menus, code) {
-    const codes = new Set(collectMenuCodes(menus));
-    if (Array.isArray(code)) {
-        return code.some((item) => codes.has(item));
-    }
-    return codes.has(code);
-}
-/** First navigable leaf route in a menu tree — a sensible post-login default landing. */
-function findFirstLeafRoute(menus) {
-    for (const menu of menus) {
-        if (isLeafItem(menu)) {
-            const route = getMenuRoute(menu);
-            if (route) {
-                return route;
-            }
-        }
-        const childRoute = findFirstLeafRoute(getMenuChildren(menu));
-        if (childRoute) {
-            return childRoute;
-        }
-    }
-    return null;
-}
-/** Finds a menu node's display name by id (recursive), or null. */
-function findMenuNameById(menus, menuId) {
-    for (const menu of menus) {
-        if (getMenuKey(menu) === menuId) {
-            const label = getMenuLabel(menu);
-            return label || null;
-        }
-        const child = findMenuNameById(getMenuChildren(menu), menuId);
-        if (child) {
-            return child;
-        }
-    }
-    return null;
-}
-
-/**
- * Current-user navigation & favorites service — calls iam-user-api's
- * `/me/menus*` endpoints (user-menu service contract). These endpoints return
- * a `{ meta, data }` envelope; this service unwraps `.data` so callers keep
- * the app-wide body-as-data convention.
- *
- * Base URL: `{api.user}` from the resolved auth config (defaults to the
- * library environment file). Consumer apps override via
- * `provideInsightAuth({ api: { user: '...' } })`.
- */
-class IUserMenuService {
-    api = inject(IApiService);
-    config = inject(INSIGHT_AUTH_CONFIG);
-    get baseUrl() {
-        return this.config.api['user'] ?? environment.api.user;
-    }
-    /** GET `{api.user}/me/menus` — effective navigation tree for one or all active applications. Output type overridable via `T`. */
-    getEffectiveMenus(applicationId) {
-        const params = applicationId ? new HttpParams({ fromObject: { applicationId } }) : undefined;
-        return this.api
-            .get('/me/menus', params, { apiUrl: this.baseUrl })
-            .pipe(map((response) => response.data));
-    }
-    /** GET `{api.user}/me/menus/favorites` — effective favorite items, sorted by name. Output type overridable via `T`. */
-    getFavorites(applicationId) {
-        const params = applicationId ? new HttpParams({ fromObject: { applicationId } }) : undefined;
-        return this.api
-            .get('/me/menus/favorites', params, { apiUrl: this.baseUrl })
-            .pipe(map((response) => response.data));
-    }
-    /** PUT `{api.user}/me/menus/{menuId}/favorite` — pin an effective menu item (204 No Content). */
-    addFavorite(menuId) {
-        return this.api.put(`/me/menus/${menuId}/favorite`, {}, { apiUrl: this.baseUrl });
-    }
-    /** DELETE `{api.user}/me/menus/{menuId}/favorite` — unpin a menu item (204 No Content). */
-    removeFavorite(menuId) {
-        return this.api.delete(`/me/menus/${menuId}/favorite`, { apiUrl: this.baseUrl });
-    }
-    /**
-     * PUT `{api.user}/me/menus/favorites` — atomically replace the complete
-     * favorite collection after a drag-drop. `displayOrder` values form the
-     * complete sequence 1..n. Returns 204 No Content.
-     */
-    reorderFavorites(menuIds) {
-        const items = menuIds.map((menuId, index) => ({
-            menuId: String(menuId),
-            displayOrder: index + 1,
-        }));
-        return this.api.put('/me/menus/favorites', { items }, { apiUrl: this.baseUrl });
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUserMenuService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUserMenuService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUserMenuService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
-
-/**
- * Current-user profile service — calls iam-user-api's `GET {api.user}/users/user`
- * endpoint (`CurrentUserDto`). The sidebar-shaped mapping (`IUser`) lives in
- * `user.mapper.ts` (`mapToSidebarUser`).
- *
- * Base URL: `{api.user}` from the resolved auth config (defaults to the
- * library environment file). Output type overridable via the generic — the
- * library default is the raw `IInsightCurrentUser` DTO.
- */
-class ICurrentUserService {
-    api = inject(IApiService);
-    config = inject(INSIGHT_AUTH_CONFIG);
-    get baseUrl() {
-        return this.config.api['user'] ?? environment.api.user;
-    }
-    /** GET `{api.user}/users/user` — raw current-user DTO. Override `T` to use your own response type. */
-    getCurrentUser() {
-        return this.api.get('/users/user', undefined, { apiUrl: this.baseUrl });
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICurrentUserService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICurrentUserService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: ICurrentUserService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
 
 /**
  * Session-storage wrapper for non-sensitive UI state (returnUrl, nonce/state).
@@ -14006,208 +14265,103 @@ class IStorageService {
         this.delete('ru');
         return url || '/';
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IStorageService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IStorageService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IStorageService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IStorageService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IStorageService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IStorageService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
 
 /**
- * In-memory store for the current user's sidebar data — user profile, effective
- * navigation menus, favorites — and permission checks.
+ * Library-provided session-expired overlay. Consumer apps render it once near
+ * the app root (mirroring `<i-dialog-outlet />`):
  *
- * Everything lives in memory (signals); NOTHING is persisted to Web Storage.
- * On a cold start (page load) consumers call `load()` to re-fetch user, menus
- * and favorites; the store then re-emits so gated UI (`ihHasMn` /
- * `ihNotHasMn`) re-renders reactively once data is available (async-aware).
+ * ```html
+ * <i-session-expired-dialog />
+ * ```
+ *
+ * It is self-gating (renders nothing while hidden), reads its state from the
+ * shared `SessionExpiredService` (shown by the auth interceptor when a token
+ * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
+ * again", performs a full-page redirect to iam-web's signin via
+ * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
+ * clicking the backdrop.
  */
-class IUserMenuStore {
-    currentUserService = inject(ICurrentUserService);
-    menuService = inject(IUserMenuService);
-    session = inject(ISessionService);
-    /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
-    currentUser = signal(null, ...(ngDevMode ? [{ debugName: "currentUser" }] : []));
-    /** Raw current-user DTO as returned by the backend — `null` until loaded. */
-    rawCurrentUser = signal(null, ...(ngDevMode ? [{ debugName: "rawCurrentUser" }] : []));
-    /** Effective navigation tree (`IMenu` modern shape). */
-    menus = signal([], ...(ngDevMode ? [{ debugName: "menus" }] : []));
-    /** Favorite menus (`IMenu` modern shape). */
-    favorites = signal([], ...(ngDevMode ? [{ debugName: "favorites" }] : []));
-    /** Roles decoded from the access token (for `source: 'role'` permission checks). */
-    roles = signal([], ...(ngDevMode ? [{ debugName: "roles" }] : []));
-    /** True while the cold-start `load()` is in flight. */
-    initializing = signal(false, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
-    /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
-    loadError = signal(null, ...(ngDevMode ? [{ debugName: "loadError" }] : []));
-    // Reactive observable projections (used by directives/components that prefer
-    // observables over signals).
-    currentUser$ = toObservable(this.currentUser);
-    menus$ = toObservable(this.menus);
-    favorites$ = toObservable(this.favorites);
-    roles$ = toObservable(this.roles);
-    initializing$ = toObservable(this.initializing);
-    /**
-     * Post-login default landing (when no return URL is present).
-     * Order: (1) first navigable favorite route, (2) first navigable menu route.
-     */
-    get defaultRoute() {
-        return findFirstLeafRoute(this.favorites()) ?? findFirstLeafRoute(this.menus());
+class ISessionExpiredDialog {
+    sessionExpired = inject(SessionExpiredService);
+    config = inject(INSIGHT_AUTH_CONFIG);
+    visible = this.sessionExpired.visible;
+    iconClass() {
+        return this.sessionExpired.reason() === 'SESSION_REPLACED'
+            ? 'fa-solid fa-right-from-bracket'
+            : 'fa-solid fa-clock';
     }
-    /** Finds a menu node's display name by id (recursive), or null. */
-    findMenuName(menuId) {
-        return findMenuNameById(this.menus(), menuId);
-    }
-    /**
-     * Cold-start: fetch user + menus + favorites concurrently. A failure in one
-     * branch does not block the others; `initializing` clears once all settle.
-     *
-     * Returns an observable that completes when the load settles, so callers can
-     * await it (e.g. to navigate to `defaultRoute` after login). The load starts
-     * immediately even if the caller ignores the returned observable — a shared
-     * source is kept alive by an internal subscribe (fire-and-forget compatible).
-     */
-    load() {
-        if (this.initializing()) {
-            return this.initializing$.pipe(filter$1((init) => !init), take(1), map(() => undefined));
+    title() {
+        switch (this.sessionExpired.reason()) {
+            case 'SESSION_REPLACED':
+                return 'Signed Out Remotely';
+            case 'SESSION_REVOKED':
+                return 'Session Ended';
+            default:
+                return 'Session Expired';
         }
-        this.initializing.set(true);
-        this.loadError.set(null);
-        this.roles.set(this.session.getRoles());
-        const result$ = forkJoin({
-            user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err))),
-            menus: this.loadMenusInternal().pipe(catchError((err) => this.recordError('menus', err))),
-            favorites: this.loadFavoritesInternal().pipe(catchError((err) => this.recordError('favorites', err))),
-        }).pipe(map(() => undefined), catchError(() => of(undefined)), finalize(() => this.initializing.set(false)), shareReplay$1({ bufferSize: 1, refCount: false }));
-        // Fire-and-forget: always start the load even if the caller ignores the result.
-        result$.subscribe();
-        return result$;
     }
-    /** Refresh roles from the current access token (call after login / token change). */
-    syncRoles() {
-        this.roles.set(this.session.getRoles());
-    }
-    /**
-     * Menu-mode permission check against the in-memory menu codes (ANY match).
-     * Returns `false` while menus are not yet loaded — gated UI renders only
-     * after the store has data (async-aware via the reactive directives).
-     */
-    hasMenu(code) {
-        return hasAnyMenuCode(this.menus(), code);
-    }
-    /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
-    hasRole(code) {
-        const roles = this.roles();
-        if (Array.isArray(code)) {
-            return code.some((role) => roles.includes(role));
+    message() {
+        switch (this.sessionExpired.reason()) {
+            case 'TOKEN_EXPIRED':
+                return 'Your session has expired. Please log in again to continue.';
+            case 'SESSION_REVOKED':
+                return 'Your session has been ended. Please log in again.';
+            case 'SESSION_REPLACED':
+                return ('Your session was ended because you signed in from another device or ' +
+                    'your concurrent session access was revoked. Please log in again.');
+            default:
+                return 'Your session is no longer valid. Please log in again.';
         }
-        return roles.includes(code);
     }
-    /**
-     * Pin (`isFavorite: true`) or unpin a menu item. Flips the star icon in the
-     * `menus` tree immediately (optimistic), calls the backend, then re-fetches
-     * favorites so the server remains the source of truth for the favorites
-     * section. The menu-star change is reverted on error.
-     */
-    toggleFavorite(menuId, isFavorite) {
-        const previousMenus = this.menus();
-        this.menus.set(this.applyMenuFavorite(previousMenus, menuId, isFavorite));
-        const call = isFavorite
-            ? this.menuService.addFavorite(menuId)
-            : this.menuService.removeFavorite(menuId);
-        return call.pipe(switchMap(() => this.reloadFavorites()), catchError((err) => {
-            this.menus.set(previousMenus);
-            return throwError(() => err);
-        }));
+    /** Perform the SSO handoff to iam-web's signin page, then clear the overlay state. */
+    onConfirm() {
+        const returnUrl = this.sessionExpired.returnUrl();
+        this.sessionExpired.hide();
+        window.location.href = buildExternalSigninUrl(this.config, returnUrl);
     }
-    /**
-     * Persists the new favorite order after a drag-drop. Reorders the in-memory
-     * `favorites` signal locally (optimistic) and calls the backend — no GET
-     * refetch after the write. The local change is reverted on error.
-     */
-    reorderFavorites(menuIds) {
-        const previous = this.favorites();
-        this.favorites.set(this.applyFavoriteReorder(previous, menuIds));
-        return this.menuService.reorderFavorites(menuIds).pipe(catchError((err) => {
-            this.favorites.set(previous);
-            return throwError(() => err);
-        }));
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISessionExpiredDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: ISessionExpiredDialog, isStandalone: true, selector: "i-session-expired-dialog", ngImport: i0, template: `
+    @if (visible()) {
+      <div class="session-expired-overlay">
+        <div class="session-expired-card" (click)="$event.stopPropagation()">
+          <div class="session-expired-icon">
+            <i class="fa-solid {{ iconClass() }}"></i>
+          </div>
+          <h1>{{ title() }}</h1>
+          <p>{{ message() }}</p>
+          <button class="session-expired-action" type="button" (click)="onConfirm()">
+            Log in again
+          </button>
+        </div>
+      </div>
     }
-    /** Re-fetches the favorites from the backend (manual refresh). */
-    reloadFavorites() {
-        return this.loadFavoritesInternal().pipe(map(() => undefined));
-    }
-    /**
-     * Loads the effective navigation tree into `menus` — for one application
-     * (`applicationId`) or all active applications when omitted. Returns the
-     * mapped `IMenu[]`.
-     */
-    loadMenus(applicationId) {
-        return this.menuService.getEffectiveMenus(applicationId).pipe(tap$1((nodes) => this.menus.set(toIMenus(nodes))), map((nodes) => toIMenus(nodes)));
-    }
-    /** Loads favorites into `favorites` — optionally for a single application. Returns the mapped `IMenu[]`. */
-    loadFavorites(applicationId) {
-        return this.menuService.getFavorites(applicationId).pipe(tap$1((items) => this.favorites.set(items.map(toIMenuFavorite))), map((items) => items.map(toIMenuFavorite)));
-    }
-    /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
-    applyMenuFavorite(menus, menuId, isFavorite) {
-        return menus.map((menu) => {
-            if (getMenuKey(menu) === menuId) {
-                return { ...menu, isFavorite };
-            }
-            if (menu.children?.length) {
-                return { ...menu, children: this.applyMenuFavorite(menu.children, menuId, isFavorite) };
-            }
-            if (menu.child?.length) {
-                return { ...menu, child: this.applyMenuFavorite(menu.child, menuId, isFavorite) };
-            }
-            return menu;
-        });
-    }
-    applyFavoriteReorder(favorites, menuIds) {
-        const byId = new Map(favorites.map((favorite) => [String(getMenuKey(favorite)), favorite]));
-        const ordered = [];
-        const seen = new Set();
-        for (const id of menuIds) {
-            const item = byId.get(String(id));
-            if (item) {
-                ordered.push(item);
-                seen.add(String(id));
-            }
-        }
-        for (const favorite of favorites) {
-            if (!seen.has(String(getMenuKey(favorite)))) {
-                ordered.push(favorite);
-            }
-        }
-        return ordered;
-    }
-    loadUserInternal() {
-        return this.currentUserService.getCurrentUser().pipe(tap$1((raw) => {
-            this.rawCurrentUser.set(raw);
-            this.currentUser.set(mapToSidebarUser(raw));
-        }), map(() => null));
-    }
-    loadMenusInternal() {
-        return this.loadMenus().pipe(map(() => null));
-    }
-    loadFavoritesInternal() {
-        return this.loadFavorites().pipe(map(() => null));
-    }
-    recordError(source, err) {
-        const detail = err?.detail ?? 'Failed to load';
-        this.loadError.set(`${source}: ${detail}`);
-        // Never log sensitive data — only the load source and error detail.
-        console.error(`[@insight/ui][STORE] load "${source}" failed`, err);
-        return of(null);
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUserMenuStore, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUserMenuStore, providedIn: 'root' });
+  `, isInline: true, styles: [".session-expired-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background-color:#00000080;z-index:9999}.session-expired-card{background:var(--i-color-surface, #ffffff);border-radius:8px;padding:32px;max-width:380px;width:calc(100% - 32px);box-shadow:0 8px 24px #0003;text-align:center}.session-expired-icon{font-size:48px;color:var(--i-color-warning, #f59e0b);margin-bottom:16px}h1{margin:0 0 8px;font-size:22px;font-weight:600;color:var(--i-text-color, #1f2937)}p{margin:0 0 24px;font-size:14px;line-height:1.5;color:var(--i-text-subtle-color, #6b7280)}.session-expired-action{border:none;border-radius:6px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;background:var(--i-color-primary, #2563eb);color:#fff}.session-expired-action:hover{filter:brightness(1.05)}\n"], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IUserMenuStore, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISessionExpiredDialog, decorators: [{
+            type: Component,
+            args: [{ selector: 'i-session-expired-dialog', standalone: true, changeDetection: ChangeDetectionStrategy.OnPush, template: `
+    @if (visible()) {
+      <div class="session-expired-overlay">
+        <div class="session-expired-card" (click)="$event.stopPropagation()">
+          <div class="session-expired-icon">
+            <i class="fa-solid {{ iconClass() }}"></i>
+          </div>
+          <h1>{{ title() }}</h1>
+          <p>{{ message() }}</p>
+          <button class="session-expired-action" type="button" (click)="onConfirm()">
+            Log in again
+          </button>
+        </div>
+      </div>
+    }
+  `, styles: [".session-expired-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background-color:#00000080;z-index:9999}.session-expired-card{background:var(--i-color-surface, #ffffff);border-radius:8px;padding:32px;max-width:380px;width:calc(100% - 32px);box-shadow:0 8px 24px #0003;text-align:center}.session-expired-icon{font-size:48px;color:var(--i-color-warning, #f59e0b);margin-bottom:16px}h1{margin:0 0 8px;font-size:22px;font-weight:600;color:var(--i-text-color, #1f2937)}p{margin:0 0 24px;font-size:14px;line-height:1.5;color:var(--i-text-subtle-color, #6b7280)}.session-expired-action{border:none;border-radius:6px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;background:var(--i-color-primary, #2563eb);color:#fff}.session-expired-action:hover{filter:brightness(1.05)}\n"] }]
         }] });
 
 /** Resolves an input into a concrete `{ source, codes }` pair (or `null`). */
@@ -14264,10 +14418,10 @@ class IHMenuGateDirective {
             this.viewCreated = false;
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHMenuGateDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IHMenuGateDirective, isStandalone: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHMenuGateDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.30", type: IHMenuGateDirective, isStandalone: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHMenuGateDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHMenuGateDirective, decorators: [{
             type: Directive,
             args: [{ standalone: true }]
         }] });
@@ -14287,10 +14441,10 @@ class IHHasMnDirective extends IHMenuGateDirective {
     set ihHasMn(value) {
         this.value$.next(value);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IHHasMnDirective, isStandalone: true, selector: "[ihHasMn]", inputs: { ihHasMn: "ihHasMn" }, usesInheritance: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.30", type: IHHasMnDirective, isStandalone: true, selector: "[ihHasMn]", inputs: { ihHasMn: "ihHasMn" }, usesInheritance: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHHasMnDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHHasMnDirective, decorators: [{
             type: Directive,
             args: [{ selector: '[ihHasMn]', standalone: true }]
         }], propDecorators: { ihHasMn: [{
@@ -14312,10 +14466,10 @@ class IHNotHasMnDirective extends IHMenuGateDirective {
     set ihNotHasMn(value) {
         this.value$.next(value);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHNotHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.29", type: IHNotHasMnDirective, isStandalone: true, selector: "[ihNotHasMn]", inputs: { ihNotHasMn: "ihNotHasMn" }, usesInheritance: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHNotHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.30", type: IHNotHasMnDirective, isStandalone: true, selector: "[ihNotHasMn]", inputs: { ihNotHasMn: "ihNotHasMn" }, usesInheritance: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImport: i0, type: IHNotHasMnDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHNotHasMnDirective, decorators: [{
             type: Directive,
             args: [{ selector: '[ihNotHasMn]', standalone: true }]
         }], propDecorators: { ihNotHasMn: [{
@@ -14330,5 +14484,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.29", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeMenuTree, provideInsightAuth, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
+export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeMenuTree, provideInsightAuth, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
 //# sourceMappingURL=insight-ui.mjs.map

@@ -1682,6 +1682,13 @@ declare class IHContent {
     readonly shell: IHTitleBreadcrumbService;
     sidebarVisibility: boolean;
     readonly onSidebarToggled: EventEmitter<boolean>;
+    private readonly session;
+    private readonly userMenuStore;
+    /** Aggregated boot loading state — true while session restore or sidebar menu data is loading. */
+    readonly initializing: i0.WritableSignal<boolean>;
+    /** Emits the aggregated loading state so consumer apps can render their own loader. */
+    readonly loading: EventEmitter<boolean>;
+    private readonly loadingEffect;
     /** route-based breadcrumbs */
     readonly breadcrumb$: Observable<IBreadcrumbItem[]>;
     /** last breadcrumb label = route-based page title */
@@ -1711,7 +1718,7 @@ declare class IHContent {
      */
     overrideHref(url: string): string;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHContent, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHContent, "ih-content", never, {}, { "onSidebarToggled": "onSidebarToggled"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHContent, "ih-content", never, {}, { "onSidebarToggled": "onSidebarToggled"; "loading": "loading"; }, never, never, true, never>;
 }
 declare class IHMenu implements OnChanges {
     menu: IMenu | undefined;
@@ -2240,6 +2247,31 @@ type IInsightAuthConfig = {
     tokenLifespan: IInsightTokenLifespan;
     /** CSRF token max age in seconds (backend cookie maxAge minus a safety buffer). */
     csrfTokenMaxAgeSeconds: number;
+    /**
+     * This app's registered application API key (iam-user-api `application.api_key`).
+     * Attached as an `Api-Key` header on every request. Empty/undefined disables it.
+     */
+    apiKey?: string;
+    /**
+     * This app's application id (iam-user-api `application.id`). Used as the
+     * default `applicationId` when loading the effective menus, so each app only
+     * sees its own application's navigation. Empty/undefined keeps the legacy
+     * all-applications behaviour.
+     */
+    appId?: string;
+    /**
+     * How the auth interceptor handles a failed session refresh:
+     * - `'dialog'`: show the library session-expired dialog (default).
+     * - `'redirect'`: legacy behaviour — full-page redirect to the signin page.
+     * When `onUnauthorized` is provided it takes precedence and disables both.
+     */
+    unauthorizedHandling?: 'dialog' | 'redirect';
+    /**
+     * Optional consumer-owned handler invoked when a session refresh fails.
+     * Overrides `unauthorizedHandling` — neither the dialog nor the redirect
+     * runs when this is provided.
+     */
+    onUnauthorized?: (error: unknown) => void;
 };
 /**
  * Overrides accepted by `provideInsightAuth()`. Every field is optional and
@@ -2555,6 +2587,12 @@ type IApiOptions = {
     headers?: Record<string, string>;
     /** Request body (only used by DELETE requests that send a payload). */
     body?: any;
+    /**
+     * Skip attaching the `Authorization: Bearer` header for this call. The flag
+     * is conveyed to the auth interceptor via a sentinel header that is stripped
+     * before the request leaves the browser.
+     */
+    skipBearer?: boolean;
 };
 /**
  * Standardized HTTP client for @insight/ui consumer apps.
@@ -2570,6 +2608,8 @@ declare class IApiService {
     private readonly csrf;
     private readonly config;
     private get headers();
+    /** Merge default headers with per-call overrides, adding the skip-bearer sentinel when requested. */
+    private mergeHeaders;
     /**
      * Normalize a raw `HttpErrorResponse` into a consistent shape:
      * `{ status, detail, retryAfter, ...rest }`. `retryAfter` is read from the
@@ -2764,6 +2804,7 @@ declare class ISessionService {
  */
 declare const authGuard: CanActivateFn;
 
+declare const IH_SKIP_BEARER_HEADER = "X-IH-Skip-Bearer";
 /**
  * Auth HTTP interceptor for @insight/ui consumer apps.
  *
@@ -2950,6 +2991,34 @@ declare class IStorageService {
     getReturnUrl(): string;
     static ɵfac: i0.ɵɵFactoryDeclaration<IStorageService, never>;
     static ɵprov: i0.ɵɵInjectableDeclaration<IStorageService>;
+}
+
+/**
+ * Library-provided session-expired overlay. Consumer apps render it once near
+ * the app root (mirroring `<i-dialog-outlet />`):
+ *
+ * ```html
+ * <i-session-expired-dialog />
+ * ```
+ *
+ * It is self-gating (renders nothing while hidden), reads its state from the
+ * shared `SessionExpiredService` (shown by the auth interceptor when a token
+ * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
+ * again", performs a full-page redirect to iam-web's signin via
+ * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
+ * clicking the backdrop.
+ */
+declare class ISessionExpiredDialog {
+    private readonly sessionExpired;
+    private readonly config;
+    protected readonly visible: i0.WritableSignal<boolean>;
+    protected iconClass(): string;
+    protected title(): string;
+    protected message(): string;
+    /** Perform the SSO handoff to iam-web's signin page, then clear the overlay state. */
+    onConfirm(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionExpiredDialog, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISessionExpiredDialog, "i-session-expired-dialog", never, {}, {}, never, never, true, never>;
 }
 
 /**
@@ -3164,6 +3233,10 @@ type IEnvironment = {
     mfaChallengeSessionTimeoutSeconds?: number;
     /** Origins iam-web's signin page trusts for post-login redirects (informational). */
     allowedReturnOrigins: string[];
+    /** This app's registered application API key (attached as `Api-Key` header). */
+    apiKey?: string;
+    /** This app's application id (used as the default filter when loading effective menus). */
+    appId?: string;
 };
 
 /**
@@ -3175,5 +3248,5 @@ type IEnvironment = {
  */
 declare const environment: IEnvironment;
 
-export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeMenuTree, provideInsightAuth, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
+export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeMenuTree, provideInsightAuth, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
 export type { IAlertData, IApiOptions, IApiResponse, IAuthUser, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEnvironment, IErrorContext, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IInsightAuthConfig, IInsightAuthConfigOverrides, IInsightCurrentUser, IInsightFavoriteMenuItem, IInsightFavoriteOrderItem, IInsightMenuApplication, IInsightMenuCompany, IInsightMenuNode, IInsightMenuOpenIn, IInsightPermission, IInsightPermissionInput, IInsightPermissionSource, IInsightTokenLifespan, IInsightUserMenuEnvelope, ILoginResponse, IMenu, IMenuApplication, IMenuCompany, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuOpenIn, IMfaChallengeResponse, IPaginatorState, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser, IValidateResetTokenResponse, SessionExpiredReason };
