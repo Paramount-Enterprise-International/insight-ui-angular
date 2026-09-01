@@ -19,6 +19,7 @@
 import { APP_BASE_HREF, AsyncPipe, NgClass } from '@angular/common';
 import {
   Component,
+  effect,
   ElementRef,
   EventEmitter,
   HostBinding,
@@ -57,6 +58,8 @@ import {
 } from 'rxjs';
 import { IAvatar } from '../avatar';
 import { IHighlightSearchPipe } from '../highlight-search.pipe';
+import { ISessionService } from '../session/session.service';
+import { IUserMenuStore } from '../store/user-menu.store';
 
 export type IRoute = Omit<Route, 'data' | 'children'> & {
   data: {
@@ -458,6 +461,24 @@ export class IHContent {
   sidebarVisibility = true;
 
   @Output() readonly onSidebarToggled = new EventEmitter<boolean>();
+
+  private readonly session = inject(ISessionService);
+  private readonly userMenuStore = inject(IUserMenuStore);
+
+  /** Aggregated boot loading state — true while session restore or sidebar menu data is loading. */
+  readonly initializing = signal(true);
+
+  /** Emits the aggregated loading state so consumer apps can render their own loader. */
+  @Output() readonly loading = new EventEmitter<boolean>();
+
+  // Push session + menu-store initializing changes through the `loading` output.
+  private readonly loadingEffect = effect(() => {
+    const value = this.session.initializing() || this.userMenuStore.initializing();
+    if (value !== this.initializing()) {
+      this.initializing.set(value);
+      this.loading.emit(value);
+    }
+  });
 
   /** route-based breadcrumbs */
   readonly breadcrumb$: Observable<IBreadcrumbItem[]> = this.router.events.pipe(

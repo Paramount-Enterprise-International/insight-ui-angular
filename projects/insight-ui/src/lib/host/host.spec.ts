@@ -1,4 +1,5 @@
 import { APP_BASE_HREF } from '@angular/common';
+import { provideHttpClient } from '@angular/common/http';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -22,7 +23,10 @@ describe('IHContent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [IHContent, RouterTestingModule],
-      providers: [{ provide: APP_BASE_HREF, useValue: '/-/' }],
+      providers: [
+        { provide: APP_BASE_HREF, useValue: '/-/' },
+        provideHttpClient(),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(IHContent);
