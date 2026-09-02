@@ -10773,6 +10773,15 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
         }] });
 
 /**
+ * Known API error codes surfaced by the platform services (mirrors the
+ * iam-user-api error catalog — see `iam-user-api/src/common/errors/user-errors.ts`).
+ *
+ * Consumers branch on these to tailor UX (e.g. showing the "Access Unavailable"
+ * page when the current user has no application mapping).
+ */
+const USER_APPLICATION_MAPPING_NOT_FOUND = 'USER_APPLICATION_MAPPING_NOT_FOUND';
+
+/**
  * Types for the current-user navigation & favorites data, matched to the
  * iam-user-api user-menu service contract (`GET {api.user}/me/menus*` and
  * `GET {api.user}/users/user`). These are the raw backend shapes; the library
@@ -10970,19 +10979,12 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
             args: [{ providedIn: 'root' }]
         }] });
 
-/**
- * In-memory store for the current user's sidebar data — user profile, effective
- * navigation menus, favorites — and permission checks.
- *
- * Everything lives in memory (signals); NOTHING is persisted to Web Storage.
- * On a cold start (page load) consumers call `load()` to re-fetch user, menus
- * and favorites; the store then re-emits so gated UI (`ihHasMn` /
- * `ihNotHasMn`) re-renders reactively once data is available (async-aware).
- */
 class IUserMenuStore {
     currentUserService = inject(ICurrentUserService);
     menuService = inject(IUserMenuService);
     session = inject(ISessionService);
+    /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
+    loadedUserSub = null;
     /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
     currentUser = signal(null, ...(ngDevMode ? [{ debugName: "currentUser" }] : []));
     /** Raw current-user DTO as returned by the backend — `null` until loaded. */
@@ -10997,6 +10999,8 @@ class IUserMenuStore {
     initializing = signal(false, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
     /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
     loadError = signal(null, ...(ngDevMode ? [{ debugName: "loadError" }] : []));
+    /** Normalized per-branch errors from the last `load()` — mirrors the service API error contract. */
+    loadErrors = signal({ user: null, menus: null, favorites: null }, ...(ngDevMode ? [{ debugName: "loadErrors" }] : []));
     // Reactive observable projections (used by directives/components that prefer
     // observables over signals).
     currentUser$ = toObservable(this.currentUser);
@@ -11028,8 +11032,18 @@ class IUserMenuStore {
         if (this.initializing()) {
             return this.initializing$.pipe(filter((init) => !init), take(1), map(() => undefined));
         }
+        // Invalidate cross-session cache: if this load is for a different user
+        // (`sub`) than the one whose data is cached, drop the stale data first so
+        // a failed refetch (e.g. USER_APPLICATION_MAPPING_NOT_FOUND) never leaks
+        // the previous user's menus/favorites into the sidebar.
+        const sessionSub = this.session.getUser()?.sub ?? null;
+        if (sessionSub !== this.loadedUserSub) {
+            this.clearData();
+            this.loadedUserSub = sessionSub;
+        }
         this.initializing.set(true);
         this.loadError.set(null);
+        this.loadErrors.set({ user: null, menus: null, favorites: null });
         this.roles.set(this.session.getRoles());
         const result$ = forkJoin({
             user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err))),
@@ -11039,6 +11053,15 @@ class IUserMenuStore {
         // Fire-and-forget: always start the load even if the caller ignores the result.
         result$.subscribe();
         return result$;
+    }
+    /**
+     * Clears every cached user/menu/favorite value and error state, and forgets
+     * the identity they belonged to. Call on logout / session clear so no stale
+     * data survives into the next login.
+     */
+    reset() {
+        this.clearData();
+        this.loadedUserSub = null;
     }
     /** Refresh roles from the current access token (call after login / token change). */
     syncRoles() {
@@ -11151,10 +11174,20 @@ class IUserMenuStore {
     loadFavoritesInternal() {
         return this.loadFavorites().pipe(map(() => null));
     }
+    clearData() {
+        this.currentUser.set(null);
+        this.rawCurrentUser.set(null);
+        this.menus.set([]);
+        this.favorites.set([]);
+        this.roles.set([]);
+        this.loadError.set(null);
+        this.loadErrors.set({ user: null, menus: null, favorites: null });
+    }
     recordError(source, err) {
-        const detail = err?.detail ?? 'Failed to load';
-        this.loadError.set(`${source}: ${detail}`);
-        // Never log sensitive data — only the load source and error detail.
+        const normalized = normalizeApiError(err);
+        this.loadErrors.update((errors) => ({ ...errors, [source]: normalized }));
+        this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(err, 'Failed to load')}`);
+        // Never log sensitive data — only the load source and normalized error details.
         console.error(`[@insight/ui][STORE] load "${source}" failed`, err);
         return of(null);
     }
@@ -14577,5 +14610,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
+export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
 //# sourceMappingURL=insight-ui.mjs.map
