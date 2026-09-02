@@ -3,6 +3,7 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { forkJoin, map, Observable, of, throwError } from 'rxjs';
 import { catchError, filter, finalize, shareReplay, switchMap, take, tap } from 'rxjs/operators';
 
+import { type INormalizedApiError, normalizeApiError, resolveApiErrorDisplayMessage } from '../api';
 import { getMenuKey, IMenu, IUser } from '../host';
 import { ISessionService } from '../session/session.service';
 import {
@@ -30,11 +31,20 @@ import {
  * and favorites; the store then re-emits so gated UI (`ihHasMn` /
  * `ihNotHasMn`) re-renders reactively once data is available (async-aware).
  */
+/** Load branch keys for the cold-start sidebar data load. */
+export type UserMenuLoadSource = 'user' | 'menus' | 'favorites';
+
+/** Per-branch normalized errors from the last `load()` — mirrors the service API error contract. */
+export type UserMenuLoadErrors = Record<UserMenuLoadSource, INormalizedApiError | null>;
+
 @Injectable({ providedIn: 'root' })
 export class IUserMenuStore {
   private readonly currentUserService = inject(ICurrentUserService);
   private readonly menuService = inject(IUserMenuService);
   private readonly session = inject(ISessionService);
+
+  /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
+  private loadedUserSub: string | null = null;
 
   /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
   readonly currentUser = signal<IUser | null>(null);
@@ -50,6 +60,8 @@ export class IUserMenuStore {
   readonly initializing = signal(false);
   /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
   readonly loadError = signal<string | null>(null);
+  /** Normalized per-branch errors from the last `load()` — mirrors the service API error contract. */
+  readonly loadErrors = signal<UserMenuLoadErrors>({ user: null, menus: null, favorites: null });
 
   // Reactive observable projections (used by directives/components that prefer
   // observables over signals).
@@ -89,8 +101,18 @@ export class IUserMenuStore {
         map(() => undefined),
       );
     }
+    // Invalidate cross-session cache: if this load is for a different user
+    // (`sub`) than the one whose data is cached, drop the stale data first so
+    // a failed refetch (e.g. USER_APPLICATION_MAPPING_NOT_FOUND) never leaks
+    // the previous user's menus/favorites into the sidebar.
+    const sessionSub = this.session.getUser()?.sub ?? null;
+    if (sessionSub !== this.loadedUserSub) {
+      this.clearData();
+      this.loadedUserSub = sessionSub;
+    }
     this.initializing.set(true);
     this.loadError.set(null);
+    this.loadErrors.set({ user: null, menus: null, favorites: null });
     this.roles.set(this.session.getRoles());
 
     const result$ = forkJoin({
@@ -110,6 +132,16 @@ export class IUserMenuStore {
     result$.subscribe();
 
     return result$;
+  }
+
+  /**
+   * Clears every cached user/menu/favorite value and error state, and forgets
+   * the identity they belonged to. Call on logout / session clear so no stale
+   * data survives into the next login.
+   */
+  reset(): void {
+    this.clearData();
+    this.loadedUserSub = null;
   }
 
   /** Refresh roles from the current access token (call after login / token change). */
@@ -250,10 +282,21 @@ export class IUserMenuStore {
     return this.loadFavorites().pipe(map(() => null));
   }
 
-  private recordError(source: string, err: unknown): Observable<null> {
-    const detail = (err as { detail?: string })?.detail ?? 'Failed to load';
-    this.loadError.set(`${source}: ${detail}`);
-    // Never log sensitive data — only the load source and error detail.
+  private clearData(): void {
+    this.currentUser.set(null);
+    this.rawCurrentUser.set(null);
+    this.menus.set([]);
+    this.favorites.set([]);
+    this.roles.set([]);
+    this.loadError.set(null);
+    this.loadErrors.set({ user: null, menus: null, favorites: null });
+  }
+
+  private recordError(source: UserMenuLoadSource, err: unknown): Observable<null> {
+    const normalized = normalizeApiError(err);
+    this.loadErrors.update((errors) => ({ ...errors, [source]: normalized }));
+    this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(err, 'Failed to load')}`);
+    // Never log sensitive data — only the load source and normalized error details.
     console.error(`[@insight/ui][STORE] load "${source}" failed`, err);
     return of(null);
   }
