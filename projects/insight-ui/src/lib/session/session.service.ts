@@ -5,6 +5,7 @@ import { catchError, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 
 import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
 import { IAuthService, IAuthUser } from '../auth/auth.service';
+import { normalizeApiError } from '../api/api-error';
 import { ICsrfService } from '../csrf/csrf.service';
 import {
   extractProblemDetailsErrorCode,
@@ -416,13 +417,16 @@ export class ISessionService {
       // wrongly pop the overlay on the signin page after an external logout.
       const isAuthPage = /^\/auth(\/|$)|^\/signin$|^\/logout$/i.test(pathname);
       if (wasActive && !isAuthPage && isSessionExpiredError(err)) {
-        // Pass the raw backend error code + detail through so the consumer app
-        // can resolve a localized message from its own error-catalog service.
+        // Preserve the current backend message and normalized error alongside
+        // legacy fields so the dialog can apply the shared display precedence.
+        const apiError = normalizeApiError(err);
         this.sessionExpiredService.show(
           pathname,
           code ?? 'TOKEN_EXPIRED',
           rawErrorCode,
-          (err as { detail?: string })?.detail,
+          apiError.detail,
+          apiError.message,
+          apiError,
         );
       }
       if (isSessionExpiredError(err)) {

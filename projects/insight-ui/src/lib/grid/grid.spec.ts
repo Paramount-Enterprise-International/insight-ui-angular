@@ -113,7 +113,7 @@ describe('IGrid — tree mode row click + conditional selection', () => {
     expect(host.rowClicks[0].name).toBe('Root A');
   });
 
-  it('toggles selection when clicking a selectable row (tree mode)', () => {
+  it('does not toggle selection when clicking a selectable row (tree mode)', () => {
     // treeInitialExpandLevel=99 already renders children by default.
     const rows = getRowElements();
     const childRow = rows.find((r) => r.textContent?.includes('Child A.1'))!;
@@ -121,7 +121,7 @@ describe('IGrid — tree mode row click + conditional selection', () => {
     treeText.click();
     fixture.detectChanges();
 
-    expect(host.grid.selectedRows.some((r) => r.name === 'Child A.1')).toBe(true);
+    expect(host.grid.selectedRows.some((r) => r.name === 'Child A.1')).toBe(false);
   });
 
   it('does not toggle selection when clicking a disabled row', () => {

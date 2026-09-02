@@ -82,6 +82,31 @@ describe('IApiService', () => {
       );
   });
 
+  it('keeps the backend message ahead of the transport message without overwriting legacy detail', (done) => {
+    service.post('/auth/refresh', {}).subscribe({
+      error: (err) => {
+        expect(err.status).toBe(401);
+        expect(err.errorCode).toBe('AUTH_SESSION_REVOKED');
+        expect(err.message).toBe('Your session was revoked.');
+        expect(err.detail).toBe('Legacy session detail');
+        expect(err.revision).toBe(8);
+        expect(err.traceId).toBe('trace-456');
+        done();
+      },
+    });
+
+    httpMock.expectOne(`${testConfig.api.identity}/auth/refresh`).flush(
+      {
+        errorCode: 'AUTH_SESSION_REVOKED',
+        message: 'Your session was revoked.',
+        detail: 'Legacy session detail',
+        revision: 8,
+        traceId: 'trace-456',
+      },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+  });
+
   it('resolves an apiUrl override instead of the default identity base URL', () => {
     service.get('/products', undefined, { apiUrl: 'http://localhost:3002/api' }).subscribe();
 
