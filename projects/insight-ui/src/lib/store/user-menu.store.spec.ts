@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
-import { ISessionService } from '../session/session.service';
+import { ISessionService, type ISessionUser } from '../session/session.service';
 import {
   ICurrentUserService,
   IInsightCurrentUser,
@@ -89,12 +89,13 @@ describe('IUserMenuStore', () => {
       'removeFavorite',
       'reorderFavorites',
     ]);
-    sessionSpy = jasmine.createSpyObj<ISessionService>('ISessionService', ['getRoles', 'hasRole']);
+    sessionSpy = jasmine.createSpyObj<ISessionService>('ISessionService', ['getRoles', 'hasRole', 'getUser']);
 
     userSpy.getCurrentUser.and.returnValue(of(rawUser));
     menuSpy.getEffectiveMenus.and.returnValue(of(nodes));
     menuSpy.getFavorites.and.returnValue(of(favorites));
     sessionSpy.getRoles.and.returnValue(['iam-admin']);
+    sessionSpy.getUser.and.returnValue({ sub: 'sub-a' } as ISessionUser);
 
     TestBed.configureTestingModule({
       providers: [
@@ -109,7 +110,11 @@ describe('IUserMenuStore', () => {
   it('load() populates user, menus, favorites and roles from memory signals', () => {
     store.load();
 
-    expect(store.currentUser()).toEqual({ employeeCode: 'EMP001', fullName: 'John Doe', userImagePath: '' });
+    expect(store.currentUser()).toEqual({
+      employeeCode: 'EMP001',
+      fullName: 'John Doe',
+      userImagePath: '',
+    });
     expect(store.rawCurrentUser()).toEqual(rawUser);
     expect(store.menus().length).toBe(1);
     expect(store.menus()[0].children?.[0].menuCode).toBe('dashboard');
@@ -128,7 +133,14 @@ describe('IUserMenuStore', () => {
   it('defaultRoute prefers the first favorite route, then falls back to the first menu route', () => {
     // Favorites present → first favorite route wins.
     store.favorites.set([
-      { id: 'f1', name: 'Report', type: 'item', menuCode: 'report', route: '/report', isFavorite: true },
+      {
+        id: 'f1',
+        name: 'Report',
+        type: 'item',
+        menuCode: 'report',
+        route: '/report',
+        isFavorite: true,
+      },
     ]);
     store.menus.set([
       { id: 'm1', name: 'Dashboard', type: 'item', menuCode: 'dashboard', route: '/dashboard' },
@@ -163,7 +175,14 @@ describe('IUserMenuStore', () => {
 
   it('toggleFavorite flips the menu star, then refetches favorites after the write', () => {
     store.menus.set([
-      { id: 'm1', name: 'Dashboard', type: 'item', menuCode: 'dashboard', route: '/dashboard', isFavorite: false },
+      {
+        id: 'm1',
+        name: 'Dashboard',
+        type: 'item',
+        menuCode: 'dashboard',
+        route: '/dashboard',
+        isFavorite: false,
+      },
     ]);
     store.favorites.set([]);
     menuSpy.addFavorite.and.returnValue(of(undefined));
@@ -185,8 +204,22 @@ describe('IUserMenuStore', () => {
 
   it('reorderFavorites reorders locally and does not refetch after the write', () => {
     store.favorites.set([
-      { id: 'm1', name: 'Dashboard', type: 'item', menuCode: 'dashboard', route: '/dashboard', isFavorite: true },
-      { id: 'm2', name: 'Reports', type: 'item', menuCode: 'reports', route: '/reports', isFavorite: true },
+      {
+        id: 'm1',
+        name: 'Dashboard',
+        type: 'item',
+        menuCode: 'dashboard',
+        route: '/dashboard',
+        isFavorite: true,
+      },
+      {
+        id: 'm2',
+        name: 'Reports',
+        type: 'item',
+        menuCode: 'reports',
+        route: '/reports',
+        isFavorite: true,
+      },
     ]);
     menuSpy.reorderFavorites.and.returnValue(of(undefined));
 
@@ -227,5 +260,106 @@ describe('IUserMenuStore', () => {
     userSubject.next(rawUser);
     userSubject.complete();
     expect(store.initializing()).toBeFalse();
+  });
+
+  it('records the normalized menus error (errorCode + revision) and real message when /me/menus fails', () => {
+    menuSpy.getEffectiveMenus.and.returnValue(
+      throwError(() => ({
+        status: 404,
+        errorCode: 'USER_APPLICATION_MAPPING_NOT_FOUND',
+        message: 'The requested user application assignment was not found.',
+        revision: 1,
+      })),
+    );
+
+    store.load();
+
+    expect(store.initializing()).toBeFalse();
+    expect(store.loadErrors().menus?.errorCode).toBe('USER_APPLICATION_MAPPING_NOT_FOUND');
+    expect(store.loadErrors().menus?.status).toBe(404);
+    expect(store.loadErrors().menus?.revision).toBe(1);
+    expect(store.loadError()).toBe(
+      'menus: The requested user application assignment was not found.',
+    );
+    // Non-failed branches stay clean.
+    expect(store.loadErrors().user).toBeNull();
+    expect(store.loadErrors().favorites).toBeNull();
+  });
+
+  it('records per-branch errors for user and favorites independently of menus', () => {
+    userSpy.getCurrentUser.and.returnValue(
+      throwError(() => ({ status: 500, message: 'user exploded' })),
+    );
+    menuSpy.getFavorites.and.returnValue(
+      throwError(() => ({ status: 500, message: 'favorites exploded' })),
+    );
+
+    store.load();
+
+    expect(store.loadErrors().user?.status).toBe(500);
+    expect(store.loadErrors().favorites?.message).toBe('favorites exploded');
+    // Menus branch succeeded → no error.
+    expect(store.loadErrors().menus).toBeNull();
+  });
+
+  it('clears loadErrors on a successful load', () => {
+    // Force an error first, then a clean reload.
+    menuSpy.getEffectiveMenus.and.returnValue(
+      throwError(() => ({ status: 404, errorCode: 'USER_APPLICATION_MAPPING_NOT_FOUND' })),
+    );
+    store.load();
+    expect(store.loadErrors().menus).not.toBeNull();
+
+    menuSpy.getEffectiveMenus.and.returnValue(of(nodes));
+    store.load();
+    expect(store.loadErrors().menus).toBeNull();
+    expect(store.loadError()).toBeNull();
+  });
+
+  it('drops the previous user\'s menus when load() runs for a different user and menus fail', () => {
+    // User A loads menus fine.
+    store.load();
+    expect(store.menus().length).toBe(1);
+
+    // Switch to user B (different `sub`): menus endpoint errors (e.g. no
+    // application mapping) → stale user A menus must NOT remain visible.
+    sessionSpy.getUser.and.returnValue({ sub: 'sub-b' } as ISessionUser);
+    menuSpy.getEffectiveMenus.and.returnValue(
+      throwError(() => ({
+        status: 404,
+        errorCode: 'USER_APPLICATION_MAPPING_NOT_FOUND',
+        message: 'The requested user application assignment was not found.',
+        revision: 1,
+      })),
+    );
+
+    store.load();
+
+    expect(store.menus().length).toBe(0);
+    expect(store.loadErrors().menus?.errorCode).toBe('USER_APPLICATION_MAPPING_NOT_FOUND');
+  });
+
+  it('keeps cached menus across a same-user reload', () => {
+    store.load();
+    expect(store.menus().length).toBe(1);
+
+    // Same user re-loads (same `sub`) — menus stay until the refetch replaces them.
+    store.load();
+    expect(store.menus().length).toBe(1);
+  });
+
+  it('reset() clears all cached data and forgets the identity', () => {
+    store.load();
+    expect(store.menus().length).toBe(1);
+    expect(store.favorites().length).toBe(1);
+
+    store.reset();
+
+    expect(store.menus().length).toBe(0);
+    expect(store.favorites().length).toBe(0);
+    expect(store.currentUser()).toBeNull();
+    expect(store.rawCurrentUser()).toBeNull();
+    expect(store.roles()).toEqual([]);
+    expect(store.loadErrors()).toEqual({ user: null, menus: null, favorites: null });
   });
 });
