@@ -6629,9 +6629,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
  *   stopped all click propagation. Removed that blanket stopPropagation —
  *   interactive controls (expand toggle, checkbox/radio) already stop their
  *   own propagation individually.
- * - Tree mode: clicking anywhere on a row (outside interactive controls) now
- *   also toggles that row's selection when selectionMode is set (flat mode
- *   unchanged — still checkbox/radio-only for backward compatibility).
+ * - Tree and flat selection remain checkbox/radio-only. `onRowClick` emits for
+ *   consumers that explicitly bind row actions, but does not toggle selection.
  * - Add selectionRowHidden / selectionRowDisabled per-row predicate inputs:
  *   - selectionRowHidden(row) => boolean — hides the checkbox/radio for a row
  *     (space is preserved for column/indent alignment)
@@ -8738,14 +8737,6 @@ class IGrid {
     /* ------- row click ------- */
     onRowClicked(row) {
         this.onRowClick.emit(row);
-        // Tree mode: clicking anywhere on the row (outside interactive controls,
-        // which each stop their own propagation) also toggles selection — matches
-        // common tree-select UX. Flat mode stays checkbox/radio-only for backward
-        // compatibility (consumers opt in manually via
-        // `(onRowClick)="grid.onRowSelectionToggle($event)"`).
-        if (this.treeEnabled && this.selectionMode && this.isRowSelectable(row)) {
-            this.onRowSelectionToggle(row);
-        }
     }
     /* ------- template helpers ------- */
     get singleSelectionName() {
@@ -9005,10 +8996,9 @@ class IGrid {
           @for (col of columns; track getColumnTrack(col, colIndex); let colIndex = $index) {
             @if (treeEnabled && isTreeHostColumn(col)) {
               <!-- TREE MODE: tree UI is inside this cell -->
-              <!-- NOTE: no cell-level (click) stopPropagation here on purpose —
-                   clicks must bubble to <i-grid-row> so onRowClick fires and
-                   (in tree mode) toggles selection. Interactive controls below
-                   (expand toggle, checkbox/radio) each stop their own click. -->
+                  <!-- NOTE: no cell-level (click) stopPropagation here on purpose —
+                    clicks must bubble to <i-grid-row> so onRowClick fires.
+                    Interactive controls below each stop their own click. -->
               <i-grid-cell [class.i-grid-cell--auto]="col.isAuto" [column]="col">
                 <span class="i-grid-tree-inline">
                   <span class="i-grid-tree-indent" [style.width.px]="getTreeIndentPx(row)"></span>
@@ -9354,10 +9344,9 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
           @for (col of columns; track getColumnTrack(col, colIndex); let colIndex = $index) {
             @if (treeEnabled && isTreeHostColumn(col)) {
               <!-- TREE MODE: tree UI is inside this cell -->
-              <!-- NOTE: no cell-level (click) stopPropagation here on purpose —
-                   clicks must bubble to <i-grid-row> so onRowClick fires and
-                   (in tree mode) toggles selection. Interactive controls below
-                   (expand toggle, checkbox/radio) each stop their own click. -->
+                  <!-- NOTE: no cell-level (click) stopPropagation here on purpose —
+                    clicks must bubble to <i-grid-row> so onRowClick fires.
+                    Interactive controls below each stop their own click. -->
               <i-grid-cell [class.i-grid-cell--auto]="col.isAuto" [column]="col">
                 <span class="i-grid-tree-inline">
                   <span class="i-grid-tree-indent" [style.width.px]="getTreeIndentPx(row)"></span>
@@ -9891,6 +9880,114 @@ function buildExternalSigninUrl(config, targetPath) {
     return `${config.signinUrl}?returnUrl=${encodeURIComponent(callbackUrl)}`;
 }
 
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
+const readString = (value, key) => {
+    const candidate = value[key];
+    return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate : undefined;
+};
+const readNumber = (value, key) => {
+    const candidate = value[key];
+    return typeof candidate === 'number' && Number.isFinite(candidate) ? candidate : undefined;
+};
+const toSafeExtensionValue = (value, ancestors = new Set()) => {
+    if (value === null || typeof value === 'string' || typeof value === 'boolean') {
+        return value;
+    }
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : undefined;
+    }
+    if (typeof value !== 'object' || ancestors.has(value)) {
+        return undefined;
+    }
+    const nextAncestors = new Set(ancestors).add(value);
+    if (Array.isArray(value)) {
+        const result = [];
+        for (const item of value) {
+            const safeItem = toSafeExtensionValue(item, nextAncestors);
+            if (safeItem !== undefined) {
+                result.push(safeItem);
+            }
+        }
+        return result;
+    }
+    const result = {};
+    for (const [key, item] of Object.entries(value)) {
+        if (UNSAFE_KEYS.has(key)) {
+            continue;
+        }
+        const safeItem = toSafeExtensionValue(item, nextAncestors);
+        if (safeItem !== undefined) {
+            result[key] = safeItem;
+        }
+    }
+    return result;
+};
+const readRetryAfterHeader = (transport) => {
+    const headers = transport['headers'];
+    if (!isRecord(headers) || typeof headers['get'] !== 'function') {
+        return undefined;
+    }
+    const value = headers['get']('Retry-After');
+    if (typeof value !== 'string' || value.trim().length === 0) {
+        return undefined;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+};
+/**
+ * Purely normalizes current error bodies, legacy Problem Details bodies, and
+ * raw Angular `HttpErrorResponse`-like values into one strict shape.
+ */
+const normalizeApiError = (error) => {
+    const transport = isRecord(error) ? error : {};
+    const nestedBody = isRecord(transport['error']) ? transport['error'] : undefined;
+    const body = nestedBody ?? transport;
+    const normalized = {};
+    for (const [key, value] of Object.entries(body)) {
+        if (UNSAFE_KEYS.has(key)) {
+            continue;
+        }
+        const safeValue = toSafeExtensionValue(value);
+        if (safeValue !== undefined) {
+            normalized[key] = safeValue;
+        }
+    }
+    const status = readNumber(transport, 'status') ?? readNumber(body, 'status');
+    const bodyMessage = readString(body, 'message');
+    const retryAfter = readNumber(body, 'retryAfter') ?? readRetryAfterHeader(transport);
+    if (status !== undefined)
+        normalized.status = status;
+    if (bodyMessage !== undefined)
+        normalized.message = bodyMessage;
+    if (retryAfter !== undefined)
+        normalized.retryAfter = retryAfter;
+    return normalized;
+};
+/**
+ * Resolves display text in the approved order: backend `message`, optional
+ * catalog lookup, legacy `detail`/`title`, then the caller's local fallback.
+ */
+const resolveApiErrorDisplayMessage = (error, localFallback, catalogResolver) => {
+    const normalized = normalizeApiError(error);
+    const backendMessage = normalized.message;
+    if (backendMessage) {
+        return backendMessage;
+    }
+    if (catalogResolver && normalized.errorCode) {
+        try {
+            const catalogMessage = catalogResolver(normalized.errorCode, normalized.revision, normalized);
+            if (catalogMessage?.trim()) {
+                return catalogMessage;
+            }
+        }
+        catch {
+            // A consumer catalog is optional; lookup failures fall through safely.
+        }
+    }
+    return normalized.detail ?? normalized.title ?? localFallback;
+};
+
 const valueAt = (value, key) => {
     if (typeof value !== 'object' || value === null) {
         return undefined;
@@ -9945,10 +10042,9 @@ const isSessionExpiredError = (error) => {
 /**
  * In-memory overlay state for the session-expired UI.
  *
- * Besides the derived `reason`, the service also exposes the RAW backend error
- * code and Problem Details `detail` so consumer apps (e.g. iam-web) can resolve
- * a localized display message from their own error-catalog service without the
- * library ever calling the configuration API.
+ * Besides the derived `reason`, the service exposes current backend error
+ * fields and legacy `detail` so the shared dialog or consumer UI can resolve
+ * display text without making its own configuration API call.
  *
  * @overridable — consumers may provide `{ provide: SessionExpiredService, useClass: ... }`.
  */
@@ -9960,11 +10056,17 @@ class SessionExpiredService {
     errorCode = signal(null, ...(ngDevMode ? [{ debugName: "errorCode" }] : []));
     /** Backend-provided `detail` message from the Problem Details response — display fallback. */
     detail = signal(null, ...(ngDevMode ? [{ debugName: "detail" }] : []));
-    show(returnUrl, reason, errorCode, detail) {
+    /** Backend-provided message from the current error contract — highest display precedence. */
+    message = signal(null, ...(ngDevMode ? [{ debugName: "message" }] : []));
+    /** Full normalized error, including revision and safe extension fields. */
+    apiError = signal(null, ...(ngDevMode ? [{ debugName: "apiError" }] : []));
+    show(returnUrl, reason, errorCode, detail, message, apiError) {
         this.returnUrl.set(returnUrl || '/');
         this.reason.set(reason);
         this.errorCode.set(errorCode ?? null);
         this.detail.set(detail ?? null);
+        this.message.set(message ?? null);
+        this.apiError.set(apiError ?? null);
         this.visible.set(true);
     }
     hide() {
@@ -9993,9 +10095,8 @@ const addAuthHeader = (req, token) => req.clone({ headers: req.headers.set('Auth
  * Attaches the in-memory access token as a Bearer header. On 401, attempts a
  * single silent refresh (via the HttpOnly refresh cookie) and retries once;
  * on refresh failure, clears the session and redirects to iam-web's signin
- * page. 429 (rate-limit) and 423 (lockout) responses are passed through
- * untouched — `IApiService.enrichError()` already surfaces `retryAfter` for
- * consumer apps to build the same UX as iam-web.
+ * page. 429 (rate-limit) and 423 (lockout) responses are passed through;
+ * `IApiService` normalizes their current or legacy backend error fields.
  */
 const authInterceptor = (req, next) => {
     const session = inject(ISessionService);
@@ -10024,10 +10125,11 @@ const authInterceptor = (req, next) => {
             else if ((config.unauthorizedHandling ?? 'dialog') === 'dialog') {
                 // Default: surface the library session-expired overlay (rendered by
                 // the consumer app) instead of leaving the page.
-                const errorCode = extractProblemDetailsErrorCode(refreshErr);
+                const apiError = normalizeApiError(refreshErr);
+                const errorCode = extractProblemDetailsErrorCode(apiError);
                 const reason = toSessionExpiredReason(errorCode);
                 const targetPath = window.location.pathname + window.location.search;
-                sessionExpired.show(targetPath, reason, errorCode, refreshErr?.detail);
+                sessionExpired.show(targetPath, reason, errorCode, apiError.detail, apiError.message, apiError);
             }
             else {
                 // Legacy: full-page redirect to iam-web's signin page. Use the
@@ -10046,9 +10148,9 @@ const authInterceptor = (req, next) => {
  * Mirrors iam-web's `IApiService`: `withCredentials: true` on every request
  * (required for the CSRF cookie and the HttpOnly refresh cookie to flow),
  * automatic `X-CSRF-Token` header injection, transparent response typing
- * (`T`, no wrapper), and RFC 9457 Problem Details error enrichment matching
- * the exact shape iam-web already produces (`status`/`detail`/`retryAfter`)
- * so consumer apps can reuse the `err?.detail ?? 'fallback'` convention.
+ * (`T`, no wrapper), and normalized current/legacy backend errors. New
+ * `errorCode`/`message`/`revision` responses and safe extensions are retained,
+ * while legacy Problem Details `detail`/`title`/`code` remains compatible.
  */
 class IApiService {
     http = inject(HttpClient);
@@ -10076,28 +10178,9 @@ class IApiService {
         }
         return merged;
     }
-    /**
-     * Normalize a raw `HttpErrorResponse` into a consistent shape:
-     * `{ status, detail, retryAfter, ...rest }`. `retryAfter` is read from the
-     * body or the `Retry-After` header, so 429/423 responses surface it
-     * untouched for rate-limit/lockout UX.
-     */
+    /** Normalize current, legacy, and raw transport errors without losing safe extensions. */
     enrichError(err) {
-        const body = err?.error;
-        if (body && typeof body === 'object' && !Array.isArray(body)) {
-            const retryAfterFromHeader = err?.headers?.get?.('Retry-After');
-            const parsedHeader = retryAfterFromHeader ? Number(retryAfterFromHeader) : NaN;
-            const retryAfter = (typeof body.retryAfter === 'number' ? body.retryAfter : undefined) ??
-                (Number.isFinite(parsedHeader) ? parsedHeader : undefined);
-            return throwError(() => ({
-                ...body,
-                status: err?.status ?? body.status,
-                message: err?.message ?? body.message,
-                detail: body.detail ?? body.title ?? err?.message ?? 'An error occurred',
-                retryAfter,
-            }));
-        }
-        return throwError(() => err);
+        return throwError(() => normalizeApiError(err));
     }
     get(path, params, options) {
         const baseUrl = options?.apiUrl ?? this.config.api.identity;
@@ -10658,9 +10741,10 @@ class ISessionService {
             // wrongly pop the overlay on the signin page after an external logout.
             const isAuthPage = /^\/auth(\/|$)|^\/signin$|^\/logout$/i.test(pathname);
             if (wasActive && !isAuthPage && isSessionExpiredError(err)) {
-                // Pass the raw backend error code + detail through so the consumer app
-                // can resolve a localized message from its own error-catalog service.
-                this.sessionExpiredService.show(pathname, code ?? 'TOKEN_EXPIRED', rawErrorCode, err?.detail);
+                // Preserve the current backend message and normalized error alongside
+                // legacy fields so the dialog can apply the shared display precedence.
+                const apiError = normalizeApiError(err);
+                this.sessionExpiredService.show(pathname, code ?? 'TOKEN_EXPIRED', rawErrorCode, apiError.detail, apiError.message, apiError);
             }
             if (isSessionExpiredError(err)) {
                 this.authService.logout().subscribe({ error: () => void 0 });
@@ -14308,6 +14392,15 @@ class ISessionExpiredDialog {
         }
     }
     message() {
+        const localFallback = this.localFallbackMessage();
+        const error = this.sessionExpired.apiError() ?? {
+            errorCode: this.sessionExpired.errorCode() ?? undefined,
+            message: this.sessionExpired.message() ?? undefined,
+            detail: this.sessionExpired.detail() ?? undefined,
+        };
+        return resolveApiErrorDisplayMessage(error, localFallback, this.config.errorCatalogResolver);
+    }
+    localFallbackMessage() {
         switch (this.sessionExpired.reason()) {
             case 'TOKEN_EXPIRED':
                 return 'Your session has expired. Please log in again to continue.';
@@ -14484,5 +14577,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeMenuTree, provideInsightAuth, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
+export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
 //# sourceMappingURL=insight-ui.mjs.map

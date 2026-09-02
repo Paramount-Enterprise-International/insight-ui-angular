@@ -2196,6 +2196,42 @@ declare class IUI {
     static ɵinj: i0.ɵɵInjectorDeclaration<IUI>;
 }
 
+/** JSON-safe values accepted from backend error extension fields. */
+type ApiErrorExtensionValue = string | number | boolean | null | ApiErrorExtensionValue[] | {
+    [key: string]: ApiErrorExtensionValue;
+};
+/**
+ * Normalized API error shared by all @insight/ui consumers.
+ *
+ * Known fields model the current backend contract and legacy Problem Details
+ * fields. The index signature keeps safe, JSON-compatible backend extensions
+ * (for example `traceId` or validation metadata) without weakening them to
+ * `any`.
+ */
+type INormalizedApiError = {
+    [key: string]: unknown;
+    status?: number;
+    errorCode?: string;
+    code?: string;
+    message?: string;
+    revision?: number;
+    detail?: string;
+    title?: string;
+    retryAfter?: number;
+};
+/** Optional synchronous lookup used between backend and legacy/local messages. */
+type ApiErrorCatalogResolver = (errorCode: string, revision: number | undefined, error: INormalizedApiError) => string | null | undefined;
+/**
+ * Purely normalizes current error bodies, legacy Problem Details bodies, and
+ * raw Angular `HttpErrorResponse`-like values into one strict shape.
+ */
+declare const normalizeApiError: (error: unknown) => INormalizedApiError;
+/**
+ * Resolves display text in the approved order: backend `message`, optional
+ * catalog lookup, legacy `detail`/`title`, then the caller's local fallback.
+ */
+declare const resolveApiErrorDisplayMessage: (error: unknown, localFallback: string, catalogResolver?: ApiErrorCatalogResolver) => string;
+
 /**
  * Token lifespan configuration (seconds). Mirrors the platform-wide AC used by
  * iam-web: Access Token 1h, Refresh Token 2h, Max SSO Session 15h. Consumer
@@ -2272,6 +2308,11 @@ type IInsightAuthConfig = {
      * runs when this is provided.
      */
     onUnauthorized?: (error: unknown) => void;
+    /**
+     * Optional synchronous error-catalog lookup. Display helpers invoke it only
+     * when the backend did not provide `message`, before legacy/local fallbacks.
+     */
+    errorCatalogResolver?: ApiErrorCatalogResolver;
 };
 /**
  * Overrides accepted by `provideInsightAuth()`. Every field is optional and
@@ -2599,9 +2640,9 @@ type IApiOptions = {
  * Mirrors iam-web's `IApiService`: `withCredentials: true` on every request
  * (required for the CSRF cookie and the HttpOnly refresh cookie to flow),
  * automatic `X-CSRF-Token` header injection, transparent response typing
- * (`T`, no wrapper), and RFC 9457 Problem Details error enrichment matching
- * the exact shape iam-web already produces (`status`/`detail`/`retryAfter`)
- * so consumer apps can reuse the `err?.detail ?? 'fallback'` convention.
+ * (`T`, no wrapper), and normalized current/legacy backend errors. New
+ * `errorCode`/`message`/`revision` responses and safe extensions are retained,
+ * while legacy Problem Details `detail`/`title`/`code` remains compatible.
  */
 declare class IApiService {
     private readonly http;
@@ -2610,12 +2651,7 @@ declare class IApiService {
     private get headers();
     /** Merge default headers with per-call overrides, adding the skip-bearer sentinel when requested. */
     private mergeHeaders;
-    /**
-     * Normalize a raw `HttpErrorResponse` into a consistent shape:
-     * `{ status, detail, retryAfter, ...rest }`. `retryAfter` is read from the
-     * body or the `Retry-After` header, so 429/423 responses surface it
-     * untouched for rate-limit/lockout UX.
-     */
+    /** Normalize current, legacy, and raw transport errors without losing safe extensions. */
     private enrichError;
     get<T = any>(path: string, params?: HttpParams, options?: IApiOptions): Observable<T>;
     post<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
@@ -2641,10 +2677,9 @@ declare const isSessionExpiredError: (error: unknown) => boolean;
 /**
  * In-memory overlay state for the session-expired UI.
  *
- * Besides the derived `reason`, the service also exposes the RAW backend error
- * code and Problem Details `detail` so consumer apps (e.g. iam-web) can resolve
- * a localized display message from their own error-catalog service without the
- * library ever calling the configuration API.
+ * Besides the derived `reason`, the service exposes current backend error
+ * fields and legacy `detail` so the shared dialog or consumer UI can resolve
+ * display text without making its own configuration API call.
  *
  * @overridable — consumers may provide `{ provide: SessionExpiredService, useClass: ... }`.
  */
@@ -2656,7 +2691,11 @@ declare class SessionExpiredService {
     readonly errorCode: i0.WritableSignal<string | null>;
     /** Backend-provided `detail` message from the Problem Details response — display fallback. */
     readonly detail: i0.WritableSignal<string | null>;
-    show(returnUrl: string, reason?: SessionExpiredReason, errorCode?: string | null, detail?: string | null): void;
+    /** Backend-provided message from the current error contract — highest display precedence. */
+    readonly message: i0.WritableSignal<string | null>;
+    /** Full normalized error, including revision and safe extension fields. */
+    readonly apiError: i0.WritableSignal<INormalizedApiError | null>;
+    show(returnUrl: string, reason?: SessionExpiredReason, errorCode?: string | null, detail?: string | null, message?: string | null, apiError?: INormalizedApiError | null): void;
     hide(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<SessionExpiredService, never>;
     static ɵprov: i0.ɵɵInjectableDeclaration<SessionExpiredService>;
@@ -2811,9 +2850,8 @@ declare const IH_SKIP_BEARER_HEADER = "X-IH-Skip-Bearer";
  * Attaches the in-memory access token as a Bearer header. On 401, attempts a
  * single silent refresh (via the HttpOnly refresh cookie) and retries once;
  * on refresh failure, clears the session and redirects to iam-web's signin
- * page. 429 (rate-limit) and 423 (lockout) responses are passed through
- * untouched — `IApiService.enrichError()` already surfaces `retryAfter` for
- * consumer apps to build the same UX as iam-web.
+ * page. 429 (rate-limit) and 423 (lockout) responses are passed through;
+ * `IApiService` normalizes their current or legacy backend error fields.
  */
 declare const authInterceptor: HttpInterceptorFn;
 
@@ -3015,6 +3053,7 @@ declare class ISessionExpiredDialog {
     protected iconClass(): string;
     protected title(): string;
     protected message(): string;
+    private localFallbackMessage;
     /** Perform the SSO handoff to iam-web's signin page, then clear the overlay state. */
     onConfirm(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISessionExpiredDialog, never>;
@@ -3248,5 +3287,5 @@ type IEnvironment = {
  */
 declare const environment: IEnvironment;
 
-export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeMenuTree, provideInsightAuth, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
-export type { IAlertData, IApiOptions, IApiResponse, IAuthUser, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEnvironment, IErrorContext, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IInsightAuthConfig, IInsightAuthConfigOverrides, IInsightCurrentUser, IInsightFavoriteMenuItem, IInsightFavoriteOrderItem, IInsightMenuApplication, IInsightMenuCompany, IInsightMenuNode, IInsightMenuOpenIn, IInsightPermission, IInsightPermissionInput, IInsightPermissionSource, IInsightTokenLifespan, IInsightUserMenuEnvelope, ILoginResponse, IMenu, IMenuApplication, IMenuCompany, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuOpenIn, IMfaChallengeResponse, IPaginatorState, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser, IValidateResetTokenResponse, SessionExpiredReason };
+export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
+export type { ApiErrorCatalogResolver, ApiErrorExtensionValue, IAlertData, IApiOptions, IApiResponse, IAuthUser, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEnvironment, IErrorContext, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IInsightAuthConfig, IInsightAuthConfigOverrides, IInsightCurrentUser, IInsightFavoriteMenuItem, IInsightFavoriteOrderItem, IInsightMenuApplication, IInsightMenuCompany, IInsightMenuNode, IInsightMenuOpenIn, IInsightPermission, IInsightPermissionInput, IInsightPermissionSource, IInsightTokenLifespan, IInsightUserMenuEnvelope, ILoginResponse, IMenu, IMenuApplication, IMenuCompany, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuOpenIn, IMfaChallengeResponse, INormalizedApiError, IPaginatorState, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser, IValidateResetTokenResponse, SessionExpiredReason };
