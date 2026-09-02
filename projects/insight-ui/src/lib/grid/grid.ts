@@ -8,9 +8,8 @@
  *   stopped all click propagation. Removed that blanket stopPropagation —
  *   interactive controls (expand toggle, checkbox/radio) already stop their
  *   own propagation individually.
- * - Tree mode: clicking anywhere on a row (outside interactive controls) now
- *   also toggles that row's selection when selectionMode is set (flat mode
- *   unchanged — still checkbox/radio-only for backward compatibility).
+ * - Tree and flat selection remain checkbox/radio-only. `onRowClick` emits for
+ *   consumers that explicitly bind row actions, but does not toggle selection.
  * - Add selectionRowHidden / selectionRowDisabled per-row predicate inputs:
  *   - selectionRowHidden(row) => boolean — hides the checkbox/radio for a row
  *     (space is preserved for column/indent alignment)
@@ -1361,10 +1360,9 @@ export class IGridViewport {}
           @for (col of columns; track getColumnTrack(col, colIndex); let colIndex = $index) {
             @if (treeEnabled && isTreeHostColumn(col)) {
               <!-- TREE MODE: tree UI is inside this cell -->
-              <!-- NOTE: no cell-level (click) stopPropagation here on purpose —
-                   clicks must bubble to <i-grid-row> so onRowClick fires and
-                   (in tree mode) toggles selection. Interactive controls below
-                   (expand toggle, checkbox/radio) each stop their own click. -->
+                  <!-- NOTE: no cell-level (click) stopPropagation here on purpose —
+                    clicks must bubble to <i-grid-row> so onRowClick fires.
+                    Interactive controls below each stop their own click. -->
               <i-grid-cell [class.i-grid-cell--auto]="col.isAuto" [column]="col">
                 <span class="i-grid-tree-inline">
                   <span class="i-grid-tree-indent" [style.width.px]="getTreeIndentPx(row)"></span>
@@ -2901,15 +2899,6 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   onRowClicked(row: T): void {
     this.onRowClick.emit(row);
-
-    // Tree mode: clicking anywhere on the row (outside interactive controls,
-    // which each stop their own propagation) also toggles selection — matches
-    // common tree-select UX. Flat mode stays checkbox/radio-only for backward
-    // compatibility (consumers opt in manually via
-    // `(onRowClick)="grid.onRowSelectionToggle($event)"`).
-    if (this.treeEnabled && this.selectionMode && this.isRowSelectable(row)) {
-      this.onRowSelectionToggle(row);
-    }
   }
 
   /* ------- template helpers ------- */

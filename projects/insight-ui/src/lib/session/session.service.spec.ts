@@ -26,9 +26,11 @@ function makeJwt(payload: Record<string, unknown>): string {
 describe('ISessionService', () => {
   let service: ISessionService;
   let authSpy: jasmine.SpyObj<IAuthService>;
+  let sessionExpiredSpy: jasmine.SpyObj<SessionExpiredService>;
 
   beforeEach(() => {
     authSpy = jasmine.createSpyObj<IAuthService>('IAuthService', ['refresh', 'logout']);
+    sessionExpiredSpy = jasmine.createSpyObj<SessionExpiredService>('SessionExpiredService', ['show', 'hide']);
     TestBed.configureTestingModule({
       providers: [
         { provide: IAuthService, useValue: authSpy },
@@ -38,13 +40,15 @@ describe('ISessionService', () => {
         },
         {
           provide: SessionExpiredService,
-          useValue: { show: jasmine.createSpy('show'), hide: jasmine.createSpy('hide') },
+          useValue: sessionExpiredSpy,
         },
         { provide: INSIGHT_AUTH_CONFIG, useValue: testConfig },
       ],
     });
     service = TestBed.inject(ISessionService);
   });
+
+  afterEach(() => sessionStorage.removeItem('iam.session.active'));
 
   it('is not authenticated by default', () => {
     expect(service.isAuth()).toBeFalse();
@@ -129,5 +133,36 @@ describe('ISessionService', () => {
         done();
       },
     });
+  });
+
+  it('tryRestoreSession() propagates the normalized backend message to session-expired state', async () => {
+    sessionStorage.setItem('iam.session.active', 'true');
+    authSpy.refresh.and.returnValue(
+      throwError(
+        () => ({
+          error: {
+            errorCode: 'AUTH_SESSION_REVOKED',
+            message: 'Your session was revoked by an administrator.',
+            revision: 6,
+            traceId: 'trace-restore',
+          },
+          status: 401,
+          message: 'HTTP transport message',
+        }),
+      ),
+    );
+    authSpy.logout.and.returnValue(of(undefined));
+
+    const result = await service.tryRestoreSession();
+
+    expect(result.reason).toBe('SESSION_REVOKED');
+    const call = sessionExpiredSpy.show.calls.mostRecent().args;
+    expect(call[0]).toBe(window.location.pathname);
+    expect(call[1]).toBe('SESSION_REVOKED');
+    expect(call[2]).toBe('AUTH_SESSION_REVOKED');
+    expect(call[3]).toBeUndefined();
+    expect(call[4]).toBe('Your session was revoked by an administrator.');
+    expect(call[5]?.revision).toBe(6);
+    expect(call[5]?.['traceId'] as unknown).toBe('trace-restore');
   });
 });

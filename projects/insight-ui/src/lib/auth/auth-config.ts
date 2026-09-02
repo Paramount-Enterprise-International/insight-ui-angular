@@ -1,6 +1,7 @@
 import { InjectionToken } from '@angular/core';
 
 import { environment as defaultEnvironment } from '../../environments/environment';
+import type { ApiErrorCatalogResolver } from '../api/api-error';
 
 /**
  * Token lifespan configuration (seconds). Mirrors the platform-wide AC used by
@@ -79,6 +80,11 @@ export type IInsightAuthConfig = {
    * runs when this is provided.
    */
   onUnauthorized?: (error: unknown) => void;
+  /**
+   * Optional synchronous error-catalog lookup. Display helpers invoke it only
+   * when the backend did not provide `message`, before legacy/local fallbacks.
+   */
+  errorCatalogResolver?: ApiErrorCatalogResolver;
 }
 
 /**
