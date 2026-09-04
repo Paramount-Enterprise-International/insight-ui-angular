@@ -6,7 +6,10 @@ import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { Observable, of } from 'rxjs';
 
+import { IConfirmService } from '../dialog/dialog';
 import {
+  buildFavoritePathMap,
+  collectMenuChain,
   IHContent,
   IHSidebar,
   IHTitleBreadcrumbService,
@@ -14,11 +17,8 @@ import {
   IMenuFavoriteReorderEvent,
   IMenuFavoriteToggleEvent,
   IUser,
-  buildFavoritePathMap,
-  collectMenuChain,
   normalizeMenuTree,
 } from './host';
-import { IConfirmService } from '../dialog/dialog';
 
 describe('IHContent', () => {
   let fixture: ComponentFixture<IHContent>;
@@ -26,10 +26,7 @@ describe('IHContent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [IHContent, RouterTestingModule],
-      providers: [
-        { provide: APP_BASE_HREF, useValue: '/-/' },
-        provideHttpClient(),
-      ],
+      providers: [{ provide: APP_BASE_HREF, useValue: '/-/' }, provideHttpClient()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(IHContent);
@@ -68,7 +65,11 @@ const MODERN_MENU: IMenu = {
       openIn: 'CURRENT_TAB',
       sequence: 1,
       isFavorite: true,
-      application: { id: '77777777-7777-4777-a777-777777777002', code: 'IAMCN', name: 'IAM Console' },
+      application: {
+        id: '77777777-7777-4777-a777-777777777002',
+        code: 'IAMCN',
+        name: 'IAM Console',
+      },
       children: [],
     },
   ],
@@ -319,12 +320,10 @@ describe('IHSidebar (modern menus + favorites)', () => {
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;
-    const favoritesLeaves = el.querySelectorAll(
-      '.ih-sidebar-favorites a[data-menu-id]',
+    const favoritesLeaves = el.querySelectorAll('.ih-sidebar-favorites a[data-menu-id]');
+    const mainMenuLeaves = Array.from(el.querySelectorAll('a[data-menu-id]')).filter(
+      (node) => !(node as HTMLElement).closest('.ih-sidebar-favorites'),
     );
-    const mainMenuLeaves = Array.from(
-      el.querySelectorAll('a[data-menu-id]'),
-    ).filter((node) => !(node as HTMLElement).closest('.ih-sidebar-favorites'));
 
     // Only Favorites leaves carry the drag marker (data-menu-id); the main
     // menu tree has none.
@@ -379,7 +378,7 @@ describe('IHSidebar (modern menus + favorites)', () => {
           x: 0,
           y: i * 30,
           toJSON: (): Record<string, never> => ({}),
-        } as DOMRect);
+        }) as DOMRect;
     });
 
     const sidebar = fixture.debugElement.query(By.directive(IHSidebar))
@@ -417,7 +416,7 @@ describe('IHSidebar (modern menus + favorites)', () => {
           x: 0,
           y: i * 30,
           toJSON: (): Record<string, never> => ({}),
-        } as DOMRect);
+        }) as DOMRect;
     });
 
     const sidebar = fixture.debugElement.query(By.directive(IHSidebar))
@@ -535,9 +534,7 @@ describe('IHSidebar (modern menus + favorites)', () => {
 @Component({
   standalone: true,
   imports: [IHSidebar],
-  template: `
-    <ih-sidebar [menusInput$]="menus$" [user$]="user$" />
-  `,
+  template: ` <ih-sidebar [menusInput$]="menus$" [user$]="user$" /> `,
 })
 class FallbackIconHost {
   user$: Observable<IUser> = of(USER);
@@ -683,4 +680,3 @@ describe('buildFavoritePathMap', () => {
     expect(chain?.map((node) => node.name ?? node.menuName)).toEqual(['docs', 'sso', 'index']);
   });
 });
-

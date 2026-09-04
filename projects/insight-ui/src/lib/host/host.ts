@@ -1126,7 +1126,10 @@ export class IHMenu implements OnChanges {
       const menuName = getMenuLabel(this.menu) || 'this menu';
 
       this.confirmService
-        .warning('Remove from Favorites', `Remove <strong>${menuName}</strong> from your favorites?`)
+        .warning(
+          'Remove from Favorites',
+          `Remove <strong>${menuName}</strong> from your favorites?`,
+        )
         .subscribe((confirmed) => {
           if (!confirmed) return;
           this.favoriteToggle.emit({ id, isFavorite: false });
@@ -1308,7 +1311,9 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   private fullMenusSubscription: Subscription | null = null;
 
   /** Ancestor path label per favorite key (menu tree) for the Favorites section. */
-  readonly favoritePaths = computed(() => buildFavoritePathMap(this.fullMenus(), this.favoriteItems()));
+  readonly favoritePaths = computed(() =>
+    buildFavoritePathMap(this.fullMenus(), this.favoriteItems()),
+  );
 
   private favoritesSubscription: Subscription | null = null;
 
