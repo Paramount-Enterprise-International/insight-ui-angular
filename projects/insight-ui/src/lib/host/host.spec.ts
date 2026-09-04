@@ -14,8 +14,11 @@ import {
   IMenuFavoriteReorderEvent,
   IMenuFavoriteToggleEvent,
   IUser,
+  buildFavoritePathMap,
+  collectMenuChain,
   normalizeMenuTree,
 } from './host';
+import { IConfirmService } from '../dialog/dialog';
 
 describe('IHContent', () => {
   let fixture: ComponentFixture<IHContent>;
@@ -190,11 +193,21 @@ describe('normalizeMenuTree', () => {
 describe('IHSidebar (modern menus + favorites)', () => {
   let fixture: ComponentFixture<SidebarHost>;
   let host: SidebarHost;
+  /** Confirm result for the mocked IConfirmService (false = cancel). */
+  let confirmChoice = false;
 
   beforeEach(async () => {
+    confirmChoice = false;
+
     await TestBed.configureTestingModule({
       imports: [SidebarHost, RouterTestingModule],
-      providers: [{ provide: APP_BASE_HREF, useValue: '/' }],
+      providers: [
+        { provide: APP_BASE_HREF, useValue: '/' },
+        {
+          provide: IConfirmService,
+          useValue: { warning: (): Observable<boolean> => of(confirmChoice) },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SidebarHost);
@@ -235,7 +248,20 @@ describe('IHSidebar (modern menus + favorites)', () => {
     expect(star.classList.contains('is-favorite')).toBe(true);
   });
 
-  it('emits onFavoriteToggle when the pin star is clicked (optimistic toggle)', () => {
+  it('does not emit onFavoriteToggle when an unfavorite is cancelled', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    const star = el.querySelector('.ih-menu-favorite') as HTMLElement;
+
+    // The default fixture leaf (Users) is a favorite and the confirm is cancelled.
+    star.click();
+
+    expect(host.toggles.length).toBe(0);
+  });
+
+  it('emits onFavoriteToggle only after an unfavorite is confirmed', () => {
+    confirmChoice = true;
+    fixture.detectChanges();
+
     const el = fixture.nativeElement as HTMLElement;
     const star = el.querySelector('.ih-menu-favorite') as HTMLElement;
 
@@ -244,6 +270,20 @@ describe('IHSidebar (modern menus + favorites)', () => {
     expect(host.toggles.length).toBe(1);
     expect(host.toggles[0].id).toBe('11111111-1111-4111-a111-111111111102');
     expect(host.toggles[0].isFavorite).toBe(false);
+  });
+
+  it('emits onFavoriteToggle immediately when pinning a non-favorite leaf', () => {
+    host.menus$ = of([MODERN_MENU_TWO]);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const star = el.querySelector('.ih-menu-favorite') as HTMLElement;
+
+    star.click();
+
+    expect(host.toggles.length).toBe(1);
+    expect(host.toggles[0].id).toBe('22222222-2222-4222-a222-222222222202');
+    expect(host.toggles[0].isFavorite).toBe(true);
   });
 
   it('does not render pin stars when favoriteMode is off', () => {
@@ -394,7 +434,34 @@ describe('IHSidebar (modern menus + favorites)', () => {
     ]);
   });
 
-  it('shows the owning application name next to favorite labels', () => {
+  it('shows the favorite ancestor path (from the menu tree) as the leaf subtitle', () => {
+    host.favorites$ = of([
+      {
+        id: '11111111-1111-4111-a111-111111111102',
+        name: 'Users',
+        type: 'item',
+        route: '/admin/users',
+        icon: 'fas fa-users',
+        application: {
+          id: '77777777-7777-4777-a777-777777777002',
+          code: 'IAMCN',
+          name: 'IAM Console',
+        },
+      } as IMenu,
+    ]);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const appLabel = el.querySelector('.ih-sidebar-favorites .ih-menu-application');
+
+    // Users lives under the 'Administration' group in the default menu tree.
+    expect(appLabel).toBeTruthy();
+    expect(appLabel?.textContent).toContain('Administration');
+    expect(appLabel?.textContent).not.toContain('IAM Console');
+  });
+
+  it('falls back to the application name when a favorite is not in the menu tree', () => {
+    host.menus$ = of([MODERN_MENU_TWO]);
     host.favorites$ = of([
       {
         id: '11111111-1111-4111-a111-111111111102',
@@ -416,6 +483,25 @@ describe('IHSidebar (modern menus + favorites)', () => {
 
     expect(appLabel).toBeTruthy();
     expect(appLabel?.textContent).toContain('IAM Console');
+  });
+
+  it('does not render a subtitle for a root-level favorite (no ancestors)', () => {
+    const rootLeaf: IMenu = {
+      id: 'root-leaf',
+      name: 'Root Item',
+      type: 'item',
+      route: '/root',
+      icon: 'fas fa-star',
+    };
+
+    host.menus$ = of([rootLeaf]);
+    host.favorites$ = of([rootLeaf]);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const appLabel = el.querySelector('.ih-sidebar-favorites .ih-menu-application');
+
+    expect(appLabel).toBeNull();
   });
 
   it('does not show the application name on the main menu tree', () => {
@@ -505,6 +591,96 @@ describe('IHMenu icon fallback', () => {
     expect(icon!.classList.contains('fa-users')).toBe(true);
     expect(icon!.classList.contains('fa-fw')).toBe(true);
     expect(icon!.classList.contains('fa-brands')).toBe(false);
+  });
+});
+
+/* ── Favorite ancestor path resolution ────────────────────────────────────── */
+
+const DEEP_TREE: IMenu[] = [
+  {
+    id: 'group-atlas',
+    name: 'Atlas React',
+    type: 'group',
+    children: [
+      {
+        id: 'group-guide',
+        name: 'React Guide',
+        type: 'group',
+        children: [
+          { id: 'leaf-button', name: 'Button', type: 'item', route: '/docs/react', children: [] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'group-docs',
+    name: 'docs',
+    type: 'group',
+    children: [
+      {
+        id: 'group-sso',
+        name: 'sso',
+        type: 'group',
+        children: [
+          { id: 'leaf-index', name: 'index', type: 'item', route: '/docs/sso/index', children: [] },
+        ],
+      },
+    ],
+  },
+  { id: 'root-leaf', name: 'Root Favorite', type: 'item', route: '/root', children: [] },
+];
+
+describe('buildFavoritePathMap', () => {
+  it('joins ancestor group names (excluding the leaf) with "> "', () => {
+    const tree = normalizeMenuTree(DEEP_TREE);
+    const favorites: IMenu[] = [{ id: 'leaf-index', name: 'index', type: 'item' } as IMenu];
+
+    const map = buildFavoritePathMap(tree, favorites);
+
+    expect(map['leaf-index']).toBe('docs > sso');
+  });
+
+  it('resolves the chain from the tree, not from the item route', () => {
+    const tree = normalizeMenuTree(DEEP_TREE);
+    const favorites: IMenu[] = [
+      {
+        id: 'leaf-button',
+        name: 'Button',
+        type: 'item',
+        route: '/docs/react',
+        application: { id: 'app', code: 'ATLAS', name: 'Atlas' },
+      } as IMenu,
+    ];
+
+    const map = buildFavoritePathMap(tree, favorites);
+
+    expect(map['leaf-button']).toBe('Atlas React > React Guide');
+  });
+
+  it('maps a missing favorite to undefined', () => {
+    const tree = normalizeMenuTree(DEEP_TREE);
+    const favorites: IMenu[] = [{ id: 'missing', name: 'Ghost', type: 'item' } as IMenu];
+
+    const map = buildFavoritePathMap(tree, favorites);
+
+    expect(map['missing']).toBeUndefined();
+  });
+
+  it('maps a root-level favorite to an empty string', () => {
+    const tree = normalizeMenuTree(DEEP_TREE);
+    const favorites: IMenu[] = [{ id: 'root-leaf', name: 'Root Favorite', type: 'item' } as IMenu];
+
+    const map = buildFavoritePathMap(tree, favorites);
+
+    expect(map['root-leaf']).toBe('');
+  });
+
+  it('collectMenuChain returns the root-to-leaf chain for a nested node', () => {
+    const tree = normalizeMenuTree(DEEP_TREE);
+
+    const chain = collectMenuChain(tree, 'leaf-index');
+
+    expect(chain?.map((node) => node.name ?? node.menuName)).toEqual(['docs', 'sso', 'index']);
   });
 });
 
