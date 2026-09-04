@@ -19,6 +19,7 @@
 import { APP_BASE_HREF, AsyncPipe, NgClass } from '@angular/common';
 import {
   Component,
+  computed,
   effect,
   ElementRef,
   EventEmitter,
@@ -57,6 +58,7 @@ import {
   tap,
 } from 'rxjs';
 import { IAvatar } from '../avatar';
+import { IConfirmService } from '../dialog/dialog';
 import { IHighlightSearchPipe } from '../highlight-search.pipe';
 import { ISessionService } from '../session/session.service';
 import { IUserMenuStore } from '../store/user-menu.store';
@@ -215,6 +217,68 @@ export function getMenuChildren(menu: IMenu | null | undefined): IMenu[] {
 
 export function hasMenuChildren(menu: IMenu | null | undefined): boolean {
   return getMenuChildren(menu).length > 0;
+}
+
+/**
+ * Walks a menu tree (roots -> children) looking for the node whose key matches
+ * `targetKey`, returning the chain from the matching root down to that node.
+ * Used to resolve a favorite leaf's ancestor path from the sidebar menu tree.
+ */
+export function collectMenuChain(
+  menus: IMenu[] | null | undefined,
+  targetKey: string,
+): IMenu[] | null {
+  for (const menu of menus ?? []) {
+    if (String(getMenuKey(menu)) === targetKey) {
+      return [menu];
+    }
+
+    const childChain = collectMenuChain(getMenuChildren(menu), targetKey);
+
+    if (childChain) {
+      return [menu, ...childChain];
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Builds a per-menu-key ancestor path label map for the sidebar Favorites
+ * section. The label is the chain of ancestor NAMES (excluding the leaf itself)
+ * joined by "> ", resolved from the full menu tree - never from the item's
+ * route, since route and tree position can differ. A favorite that is not
+ * found in the tree maps to `undefined` (callers fall back to the app label);
+ * a root-level favorite (no ancestors) maps to an empty string.
+ */
+export function buildFavoritePathMap(
+  menus: IMenu[] | null | undefined,
+  favorites: IMenu[] | null | undefined,
+): Record<string, string | undefined> {
+  const pathByKey: Record<string, string | undefined> = {};
+
+  for (const favorite of favorites ?? []) {
+    const key = getMenuKey(favorite);
+
+    if (key === null) continue;
+
+    const keyString = String(key);
+    const chain = collectMenuChain(menus, keyString);
+
+    if (!chain) {
+      pathByKey[keyString] = undefined;
+      continue;
+    }
+
+    const ancestorLabels = chain
+      .slice(0, -1)
+      .map((node) => getMenuLabel(node))
+      .filter((label) => label.length > 0);
+
+    pathByKey[keyString] = ancestorLabels.join(' > ');
+  }
+
+  return pathByKey;
 }
 
 /** True for a legacy top-level module header (menuTypeId === 2). */
@@ -736,8 +800,8 @@ export class IHContent {
               <i [class]="menuIcon"></i>
               <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (showApplication && menu.application?.name) {
-                  <small class="ih-menu-application">{{ menu.application?.name }}</small>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
                 }
               </span>
 
@@ -775,8 +839,8 @@ export class IHContent {
               <i [class]="menuIcon"></i>
               <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (showApplication && menu.application?.name) {
-                  <small class="ih-menu-application">{{ menu.application?.name }}</small>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
                 }
               </span>
 
@@ -814,8 +878,8 @@ export class IHContent {
               <i [class]="menuIcon"></i>
               <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (showApplication && menu.application?.name) {
-                  <small class="ih-menu-application">{{ menu.application?.name }}</small>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
                 }
               </span>
 
@@ -848,6 +912,7 @@ export class IHContent {
                 [favoriteMode]="favoriteMode"
                 [filter]="filter"
                 [menu]="m"
+                [pathByKey]="pathByKey"
                 [selectedMenuId]="selectedMenuId"
                 [showApplication]="showApplication"
                 (favoriteToggle)="onChildFavoriteToggle($event)"
@@ -860,6 +925,8 @@ export class IHContent {
   `,
 })
 export class IHMenu implements OnChanges {
+  private readonly confirmService = inject(IConfirmService);
+
   @Input() menu: IMenu | undefined;
   @Input() selectedMenuId: string | number | null = null;
   @Input() filter = '';
@@ -874,6 +941,8 @@ export class IHMenu implements OnChanges {
   @Input() dragEnabled = false;
   /** When true, leaf items render their owning application name next to the label (used for the Favorites section). */
   @Input() showApplication = false;
+  /** Per-menu-key ancestor path labels (sidebar Favorites section) - rendered instead of the application name when present. */
+  @Input() pathByKey?: Record<string, string | undefined>;
 
   @Output() readonly clicked = new EventEmitter<any>();
   @Output() readonly favoriteToggle = new EventEmitter<IMenuFavoriteToggleEvent>();
@@ -906,6 +975,25 @@ export class IHMenu implements OnChanges {
 
   get menuLabel(): string {
     return getMenuLabel(this.menu);
+  }
+
+  /**
+   * Subtitle shown on favorite leaves: the ancestor path resolved from the
+   * sidebar menu tree when available, falling back to the owning application
+   * name when the leaf is not present in the tree.
+   */
+  get applicationLabel(): string | null {
+    if (!this.showApplication || !this.menu) return null;
+
+    const key = getMenuKey(this.menu);
+
+    if (key !== null && this.pathByKey) {
+      const path = this.pathByKey[String(key)];
+
+      if (path !== undefined) return path;
+    }
+
+    return this.menu.application?.name ?? null;
   }
 
   get menuChildrenList(): IMenu[] {
@@ -1031,7 +1119,26 @@ export class IHMenu implements OnChanges {
     const id = getMenuKey(this.menu);
     if (id === null) return;
 
-    this.favoriteToggle.emit({ id, isFavorite: !this.menuIsFavorite });
+    const isUnfavorite = this.menuIsFavorite;
+
+    // Unfavorite is destructive - confirm before removing the pin.
+    if (isUnfavorite) {
+      const menuName = getMenuLabel(this.menu) || 'this menu';
+
+      this.confirmService
+        .warning(
+          'Remove from Favorites',
+          `Remove <strong>${menuName}</strong> from your favorites?`,
+        )
+        .subscribe((confirmed) => {
+          if (!confirmed) return;
+          this.favoriteToggle.emit({ id, isFavorite: false });
+        });
+
+      return;
+    }
+
+    this.favoriteToggle.emit({ id, isFavorite: true });
   }
 
   onChildFavoriteToggle(event: IMenuFavoriteToggleEvent): void {
@@ -1103,6 +1210,7 @@ export class IHMenu implements OnChanges {
               [favoriteMode]="favoriteMode"
               [filter]="menuFilter()"
               [menu]="favoritesGroup"
+              [pathByKey]="favoritePaths()"
               [selectedMenuId]="selectedMenuId()"
               [showApplication]="true"
               (favoriteToggle)="onFavoriteToggle.emit($event)"
@@ -1197,6 +1305,16 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
 
   /** Latest favorites array mirrored from `favorites$` — source of truth for drag reorder. */
   readonly favoriteItems = signal<IMenu[]>([]);
+
+  /** Full (unfiltered) normalized menu tree - source for favorite ancestor paths. */
+  private readonly fullMenus = signal<IMenu[]>([]);
+  private fullMenusSubscription: Subscription | null = null;
+
+  /** Ancestor path label per favorite key (menu tree) for the Favorites section. */
+  readonly favoritePaths = computed(() =>
+    buildFavoritePathMap(this.fullMenus(), this.favoriteItems()),
+  );
+
   private favoritesSubscription: Subscription | null = null;
 
   private navigableMenus: IMenu[] = [];
@@ -1226,6 +1344,7 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
 
     this.buildMenusStream();
 
+    this.subscribeFullMenus();
     this.subscribeFavorites();
   }
 
@@ -1234,6 +1353,7 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
       this.originalMenus$ = this.normalizeMenusStream();
 
       this.buildMenusStream();
+      this.subscribeFullMenus();
     }
 
     if (changes['favorites$']) {
@@ -1243,6 +1363,7 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.favoritesSubscription?.unsubscribe();
+    this.fullMenusSubscription?.unsubscribe();
     // Make sure no document-level drag listeners leak if destroyed mid-drag.
     if (this.dragState) {
       this.cleanupFavoriteDrag();
@@ -1254,6 +1375,14 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
     this.favoritesSubscription?.unsubscribe();
     this.favoritesSubscription = (this.favorites$ ?? of([])).subscribe((favs) =>
       this.favoriteItems.set(favs ?? []),
+    );
+  }
+
+  /** Mirrors the full (unfiltered) normalized menu tree into the `fullMenus` signal. */
+  private subscribeFullMenus(): void {
+    this.fullMenusSubscription?.unsubscribe();
+    this.fullMenusSubscription = this.originalMenus$.subscribe((menus) =>
+      this.fullMenus.set(menus),
     );
   }
 
