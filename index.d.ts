@@ -1640,6 +1640,21 @@ declare function getMenuLabel(menu: IMenu | null | undefined): string;
 /** Children — prefers the modern `children`, falls back to legacy `child`. */
 declare function getMenuChildren(menu: IMenu | null | undefined): IMenu[];
 declare function hasMenuChildren(menu: IMenu | null | undefined): boolean;
+/**
+ * Walks a menu tree (roots -> children) looking for the node whose key matches
+ * `targetKey`, returning the chain from the matching root down to that node.
+ * Used to resolve a favorite leaf's ancestor path from the sidebar menu tree.
+ */
+declare function collectMenuChain(menus: IMenu[] | null | undefined, targetKey: string): IMenu[] | null;
+/**
+ * Builds a per-menu-key ancestor path label map for the sidebar Favorites
+ * section. The label is the chain of ancestor NAMES (excluding the leaf itself)
+ * joined by "> ", resolved from the full menu tree - never from the item's
+ * route, since route and tree position can differ. A favorite that is not
+ * found in the tree maps to `undefined` (callers fall back to the app label);
+ * a root-level favorite (no ancestors) maps to an empty string.
+ */
+declare function buildFavoritePathMap(menus: IMenu[] | null | undefined, favorites: IMenu[] | null | undefined): Record<string, string | undefined>;
 /** True for a legacy top-level module header (menuTypeId === 2). */
 declare function isModuleMenu(menu: IMenu | null | undefined): boolean;
 /** True for a structural group/module node (non-navigable container). */
@@ -1721,6 +1736,7 @@ declare class IHContent {
     static ɵcmp: i0.ɵɵComponentDeclaration<IHContent, "ih-content", never, {}, { "onSidebarToggled": "onSidebarToggled"; "loading": "loading"; }, never, never, true, never>;
 }
 declare class IHMenu implements OnChanges {
+    private readonly confirmService;
     menu: IMenu | undefined;
     selectedMenuId: string | number | null;
     filter: string;
@@ -1735,6 +1751,8 @@ declare class IHMenu implements OnChanges {
     dragEnabled: boolean;
     /** When true, leaf items render their owning application name next to the label (used for the Favorites section). */
     showApplication: boolean;
+    /** Per-menu-key ancestor path labels (sidebar Favorites section) - rendered instead of the application name when present. */
+    pathByKey?: Record<string, string | undefined>;
     readonly clicked: EventEmitter<any>;
     readonly favoriteToggle: EventEmitter<IMenuFavoriteToggleEvent>;
     menus: QueryList<IHMenu>;
@@ -1747,6 +1765,12 @@ declare class IHMenu implements OnChanges {
     get isReload(): boolean;
     get isNewTab(): boolean;
     get menuLabel(): string;
+    /**
+     * Subtitle shown on favorite leaves: the ancestor path resolved from the
+     * sidebar menu tree when available, falling back to the owning application
+     * name when the leaf is not present in the tree.
+     */
+    get applicationLabel(): string | null;
     get menuChildrenList(): IMenu[];
     get menuHasChildren(): boolean;
     /** Legacy top-level module header (menuTypeId === 2). */
@@ -1788,7 +1812,7 @@ declare class IHMenu implements OnChanges {
     onChildFavoriteToggle(event: IMenuFavoriteToggleEvent): void;
     hrefWithMenuFilter(raw: string): string;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHMenu, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "depth": { "alias": "depth"; "required": false; }; "dragEnabled": { "alias": "dragEnabled"; "required": false; }; "showApplication": { "alias": "showApplication"; "required": false; }; }, { "clicked": "clicked"; "favoriteToggle": "favoriteToggle"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "depth": { "alias": "depth"; "required": false; }; "dragEnabled": { "alias": "dragEnabled"; "required": false; }; "showApplication": { "alias": "showApplication"; "required": false; }; "pathByKey": { "alias": "pathByKey"; "required": false; }; }, { "clicked": "clicked"; "favoriteToggle": "favoriteToggle"; }, never, never, true, never>;
 }
 declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private router;
@@ -1823,6 +1847,11 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private favoritesGroupCache;
     /** Latest favorites array mirrored from `favorites$` — source of truth for drag reorder. */
     readonly favoriteItems: i0.WritableSignal<IMenu[]>;
+    /** Full (unfiltered) normalized menu tree - source for favorite ancestor paths. */
+    private readonly fullMenus;
+    private fullMenusSubscription;
+    /** Ancestor path label per favorite key (menu tree) for the Favorites section. */
+    readonly favoritePaths: i0.Signal<Record<string, string | undefined>>;
     private favoritesSubscription;
     private navigableMenus;
     private originalMenus$;
@@ -1832,6 +1861,8 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     ngOnDestroy(): void;
     /** Mirrors the `favorites$` input into the local `favoriteItems` signal. */
     private subscribeFavorites;
+    /** Mirrors the full (unfiltered) normalized menu tree into the `fullMenus` signal. */
+    private subscribeFullMenus;
     private dragState;
     /** Document mousemove during an active favorites drag (live reorder preview). */
     private onDocumentMouseMove;
@@ -3313,5 +3344,5 @@ type IEnvironment = {
  */
 declare const environment: IEnvironment;
 
-export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
+export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectMenuChain, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
 export type { ApiErrorCatalogResolver, ApiErrorExtensionValue, IAlertData, IApiOptions, IApiResponse, IAuthUser, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEnvironment, IErrorContext, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IInsightAuthConfig, IInsightAuthConfigOverrides, IInsightCurrentUser, IInsightFavoriteMenuItem, IInsightFavoriteOrderItem, IInsightMenuApplication, IInsightMenuCompany, IInsightMenuNode, IInsightMenuOpenIn, IInsightPermission, IInsightPermissionInput, IInsightPermissionSource, IInsightTokenLifespan, IInsightUserMenuEnvelope, ILoginResponse, IMenu, IMenuApplication, IMenuCompany, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuOpenIn, IMfaChallengeResponse, INormalizedApiError, IPaginatorState, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser, IValidateResetTokenResponse, KnownErrorCode, SessionExpiredReason, UserMenuLoadErrors, UserMenuLoadSource };

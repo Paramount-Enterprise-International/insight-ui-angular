@@ -1,5 +1,5 @@
 import * as i0 from '@angular/core';
-import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, effect, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER } from '@angular/core';
+import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, effect, ViewChildren, computed, makeEnvironmentProviders, APP_INITIALIZER } from '@angular/core';
 import * as i1$1 from '@angular/common';
 import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
@@ -11244,6 +11244,51 @@ function getMenuChildren(menu) {
 function hasMenuChildren(menu) {
     return getMenuChildren(menu).length > 0;
 }
+/**
+ * Walks a menu tree (roots -> children) looking for the node whose key matches
+ * `targetKey`, returning the chain from the matching root down to that node.
+ * Used to resolve a favorite leaf's ancestor path from the sidebar menu tree.
+ */
+function collectMenuChain(menus, targetKey) {
+    for (const menu of menus ?? []) {
+        if (String(getMenuKey(menu)) === targetKey) {
+            return [menu];
+        }
+        const childChain = collectMenuChain(getMenuChildren(menu), targetKey);
+        if (childChain) {
+            return [menu, ...childChain];
+        }
+    }
+    return null;
+}
+/**
+ * Builds a per-menu-key ancestor path label map for the sidebar Favorites
+ * section. The label is the chain of ancestor NAMES (excluding the leaf itself)
+ * joined by "> ", resolved from the full menu tree - never from the item's
+ * route, since route and tree position can differ. A favorite that is not
+ * found in the tree maps to `undefined` (callers fall back to the app label);
+ * a root-level favorite (no ancestors) maps to an empty string.
+ */
+function buildFavoritePathMap(menus, favorites) {
+    const pathByKey = {};
+    for (const favorite of favorites ?? []) {
+        const key = getMenuKey(favorite);
+        if (key === null)
+            continue;
+        const keyString = String(key);
+        const chain = collectMenuChain(menus, keyString);
+        if (!chain) {
+            pathByKey[keyString] = undefined;
+            continue;
+        }
+        const ancestorLabels = chain
+            .slice(0, -1)
+            .map((node) => getMenuLabel(node))
+            .filter((label) => label.length > 0);
+        pathByKey[keyString] = ancestorLabels.join(' > ');
+    }
+    return pathByKey;
+}
 /** True for a legacy top-level module header (menuTypeId === 2). */
 function isModuleMenu(menu) {
     if (!menu)
@@ -11721,6 +11766,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
  * - Leaf SPA menu: routerLink
  * ========================================================= */
 class IHMenu {
+    confirmService = inject(IConfirmService);
     menu;
     selectedMenuId = null;
     filter = '';
@@ -11735,6 +11781,8 @@ class IHMenu {
     dragEnabled = false;
     /** When true, leaf items render their owning application name next to the label (used for the Favorites section). */
     showApplication = false;
+    /** Per-menu-key ancestor path labels (sidebar Favorites section) - rendered instead of the application name when present. */
+    pathByKey;
     clicked = new EventEmitter();
     favoriteToggle = new EventEmitter();
     menus;
@@ -11757,6 +11805,22 @@ class IHMenu {
     }
     get menuLabel() {
         return getMenuLabel(this.menu);
+    }
+    /**
+     * Subtitle shown on favorite leaves: the ancestor path resolved from the
+     * sidebar menu tree when available, falling back to the owning application
+     * name when the leaf is not present in the tree.
+     */
+    get applicationLabel() {
+        if (!this.showApplication || !this.menu)
+            return null;
+        const key = getMenuKey(this.menu);
+        if (key !== null && this.pathByKey) {
+            const path = this.pathByKey[String(key)];
+            if (path !== undefined)
+                return path;
+        }
+        return this.menu.application?.name ?? null;
     }
     get menuChildrenList() {
         return getMenuChildren(this.menu);
@@ -11866,7 +11930,20 @@ class IHMenu {
         const id = getMenuKey(this.menu);
         if (id === null)
             return;
-        this.favoriteToggle.emit({ id, isFavorite: !this.menuIsFavorite });
+        const isUnfavorite = this.menuIsFavorite;
+        // Unfavorite is destructive - confirm before removing the pin.
+        if (isUnfavorite) {
+            const menuName = getMenuLabel(this.menu) || 'this menu';
+            this.confirmService
+                .warning('Remove from Favorites', `Remove <strong>${menuName}</strong> from your favorites?`)
+                .subscribe((confirmed) => {
+                if (!confirmed)
+                    return;
+                this.favoriteToggle.emit({ id, isFavorite: false });
+            });
+            return;
+        }
+        this.favoriteToggle.emit({ id, isFavorite: true });
     }
     onChildFavoriteToggle(event) {
         this.favoriteToggle.emit(event);
@@ -11888,7 +11965,7 @@ class IHMenu {
         }
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHMenu, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter", favoriteMode: "favoriteMode", collapsible: "collapsible", depth: "depth", dragEnabled: "dragEnabled", showApplication: "showApplication" }, outputs: { clicked: "clicked", favoriteToggle: "favoriteToggle" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter", favoriteMode: "favoriteMode", collapsible: "collapsible", depth: "depth", dragEnabled: "dragEnabled", showApplication: "showApplication", pathByKey: "pathByKey" }, outputs: { clicked: "clicked", favoriteToggle: "favoriteToggle" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
     @if (menu) {
       @let hasChild = menuHasChildren;
       @let route = menuRoute;
@@ -11964,8 +12041,8 @@ class IHMenu {
               <i [class]="menuIcon"></i>
               <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (showApplication && menu.application?.name) {
-                  <small class="ih-menu-application">{{ menu.application?.name }}</small>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
                 }
               </span>
 
@@ -12003,8 +12080,8 @@ class IHMenu {
               <i [class]="menuIcon"></i>
               <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (showApplication && menu.application?.name) {
-                  <small class="ih-menu-application">{{ menu.application?.name }}</small>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
                 }
               </span>
 
@@ -12042,8 +12119,8 @@ class IHMenu {
               <i [class]="menuIcon"></i>
               <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (showApplication && menu.application?.name) {
-                  <small class="ih-menu-application">{{ menu.application?.name }}</small>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
                 }
               </span>
 
@@ -12076,6 +12153,7 @@ class IHMenu {
                 [favoriteMode]="favoriteMode"
                 [filter]="filter"
                 [menu]="m"
+                [pathByKey]="pathByKey"
                 [selectedMenuId]="selectedMenuId"
                 [showApplication]="showApplication"
                 (favoriteToggle)="onChildFavoriteToggle($event)"
@@ -12085,7 +12163,7 @@ class IHMenu {
         }
       </li>
     }
-  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication"], outputs: ["clicked", "favoriteToggle"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
+  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHMenu, decorators: [{
             type: Component,
@@ -12169,8 +12247,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
               <i [class]="menuIcon"></i>
               <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (showApplication && menu.application?.name) {
-                  <small class="ih-menu-application">{{ menu.application?.name }}</small>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
                 }
               </span>
 
@@ -12208,8 +12286,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
               <i [class]="menuIcon"></i>
               <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (showApplication && menu.application?.name) {
-                  <small class="ih-menu-application">{{ menu.application?.name }}</small>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
                 }
               </span>
 
@@ -12247,8 +12325,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
               <i [class]="menuIcon"></i>
               <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (showApplication && menu.application?.name) {
-                  <small class="ih-menu-application">{{ menu.application?.name }}</small>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
                 }
               </span>
 
@@ -12281,6 +12359,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
                 [favoriteMode]="favoriteMode"
                 [filter]="filter"
                 [menu]="m"
+                [pathByKey]="pathByKey"
                 [selectedMenuId]="selectedMenuId"
                 [showApplication]="showApplication"
                 (favoriteToggle)="onChildFavoriteToggle($event)"
@@ -12307,6 +12386,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
             }], dragEnabled: [{
                 type: Input
             }], showApplication: [{
+                type: Input
+            }], pathByKey: [{
                 type: Input
             }], clicked: [{
                 type: Output
@@ -12367,6 +12448,11 @@ class IHSidebar {
     favoritesGroupCache = null;
     /** Latest favorites array mirrored from `favorites$` — source of truth for drag reorder. */
     favoriteItems = signal([], ...(ngDevMode ? [{ debugName: "favoriteItems" }] : []));
+    /** Full (unfiltered) normalized menu tree - source for favorite ancestor paths. */
+    fullMenus = signal([], ...(ngDevMode ? [{ debugName: "fullMenus" }] : []));
+    fullMenusSubscription = null;
+    /** Ancestor path label per favorite key (menu tree) for the Favorites section. */
+    favoritePaths = computed(() => buildFavoritePathMap(this.fullMenus(), this.favoriteItems()), ...(ngDevMode ? [{ debugName: "favoritePaths" }] : []));
     favoritesSubscription = null;
     navigableMenus = [];
     originalMenus$;
@@ -12385,12 +12471,14 @@ class IHSidebar {
         this.menuSearch.setValue(initialFilter, { emitEvent: false });
         this.originalMenus$ = this.normalizeMenusStream();
         this.buildMenusStream();
+        this.subscribeFullMenus();
         this.subscribeFavorites();
     }
     ngOnChanges(changes) {
         if (changes['menusInput$'] && !changes['menusInput$'].firstChange) {
             this.originalMenus$ = this.normalizeMenusStream();
             this.buildMenusStream();
+            this.subscribeFullMenus();
         }
         if (changes['favorites$']) {
             this.subscribeFavorites();
@@ -12398,6 +12486,7 @@ class IHSidebar {
     }
     ngOnDestroy() {
         this.favoritesSubscription?.unsubscribe();
+        this.fullMenusSubscription?.unsubscribe();
         // Make sure no document-level drag listeners leak if destroyed mid-drag.
         if (this.dragState) {
             this.cleanupFavoriteDrag();
@@ -12407,6 +12496,11 @@ class IHSidebar {
     subscribeFavorites() {
         this.favoritesSubscription?.unsubscribe();
         this.favoritesSubscription = (this.favorites$ ?? of([])).subscribe((favs) => this.favoriteItems.set(favs ?? []));
+    }
+    /** Mirrors the full (unfiltered) normalized menu tree into the `fullMenus` signal. */
+    subscribeFullMenus() {
+        this.fullMenusSubscription?.unsubscribe();
+        this.fullMenusSubscription = this.originalMenus$.subscribe((menus) => this.fullMenus.set(menus));
     }
     dragState = null;
     /** Document mousemove during an active favorites drag (live reorder preview). */
@@ -12819,6 +12913,7 @@ class IHSidebar {
               [favoriteMode]="favoriteMode"
               [filter]="menuFilter()"
               [menu]="favoritesGroup"
+              [pathByKey]="favoritePaths()"
               [selectedMenuId]="selectedMenuId()"
               [showApplication]="true"
               (favoriteToggle)="onFavoriteToggle.emit($event)"
@@ -12858,7 +12953,7 @@ class IHSidebar {
     <div class="ih-sidebar-footer">
       <small>{{ footerText }}</small>
     </div>
-  `, isInline: true, dependencies: [{ kind: "component", type: IAvatar, selector: "i-avatar", inputs: ["src", "alt", "size", "shape", "fallbackSrc", "className"] }, { kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication"], outputs: ["clicked", "favoriteToggle"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.DefaultValueAccessor, selector: "input:not([type=checkbox])[formControlName],textarea[formControlName],input:not([type=checkbox])[formControl],textarea[formControl],input:not([type=checkbox])[ngModel],textarea[ngModel],[ngDefaultControl]" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.FormControlDirective, selector: "[formControl]", inputs: ["formControl", "disabled", "ngModel"], outputs: ["ngModelChange"], exportAs: ["ngForm"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
+  `, isInline: true, dependencies: [{ kind: "component", type: IAvatar, selector: "i-avatar", inputs: ["src", "alt", "size", "shape", "fallbackSrc", "className"] }, { kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.DefaultValueAccessor, selector: "input:not([type=checkbox])[formControlName],textarea[formControlName],input:not([type=checkbox])[formControl],textarea[formControl],input:not([type=checkbox])[ngModel],textarea[ngModel],[ngDefaultControl]" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.FormControlDirective, selector: "[formControl]", inputs: ["formControl", "disabled", "ngModel"], outputs: ["ngModelChange"], exportAs: ["ngForm"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHSidebar, decorators: [{
             type: Component,
@@ -12905,6 +13000,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
               [favoriteMode]="favoriteMode"
               [filter]="menuFilter()"
               [menu]="favoritesGroup"
+              [pathByKey]="favoritePaths()"
               [selectedMenuId]="selectedMenuId()"
               [showApplication]="true"
               (favoriteToggle)="onFavoriteToggle.emit($event)"
@@ -14610,5 +14706,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
+export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectMenuChain, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
 //# sourceMappingURL=insight-ui.mjs.map
