@@ -44,6 +44,6 @@ export * from './lib/store';
 // Permission directives (ihHasMn / ihNotHasMn — async, menu or role source)
 export * from './lib/directives';
 
-// Default environment (single env; mirrors iam-web environment.dev.ts)
+// Default environment (no identity host baked in - consumer apps supply their own)
 export * from './environments/environment.interface';
 export * from './environments/environment';

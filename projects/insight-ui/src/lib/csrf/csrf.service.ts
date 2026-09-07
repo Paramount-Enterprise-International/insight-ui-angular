@@ -3,13 +3,12 @@ import { inject, Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
-import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { getAuthEndpointUrl, INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
 
 /**
- * CSRF token management — cookie-to-header pattern for @insight/ui consumer apps.
- * Mirrors iam-web's `ICsrfService`:
+ * CSRF token management - cookie-to-header pattern for @insight/ui consumer apps.
  *
- *   1. FE calls GET {api.identity}/auth/csrf.
+ *   1. FE calls GET {api.identity}{csrf endpoint} (default `/auth/csrf`).
  *   2. Backend returns `{ csrfToken }` in the JSON body AND sets a `csrf_token` cookie.
  *   3. FE stores the token in memory (JS cannot read cross-origin cookies).
  *   4. FE sends the token back as `X-CSRF-Token` header on mutating requests.
@@ -49,14 +48,14 @@ export class ICsrfService {
   }
 
   /**
-   * Fetch a fresh CSRF token from `iam-identity-api` and store it in memory.
-   * On failure the error is propagated (callers that want best-effort behavior
-   * can catch it) — a failed fetch must not be silently swallowed, e.g. so the
-   * `retryOnCsrfError` pattern can re-trigger the fetch.
+   * Fetch a fresh CSRF token from the configured identity host and store it in
+   * memory. On failure the error is propagated (callers that want best-effort
+   * behavior can catch it) - a failed fetch must not be silently swallowed,
+   * e.g. so the `retryOnCsrfError` pattern can re-trigger the fetch.
    */
   ensureToken(): Observable<void> {
     return this.http
-      .get<{ csrfToken: string }>(`${this.config.api.identity}/auth/csrf`, { withCredentials: true })
+      .get<{ csrfToken: string }>(getAuthEndpointUrl(this.config, 'csrf'), { withCredentials: true })
       .pipe(
       tap((res) => {
         this.token = res.csrfToken ?? null;

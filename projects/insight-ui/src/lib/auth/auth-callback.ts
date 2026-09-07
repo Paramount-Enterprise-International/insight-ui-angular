@@ -6,11 +6,11 @@ import { sanitizeReturnUrl } from './sanitize-return-url';
 import { ISessionService } from '../session/session.service';
 
 /**
- * Extract the access token appended by iam-web after a successful external
- * SSO redirect. Reads the URL HASH FRAGMENT (`#at=<token>`) — deliberately
- * NOT a query parameter — so the token is never sent to the server and never
- * appears in access/gateway logs (fragments are browser-only and are
- * unconditionally stripped from the `Referer` header).
+ * Extract the access token appended by the sign-in host after a successful
+ * external SSO redirect. Reads the URL HASH FRAGMENT (`#at=<token>`) -
+ * deliberately NOT a query parameter - so the token is never sent to the
+ * server and never appears in access/gateway logs (fragments are browser-only
+ * and are unconditionally stripped from the `Referer` header).
  */
 export function extractAccessTokenFromHash(): string | null {
   const hash = window.location.hash;
@@ -24,7 +24,7 @@ export function extractAccessTokenFromHash(): string | null {
 /**
  * Reusable SSO callback route component for @insight/ui consumer apps.
  * Register it at whatever route path is used as the `returnUrl` when
- * redirecting to iam-web's signin page, e.g.
+ * redirecting to the configured signinUrl, e.g.
  * `{ path: 'auth/callback', component: IAuthCallback }`.
  *
  * Flow:
@@ -34,7 +34,7 @@ export function extractAccessTokenFromHash(): string | null {
  *     sitting in browser history).
  *  4. Validate & redirect to the original in-app `returnUrl` (query param
  *     `returnUrl`, defaulting to `/`), using the same `sanitizeReturnUrl`
- *     rules as iam-web.
+ *     rules as the sign-in page.
  */
 @Component({
   selector: 'i-auth-callback',

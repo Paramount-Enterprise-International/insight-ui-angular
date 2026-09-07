@@ -8,12 +8,13 @@ import { ISessionService } from '../session/session.service';
 /**
  * Cross-domain auth guard for @insight/ui consumer apps.
  *
- * Unlike iam-web's internal Router-based guard, this performs a FULL PAGE
- * redirect to iam-web's signin page when unauthenticated, since the consumer
- * app and iam-web are separate applications/domains — not routes within the
- * same Angular router. The redirect is routed through this app's OWN
- * callback route (not the page the user was trying to visit) — see
- * `buildExternalSigninUrl()` for why that's required to avoid a redirect loop.
+ * Unlike an identity-owner app's internal Router-based guard, this performs a
+ * FULL PAGE redirect to the configured signinUrl when unauthenticated, since
+ * the consumer app and its auth/BFF host are separate applications/domains -
+ * not routes within the same Angular router. The redirect is routed through
+ * this app's OWN callback route (not the page the user was trying to visit) -
+ * see `buildExternalSigninUrl()` for why that's required to avoid a redirect
+ * loop.
  */
 export const authGuard: CanActivateFn = (_route, state) => {
   const session = inject(ISessionService);

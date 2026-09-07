@@ -70,9 +70,9 @@ function decodeUser(accessToken: string): IAuthUser {
  * Session management for @insight/ui consumer apps.
  *
  * Access token: stored IN MEMORY only (never Web Storage). Refresh token:
- * HttpOnly cookie managed exclusively by iam-identity-api; this service never
- * reads or stores it directly (an in-memory `refreshToken` is kept only for
- * server-side logout).
+ * HttpOnly cookie managed by the app's own identity host/BFF; this service
+ * never reads or stores it directly (an in-memory `refreshToken` is kept only
+ * for server-side logout).
  *
  * Superset of the basic SSO session (used by remote apps via `setAccessToken` /
  * `authGuard` / `IAuthCallback`) and the richer iam-web session (session
@@ -298,8 +298,8 @@ export class ISessionService {
   }
 
   /**
-   * Silently refresh the access token via the HttpOnly refresh cookie
-   * (`POST {api.identity}/auth/refresh`, `withCredentials: true`).
+   * Silently refresh the access token via the HttpOnly session cookie
+   * (`POST {api.identity}{refresh endpoint}`, `withCredentials: true`).
    * Single-flight: concurrent callers share the in-flight refresh; the shared
    * observable is retained until it completes/errors so a cancelled caller
    * cannot abort the fetch.
