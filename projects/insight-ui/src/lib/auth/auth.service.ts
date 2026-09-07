@@ -144,13 +144,18 @@ export class IAuthService {
 
   /** Clear the server-side session and expire the HttpOnly session cookie. */
   logout(refreshToken?: string): Observable<void> {
-    return this.api.post<void>(getAuthEndpointPath(this.config, 'logout'), { refreshToken }).pipe(map(() => undefined));
+    return this.api
+      .post<void>(getAuthEndpointPath(this.config, 'logout'), { refreshToken })
+      .pipe(map(() => undefined));
   }
 
   /** Exchange a short-lived `at=` auth token for a full session (cross-app handoff). */
   exchangeAuthToken(authToken: string): Observable<ILoginResponse> {
-    return this.api
-      .post<ILoginResponse>(getAuthEndpointPath(this.config, 'exchange'), {}, { headers: { Authorization: authToken } });
+    return this.api.post<ILoginResponse>(
+      getAuthEndpointPath(this.config, 'exchange'),
+      {},
+      { headers: { Authorization: authToken } },
+    );
   }
 
   /** Verify the MFA TOTP code during a login challenge. */
@@ -160,12 +165,21 @@ export class IAuthService {
 
   /** Verify the TOTP code during first-time MFA enrollment (forced at login). */
   verifyMfaEnroll(mfaSessionId: string, totpCode: string): Observable<IMfaChallengeResponse> {
-    return this.api.post<IMfaChallengeResponse>('/auth/mfa/enroll/verify', { mfaSessionId, totpCode });
+    return this.api.post<IMfaChallengeResponse>('/auth/mfa/enroll/verify', {
+      mfaSessionId,
+      totpCode,
+    });
   }
 
   /** Self-service MFA — check enrollment status (`GET /profile/mfa`). */
-  selfServiceGetStatus(): Observable<{ enrolled: boolean; createdAt?: string; lastUsedAt?: string }> {
-    return this.api.get<{ enrolled: boolean; createdAt?: string; lastUsedAt?: string }>('/profile/mfa');
+  selfServiceGetStatus(): Observable<{
+    enrolled: boolean;
+    createdAt?: string;
+    lastUsedAt?: string;
+  }> {
+    return this.api.get<{ enrolled: boolean; createdAt?: string; lastUsedAt?: string }>(
+      '/profile/mfa',
+    );
   }
 
   /** Self-service MFA — initiate enrollment to get the QR & session id (`POST /profile/mfa/enroll`). */
@@ -174,7 +188,10 @@ export class IAuthService {
     secret: string;
     enrollmentSessionId: string;
   }> {
-    return this.api.post<{ qrCodeUri: string; secret: string; enrollmentSessionId: string }>('/profile/mfa/enroll', {});
+    return this.api.post<{ qrCodeUri: string; secret: string; enrollmentSessionId: string }>(
+      '/profile/mfa/enroll',
+      {},
+    );
   }
 
   /** Self-service MFA — verify OTP and complete enrollment (`POST /profile/mfa/enroll/verify`). */
@@ -220,7 +237,10 @@ export class IAuthService {
   }
 
   /** Request a password-reset link via email or WhatsApp (`POST /auth/forgot-password`). */
-  forgotPassword(identifier: string, mode: 'email' | 'whatsapp'): Observable<IForgotPasswordResponse> {
+  forgotPassword(
+    identifier: string,
+    mode: 'email' | 'whatsapp',
+  ): Observable<IForgotPasswordResponse> {
     return this.api.post<IForgotPasswordResponse>('/auth/forgot-password', {
       identifier,
       method: mode,
@@ -236,8 +256,16 @@ export class IAuthService {
   }
 
   /** Submit a new password using the reset token (`POST /auth/reset-password`). */
-  resetPassword(token: string, newPassword: string, confirmPassword: string): Observable<IResetPasswordResponse> {
-    return this.api.post<IResetPasswordResponse>('/auth/reset-password', { token, newPassword, confirmPassword });
+  resetPassword(
+    token: string,
+    newPassword: string,
+    confirmPassword: string,
+  ): Observable<IResetPasswordResponse> {
+    return this.api.post<IResetPasswordResponse>('/auth/reset-password', {
+      token,
+      newPassword,
+      confirmPassword,
+    });
   }
 
   // ─── Login lockout helpers (sessionStorage per-username) ─────────────────────

@@ -20,15 +20,15 @@ describe('provideInsightAuth', () => {
   });
 
   it('fails fast when signinUrl is missing', () => {
-    expect(() => provideInsightAuth({ api: { identity: 'https://app.example.com/api' } })).toThrowError(
-      /signinUrl/,
-    );
+    expect(() =>
+      provideInsightAuth({ api: { identity: 'https://app.example.com/api' } }),
+    ).toThrowError(/signinUrl/);
   });
 
   it('fails fast when api.identity is missing', () => {
-    expect(() => provideInsightAuth({ signinUrl: 'https://app.example.com/api/auth/login' })).toThrowError(
-      /api.identity/,
-    );
+    expect(() =>
+      provideInsightAuth({ signinUrl: 'https://app.example.com/api/auth/login' }),
+    ).toThrowError(/api.identity/);
   });
 
   it('resolves optional-field defaults when identity host and signinUrl are supplied', () => {
@@ -53,7 +53,10 @@ describe('provideInsightAuth', () => {
       providers: [
         provideInsightAuth({
           ...VALID_OVERRIDES,
-          api: { identity: VALID_OVERRIDES.api.identity, product: 'https://product.example.com/api' },
+          api: {
+            identity: VALID_OVERRIDES.api.identity,
+            product: 'https://product.example.com/api',
+          },
         }),
       ],
     });
@@ -81,7 +84,9 @@ describe('provideInsightAuth', () => {
 
   it('deep-merges a partial `tokenLifespan` override, keeping the other lifespan defaults', () => {
     TestBed.configureTestingModule({
-      providers: [provideInsightAuth({ ...VALID_OVERRIDES, tokenLifespan: { accessTokenSeconds: 900 } })],
+      providers: [
+        provideInsightAuth({ ...VALID_OVERRIDES, tokenLifespan: { accessTokenSeconds: 900 } }),
+      ],
     });
 
     const config = TestBed.inject(INSIGHT_AUTH_CONFIG);
@@ -103,7 +108,10 @@ describe('getDefaultInsightAuthConfig / validateInsightAuthConfig', () => {
     const defaults = getDefaultInsightAuthConfig();
     expect(() => validateInsightAuthConfig(defaults)).toThrowError(/api.identity/);
 
-    const partial: IInsightAuthConfig = { ...defaults, api: { ...defaults.api, identity: 'https://app.example.com/api' } };
+    const partial: IInsightAuthConfig = {
+      ...defaults,
+      api: { ...defaults.api, identity: 'https://app.example.com/api' },
+    };
     expect(() => validateInsightAuthConfig(partial)).toThrowError(/signinUrl/);
   });
 });

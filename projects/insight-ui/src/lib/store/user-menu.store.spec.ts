@@ -158,7 +158,8 @@ describe('IUserMenuStore', () => {
 
     store.load();
     expect(store.hasMenu('dashboard')).toBeTrue();
-    expect(store.hasMenu('group')).toBeTrue();
+    // structural group/container codes are never granted (leaf-only, blueprint-aligned)
+    expect(store.hasMenu('group')).toBeFalse();
     expect(store.hasMenu('nope')).toBeFalse();
     expect(store.hasMenu(['nope', 'dashboard'])).toBeTrue();
   });
