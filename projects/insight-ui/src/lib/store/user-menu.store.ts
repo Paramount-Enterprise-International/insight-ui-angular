@@ -56,6 +56,12 @@ export class IUserMenuStore {
   readonly favorites = signal<IMenu[]>([]);
   /** Roles decoded from the access token (for `source: 'role'` permission checks). */
   readonly roles = signal<string[]>([]);
+  /**
+   * Feature permissions granted by the backend (for `source: 'permission'`
+   * checks). NOT hydrated by `load()` yet - a loader calls `setPermissions()`
+   * once the endpoint is available.
+   */
+  readonly permissions = signal<string[]>([]);
   /** True while the cold-start `load()` is in flight. */
   readonly initializing = signal(false);
   /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
@@ -69,6 +75,7 @@ export class IUserMenuStore {
   readonly menus$ = toObservable(this.menus);
   readonly favorites$ = toObservable(this.favorites);
   readonly roles$ = toObservable(this.roles);
+  readonly permissions$ = toObservable(this.permissions);
   readonly initializing$ = toObservable(this.initializing);
 
   /**
@@ -165,6 +172,28 @@ export class IUserMenuStore {
       return code.some((role) => roles.includes(role));
     }
     return roles.includes(code);
+  }
+
+  /**
+   * Replaces the granted permission list (feature/action codes). Called by a
+   * loader once the backend endpoint is available - `load()` does not fetch
+   * permissions.
+   */
+  setPermissions(permissions: string[]): void {
+    this.permissions.set(permissions);
+  }
+
+  /**
+   * Permission-mode check against the granted permissions (ANY match). Returns
+   * `false` while the list is empty/not loaded - gated UI renders only after
+   * the store has data (async-aware via the reactive directives).
+   */
+  hasPermission(code: string | string[]): boolean {
+    const granted = this.permissions();
+    if (Array.isArray(code)) {
+      return code.some((permission) => granted.includes(permission));
+    }
+    return granted.includes(code);
   }
 
   /**
@@ -288,6 +317,7 @@ export class IUserMenuStore {
     this.menus.set([]);
     this.favorites.set([]);
     this.roles.set([]);
+    this.permissions.set([]);
     this.loadError.set(null);
     this.loadErrors.set({ user: null, menus: null, favorites: null });
   }
