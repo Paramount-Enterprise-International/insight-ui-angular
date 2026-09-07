@@ -16,7 +16,7 @@ import { SessionExpiredService } from './session-expired.service';
  * It is self-gating (renders nothing while hidden), reads its state from the
  * shared `SessionExpiredService` (shown by the auth interceptor when a token
  * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
- * again", performs a full-page redirect to iam-web's signin via
+ * again", performs a full-page redirect to the configured signinUrl via
  * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
  * clicking the backdrop.
  */
@@ -148,7 +148,7 @@ export class ISessionExpiredDialog {
     }
   }
 
-  /** Perform the SSO handoff to iam-web's signin page, then clear the overlay state. */
+  /** Perform the SSO handoff to the configured signinUrl, then clear the overlay state. */
   onConfirm(): void {
     const returnUrl = this.sessionExpired.returnUrl();
     this.sessionExpired.hide();

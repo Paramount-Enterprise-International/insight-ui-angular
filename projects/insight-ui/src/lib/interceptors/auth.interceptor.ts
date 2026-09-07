@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 
-import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { getAuthEndpointPath, IInsightAuthConfig, INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
 import { normalizeApiError } from '../api/api-error';
 import { ISessionService } from '../session/session.service';
@@ -18,11 +18,14 @@ import {
 // it never reaches the server.
 export const IH_SKIP_BEARER_HEADER = 'X-IH-Skip-Bearer';
 
-// Endpoints that must never receive a Bearer header (would be circular / not
-// yet authenticated) — CSRF + silent refresh are called before a token exists.
-const AUTH_SKIP_URLS = ['/auth/csrf', '/auth/refresh'];
-
-const isAuthSkipUrl = (url: string): boolean => AUTH_SKIP_URLS.some((skip) => url.includes(skip));
+// Identity endpoints that must never receive a Bearer header (would be
+// circular / not yet authenticated) - CSRF bootstrap + silent refresh run before
+// a token exists. Paths come from the resolved config so a consumer backend
+// exposing different routes still works.
+const isAuthSkipUrl = (url: string, config: IInsightAuthConfig): boolean => {
+  const skipPaths = [getAuthEndpointPath(config, 'csrf'), getAuthEndpointPath(config, 'refresh')];
+  return skipPaths.some((path) => path && url.includes(path));
+};
 
 const addAuthHeader = (req: HttpRequest<unknown>, token: string): HttpRequest<unknown> =>
   req.clone({ headers: req.headers.set('Authorization', `Bearer ${token}`) });
@@ -31,17 +34,18 @@ const addAuthHeader = (req: HttpRequest<unknown>, token: string): HttpRequest<un
  * Auth HTTP interceptor for @insight/ui consumer apps.
  *
  * Attaches the in-memory access token as a Bearer header. On 401, attempts a
- * single silent refresh (via the HttpOnly refresh cookie) and retries once;
- * on refresh failure, clears the session and redirects to iam-web's signin
- * page. 429 (rate-limit) and 423 (lockout) responses are passed through;
- * `IApiService` normalizes their current or legacy backend error fields.
+ * single silent refresh (via the HttpOnly session cookie) and retries once;
+ * on refresh failure, clears the session and redirects to the configured
+ * signinUrl (the app's own login). 429 (rate-limit) and 423 (lockout)
+ * responses are passed through; `IApiService` normalizes their current or
+ * legacy backend error fields.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEvent<unknown>> => {
   const session = inject(ISessionService);
   const config = inject(INSIGHT_AUTH_CONFIG);
   const sessionExpired = inject(SessionExpiredService);
 
-  if (isAuthSkipUrl(req.url)) {
+  if (isAuthSkipUrl(req.url, config)) {
     return next(req);
   }
 
@@ -84,7 +88,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEv
               apiError,
             );
           } else {
-            // Legacy: full-page redirect to iam-web's signin page. Use the
+            // Legacy: full-page redirect to the configured signinUrl. Use the
             // current path (no hash/token) as the target, routed through the
             // callback route, same as authGuard, to avoid a redirect loop.
             const targetPath = window.location.pathname + window.location.search;

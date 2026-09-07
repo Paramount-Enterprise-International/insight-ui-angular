@@ -12,7 +12,6 @@ const testConfig: IInsightAuthConfig = {
   },
   signinUrl: 'http://localhost:4200/auth/signin',
   allowedReturnOrigins: ['http://localhost:4207'],
-  cookieDomain: 'localhost',
   tokenLifespan: { accessTokenSeconds: 3600, refreshTokenSeconds: 7200, ssoSessionMaxSeconds: 54000 },
   csrfTokenMaxAgeSeconds: 7170,
 };

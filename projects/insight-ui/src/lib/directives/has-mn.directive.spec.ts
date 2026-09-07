@@ -16,6 +16,8 @@ import { ICurrentUserService, IUserMenuService } from '../user';
     <div *ihNotHasMn="'admin'"><span class="not-admin">NOT-ADMIN</span></div>
     <div *ihHasMn="{ source: 'role', value: 'iam-admin' }"><span class="role-admin">ROLE-ADMIN</span></div>
     <div *ihNotHasMn="{ source: 'role', value: 'iam-super' }"><span class="not-super">NOT-SUPER</span></div>
+    <div *ihHasMn="{ source: 'permission', value: 'report.export' }"><span class="perm-export">PERM-EXPORT</span></div>
+    <div *ihNotHasMn="{ source: 'permission', value: 'report.delete' }"><span class="not-delete">NOT-DELETE</span></div>
   `,
 })
 class HostComponent {}
@@ -78,6 +80,37 @@ describe('IHHasMnDirective / IHNotHasMnDirective', () => {
 
     expect(query('.role-admin')).toBeFalsy();
     expect(query('.not-super')).toBeTruthy();
+  });
+
+  it('permission mode renders when the feature permission is granted', async () => {
+    store.permissions.set(['report.export']);
+    await settle();
+
+    expect(query('.perm-export')).toBeTruthy();
+    expect(query('.not-delete')).toBeTruthy();
+  });
+
+  it('permission mode does not render when the permission is missing', async () => {
+    store.permissions.set([]);
+    await settle();
+
+    expect(query('.perm-export')).toBeFalsy();
+    expect(query('.not-delete')).toBeTruthy();
+  });
+
+  it('initializing gate hides BOTH has and not-has views until the store settles', async () => {
+    store.menus.set([{ id: 'm1', name: 'Admin', type: 'item', menuCode: 'admin', route: '/admin' }]);
+    store.initializing.set(true);
+    await settle();
+
+    expect(query('.menu-admin')).toBeFalsy();
+    expect(query('.not-admin')).toBeFalsy();
+
+    store.initializing.set(false);
+    await settle();
+
+    expect(query('.menu-admin')).toBeTruthy();
+    expect(query('.not-admin')).toBeFalsy();
   });
 
   it('async: hidden while the store is empty, then appears after data arrives', async () => {

@@ -66,13 +66,30 @@ export class IApiService {
     return merged;
   }
 
+  /**
+   * Base URL for a call: an explicit `apiUrl` override wins, otherwise the
+   * configured identity host. Throws a descriptive error when neither exists so
+   * a consumer that never provided `api.identity` fails fast instead of issuing
+   * a relative request against the app origin.
+   */
+  private resolveBaseUrl(options?: IApiOptions): string {
+    const baseUrl = options?.apiUrl ?? this.config.api.identity;
+    if (!baseUrl) {
+      throw new Error(
+        '[@insight/ui] No API base URL configured. Set api.identity via provideInsightAuth() ' +
+          'or pass IApiOptions.apiUrl before calling this service.',
+      );
+    }
+    return baseUrl;
+  }
+
   /** Normalize current, legacy, and raw transport errors without losing safe extensions. */
   private enrichError(err: unknown): Observable<never> {
     return throwError(() => normalizeApiError(err));
   }
 
   get<T = any>(path: string, params?: HttpParams, options?: IApiOptions): Observable<T> {
-    const baseUrl = options?.apiUrl ?? this.config.api.identity;
+    const baseUrl = this.resolveBaseUrl(options);
     const mergedHeaders = this.mergeHeaders(options);
     return this.http
       .get<IApiResponse<T>>(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders })
@@ -83,7 +100,7 @@ export class IApiService {
   }
 
   post<T = any>(path: string, body: any = {}, options?: IApiOptions): Observable<T> {
-    const baseUrl = options?.apiUrl ?? this.config.api.identity;
+    const baseUrl = this.resolveBaseUrl(options);
     const mergedHeaders = this.mergeHeaders(options);
     return this.http
       .post<IApiResponse<T>>(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
@@ -94,7 +111,7 @@ export class IApiService {
   }
 
   put<T = any>(path: string, body: any = {}, options?: IApiOptions): Observable<T> {
-    const baseUrl = options?.apiUrl ?? this.config.api.identity;
+    const baseUrl = this.resolveBaseUrl(options);
     const mergedHeaders = this.mergeHeaders(options);
     return this.http
       .put<IApiResponse<T>>(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
@@ -105,7 +122,7 @@ export class IApiService {
   }
 
   delete<T = any>(path: string, options?: IApiOptions): Observable<T> {
-    const baseUrl = options?.apiUrl ?? this.config.api.identity;
+    const baseUrl = this.resolveBaseUrl(options);
     const mergedHeaders = this.mergeHeaders(options);
 
     // Fastify rejects Content-Type: application/json with an empty body
@@ -126,7 +143,7 @@ export class IApiService {
   }
 
   getBlob(path: string, params?: HttpParams, options?: IApiOptions): Observable<Blob> {
-    const baseUrl = options?.apiUrl ?? this.config.api.identity;
+    const baseUrl = this.resolveBaseUrl(options);
     const mergedHeaders = this.mergeHeaders(options);
     return this.http
       .get(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders, responseType: 'blob' })
@@ -134,7 +151,7 @@ export class IApiService {
   }
 
   upload<T = any>(path: string, file: File | FormData, options?: IApiOptions): Observable<T> {
-    const baseUrl = options?.apiUrl ?? this.config.api.identity;
+    const baseUrl = this.resolveBaseUrl(options);
     const body =
       file instanceof FormData
         ? file
