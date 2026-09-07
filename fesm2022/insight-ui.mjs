@@ -9716,9 +9716,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
 /**
  * Default environment for `@insight/ui`'s shared data layer.
  *
- * These are the library-wide defaults for the SSO / sidebar / user data
- * layer. Consumer apps override any field at bootstrap via
- * `provideInsightAuth()`.
+ * `api.identity`, `signinUrl` and `authCallbackUrl` are intentionally EMPTY -
+ * the library does not default to any shared identity provider. Each consumer
+ * app supplies its own values (its own BFF/identity host) via
+ * `provideInsightAuth()`. The `user`/`configuration`/`application` keys keep
+ * defaulting to the platform services and can still be overridden.
  */
 const environment = {
     production: false,
@@ -9726,14 +9728,13 @@ const environment = {
     appName: 'Insight UI',
     version: '1.0.2',
     api: {
-        identity: 'https://account-dev.paramountenterprise.co.id/api',
+        identity: '',
         user: 'https://account-dev.paramountenterprise.co.id/api/v1/users',
         configuration: 'https://account-dev.paramountenterprise.co.id/api/v1',
         application: 'https://account-dev.paramountenterprise.co.id/api/v1/applications',
     },
-    signinUrl: 'https://account-dev.paramountenterprise.co.id/signin',
-    authCallbackUrl: 'https://account-dev.paramountenterprise.co.id/auth',
-    cookieDomain: '.paramountenterprise.co.id',
+    signinUrl: '',
+    authCallbackUrl: '',
     securityMode: true,
     tokenLifespan: {
         accessTokenSeconds: 3600,
@@ -9749,31 +9750,38 @@ const environment = {
     ],
 };
 
+/** Default relative endpoint paths for the configured identity host. */
+function getDefaultInsightAuthEndpoints() {
+    return {
+        csrf: '/auth/csrf',
+        login: '/auth/login',
+        refresh: '/auth/refresh',
+        logout: '/auth/logout',
+        exchange: '/auth/exchange',
+    };
+}
 /**
- * Default `IInsightAuthConfig`, sourced from the library's default environment
- * file (`environments/environment.ts`). Consumer apps override any field via
- * `provideInsightAuth({ ... })`.
- *
- * `allowedReturnOrigins` defaults to this app's own origin (the common case —
- * a callback only ever needs to trust redirecting back to itself) and
- * `cookieDomain` defaults to the current hostname (informational only, the
- * frontend never reads/sets this cookie) — both computed at call time since
- * they depend on `window.location`.
+ * Default `IInsightAuthConfig`. `api.identity` and `signinUrl` are left EMPTY
+ * (no shared identity host is baked in) - a consumer app MUST supply its own
+ * values via `provideInsightAuth({ ... })` and is validated fail-fast when it
+ * forgets. All other fields default sensibly: `allowedReturnOrigins` to this
+ * app's own origin, `endpoints` to the platform/BFF path contract, and lifespan /
+ * csrf / api-key values from the library's default environment.
  */
 function getDefaultInsightAuthConfig() {
     return {
         api: {
-            identity: environment.api.identity,
+            identity: '', // no default identity host - the consumer app supplies its own
             user: environment.api.user,
             configuration: environment.api.configuration,
             application: environment.api.application,
         },
-        signinUrl: environment.signinUrl,
+        signinUrl: '', // no default sign-in page - the consumer app supplies its own
         callbackPath: '/auth/callback',
         allowedReturnOrigins: [window.location.origin],
-        cookieDomain: window.location.hostname,
         tokenLifespan: { ...environment.tokenLifespan },
         csrfTokenMaxAgeSeconds: environment.csrfTokenMaxAgeSeconds,
+        endpoints: { ...getDefaultInsightAuthEndpoints() },
         apiKey: environment.apiKey,
         appId: environment.appId,
         unauthorizedHandling: 'dialog',
@@ -9781,20 +9789,62 @@ function getDefaultInsightAuthConfig() {
 }
 /**
  * Injection token carrying the consumer app's `IInsightAuthConfig`. Provided via
- * `provideInsightAuth()`. Has a root-level default (`getDefaultInsightAuthConfig()`)
- * so the library services never break when a consumer forgets to call
- * `provideInsightAuth()` — consumers override it explicitly.
+ * `provideInsightAuth()`. Falls back to `getDefaultInsightAuthConfig()` (empty
+ * `api.identity`/`signinUrl`) so services still resolve when the provider is
+ * omitted - any auth call then throws a descriptive "identity host not
+ * configured" error instead of silently hitting a default host.
  */
 const INSIGHT_AUTH_CONFIG = new InjectionToken('INSIGHT_AUTH_CONFIG', {
     providedIn: 'root',
     factory: () => getDefaultInsightAuthConfig(),
 });
+/**
+ * The configured identity host (`api.identity`) or a descriptive error. Used by
+ * auth services before building a request URL so a missing per-app host fails
+ * loudly instead of producing a relative/undefined URL.
+ */
+function requireIdentityHost(config) {
+    if (!config.api.identity) {
+        throw new Error('[@insight/ui] api.identity is not configured. Point it at this app\'s own auth host/BFF ' +
+            '(e.g. provideInsightAuth({ api: { identity: "https://<your-app>/api" }, signinUrl: "..." })).');
+    }
+    return config.api.identity;
+}
+/**
+ * Relative path of an identity endpoint for the current config. Falls back to
+ * `getDefaultInsightAuthEndpoints()` when the consumer did not override it.
+ */
+function getAuthEndpointPath(config, key) {
+    return config.endpoints?.[key] ?? getDefaultInsightAuthEndpoints()[key] ?? '';
+}
+/**
+ * Absolute URL of an identity endpoint: `{api.identity}{path}`. Throws a
+ * descriptive error when the identity host is not configured.
+ */
+function getAuthEndpointUrl(config, key) {
+    return `${requireIdentityHost(config)}${getAuthEndpointPath(config, key)}`;
+}
+/**
+ * Validate a resolved auth config at bootstrap. Throws a descriptive error when
+ * the mandatory per-app values (`api.identity`, `signinUrl`) are missing so a
+ * misconfigured consumer fails fast instead of silently calling an undefined
+ * host.
+ */
+function validateInsightAuthConfig(config) {
+    if (!config.api.identity) {
+        throw new Error('[@insight/ui] provideInsightAuth() requires api.identity - the base URL of this app\'s own ' +
+            'auth host/BFF. The library no longer defaults to a shared identity provider.');
+    }
+    if (!config.signinUrl) {
+        throw new Error('[@insight/ui] provideInsightAuth() requires signinUrl - the full URL of this app\'s ' +
+            'sign-in page / BFF login route.');
+    }
+}
 
 /**
- * CSRF token management — cookie-to-header pattern for @insight/ui consumer apps.
- * Mirrors iam-web's `ICsrfService`:
+ * CSRF token management - cookie-to-header pattern for @insight/ui consumer apps.
  *
- *   1. FE calls GET {api.identity}/auth/csrf.
+ *   1. FE calls GET {api.identity}{csrf endpoint} (default `/auth/csrf`).
  *   2. Backend returns `{ csrfToken }` in the JSON body AND sets a `csrf_token` cookie.
  *   3. FE stores the token in memory (JS cannot read cross-origin cookies).
  *   4. FE sends the token back as `X-CSRF-Token` header on mutating requests.
@@ -9829,14 +9879,14 @@ class ICsrfService {
         return Date.now() - this.tokenFetchedAt >= maxAgeMs;
     }
     /**
-     * Fetch a fresh CSRF token from `iam-identity-api` and store it in memory.
-     * On failure the error is propagated (callers that want best-effort behavior
-     * can catch it) — a failed fetch must not be silently swallowed, e.g. so the
-     * `retryOnCsrfError` pattern can re-trigger the fetch.
+     * Fetch a fresh CSRF token from the configured identity host and store it in
+     * memory. On failure the error is propagated (callers that want best-effort
+     * behavior can catch it) - a failed fetch must not be silently swallowed,
+     * e.g. so the `retryOnCsrfError` pattern can re-trigger the fetch.
      */
     ensureToken() {
         return this.http
-            .get(`${this.config.api.identity}/auth/csrf`, { withCredentials: true })
+            .get(getAuthEndpointUrl(this.config, 'csrf'), { withCredentials: true })
             .pipe(tap((res) => {
             this.token = res.csrfToken ?? null;
             this.tokenFetchedAt = Date.now();
@@ -9855,18 +9905,19 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
         }] });
 
 /**
- * Build the full external URL to iam-web's signin page for a cross-domain SSO
- * redirect, routing the eventual handoff through THIS APP'S OWN callback
+ * Build the full external URL to the app's configured sign-in page
+ * (`config.signinUrl` - its own BFF login or iam-web signin) for a cross-domain
+ * SSO redirect, routing the eventual handoff through THIS APP'S OWN callback
  * route (`config.callbackPath`, default `/auth/callback`) — never through the
  * page the user originally tried to visit.
  *
  * This is deliberate and fixes a real redirect loop: if the guard/interceptor
  * used `window.location.href` (the current page) as the returnUrl directly,
- * iam-web's handoff would append `#at=<token>` to THAT SAME page. Since that
+ * the sign-in page's handoff would append `#at=<token>` to THAT SAME page. Since that
  * page still doesn't have a stored session yet at the moment it re-renders,
  * the guard would fire again, capture `window.location.href` again — which
  * NOW ALREADY CONTAINS the previous `#at=` fragment — and redirect back to
- * iam-web with an ever-growing `returnUrl`, eventually overflowing header
+ * back to the sign-in page with an ever-growing `returnUrl`, eventually overflowing header
  * size limits (HTTP 431).
  *
  * Routing through a dedicated callback route breaks the loop: the callback
@@ -10084,25 +10135,30 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
 // header (`IApiOptions.skipBearer`). Read and stripped by this interceptor so
 // it never reaches the server.
 const IH_SKIP_BEARER_HEADER = 'X-IH-Skip-Bearer';
-// Endpoints that must never receive a Bearer header (would be circular / not
-// yet authenticated) — CSRF + silent refresh are called before a token exists.
-const AUTH_SKIP_URLS = ['/auth/csrf', '/auth/refresh'];
-const isAuthSkipUrl = (url) => AUTH_SKIP_URLS.some((skip) => url.includes(skip));
+// Identity endpoints that must never receive a Bearer header (would be
+// circular / not yet authenticated) - CSRF bootstrap + silent refresh run before
+// a token exists. Paths come from the resolved config so a consumer backend
+// exposing different routes still works.
+const isAuthSkipUrl = (url, config) => {
+    const skipPaths = [getAuthEndpointPath(config, 'csrf'), getAuthEndpointPath(config, 'refresh')];
+    return skipPaths.some((path) => path && url.includes(path));
+};
 const addAuthHeader = (req, token) => req.clone({ headers: req.headers.set('Authorization', `Bearer ${token}`) });
 /**
  * Auth HTTP interceptor for @insight/ui consumer apps.
  *
  * Attaches the in-memory access token as a Bearer header. On 401, attempts a
- * single silent refresh (via the HttpOnly refresh cookie) and retries once;
- * on refresh failure, clears the session and redirects to iam-web's signin
- * page. 429 (rate-limit) and 423 (lockout) responses are passed through;
- * `IApiService` normalizes their current or legacy backend error fields.
+ * single silent refresh (via the HttpOnly session cookie) and retries once;
+ * on refresh failure, clears the session and redirects to the configured
+ * signinUrl (the app's own login). 429 (rate-limit) and 423 (lockout)
+ * responses are passed through; `IApiService` normalizes their current or
+ * legacy backend error fields.
  */
 const authInterceptor = (req, next) => {
     const session = inject(ISessionService);
     const config = inject(INSIGHT_AUTH_CONFIG);
     const sessionExpired = inject(SessionExpiredService);
-    if (isAuthSkipUrl(req.url)) {
+    if (isAuthSkipUrl(req.url, config)) {
         return next(req);
     }
     // Per-request opt-out (IApiService `skipBearer`): strip the sentinel header
@@ -10132,7 +10188,7 @@ const authInterceptor = (req, next) => {
                 sessionExpired.show(targetPath, reason, errorCode, apiError.detail, apiError.message, apiError);
             }
             else {
-                // Legacy: full-page redirect to iam-web's signin page. Use the
+                // Legacy: full-page redirect to the configured signinUrl. Use the
                 // current path (no hash/token) as the target, routed through the
                 // callback route, same as authGuard, to avoid a redirect loop.
                 const targetPath = window.location.pathname + window.location.search;
@@ -10178,33 +10234,47 @@ class IApiService {
         }
         return merged;
     }
+    /**
+     * Base URL for a call: an explicit `apiUrl` override wins, otherwise the
+     * configured identity host. Throws a descriptive error when neither exists so
+     * a consumer that never provided `api.identity` fails fast instead of issuing
+     * a relative request against the app origin.
+     */
+    resolveBaseUrl(options) {
+        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        if (!baseUrl) {
+            throw new Error('[@insight/ui] No API base URL configured. Set api.identity via provideInsightAuth() ' +
+                'or pass IApiOptions.apiUrl before calling this service.');
+        }
+        return baseUrl;
+    }
     /** Normalize current, legacy, and raw transport errors without losing safe extensions. */
     enrichError(err) {
         return throwError(() => normalizeApiError(err));
     }
     get(path, params, options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const baseUrl = this.resolveBaseUrl(options);
         const mergedHeaders = this.mergeHeaders(options);
         return this.http
             .get(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders })
             .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
     }
     post(path, body = {}, options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const baseUrl = this.resolveBaseUrl(options);
         const mergedHeaders = this.mergeHeaders(options);
         return this.http
             .post(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
             .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
     }
     put(path, body = {}, options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const baseUrl = this.resolveBaseUrl(options);
         const mergedHeaders = this.mergeHeaders(options);
         return this.http
             .put(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
             .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
     }
     delete(path, options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const baseUrl = this.resolveBaseUrl(options);
         const mergedHeaders = this.mergeHeaders(options);
         // Fastify rejects Content-Type: application/json with an empty body
         if (!options?.body) {
@@ -10219,14 +10289,14 @@ class IApiService {
             .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
     }
     getBlob(path, params, options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const baseUrl = this.resolveBaseUrl(options);
         const mergedHeaders = this.mergeHeaders(options);
         return this.http
             .get(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders, responseType: 'blob' })
             .pipe(catchError((err) => this.enrichError(err)));
     }
     upload(path, file, options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
+        const baseUrl = this.resolveBaseUrl(options);
         const body = file instanceof FormData
             ? file
             : (() => {
@@ -10268,16 +10338,19 @@ const LOCKOUT_DURATION_MS = 1 * 60 * 1000;
 const IDLE_RESET_MS = 12 * 60 * 60 * 1000;
 const LOCK_STORAGE_KEY = 'iam.mock.login_lockout';
 /**
- * iam-identity-api auth facade (Mode 2 proxy — Keycloak is never exposed to the
- * frontend). Base URL = `{api.identity}` from the resolved auth config.
+ * Auth facade against the configured identity host (`api.identity`) - typically
+ * a Mode-2 proxy (Keycloak is never exposed to the frontend) or an app's own
+ * BFF. Endpoint paths are relative and come from `config.endpoints` (defaults
+ * match the platform/BFF contract). MFA/password methods are identity-owner
+ * routes and stay fixed.
  *
- * @overridable — consumers may provide `{ provide: IAuthService, useClass: ... }`.
+ * @overridable - consumers may provide `{ provide: IAuthService, useClass: ... }`.
  */
 class IAuthService {
     api = inject(IApiService);
     config = inject(INSIGHT_AUTH_CONFIG);
     get identityUrl() {
-        return this.config.api.identity;
+        return requireIdentityHost(this.config);
     }
     login(username, password, recaptchaToken, isChallengeResponse) {
         const cleanUsername = username.trim().toLowerCase();
@@ -10292,7 +10365,7 @@ class IAuthService {
             }));
         }
         return this.api
-            .post('/auth/login', {
+            .post(getAuthEndpointPath(this.config, 'login'), {
             username,
             password,
             recaptchaToken,
@@ -10309,17 +10382,19 @@ class IAuthService {
             return throwError(() => err);
         }));
     }
-    /** Silently refresh the access token via the HttpOnly refresh-token cookie. */
+    /** Silently refresh the access token via the HttpOnly session cookie. */
     refresh() {
-        return this.api.post('/auth/refresh', {});
+        return this.api.post(getAuthEndpointPath(this.config, 'refresh'), {});
     }
-    /** Clear the server-side session and expire the HttpOnly refresh cookie. */
+    /** Clear the server-side session and expire the HttpOnly session cookie. */
     logout(refreshToken) {
-        return this.api.post('/auth/logout', { refreshToken }).pipe(map$1(() => undefined));
+        return this.api
+            .post(getAuthEndpointPath(this.config, 'logout'), { refreshToken })
+            .pipe(map$1(() => undefined));
     }
     /** Exchange a short-lived `at=` auth token for a full session (cross-app handoff). */
     exchangeAuthToken(authToken) {
-        return this.api.post('/auth/exchange', {}, { headers: { Authorization: authToken } });
+        return this.api.post(getAuthEndpointPath(this.config, 'exchange'), {}, { headers: { Authorization: authToken } });
     }
     /** Verify the MFA TOTP code during a login challenge. */
     verifyMfaChallenge(mfaSessionId, totpCode) {
@@ -10327,7 +10402,10 @@ class IAuthService {
     }
     /** Verify the TOTP code during first-time MFA enrollment (forced at login). */
     verifyMfaEnroll(mfaSessionId, totpCode) {
-        return this.api.post('/auth/mfa/enroll/verify', { mfaSessionId, totpCode });
+        return this.api.post('/auth/mfa/enroll/verify', {
+            mfaSessionId,
+            totpCode,
+        });
     }
     /** Self-service MFA — check enrollment status (`GET /profile/mfa`). */
     selfServiceGetStatus() {
@@ -10371,7 +10449,11 @@ class IAuthService {
     }
     /** Submit a new password using the reset token (`POST /auth/reset-password`). */
     resetPassword(token, newPassword, confirmPassword) {
-        return this.api.post('/auth/reset-password', { token, newPassword, confirmPassword });
+        return this.api.post('/auth/reset-password', {
+            token,
+            newPassword,
+            confirmPassword,
+        });
     }
     // ─── Login lockout helpers (sessionStorage per-username) ─────────────────────
     getLockoutData(username) {
@@ -10449,9 +10531,9 @@ function decodeUser(accessToken) {
  * Session management for @insight/ui consumer apps.
  *
  * Access token: stored IN MEMORY only (never Web Storage). Refresh token:
- * HttpOnly cookie managed exclusively by iam-identity-api; this service never
- * reads or stores it directly (an in-memory `refreshToken` is kept only for
- * server-side logout).
+ * HttpOnly cookie managed by the app's own identity host/BFF; this service
+ * never reads or stores it directly (an in-memory `refreshToken` is kept only
+ * for server-side logout).
  *
  * Superset of the basic SSO session (used by remote apps via `setAccessToken` /
  * `authGuard` / `IAuthCallback`) and the richer iam-web session (session
@@ -10647,8 +10729,8 @@ class ISessionService {
         switchMap(() => this.authService.logout(refreshToken)), catchError(() => of(undefined)), map$1(() => undefined));
     }
     /**
-     * Silently refresh the access token via the HttpOnly refresh cookie
-     * (`POST {api.identity}/auth/refresh`, `withCredentials: true`).
+     * Silently refresh the access token via the HttpOnly session cookie
+     * (`POST {api.identity}{refresh endpoint}`, `withCredentials: true`).
      * Single-flight: concurrent callers share the in-flight refresh; the shared
      * observable is retained until it completes/errors so a cancelled caller
      * cannot abort the fetch.
@@ -10835,12 +10917,17 @@ function toIMenuFavorite(item) {
         isFavorite: true,
     };
 }
-/** Recursively collects every non-null `menuCode` across a menu tree (deduplicated, order preserved). */
+/**
+ * Recursively collects the `menuCode` of every navigable leaf item across a
+ * menu tree (deduplicated, order preserved). Structural group/module nodes are
+ * excluded so a container code never counts as a grant - matching the flat
+ * granted-code list the legacy menu token carried (`ihHasMn` menu mode).
+ */
 function collectMenuCodes(menus) {
     const codes = new Set();
     const walk = (nodes) => {
         for (const node of nodes) {
-            if (node.menuCode) {
+            if (isLeafItem(node) && node.menuCode) {
                 codes.add(node.menuCode);
             }
             walk(getMenuChildren(node));
@@ -10995,6 +11082,12 @@ class IUserMenuStore {
     favorites = signal([], ...(ngDevMode ? [{ debugName: "favorites" }] : []));
     /** Roles decoded from the access token (for `source: 'role'` permission checks). */
     roles = signal([], ...(ngDevMode ? [{ debugName: "roles" }] : []));
+    /**
+     * Feature permissions granted by the backend (for `source: 'permission'`
+     * checks). NOT hydrated by `load()` yet - a loader calls `setPermissions()`
+     * once the endpoint is available.
+     */
+    permissions = signal([], ...(ngDevMode ? [{ debugName: "permissions" }] : []));
     /** True while the cold-start `load()` is in flight. */
     initializing = signal(false, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
     /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
@@ -11007,6 +11100,7 @@ class IUserMenuStore {
     menus$ = toObservable(this.menus);
     favorites$ = toObservable(this.favorites);
     roles$ = toObservable(this.roles);
+    permissions$ = toObservable(this.permissions);
     initializing$ = toObservable(this.initializing);
     /**
      * Post-login default landing (when no return URL is present).
@@ -11082,6 +11176,26 @@ class IUserMenuStore {
             return code.some((role) => roles.includes(role));
         }
         return roles.includes(code);
+    }
+    /**
+     * Replaces the granted permission list (feature/action codes). Called by a
+     * loader once the backend endpoint is available - `load()` does not fetch
+     * permissions.
+     */
+    setPermissions(permissions) {
+        this.permissions.set(permissions);
+    }
+    /**
+     * Permission-mode check against the granted permissions (ANY match). Returns
+     * `false` while the list is empty/not loaded - gated UI renders only after
+     * the store has data (async-aware via the reactive directives).
+     */
+    hasPermission(code) {
+        const granted = this.permissions();
+        if (Array.isArray(code)) {
+            return code.some((permission) => granted.includes(permission));
+        }
+        return granted.includes(code);
     }
     /**
      * Pin (`isFavorite: true`) or unpin a menu item. Flips the star icon in the
@@ -11180,6 +11294,7 @@ class IUserMenuStore {
         this.menus.set([]);
         this.favorites.set([]);
         this.roles.set([]);
+        this.permissions.set([]);
         this.loadError.set(null);
         this.loadErrors.set({ user: null, menus: null, favorites: null });
     }
@@ -14286,35 +14401,25 @@ function isAllowedOrigin(origin, allowedReturnOrigins) {
  * Registers the @insight/ui shared auth package (`IApiService`,
  * `ISessionService`, `ICsrfService`, `authGuard`) for a consumer app.
  *
- * Zero-config by default — sensible local-dev defaults are baked in (see
- * `getDefaultInsightAuthConfig()`), matching iam-web's own local
- * environment. Consumer apps only need to pass `overrides` for whatever
- * differs from the defaults — typically `api.identity` and `signinUrl` when
- * deploying to staging/production. Every field can be overridden
- * individually, down to a single nested `api.*` or `tokenLifespan.*` entry;
- * anything not overridden falls back to the default.
+ * `api.identity` and `signinUrl` are MANDATORY and app-specific: they must
+ * point at THIS app's own auth backend. In the BFF-per-app model the app's
+ * session cookie stays first-party on its own origin (SameSite-safe), so the
+ * library no longer ships a default pointing at any shared identity provider.
+ * A config that omits them throws at bootstrap (fail-fast). Every other field
+ * is optional and can be overridden individually, down to a single nested
+ * `api.*`, `tokenLifespan.*` or `endpoints.*` entry.
  *
  * Consumers must still register `authInterceptor` themselves via
  * `provideHttpClient(withInterceptors([authInterceptor]))` in their own
- * `app.config.ts` — matches iam-web's existing pattern of wiring the
- * interceptor explicitly rather than hiding it inside a provider function.
+ * `app.config.ts`.
  *
- * Usage (zero-config — local dev):
- * ```ts
- * export const config: ApplicationConfig = {
- *   providers: [
- *     provideInsightAuth(),
- *     provideHttpClient(withInterceptors([authInterceptor])),
- *     provideRouter(routes),
- *   ],
- * };
- * ```
- *
- * Usage (override for staging/production):
+ * Usage - point at your own auth host/BFF:
  * ```ts
  * provideInsightAuth({
- *   api: { identity: 'https://iam-identity.paramount-land.com/api' },
- *   signinUrl: 'https://iam.paramount-land.com/signin',
+ *   // this app's own backend: a same-origin BFF (e.g. atlas-api) or identity-api
+ *   api: { identity: 'https://<your-app>.example.com/api' },
+ *   // this app's own login entry (BFF login route or the app's signin page)
+ *   signinUrl: 'https://<your-app>.example.com/api/auth/login',
  * });
  * ```
  */
@@ -14327,7 +14432,9 @@ function provideInsightAuth(overrides) {
         // but real callers only ever pass actual string URLs, never `undefined` values.
         api: { ...defaults.api, ...overrides?.api },
         tokenLifespan: { ...defaults.tokenLifespan, ...overrides?.tokenLifespan },
+        endpoints: { ...defaults.endpoints, ...overrides?.endpoints },
     };
+    validateInsightAuthConfig(config);
     return makeEnvironmentProviders([
         { provide: INSIGHT_AUTH_CONFIG, useValue: config },
         {
@@ -14342,11 +14449,11 @@ function provideInsightAuth(overrides) {
 }
 
 /**
- * Extract the access token appended by iam-web after a successful external
- * SSO redirect. Reads the URL HASH FRAGMENT (`#at=<token>`) — deliberately
- * NOT a query parameter — so the token is never sent to the server and never
- * appears in access/gateway logs (fragments are browser-only and are
- * unconditionally stripped from the `Referer` header).
+ * Extract the access token appended by the sign-in host after a successful
+ * external SSO redirect. Reads the URL HASH FRAGMENT (`#at=<token>`) -
+ * deliberately NOT a query parameter - so the token is never sent to the
+ * server and never appears in access/gateway logs (fragments are browser-only
+ * and are unconditionally stripped from the `Referer` header).
  */
 function extractAccessTokenFromHash() {
     const hash = window.location.hash;
@@ -14359,7 +14466,7 @@ function extractAccessTokenFromHash() {
 /**
  * Reusable SSO callback route component for @insight/ui consumer apps.
  * Register it at whatever route path is used as the `returnUrl` when
- * redirecting to iam-web's signin page, e.g.
+ * redirecting to the configured signinUrl, e.g.
  * `{ path: 'auth/callback', component: IAuthCallback }`.
  *
  * Flow:
@@ -14369,7 +14476,7 @@ function extractAccessTokenFromHash() {
  *     sitting in browser history).
  *  4. Validate & redirect to the original in-app `returnUrl` (query param
  *     `returnUrl`, defaulting to `/`), using the same `sanitizeReturnUrl`
- *     rules as iam-web.
+ *     rules as the sign-in page.
  */
 class IAuthCallback {
     session = inject(ISessionService);
@@ -14415,12 +14522,13 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
 /**
  * Cross-domain auth guard for @insight/ui consumer apps.
  *
- * Unlike iam-web's internal Router-based guard, this performs a FULL PAGE
- * redirect to iam-web's signin page when unauthenticated, since the consumer
- * app and iam-web are separate applications/domains — not routes within the
- * same Angular router. The redirect is routed through this app's OWN
- * callback route (not the page the user was trying to visit) — see
- * `buildExternalSigninUrl()` for why that's required to avoid a redirect loop.
+ * Unlike an identity-owner app's internal Router-based guard, this performs a
+ * FULL PAGE redirect to the configured signinUrl when unauthenticated, since
+ * the consumer app and its auth/BFF host are separate applications/domains -
+ * not routes within the same Angular router. The redirect is routed through
+ * this app's OWN callback route (not the page the user was trying to visit) -
+ * see `buildExternalSigninUrl()` for why that's required to avoid a redirect
+ * loop.
  */
 const authGuard = (_route, state) => {
     const session = inject(ISessionService);
@@ -14497,7 +14605,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
  * It is self-gating (renders nothing while hidden), reads its state from the
  * shared `SessionExpiredService` (shown by the auth interceptor when a token
  * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
- * again", performs a full-page redirect to iam-web's signin via
+ * again", performs a full-page redirect to the configured signinUrl via
  * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
  * clicking the backdrop.
  */
@@ -14542,7 +14650,7 @@ class ISessionExpiredDialog {
                 return 'Your session is no longer valid. Please log in again.';
         }
     }
-    /** Perform the SSO handoff to iam-web's signin page, then clear the overlay state. */
+    /** Perform the SSO handoff to the configured signinUrl, then clear the overlay state. */
     onConfirm() {
         const returnUrl = this.sessionExpired.returnUrl();
         this.sessionExpired.hide();
@@ -14601,11 +14709,13 @@ function resolvePermission(value) {
  * `IHNotHasMnDirective`.
  *
  * ASYNC-AWARE: instead of a one-shot input setter, it subscribes to the
- * `IUserMenuStore`'s reactive menu/role state (`menus$` / `roles$`) and
- * re-renders the embedded view whenever the permission resolves or changes —
- * e.g. while the store cold-starts (menus not yet loaded) the view stays
- * hidden, then appears as soon as the data arrives, and disappears again if a
- * role/menu change revokes access.
+ * `IUserMenuStore`'s reactive menu/role/permission state (`menus$` / `roles$` /
+ * `permissions$`) and re-renders the embedded view whenever the permission
+ * resolves or changes. While the store cold-starts (`initializing`), the view
+ * stays hidden for BOTH `ihHasMn` and `ihNotHasMn` - a not-yet-loaded
+ * permission must not flash a denied element. Once data arrives the view
+ * appears (or stays hidden if the user lacks the code), and disappears again
+ * if a role/menu/permission change revokes access.
  */
 class IHMenuGateDirective {
     store = inject(IUserMenuStore);
@@ -14615,9 +14725,15 @@ class IHMenuGateDirective {
     viewCreated = false;
     subscription;
     ngOnInit() {
-        this.subscription = combineLatest([this.value$, this.store.menus$, this.store.roles$])
-            .pipe(map(([value]) => this.evaluate(value)), distinctUntilChanged())
-            .subscribe((allowed) => this.renderView(allowed));
+        this.subscription = combineLatest([
+            this.value$,
+            this.store.menus$,
+            this.store.roles$,
+            this.store.permissions$,
+            this.store.initializing$,
+        ])
+            .pipe(map(([value]) => (this.store.initializing() ? null : this.evaluate(value))), distinctUntilChanged())
+            .subscribe((state) => this.renderView(state));
     }
     ngOnDestroy() {
         this.subscription?.unsubscribe();
@@ -14627,10 +14743,29 @@ class IHMenuGateDirective {
         if (!resolved) {
             return false;
         }
-        return resolved.source === 'role' ? this.store.hasRole(resolved.codes) : this.store.hasMenu(resolved.codes);
+        if (resolved.source === 'role') {
+            return this.store.hasRole(resolved.codes);
+        }
+        if (resolved.source === 'permission') {
+            return this.store.hasPermission(resolved.codes);
+        }
+        return this.store.hasMenu(resolved.codes);
     }
-    renderView(allowed) {
-        const show = this.invert ? !allowed : allowed;
+    /**
+     * Renders the embedded view for a resolved state:
+     * - `null` = store still initializing / permission unknown - keep hidden for
+     *   BOTH `ihHasMn` and `ihNotHasMn` (gate lifts once `initializing` flips false).
+     * - `boolean` = final allow/deny, resolved against `invert`.
+     */
+    renderView(state) {
+        if (state === null) {
+            if (this.viewCreated) {
+                this.viewContainer.clear();
+                this.viewCreated = false;
+            }
+            return;
+        }
+        const show = this.invert ? !state : state;
         if (show && !this.viewCreated) {
             this.viewContainer.createEmbeddedView(this.templateRef);
             this.viewCreated = true;
@@ -14649,13 +14784,14 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
         }] });
 /**
  * Structural directive `*ihHasMn` — renders the element only while the current
- * user has the given menu code / role.
+ * user has the given menu code / role / feature permission.
  *
  * Usage:
  * ```html
  * <button *ihHasMn="'admin'">Admin only</button>                 <!-- menu mode (default) -->
  * <div *ihHasMn="['read', 'write']">R/W</div>
  * <i *ihHasMn="{ source: 'role', value: 'iam-admin' }">Role check</i>
+ * <i *ihHasMn="{ source: 'permission', value: 'report.export' }">Permission check</i>
  * ```
  */
 class IHHasMnDirective extends IHMenuGateDirective {
@@ -14706,5 +14842,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectMenuChain, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
+export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectMenuChain, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultInsightAuthConfig, getDefaultInsightAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, requireIdentityHost, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateInsightAuthConfig };
 //# sourceMappingURL=insight-ui.mjs.map

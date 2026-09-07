@@ -2275,6 +2275,32 @@ type IInsightTokenLifespan = {
     ssoSessionMaxSeconds: number;
 };
 /**
+ * Relative endpoint paths served by the configured identity host (`api.identity`).
+ *
+ * The library never assumes a specific identity provider's route layout. These
+ * default to the platform contract (`/auth/csrf`, `/auth/login`, ...) shared by
+ * iam-identity-api and the reference BFF (atlas-api); a consumer app can point
+ * them at whatever routes its own backend exposes. Paths are relative to
+ * `api.identity` - the host (including any mount prefix) comes from there.
+ *
+ * Only the auth-facade endpoints are configurable. MFA/password routes are used
+ * by identity-owner apps only (e.g. iam-web) and stay fixed.
+ */
+type IInsightAuthEndpoints = {
+    /** CSRF bootstrap: `GET {identity}{csrf}` returns `{ csrfToken }` and sets the CSRF cookie. */
+    csrf?: string;
+    /** Mode-2 username/password login: `POST {identity}{login}` (identity-owner apps only). */
+    login?: string;
+    /** Silent session refresh via the HttpOnly session cookie: `POST {identity}{refresh}`. */
+    refresh?: string;
+    /** Server-side session clear (CSRF-protected): `POST {identity}{logout}`. */
+    logout?: string;
+    /** Cross-app handoff: `POST {identity}{exchange}` carrying the `at=` token in `Authorization`. */
+    exchange?: string;
+};
+/** Default relative endpoint paths for the configured identity host. */
+declare function getDefaultInsightAuthEndpoints(): IInsightAuthEndpoints;
+/**
  * Configuration required by @insight/ui's shared auth package
  * (IApiService, ISessionService, ICsrfService, authGuard, authInterceptor).
  *
@@ -2282,12 +2308,23 @@ type IInsightTokenLifespan = {
  * `app.config.ts` / bootstrap `ApplicationConfig`.
  */
 type IInsightAuthConfig = {
-    /** API base URLs grouped by backend service. `identity` (iam-identity-api) is required — all auth calls (csrf, refresh) go through it. */
+    /**
+     * API base URLs grouped by backend service. `identity` is REQUIRED and must
+     * point at this app's OWN auth backend (typically a same-origin BFF that
+     * proxies iam-identity and owns the session cookie, e.g. an atlas-api
+     * instance) - never at the shared identity provider. All session calls
+     * (csrf, refresh, logout) go through it. No default is baked in.
+     */
     api: {
         identity: string;
         [key: string]: string;
     };
-    /** Full URL of iam-web's signin page — consumer apps redirect here when unauthenticated. */
+    /**
+     * REQUIRED. Full URL of this app's sign-in page - the app redirects here
+     * when unauthenticated. For BFF-mode apps this is the app's own login route
+     * (e.g. `{identity}/auth/login`); for identity-owner apps (iam-web) it is
+     * their signin page. No default is baked in.
+     */
     signinUrl: string;
     /**
      * This app's own SSO callback route, e.g. `/auth/callback` (default).
@@ -2306,14 +2343,15 @@ type IInsightAuthConfig = {
      * with `/`) are always allowed regardless of this list.
      */
     allowedReturnOrigins: string[];
-    /**
-     * Cookie domain used by iam-identity-api for the HttpOnly refresh token
-     * cookie. Informational only — the frontend never reads or sets this cookie.
-     */
-    cookieDomain: string;
     tokenLifespan: IInsightTokenLifespan;
     /** CSRF token max age in seconds (backend cookie maxAge minus a safety buffer). */
     csrfTokenMaxAgeSeconds: number;
+    /**
+     * Optional relative endpoint paths served by the configured identity host
+     * (`api.identity`). Defaults match the platform / reference-BFF contract -
+     * override when this app's backend exposes different routes.
+     */
+    endpoints?: IInsightAuthEndpoints;
     /**
      * This app's registered application API key (iam-user-api `application.api_key`).
      * Attached as an `Api-Key` header on every request. Empty/undefined disables it.
@@ -2348,9 +2386,9 @@ type IInsightAuthConfig = {
 /**
  * Overrides accepted by `provideInsightAuth()`. Every field is optional and
  * merged on top of `getDefaultInsightAuthConfig()` — including individual
- * `api.*` and `tokenLifespan.*` entries, so a consumer app can override just
- * `api.identity` (e.g. for staging/production) without having to restate the
- * rest of the config.
+ * `api.*`, `tokenLifespan.*` and `endpoints.*` entries, so a consumer app can
+ * override just `api.identity` (e.g. for staging/production) without having to
+ * restate the rest of the config.
  *
  * Deliberately NOT an open/arbitrary shape (no index signature at this
  * level) — `IInsightAuthConfig` is a narrow, well-defined auth contract, not
@@ -2364,24 +2402,45 @@ type IInsightAuthConfigOverrides = Partial<Omit<IInsightAuthConfig, 'api' | 'tok
     tokenLifespan?: Partial<IInsightTokenLifespan>;
 };
 /**
- * Default `IInsightAuthConfig`, sourced from the library's default environment
- * file (`environments/environment.ts`). Consumer apps override any field via
- * `provideInsightAuth({ ... })`.
- *
- * `allowedReturnOrigins` defaults to this app's own origin (the common case —
- * a callback only ever needs to trust redirecting back to itself) and
- * `cookieDomain` defaults to the current hostname (informational only, the
- * frontend never reads/sets this cookie) — both computed at call time since
- * they depend on `window.location`.
+ * Default `IInsightAuthConfig`. `api.identity` and `signinUrl` are left EMPTY
+ * (no shared identity host is baked in) - a consumer app MUST supply its own
+ * values via `provideInsightAuth({ ... })` and is validated fail-fast when it
+ * forgets. All other fields default sensibly: `allowedReturnOrigins` to this
+ * app's own origin, `endpoints` to the platform/BFF path contract, and lifespan /
+ * csrf / api-key values from the library's default environment.
  */
 declare function getDefaultInsightAuthConfig(): IInsightAuthConfig;
 /**
  * Injection token carrying the consumer app's `IInsightAuthConfig`. Provided via
- * `provideInsightAuth()`. Has a root-level default (`getDefaultInsightAuthConfig()`)
- * so the library services never break when a consumer forgets to call
- * `provideInsightAuth()` — consumers override it explicitly.
+ * `provideInsightAuth()`. Falls back to `getDefaultInsightAuthConfig()` (empty
+ * `api.identity`/`signinUrl`) so services still resolve when the provider is
+ * omitted - any auth call then throws a descriptive "identity host not
+ * configured" error instead of silently hitting a default host.
  */
 declare const INSIGHT_AUTH_CONFIG: InjectionToken<IInsightAuthConfig>;
+/**
+ * The configured identity host (`api.identity`) or a descriptive error. Used by
+ * auth services before building a request URL so a missing per-app host fails
+ * loudly instead of producing a relative/undefined URL.
+ */
+declare function requireIdentityHost(config: IInsightAuthConfig): string;
+/**
+ * Relative path of an identity endpoint for the current config. Falls back to
+ * `getDefaultInsightAuthEndpoints()` when the consumer did not override it.
+ */
+declare function getAuthEndpointPath(config: IInsightAuthConfig, key: keyof IInsightAuthEndpoints): string;
+/**
+ * Absolute URL of an identity endpoint: `{api.identity}{path}`. Throws a
+ * descriptive error when the identity host is not configured.
+ */
+declare function getAuthEndpointUrl(config: IInsightAuthConfig, key: keyof IInsightAuthEndpoints): string;
+/**
+ * Validate a resolved auth config at bootstrap. Throws a descriptive error when
+ * the mandatory per-app values (`api.identity`, `signinUrl`) are missing so a
+ * misconfigured consumer fails fast instead of silently calling an undefined
+ * host.
+ */
+declare function validateInsightAuthConfig(config: IInsightAuthConfig): void;
 
 type ISanitizedReturnUrl = {
     returnUrl: string;
@@ -2405,18 +2464,19 @@ type ISanitizedReturnUrl = {
 declare function sanitizeReturnUrl(url: string | null | undefined, allowedReturnOrigins: string[]): ISanitizedReturnUrl;
 
 /**
- * Build the full external URL to iam-web's signin page for a cross-domain SSO
- * redirect, routing the eventual handoff through THIS APP'S OWN callback
+ * Build the full external URL to the app's configured sign-in page
+ * (`config.signinUrl` - its own BFF login or iam-web signin) for a cross-domain
+ * SSO redirect, routing the eventual handoff through THIS APP'S OWN callback
  * route (`config.callbackPath`, default `/auth/callback`) — never through the
  * page the user originally tried to visit.
  *
  * This is deliberate and fixes a real redirect loop: if the guard/interceptor
  * used `window.location.href` (the current page) as the returnUrl directly,
- * iam-web's handoff would append `#at=<token>` to THAT SAME page. Since that
+ * the sign-in page's handoff would append `#at=<token>` to THAT SAME page. Since that
  * page still doesn't have a stored session yet at the moment it re-renders,
  * the guard would fire again, capture `window.location.href` again — which
  * NOW ALREADY CONTAINS the previous `#at=` fragment — and redirect back to
- * iam-web with an ever-growing `returnUrl`, eventually overflowing header
+ * back to the sign-in page with an ever-growing `returnUrl`, eventually overflowing header
  * size limits (HTTP 431).
  *
  * Routing through a dedicated callback route breaks the loop: the callback
@@ -2430,52 +2490,42 @@ declare function buildExternalSigninUrl(config: IInsightAuthConfig, targetPath: 
  * Registers the @insight/ui shared auth package (`IApiService`,
  * `ISessionService`, `ICsrfService`, `authGuard`) for a consumer app.
  *
- * Zero-config by default — sensible local-dev defaults are baked in (see
- * `getDefaultInsightAuthConfig()`), matching iam-web's own local
- * environment. Consumer apps only need to pass `overrides` for whatever
- * differs from the defaults — typically `api.identity` and `signinUrl` when
- * deploying to staging/production. Every field can be overridden
- * individually, down to a single nested `api.*` or `tokenLifespan.*` entry;
- * anything not overridden falls back to the default.
+ * `api.identity` and `signinUrl` are MANDATORY and app-specific: they must
+ * point at THIS app's own auth backend. In the BFF-per-app model the app's
+ * session cookie stays first-party on its own origin (SameSite-safe), so the
+ * library no longer ships a default pointing at any shared identity provider.
+ * A config that omits them throws at bootstrap (fail-fast). Every other field
+ * is optional and can be overridden individually, down to a single nested
+ * `api.*`, `tokenLifespan.*` or `endpoints.*` entry.
  *
  * Consumers must still register `authInterceptor` themselves via
  * `provideHttpClient(withInterceptors([authInterceptor]))` in their own
- * `app.config.ts` — matches iam-web's existing pattern of wiring the
- * interceptor explicitly rather than hiding it inside a provider function.
+ * `app.config.ts`.
  *
- * Usage (zero-config — local dev):
- * ```ts
- * export const config: ApplicationConfig = {
- *   providers: [
- *     provideInsightAuth(),
- *     provideHttpClient(withInterceptors([authInterceptor])),
- *     provideRouter(routes),
- *   ],
- * };
- * ```
- *
- * Usage (override for staging/production):
+ * Usage - point at your own auth host/BFF:
  * ```ts
  * provideInsightAuth({
- *   api: { identity: 'https://iam-identity.paramount-land.com/api' },
- *   signinUrl: 'https://iam.paramount-land.com/signin',
+ *   // this app's own backend: a same-origin BFF (e.g. atlas-api) or identity-api
+ *   api: { identity: 'https://<your-app>.example.com/api' },
+ *   // this app's own login entry (BFF login route or the app's signin page)
+ *   signinUrl: 'https://<your-app>.example.com/api/auth/login',
  * });
  * ```
  */
 declare function provideInsightAuth(overrides?: IInsightAuthConfigOverrides): EnvironmentProviders;
 
 /**
- * Extract the access token appended by iam-web after a successful external
- * SSO redirect. Reads the URL HASH FRAGMENT (`#at=<token>`) — deliberately
- * NOT a query parameter — so the token is never sent to the server and never
- * appears in access/gateway logs (fragments are browser-only and are
- * unconditionally stripped from the `Referer` header).
+ * Extract the access token appended by the sign-in host after a successful
+ * external SSO redirect. Reads the URL HASH FRAGMENT (`#at=<token>`) -
+ * deliberately NOT a query parameter - so the token is never sent to the
+ * server and never appears in access/gateway logs (fragments are browser-only
+ * and are unconditionally stripped from the `Referer` header).
  */
 declare function extractAccessTokenFromHash(): string | null;
 /**
  * Reusable SSO callback route component for @insight/ui consumer apps.
  * Register it at whatever route path is used as the `returnUrl` when
- * redirecting to iam-web's signin page, e.g.
+ * redirecting to the configured signinUrl, e.g.
  * `{ path: 'auth/callback', component: IAuthCallback }`.
  *
  * Flow:
@@ -2485,7 +2535,7 @@ declare function extractAccessTokenFromHash(): string | null;
  *     sitting in browser history).
  *  4. Validate & redirect to the original in-app `returnUrl` (query param
  *     `returnUrl`, defaulting to `/`), using the same `sanitizeReturnUrl`
- *     rules as iam-web.
+ *     rules as the sign-in page.
  */
 declare class IAuthCallback implements OnInit {
     private readonly session;
@@ -2550,19 +2600,22 @@ type IResetPasswordResponse = {
     reason?: 'invalid' | 'expired' | 'used' | 'history';
 };
 /**
- * iam-identity-api auth facade (Mode 2 proxy — Keycloak is never exposed to the
- * frontend). Base URL = `{api.identity}` from the resolved auth config.
+ * Auth facade against the configured identity host (`api.identity`) - typically
+ * a Mode-2 proxy (Keycloak is never exposed to the frontend) or an app's own
+ * BFF. Endpoint paths are relative and come from `config.endpoints` (defaults
+ * match the platform/BFF contract). MFA/password methods are identity-owner
+ * routes and stay fixed.
  *
- * @overridable — consumers may provide `{ provide: IAuthService, useClass: ... }`.
+ * @overridable - consumers may provide `{ provide: IAuthService, useClass: ... }`.
  */
 declare class IAuthService {
     private readonly api;
     private readonly config;
     private get identityUrl();
     login(username: string, password: string, recaptchaToken?: string, isChallengeResponse?: boolean): Observable<ILoginResponse>;
-    /** Silently refresh the access token via the HttpOnly refresh-token cookie. */
+    /** Silently refresh the access token via the HttpOnly session cookie. */
     refresh(): Observable<IRefreshResponse>;
-    /** Clear the server-side session and expire the HttpOnly refresh cookie. */
+    /** Clear the server-side session and expire the HttpOnly session cookie. */
     logout(refreshToken?: string): Observable<void>;
     /** Exchange a short-lived `at=` auth token for a full session (cross-app handoff). */
     exchangeAuthToken(authToken: string): Observable<ILoginResponse>;
@@ -2612,10 +2665,9 @@ declare class IAuthService {
 }
 
 /**
- * CSRF token management — cookie-to-header pattern for @insight/ui consumer apps.
- * Mirrors iam-web's `ICsrfService`:
+ * CSRF token management - cookie-to-header pattern for @insight/ui consumer apps.
  *
- *   1. FE calls GET {api.identity}/auth/csrf.
+ *   1. FE calls GET {api.identity}{csrf endpoint} (default `/auth/csrf`).
  *   2. Backend returns `{ csrfToken }` in the JSON body AND sets a `csrf_token` cookie.
  *   3. FE stores the token in memory (JS cannot read cross-origin cookies).
  *   4. FE sends the token back as `X-CSRF-Token` header on mutating requests.
@@ -2639,10 +2691,10 @@ declare class ICsrfService {
     /** Whether the in-memory token has exceeded its TTL (`csrfTokenMaxAgeSeconds`). */
     isTokenExpired(): boolean;
     /**
-     * Fetch a fresh CSRF token from `iam-identity-api` and store it in memory.
-     * On failure the error is propagated (callers that want best-effort behavior
-     * can catch it) — a failed fetch must not be silently swallowed, e.g. so the
-     * `retryOnCsrfError` pattern can re-trigger the fetch.
+     * Fetch a fresh CSRF token from the configured identity host and store it in
+     * memory. On failure the error is propagated (callers that want best-effort
+     * behavior can catch it) - a failed fetch must not be silently swallowed,
+     * e.g. so the `retryOnCsrfError` pattern can re-trigger the fetch.
      */
     ensureToken(): Observable<void>;
     static ɵfac: i0.ɵɵFactoryDeclaration<ICsrfService, never>;
@@ -2682,6 +2734,13 @@ declare class IApiService {
     private get headers();
     /** Merge default headers with per-call overrides, adding the skip-bearer sentinel when requested. */
     private mergeHeaders;
+    /**
+     * Base URL for a call: an explicit `apiUrl` override wins, otherwise the
+     * configured identity host. Throws a descriptive error when neither exists so
+     * a consumer that never provided `api.identity` fails fast instead of issuing
+     * a relative request against the app origin.
+     */
+    private resolveBaseUrl;
     /** Normalize current, legacy, and raw transport errors without losing safe extensions. */
     private enrichError;
     get<T = any>(path: string, params?: HttpParams, options?: IApiOptions): Observable<T>;
@@ -2755,9 +2814,9 @@ type ISessionUser = {
  * Session management for @insight/ui consumer apps.
  *
  * Access token: stored IN MEMORY only (never Web Storage). Refresh token:
- * HttpOnly cookie managed exclusively by iam-identity-api; this service never
- * reads or stores it directly (an in-memory `refreshToken` is kept only for
- * server-side logout).
+ * HttpOnly cookie managed by the app's own identity host/BFF; this service
+ * never reads or stores it directly (an in-memory `refreshToken` is kept only
+ * for server-side logout).
  *
  * Superset of the basic SSO session (used by remote apps via `setAccessToken` /
  * `authGuard` / `IAuthCallback`) and the richer iam-web session (session
@@ -2837,8 +2896,8 @@ declare class ISessionService {
      */
     logout(): Observable<void>;
     /**
-     * Silently refresh the access token via the HttpOnly refresh cookie
-     * (`POST {api.identity}/auth/refresh`, `withCredentials: true`).
+     * Silently refresh the access token via the HttpOnly session cookie
+     * (`POST {api.identity}{refresh endpoint}`, `withCredentials: true`).
      * Single-flight: concurrent callers share the in-flight refresh; the shared
      * observable is retained until it completes/errors so a cancelled caller
      * cannot abort the fetch.
@@ -2876,12 +2935,13 @@ declare class ISessionService {
 /**
  * Cross-domain auth guard for @insight/ui consumer apps.
  *
- * Unlike iam-web's internal Router-based guard, this performs a FULL PAGE
- * redirect to iam-web's signin page when unauthenticated, since the consumer
- * app and iam-web are separate applications/domains — not routes within the
- * same Angular router. The redirect is routed through this app's OWN
- * callback route (not the page the user was trying to visit) — see
- * `buildExternalSigninUrl()` for why that's required to avoid a redirect loop.
+ * Unlike an identity-owner app's internal Router-based guard, this performs a
+ * FULL PAGE redirect to the configured signinUrl when unauthenticated, since
+ * the consumer app and its auth/BFF host are separate applications/domains -
+ * not routes within the same Angular router. The redirect is routed through
+ * this app's OWN callback route (not the page the user was trying to visit) -
+ * see `buildExternalSigninUrl()` for why that's required to avoid a redirect
+ * loop.
  */
 declare const authGuard: CanActivateFn;
 
@@ -2890,10 +2950,11 @@ declare const IH_SKIP_BEARER_HEADER = "X-IH-Skip-Bearer";
  * Auth HTTP interceptor for @insight/ui consumer apps.
  *
  * Attaches the in-memory access token as a Bearer header. On 401, attempts a
- * single silent refresh (via the HttpOnly refresh cookie) and retries once;
- * on refresh failure, clears the session and redirects to iam-web's signin
- * page. 429 (rate-limit) and 423 (lockout) responses are passed through;
- * `IApiService` normalizes their current or legacy backend error fields.
+ * single silent refresh (via the HttpOnly session cookie) and retries once;
+ * on refresh failure, clears the session and redirects to the configured
+ * signinUrl (the app's own login). 429 (rate-limit) and 423 (lockout)
+ * responses are passed through; `IApiService` normalizes their current or
+ * legacy backend error fields.
  */
 declare const authInterceptor: HttpInterceptorFn;
 
@@ -2987,7 +3048,12 @@ declare function toIMenu(node: IInsightMenuNode): IMenu;
 declare function toIMenus(nodes: IInsightMenuNode[]): IMenu[];
 /** Maps a backend favorite item onto the UI-facing `IMenu` (modern shape). */
 declare function toIMenuFavorite(item: IInsightFavoriteMenuItem): IMenu;
-/** Recursively collects every non-null `menuCode` across a menu tree (deduplicated, order preserved). */
+/**
+ * Recursively collects the `menuCode` of every navigable leaf item across a
+ * menu tree (deduplicated, order preserved). Structural group/module nodes are
+ * excluded so a container code never counts as a grant - matching the flat
+ * granted-code list the legacy menu token carried (`ihHasMn` menu mode).
+ */
 declare function collectMenuCodes(menus: IMenu[]): string[];
 /**
  * Menu-mode permission check: returns true if the user's loaded menus contain
@@ -3084,7 +3150,7 @@ declare class IStorageService {
  * It is self-gating (renders nothing while hidden), reads its state from the
  * shared `SessionExpiredService` (shown by the auth interceptor when a token
  * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
- * again", performs a full-page redirect to iam-web's signin via
+ * again", performs a full-page redirect to the configured signinUrl via
  * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
  * clicking the backdrop.
  */
@@ -3096,7 +3162,7 @@ declare class ISessionExpiredDialog {
     protected title(): string;
     protected message(): string;
     private localFallbackMessage;
-    /** Perform the SSO handoff to iam-web's signin page, then clear the overlay state. */
+    /** Perform the SSO handoff to the configured signinUrl, then clear the overlay state. */
     onConfirm(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISessionExpiredDialog, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<ISessionExpiredDialog, "i-session-expired-dialog", never, {}, {}, never, never, true, never>;
@@ -3131,6 +3197,12 @@ declare class IUserMenuStore {
     readonly favorites: i0.WritableSignal<IMenu[]>;
     /** Roles decoded from the access token (for `source: 'role'` permission checks). */
     readonly roles: i0.WritableSignal<string[]>;
+    /**
+     * Feature permissions granted by the backend (for `source: 'permission'`
+     * checks). NOT hydrated by `load()` yet - a loader calls `setPermissions()`
+     * once the endpoint is available.
+     */
+    readonly permissions: i0.WritableSignal<string[]>;
     /** True while the cold-start `load()` is in flight. */
     readonly initializing: i0.WritableSignal<boolean>;
     /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
@@ -3141,6 +3213,7 @@ declare class IUserMenuStore {
     readonly menus$: Observable<IMenu[]>;
     readonly favorites$: Observable<IMenu[]>;
     readonly roles$: Observable<string[]>;
+    readonly permissions$: Observable<string[]>;
     readonly initializing$: Observable<boolean>;
     /**
      * Post-login default landing (when no return URL is present).
@@ -3175,6 +3248,18 @@ declare class IUserMenuStore {
     hasMenu(code: string | string[]): boolean;
     /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
     hasRole(code: string | string[]): boolean;
+    /**
+     * Replaces the granted permission list (feature/action codes). Called by a
+     * loader once the backend endpoint is available - `load()` does not fetch
+     * permissions.
+     */
+    setPermissions(permissions: string[]): void;
+    /**
+     * Permission-mode check against the granted permissions (ANY match). Returns
+     * `false` while the list is empty/not loaded - gated UI renders only after
+     * the store has data (async-aware via the reactive directives).
+     */
+    hasPermission(code: string | string[]): boolean;
     /**
      * Pin (`isFavorite: true`) or unpin a menu item. Flips the star icon in the
      * `menus` tree immediately (optimistic), calls the backend, then re-fetches
@@ -3211,7 +3296,7 @@ declare class IUserMenuStore {
 }
 
 /** Permission source selector used by `ihHasMn` / `ihNotHasMn`. */
-type IInsightPermissionSource = 'menu' | 'role';
+type IInsightPermissionSource = 'menu' | 'role' | 'permission';
 /** Object form: inline source + value. */
 type IInsightPermission = {
     source: IInsightPermissionSource;
@@ -3233,11 +3318,13 @@ declare function resolvePermission(value: IInsightPermissionInput | null): {
  * `IHNotHasMnDirective`.
  *
  * ASYNC-AWARE: instead of a one-shot input setter, it subscribes to the
- * `IUserMenuStore`'s reactive menu/role state (`menus$` / `roles$`) and
- * re-renders the embedded view whenever the permission resolves or changes —
- * e.g. while the store cold-starts (menus not yet loaded) the view stays
- * hidden, then appears as soon as the data arrives, and disappears again if a
- * role/menu change revokes access.
+ * `IUserMenuStore`'s reactive menu/role/permission state (`menus$` / `roles$` /
+ * `permissions$`) and re-renders the embedded view whenever the permission
+ * resolves or changes. While the store cold-starts (`initializing`), the view
+ * stays hidden for BOTH `ihHasMn` and `ihNotHasMn` - a not-yet-loaded
+ * permission must not flash a denied element. Once data arrives the view
+ * appears (or stays hidden if the user lacks the code), and disappears again
+ * if a role/menu/permission change revokes access.
  */
 declare abstract class IHMenuGateDirective implements OnInit, OnDestroy {
     /** `false` for `ihHasMn` (show when allowed), `true` for `ihNotHasMn` (show when denied). */
@@ -3251,19 +3338,26 @@ declare abstract class IHMenuGateDirective implements OnInit, OnDestroy {
     ngOnInit(): void;
     ngOnDestroy(): void;
     private evaluate;
+    /**
+     * Renders the embedded view for a resolved state:
+     * - `null` = store still initializing / permission unknown - keep hidden for
+     *   BOTH `ihHasMn` and `ihNotHasMn` (gate lifts once `initializing` flips false).
+     * - `boolean` = final allow/deny, resolved against `invert`.
+     */
     private renderView;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHMenuGateDirective, never>;
     static ɵdir: i0.ɵɵDirectiveDeclaration<IHMenuGateDirective, never, never, {}, {}, never, never, true, never>;
 }
 /**
  * Structural directive `*ihHasMn` — renders the element only while the current
- * user has the given menu code / role.
+ * user has the given menu code / role / feature permission.
  *
  * Usage:
  * ```html
  * <button *ihHasMn="'admin'">Admin only</button>                 <!-- menu mode (default) -->
  * <div *ihHasMn="['read', 'write']">R/W</div>
  * <i *ihHasMn="{ source: 'role', value: 'iam-admin' }">Role check</i>
+ * <i *ihHasMn="{ source: 'permission', value: 'report.export' }">Permission check</i>
  * ```
  */
 declare class IHHasMnDirective extends IHMenuGateDirective {
@@ -3302,7 +3396,7 @@ type IEnvironment = {
     releaseStage: string;
     appName: string;
     version: string;
-    /** API base URLs grouped by backend service. `identity` + `user` are read by the library data layer. */
+    /** API base URLs grouped by backend service. `identity` is intentionally empty in the default env - the consumer app supplies its own BFF/identity host. */
     api: {
         identity: string;
         user: string;
@@ -3310,12 +3404,10 @@ type IEnvironment = {
         application: string;
         [key: string]: string;
     };
-    /** Full URL of iam-web's signin page. */
+    /** Full URL of this app's sign-in page. Left empty by default - set by the consumer app. */
     signinUrl: string;
-    /** Full URL of iam-web's own auth callback (informational for consumers). */
+    /** Full URL of this app's own auth callback (informational, unused by the library). */
     authCallbackUrl: string;
-    /** Cookie domain used for the HttpOnly refresh token cookie (informational). */
-    cookieDomain: string;
     securityMode: boolean;
     tokenLifespan: {
         accessTokenSeconds: number;
@@ -3327,7 +3419,7 @@ type IEnvironment = {
     csrfTokenMaxAgeSeconds: number;
     /** MFA challenge session timeout (seconds). */
     mfaChallengeSessionTimeoutSeconds?: number;
-    /** Origins iam-web's signin page trusts for post-login redirects (informational). */
+    /** Origins this app's sign-in page trusts for post-login redirects (informational). */
     allowedReturnOrigins: string[];
     /** This app's registered application API key (attached as `Api-Key` header). */
     apiKey?: string;
@@ -3338,11 +3430,13 @@ type IEnvironment = {
 /**
  * Default environment for `@insight/ui`'s shared data layer.
  *
- * These are the library-wide defaults for the SSO / sidebar / user data
- * layer. Consumer apps override any field at bootstrap via
- * `provideInsightAuth()`.
+ * `api.identity`, `signinUrl` and `authCallbackUrl` are intentionally EMPTY -
+ * the library does not default to any shared identity provider. Each consumer
+ * app supplies its own values (its own BFF/identity host) via
+ * `provideInsightAuth()`. The `user`/`configuration`/`application` keys keep
+ * defaulting to the platform services and can still be overridden.
  */
 declare const environment: IEnvironment;
 
-export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectMenuChain, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getDefaultInsightAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason };
-export type { ApiErrorCatalogResolver, ApiErrorExtensionValue, IAlertData, IApiOptions, IApiResponse, IAuthUser, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEnvironment, IErrorContext, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IInsightAuthConfig, IInsightAuthConfigOverrides, IInsightCurrentUser, IInsightFavoriteMenuItem, IInsightFavoriteOrderItem, IInsightMenuApplication, IInsightMenuCompany, IInsightMenuNode, IInsightMenuOpenIn, IInsightPermission, IInsightPermissionInput, IInsightPermissionSource, IInsightTokenLifespan, IInsightUserMenuEnvelope, ILoginResponse, IMenu, IMenuApplication, IMenuCompany, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuOpenIn, IMfaChallengeResponse, INormalizedApiError, IPaginatorState, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser, IValidateResetTokenResponse, KnownErrorCode, SessionExpiredReason, UserMenuLoadErrors, UserMenuLoadSource };
+export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectMenuChain, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultInsightAuthConfig, getDefaultInsightAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, requireIdentityHost, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateInsightAuthConfig };
+export type { ApiErrorCatalogResolver, ApiErrorExtensionValue, IAlertData, IApiOptions, IApiResponse, IAuthUser, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEnvironment, IErrorContext, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IInsightAuthConfig, IInsightAuthConfigOverrides, IInsightAuthEndpoints, IInsightCurrentUser, IInsightFavoriteMenuItem, IInsightFavoriteOrderItem, IInsightMenuApplication, IInsightMenuCompany, IInsightMenuNode, IInsightMenuOpenIn, IInsightPermission, IInsightPermissionInput, IInsightPermissionSource, IInsightTokenLifespan, IInsightUserMenuEnvelope, ILoginResponse, IMenu, IMenuApplication, IMenuCompany, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuOpenIn, IMfaChallengeResponse, INormalizedApiError, IPaginatorState, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser, IValidateResetTokenResponse, KnownErrorCode, SessionExpiredReason, UserMenuLoadErrors, UserMenuLoadSource };
