@@ -5,6 +5,7 @@ import {
   IInsightAuthConfig,
   IInsightAuthConfigOverrides,
   INSIGHT_AUTH_CONFIG,
+  validateInsightAuthConfig,
 } from './auth-config';
 import { ISessionService } from '../session/session.service';
 
@@ -12,35 +13,25 @@ import { ISessionService } from '../session/session.service';
  * Registers the @insight/ui shared auth package (`IApiService`,
  * `ISessionService`, `ICsrfService`, `authGuard`) for a consumer app.
  *
- * Zero-config by default — sensible local-dev defaults are baked in (see
- * `getDefaultInsightAuthConfig()`), matching iam-web's own local
- * environment. Consumer apps only need to pass `overrides` for whatever
- * differs from the defaults — typically `api.identity` and `signinUrl` when
- * deploying to staging/production. Every field can be overridden
- * individually, down to a single nested `api.*` or `tokenLifespan.*` entry;
- * anything not overridden falls back to the default.
+ * `api.identity` and `signinUrl` are MANDATORY and app-specific: they must
+ * point at THIS app's own auth backend. In the BFF-per-app model the app's
+ * session cookie stays first-party on its own origin (SameSite-safe), so the
+ * library no longer ships a default pointing at any shared identity provider.
+ * A config that omits them throws at bootstrap (fail-fast). Every other field
+ * is optional and can be overridden individually, down to a single nested
+ * `api.*`, `tokenLifespan.*` or `endpoints.*` entry.
  *
  * Consumers must still register `authInterceptor` themselves via
  * `provideHttpClient(withInterceptors([authInterceptor]))` in their own
- * `app.config.ts` — matches iam-web's existing pattern of wiring the
- * interceptor explicitly rather than hiding it inside a provider function.
+ * `app.config.ts`.
  *
- * Usage (zero-config — local dev):
- * ```ts
- * export const config: ApplicationConfig = {
- *   providers: [
- *     provideInsightAuth(),
- *     provideHttpClient(withInterceptors([authInterceptor])),
- *     provideRouter(routes),
- *   ],
- * };
- * ```
- *
- * Usage (override for staging/production):
+ * Usage - point at your own auth host/BFF:
  * ```ts
  * provideInsightAuth({
- *   api: { identity: 'https://iam-identity.paramount-land.com/api' },
- *   signinUrl: 'https://iam.paramount-land.com/signin',
+ *   // this app's own backend: a same-origin BFF (e.g. atlas-api) or identity-api
+ *   api: { identity: 'https://<your-app>.example.com/api' },
+ *   // this app's own login entry (BFF login route or the app's signin page)
+ *   signinUrl: 'https://<your-app>.example.com/api/auth/login',
  * });
  * ```
  */
@@ -53,7 +44,9 @@ export function provideInsightAuth(overrides?: IInsightAuthConfigOverrides): Env
     // but real callers only ever pass actual string URLs, never `undefined` values.
     api: { ...defaults.api, ...overrides?.api } as IInsightAuthConfig['api'],
     tokenLifespan: { ...defaults.tokenLifespan, ...overrides?.tokenLifespan },
+    endpoints: { ...defaults.endpoints, ...overrides?.endpoints },
   };
+  validateInsightAuthConfig(config);
   return makeEnvironmentProviders([
     { provide: INSIGHT_AUTH_CONFIG, useValue: config },
     {

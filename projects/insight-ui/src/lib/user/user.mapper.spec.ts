@@ -132,9 +132,13 @@ describe('collectMenuCodes / hasAnyMenuCode', () => {
     ] }),
   ];
 
-  it('collects every non-null menu code recursively, deduplicated', () => {
+  it('collects leaf item codes recursively (group containers excluded), deduplicated', () => {
     const codes = collectMenuCodes([...tree, makeMenu({ id: 'dup', menuCode: 'dashboard' })]);
-    expect(codes).toEqual(['group', 'dashboard', 'reports', 'audit']);
+    expect(codes).toEqual(['dashboard', 'reports', 'audit']);
+  });
+
+  it('never grants a structural group container code', () => {
+    expect(hasAnyMenuCode(tree, 'group')).toBeFalse();
   });
 
   it('hasAnyMenuCode returns true when any code matches (string or array)', () => {
