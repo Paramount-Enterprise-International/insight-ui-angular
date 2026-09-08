@@ -17,6 +17,7 @@ import {
   findFirstLeafRoute,
   findMenuNameById,
   hasAnyMenuCode,
+  hasAnyRoute,
   mapToSidebarUser,
   toIMenuFavorite,
   toIMenus,
@@ -163,6 +164,15 @@ export class IUserMenuStore {
    */
   hasMenu(code: string | string[]): boolean {
     return hasAnyMenuCode(this.menus(), code);
+  }
+
+  /**
+   * Route-membership check: can the user open `path`? True when any granted
+   * leaf menu route equals it (slash-normalized). Used by route-level access
+   * guards (e.g. `requireRouteAccess`).
+   */
+  hasRoute(path: string): boolean {
+    return hasAnyRoute(this.menus(), path);
   }
 
   /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
