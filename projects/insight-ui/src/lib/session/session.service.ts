@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, Injector, signal } from '@angular/core';
 import { lastValueFrom, Observable, of, throwError, timeout } from 'rxjs';
 import { catchError, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 
@@ -14,6 +14,7 @@ import {
   ISessionExpiredService,
   toSessionExpiredReason,
 } from '../session-expired/session-expired.service';
+import { IUserMenuStore } from '../store/user-menu.store';
 
 /** Hard timeout for the single-flight refresh call (ms). */
 const REFRESH_TIMEOUT_MS = 30_000;
@@ -87,6 +88,10 @@ export class ISessionService {
   private readonly config = inject(I_AUTH_CONFIG);
   private readonly sessionExpiredService = inject(ISessionExpiredService);
   private readonly csrf = inject(ICsrfService);
+  // The user-menu store is resolved lazily at logout time (not in the
+  // constructor): the store already depends on this session service, so eager
+  // injection would create a circular dependency.
+  private readonly injector = inject(Injector);
 
   // In-memory token storage — intentionally NOT persisted to Web Storage.
   private accessToken: string | null = null;
@@ -284,6 +289,9 @@ export class ISessionService {
     // tryRestoreSession() treats the next load as a cold start, not a
     // refresh-after-revocation.
     sessionStorage.removeItem('iam.session.active');
+    // Drop any cached sidebar data (user/menus/favorites/permissions) so no
+    // stale data from this session leaks into the next login.
+    this.injector.get(IUserMenuStore, null, { optional: true })?.reset();
     // Ensure a valid CSRF token first: the backend CsrfGuard requires
     // X-CSRF-Token on POST /auth/logout. Consumers that only hold the access
     // token (e.g. `#at=` handoff) never fetched a CSRF token, so without this

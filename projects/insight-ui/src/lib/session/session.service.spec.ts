@@ -6,6 +6,9 @@ import { IAuthService, IRefreshResponse } from '../auth/auth.service';
 import { IAuthConfig, I_AUTH_CONFIG } from '../auth/auth-config';
 import { ICsrfService } from '../csrf/csrf.service';
 import { ISessionExpiredService } from '../session-expired/session-expired.service';
+import { IUserMenuStore } from '../store/user-menu.store';
+import { ICurrentUserService } from '../user/current-user.service';
+import { IUserMenuService } from '../user/user-menu.service';
 
 const testConfig: IAuthConfig = {
   api: { identity: 'http://localhost:3001/api' },
@@ -41,6 +44,11 @@ describe('ISessionService', () => {
           provide: ISessionExpiredService,
           useValue: sessionExpiredSpy,
         },
+        // Real store construction only needs these two to resolve — they never
+        // make HTTP calls during construction, so empty stubs keep the test
+        // free of an HttpClient dependency.
+        { provide: ICurrentUserService, useValue: {} as ICurrentUserService },
+        { provide: IUserMenuService, useValue: {} as IUserMenuService },
         { provide: I_AUTH_CONFIG, useValue: testConfig },
       ],
     });
@@ -163,5 +171,16 @@ describe('ISessionService', () => {
     expect(call[4]).toBe('Your session was revoked by an administrator.');
     expect(call[5]?.revision).toBe(6);
     expect(call[5]?.['traceId'] as unknown).toBe('trace-restore');
+  });
+
+  it('logout() resets the cached user menu store', (done) => {
+    authSpy.logout.and.returnValue(of(undefined));
+    const store = TestBed.inject(IUserMenuStore);
+    spyOn(store, 'reset');
+
+    service.logout().subscribe(() => {
+      expect(store.reset).toHaveBeenCalled();
+      done();
+    });
   });
 });
