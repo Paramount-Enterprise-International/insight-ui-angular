@@ -2,41 +2,41 @@ import { TestBed } from '@angular/core/testing';
 
 import { environment as defaultEnvironment } from '../../environments/environment';
 import {
-  getDefaultInsightAuthConfig,
-  IInsightAuthConfig,
-  INSIGHT_AUTH_CONFIG,
-  validateInsightAuthConfig,
+  getDefaultIAuthConfig,
+  IAuthConfig,
+  I_AUTH_CONFIG,
+  validateIAuthConfig,
 } from './auth-config';
-import { provideInsightAuth } from './provide-insight-auth';
+import { provideIAuth } from './provide-insight-auth';
 
 const VALID_OVERRIDES = {
   api: { identity: 'https://app.example.com/api' },
   signinUrl: 'https://app.example.com/api/auth/login',
 };
 
-describe('provideInsightAuth', () => {
+describe('provideIAuth', () => {
   it('fails fast when called with no arguments (no baked-in identity host)', () => {
-    expect(() => provideInsightAuth()).toThrowError(/api.identity/);
+    expect(() => provideIAuth()).toThrowError(/api.identity/);
   });
 
   it('fails fast when signinUrl is missing', () => {
     expect(() =>
-      provideInsightAuth({ api: { identity: 'https://app.example.com/api' } }),
+      provideIAuth({ api: { identity: 'https://app.example.com/api' } }),
     ).toThrowError(/signinUrl/);
   });
 
   it('fails fast when api.identity is missing', () => {
     expect(() =>
-      provideInsightAuth({ signinUrl: 'https://app.example.com/api/auth/login' }),
+      provideIAuth({ signinUrl: 'https://app.example.com/api/auth/login' }),
     ).toThrowError(/api.identity/);
   });
 
   it('resolves optional-field defaults when identity host and signinUrl are supplied', () => {
     TestBed.configureTestingModule({
-      providers: [provideInsightAuth(VALID_OVERRIDES)],
+      providers: [provideIAuth(VALID_OVERRIDES)],
     });
 
-    const config = TestBed.inject(INSIGHT_AUTH_CONFIG);
+    const config = TestBed.inject(I_AUTH_CONFIG);
 
     expect(config.api.identity).toBe('https://app.example.com/api');
     expect(config.api['user']).toBe(defaultEnvironment.api.user);
@@ -51,7 +51,7 @@ describe('provideInsightAuth', () => {
   it('deep-merges a partial `api` override, keeping the other api defaults', () => {
     TestBed.configureTestingModule({
       providers: [
-        provideInsightAuth({
+        provideIAuth({
           ...VALID_OVERRIDES,
           api: {
             identity: VALID_OVERRIDES.api.identity,
@@ -61,7 +61,7 @@ describe('provideInsightAuth', () => {
       ],
     });
 
-    const config = TestBed.inject(INSIGHT_AUTH_CONFIG);
+    const config = TestBed.inject(I_AUTH_CONFIG);
 
     expect(config.api.identity).toBe('https://app.example.com/api');
     expect(config.api['product']).toBe('https://product.example.com/api');
@@ -71,11 +71,11 @@ describe('provideInsightAuth', () => {
   it('deep-merges an `endpoints` override, keeping the other endpoint defaults', () => {
     TestBed.configureTestingModule({
       providers: [
-        provideInsightAuth({ ...VALID_OVERRIDES, endpoints: { refresh: '/v1/session/refresh' } }),
+        provideIAuth({ ...VALID_OVERRIDES, endpoints: { refresh: '/v1/session/refresh' } }),
       ],
     });
 
-    const config = TestBed.inject(INSIGHT_AUTH_CONFIG);
+    const config = TestBed.inject(I_AUTH_CONFIG);
 
     expect(config.endpoints?.refresh).toBe('/v1/session/refresh');
     expect(config.endpoints?.csrf).toBe('/auth/csrf');
@@ -85,11 +85,11 @@ describe('provideInsightAuth', () => {
   it('deep-merges a partial `tokenLifespan` override, keeping the other lifespan defaults', () => {
     TestBed.configureTestingModule({
       providers: [
-        provideInsightAuth({ ...VALID_OVERRIDES, tokenLifespan: { accessTokenSeconds: 900 } }),
+        provideIAuth({ ...VALID_OVERRIDES, tokenLifespan: { accessTokenSeconds: 900 } }),
       ],
     });
 
-    const config = TestBed.inject(INSIGHT_AUTH_CONFIG);
+    const config = TestBed.inject(I_AUTH_CONFIG);
 
     expect(config.tokenLifespan.accessTokenSeconds).toBe(900);
     expect(config.tokenLifespan.refreshTokenSeconds).toBe(7200);
@@ -97,21 +97,21 @@ describe('provideInsightAuth', () => {
   });
 });
 
-describe('getDefaultInsightAuthConfig / validateInsightAuthConfig', () => {
+describe('getDefaultIAuthConfig / validateIAuthConfig', () => {
   it('leaves identity host and signinUrl empty by default (no shared identity provider)', () => {
-    const config = getDefaultInsightAuthConfig();
+    const config = getDefaultIAuthConfig();
     expect(config.api.identity).toBe('');
     expect(config.signinUrl).toBe('');
   });
 
   it('rejects a config without an identity host or signinUrl', () => {
-    const defaults = getDefaultInsightAuthConfig();
-    expect(() => validateInsightAuthConfig(defaults)).toThrowError(/api.identity/);
+    const defaults = getDefaultIAuthConfig();
+    expect(() => validateIAuthConfig(defaults)).toThrowError(/api.identity/);
 
-    const partial: IInsightAuthConfig = {
+    const partial: IAuthConfig = {
       ...defaults,
       api: { ...defaults.api, identity: 'https://app.example.com/api' },
     };
-    expect(() => validateInsightAuthConfig(partial)).toThrowError(/signinUrl/);
+    expect(() => validateIAuthConfig(partial)).toThrowError(/signinUrl/);
   });
 });

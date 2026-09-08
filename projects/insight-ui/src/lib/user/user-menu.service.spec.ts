@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
-import { IInsightAuthConfig, INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { IAuthConfig, I_AUTH_CONFIG } from '../auth/auth-config';
 import { IApiService } from '../api/api.service';
 import { IUserMenuService } from './user-menu.service';
 
-const testConfig: IInsightAuthConfig = {
+const testConfig: IAuthConfig = {
   api: {
     identity: 'http://localhost:3001/api',
     user: 'http://localhost:3002/api/users',
@@ -25,7 +25,7 @@ describe('IUserMenuService', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: IApiService, useValue: apiSpy },
-        { provide: INSIGHT_AUTH_CONFIG, useValue: testConfig },
+        { provide: I_AUTH_CONFIG, useValue: testConfig },
       ],
     });
     service = TestBed.inject(IUserMenuService);

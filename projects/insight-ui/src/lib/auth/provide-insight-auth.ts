@@ -1,11 +1,11 @@
 import { APP_INITIALIZER, EnvironmentProviders, inject, makeEnvironmentProviders } from '@angular/core';
 
 import {
-  getDefaultInsightAuthConfig,
-  IInsightAuthConfig,
-  IInsightAuthConfigOverrides,
-  INSIGHT_AUTH_CONFIG,
-  validateInsightAuthConfig,
+  getDefaultIAuthConfig,
+  IAuthConfig,
+  IAuthConfigOverrides,
+  I_AUTH_CONFIG,
+  validateIAuthConfig,
 } from './auth-config';
 import { ISessionService } from '../session/session.service';
 
@@ -27,7 +27,7 @@ import { ISessionService } from '../session/session.service';
  *
  * Usage - point at your own auth host/BFF:
  * ```ts
- * provideInsightAuth({
+ * provideIAuth({
  *   // this app's own backend: a same-origin BFF (e.g. atlas-api) or identity-api
  *   api: { identity: 'https://<your-app>.example.com/api' },
  *   // this app's own login entry (BFF login route or the app's signin page)
@@ -35,20 +35,20 @@ import { ISessionService } from '../session/session.service';
  * });
  * ```
  */
-export function provideInsightAuth(overrides?: IInsightAuthConfigOverrides): EnvironmentProviders {
-  const defaults = getDefaultInsightAuthConfig();
-  const config: IInsightAuthConfig = {
+export function provideIAuth(overrides?: IAuthConfigOverrides): EnvironmentProviders {
+  const defaults = getDefaultIAuthConfig();
+  const config: IAuthConfig = {
     ...defaults,
     ...overrides,
     // Cast needed: `Partial<...>`'s index signature widens to `string | undefined`,
     // but real callers only ever pass actual string URLs, never `undefined` values.
-    api: { ...defaults.api, ...overrides?.api } as IInsightAuthConfig['api'],
+    api: { ...defaults.api, ...overrides?.api } as IAuthConfig['api'],
     tokenLifespan: { ...defaults.tokenLifespan, ...overrides?.tokenLifespan },
     endpoints: { ...defaults.endpoints, ...overrides?.endpoints },
   };
-  validateInsightAuthConfig(config);
+  validateIAuthConfig(config);
   return makeEnvironmentProviders([
-    { provide: INSIGHT_AUTH_CONFIG, useValue: config },
+    { provide: I_AUTH_CONFIG, useValue: config },
     {
       provide: APP_INITIALIZER,
       multi: true,

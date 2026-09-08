@@ -3,11 +3,11 @@ import { of, Subject, throwError } from 'rxjs';
 
 import { ISessionService } from './session.service';
 import { IAuthService, IRefreshResponse } from '../auth/auth.service';
-import { IInsightAuthConfig, INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { IAuthConfig, I_AUTH_CONFIG } from '../auth/auth-config';
 import { ICsrfService } from '../csrf/csrf.service';
-import { SessionExpiredService } from '../session-expired/session-expired.service';
+import { ISessionExpiredService } from '../session-expired/session-expired.service';
 
-const testConfig: IInsightAuthConfig = {
+const testConfig: IAuthConfig = {
   api: { identity: 'http://localhost:3001/api' },
   signinUrl: 'http://localhost:4200/auth/signin',
   allowedReturnOrigins: ['http://localhost:4207'],
@@ -25,11 +25,11 @@ function makeJwt(payload: Record<string, unknown>): string {
 describe('ISessionService', () => {
   let service: ISessionService;
   let authSpy: jasmine.SpyObj<IAuthService>;
-  let sessionExpiredSpy: jasmine.SpyObj<SessionExpiredService>;
+  let sessionExpiredSpy: jasmine.SpyObj<ISessionExpiredService>;
 
   beforeEach(() => {
     authSpy = jasmine.createSpyObj<IAuthService>('IAuthService', ['refresh', 'logout']);
-    sessionExpiredSpy = jasmine.createSpyObj<SessionExpiredService>('SessionExpiredService', ['show', 'hide']);
+    sessionExpiredSpy = jasmine.createSpyObj<ISessionExpiredService>('ISessionExpiredService', ['show', 'hide']);
     TestBed.configureTestingModule({
       providers: [
         { provide: IAuthService, useValue: authSpy },
@@ -38,10 +38,10 @@ describe('ISessionService', () => {
           useValue: { ensureToken: jasmine.createSpy('ensureToken').and.returnValue(of(undefined)) },
         },
         {
-          provide: SessionExpiredService,
+          provide: ISessionExpiredService,
           useValue: sessionExpiredSpy,
         },
-        { provide: INSIGHT_AUTH_CONFIG, useValue: testConfig },
+        { provide: I_AUTH_CONFIG, useValue: testConfig },
       ],
     });
     service = TestBed.inject(ISessionService);

@@ -4,7 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
 import { IApiService } from '../api/api.service';
-import { getAuthEndpointPath, INSIGHT_AUTH_CONFIG, requireIdentityHost } from './auth-config';
+import { getAuthEndpointPath, I_AUTH_CONFIG, requireIdentityHost } from './auth-config';
 
 /**
  * Login lockout constants (local, client-side supplement to Keycloak
@@ -90,7 +90,7 @@ export type IResetPasswordResponse = {
 @Injectable({ providedIn: 'root' })
 export class IAuthService {
   private readonly api = inject(IApiService);
-  private readonly config = inject(INSIGHT_AUTH_CONFIG);
+  private readonly config = inject(I_AUTH_CONFIG);
 
   private get identityUrl(): string {
     return requireIdentityHost(this.config);

@@ -4,11 +4,11 @@ import { BehaviorSubject, combineLatest, distinctUntilChanged, map, Subscription
 import { IUserMenuStore } from '../store/user-menu.store';
 
 /** Permission source selector used by `ihHasMn` / `ihNotHasMn`. */
-export type IInsightPermissionSource = 'menu' | 'role' | 'permission';
+export type IPermissionSource = 'menu' | 'role' | 'permission';
 
 /** Object form: inline source + value. */
-export type IInsightPermission = {
-  source: IInsightPermissionSource;
+export type IPermission = {
+  source: IPermissionSource;
   value: string | string[];
 }
 
@@ -17,12 +17,12 @@ export type IInsightPermission = {
  * - a plain `string | string[]` → menu-mode check (default), or
  * - an object `{ source, value }` to select the source explicitly.
  */
-export type IInsightPermissionInput = string | string[] | IInsightPermission;
+export type IPermissionInput = string | string[] | IPermission;
 
 /** Resolves an input into a concrete `{ source, codes }` pair (or `null`). */
 export function resolvePermission(
-  value: IInsightPermissionInput | null,
-): { source: IInsightPermissionSource; codes: string | string[] } | null {
+  value: IPermissionInput | null,
+): { source: IPermissionSource; codes: string | string[] } | null {
   if (!value) {
     return null;
   }
@@ -54,7 +54,7 @@ export abstract class IHMenuGateDirective implements OnInit, OnDestroy {
   private readonly templateRef = inject(TemplateRef<unknown>);
   private readonly viewContainer = inject(ViewContainerRef);
 
-  protected readonly value$ = new BehaviorSubject<IInsightPermissionInput | null>(null);
+  protected readonly value$ = new BehaviorSubject<IPermissionInput | null>(null);
   private viewCreated = false;
   private subscription?: Subscription;
 
@@ -77,7 +77,7 @@ export abstract class IHMenuGateDirective implements OnInit, OnDestroy {
     this.subscription?.unsubscribe();
   }
 
-  private evaluate(value: IInsightPermissionInput | null): boolean {
+  private evaluate(value: IPermissionInput | null): boolean {
     const resolved = resolvePermission(value);
     if (!resolved) {
       return false;
@@ -133,7 +133,7 @@ export class IHHasMnDirective extends IHMenuGateDirective {
   protected readonly invert = false;
 
   @Input()
-  set ihHasMn(value: IInsightPermissionInput) {
+  set ihHasMn(value: IPermissionInput) {
     this.value$.next(value);
   }
 }

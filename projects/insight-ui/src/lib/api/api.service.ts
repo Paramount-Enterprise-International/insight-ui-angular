@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
-import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { I_AUTH_CONFIG } from '../auth/auth-config';
 import { ICsrfService } from '../csrf/csrf.service';
 import { IH_SKIP_BEARER_HEADER } from '../interceptors/auth.interceptor';
 import { normalizeApiError } from './api-error';
@@ -40,7 +40,7 @@ export type IApiOptions = {
 export class IApiService {
   private readonly http = inject(HttpClient);
   private readonly csrf = inject(ICsrfService);
-  private readonly config = inject(INSIGHT_AUTH_CONFIG);
+  private readonly config = inject(I_AUTH_CONFIG);
 
   private get headers(): Record<string, string> {
     const base: Record<string, string> = {
@@ -76,7 +76,7 @@ export class IApiService {
     const baseUrl = options?.apiUrl ?? this.config.api.identity;
     if (!baseUrl) {
       throw new Error(
-        '[@insight/ui] No API base URL configured. Set api.identity via provideInsightAuth() ' +
+        '[@insight/ui] No API base URL configured. Set api.identity via provideIAuth() ' +
           'or pass IApiOptions.apiUrl before calling this service.',
       );
     }

@@ -4,14 +4,14 @@ import { of, Subject, throwError } from 'rxjs';
 import { ISessionService, type ISessionUser } from '../session/session.service';
 import {
   ICurrentUserService,
-  IInsightCurrentUser,
-  IInsightFavoriteMenuItem,
-  IInsightMenuNode,
+  ICurrentUserDto,
+  IFavoriteMenuItemDto,
+  IMenuNodeDto,
   IUserMenuService,
 } from '../user';
 import { IUserMenuStore } from './user-menu.store';
 
-const rawUser: IInsightCurrentUser = {
+const rawUser: ICurrentUserDto = {
   userId: 'u1',
   username: 'jdoe',
   fullName: 'John Doe',
@@ -26,7 +26,7 @@ const rawUser: IInsightCurrentUser = {
 
 const app = { id: 'a1', code: 'APP', name: 'App', url: null, version: null };
 
-const nodes: IInsightMenuNode[] = [
+const nodes: IMenuNodeDto[] = [
   {
     id: 'g1',
     name: 'Group',
@@ -60,7 +60,7 @@ const nodes: IInsightMenuNode[] = [
   },
 ];
 
-const favorites: IInsightFavoriteMenuItem[] = [
+const favorites: IFavoriteMenuItemDto[] = [
   {
     id: 'm1',
     name: 'Dashboard',
@@ -251,7 +251,7 @@ describe('IUserMenuStore', () => {
   });
 
   it('keeps initializing true while a branch is pending, then clears', () => {
-    const userSubject = new Subject<IInsightCurrentUser>();
+    const userSubject = new Subject<ICurrentUserDto>();
     userSpy.getCurrentUser.and.returnValue(userSubject);
 
     store.load();

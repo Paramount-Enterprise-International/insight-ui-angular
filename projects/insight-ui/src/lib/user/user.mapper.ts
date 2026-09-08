@@ -1,6 +1,6 @@
 import { getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, IMenu, isLeafItem, IUser } from '../host';
 
-import type { IInsightCurrentUser, IInsightFavoriteMenuItem, IInsightMenuNode } from './user.types';
+import type { ICurrentUserDto, IFavoriteMenuItemDto, IMenuNodeDto } from './user.types';
 
 /**
  * Maps the backend current-user DTO to `@insight/ui`'s sidebar `IUser` shape
@@ -8,7 +8,7 @@ import type { IInsightCurrentUser, IInsightFavoriteMenuItem, IInsightMenuNode } 
  * `userImagePath` is `''` when no photo exists — the sidebar renders it with
  * `i-avatar`, which falls back to a user icon when the image is empty/errors.
  */
-export function mapToSidebarUser(user: IInsightCurrentUser): IUser {
+export function mapToSidebarUser(user: ICurrentUserDto): IUser {
   return {
     employeeCode: user.employeeCode ?? user.username ?? '',
     fullName: user.fullName ?? user.username ?? '',
@@ -17,7 +17,7 @@ export function mapToSidebarUser(user: IInsightCurrentUser): IUser {
 }
 
 /** Maps a backend effective-menu node onto the UI-facing `IMenu` (modern shape). */
-export function toIMenu(node: IInsightMenuNode): IMenu {
+export function toIMenu(node: IMenuNodeDto): IMenu {
   return {
     id: node.id,
     name: node.name,
@@ -34,12 +34,12 @@ export function toIMenu(node: IInsightMenuNode): IMenu {
 }
 
 /** Maps an array of backend effective-menu nodes onto `IMenu[]`. */
-export function toIMenus(nodes: IInsightMenuNode[]): IMenu[] {
+export function toIMenus(nodes: IMenuNodeDto[]): IMenu[] {
   return (nodes ?? []).map(toIMenu);
 }
 
 /** Maps a backend favorite item onto the UI-facing `IMenu` (modern shape). */
-export function toIMenuFavorite(item: IInsightFavoriteMenuItem): IMenu {
+export function toIMenuFavorite(item: IFavoriteMenuItemDto): IMenu {
   return {
     id: item.id,
     name: item.name,

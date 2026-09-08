@@ -3,13 +3,13 @@ import { inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 
-import { getAuthEndpointPath, IInsightAuthConfig, INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { getAuthEndpointPath, IAuthConfig, I_AUTH_CONFIG } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
 import { normalizeApiError } from '../api/api-error';
 import { ISessionService } from '../session/session.service';
 import {
   extractProblemDetailsErrorCode,
-  SessionExpiredService,
+  ISessionExpiredService,
   toSessionExpiredReason,
 } from '../session-expired/session-expired.service';
 
@@ -22,7 +22,7 @@ export const IH_SKIP_BEARER_HEADER = 'X-IH-Skip-Bearer';
 // circular / not yet authenticated) - CSRF bootstrap + silent refresh run before
 // a token exists. Paths come from the resolved config so a consumer backend
 // exposing different routes still works.
-const isAuthSkipUrl = (url: string, config: IInsightAuthConfig): boolean => {
+const isAuthSkipUrl = (url: string, config: IAuthConfig): boolean => {
   const skipPaths = [getAuthEndpointPath(config, 'csrf'), getAuthEndpointPath(config, 'refresh')];
   return skipPaths.some((path) => path && url.includes(path));
 };
@@ -42,8 +42,8 @@ const addAuthHeader = (req: HttpRequest<unknown>, token: string): HttpRequest<un
  */
 export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEvent<unknown>> => {
   const session = inject(ISessionService);
-  const config = inject(INSIGHT_AUTH_CONFIG);
-  const sessionExpired = inject(SessionExpiredService);
+  const config = inject(I_AUTH_CONFIG);
+  const sessionExpired = inject(ISessionExpiredService);
 
   if (isAuthSkipUrl(req.url, config)) {
     return next(req);

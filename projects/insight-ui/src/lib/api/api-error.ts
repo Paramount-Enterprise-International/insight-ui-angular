@@ -1,11 +1,11 @@
 /** JSON-safe values accepted from backend error extension fields. */
-export type ApiErrorExtensionValue =
+export type IApiErrorExtensionValue =
   | string
   | number
   | boolean
   | null
-  | ApiErrorExtensionValue[]
-  | { [key: string]: ApiErrorExtensionValue };
+  | IApiErrorExtensionValue[]
+  | { [key: string]: IApiErrorExtensionValue };
 
 /**
  * Normalized API error shared by all @insight/ui consumers.
@@ -28,7 +28,7 @@ export type INormalizedApiError = {
 };
 
 /** Optional synchronous lookup used between backend and legacy/local messages. */
-export type ApiErrorCatalogResolver = (
+export type IApiErrorCatalogResolver = (
   errorCode: string,
   revision: number | undefined,
   error: INormalizedApiError,
@@ -52,7 +52,7 @@ const readNumber = (value: Record<string, unknown>, key: string): number | undef
 const toSafeExtensionValue = (
   value: unknown,
   ancestors: ReadonlySet<object> = new Set<object>(),
-): ApiErrorExtensionValue | undefined => {
+): IApiErrorExtensionValue | undefined => {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') {
     return value;
   }
@@ -65,7 +65,7 @@ const toSafeExtensionValue = (
 
   const nextAncestors = new Set(ancestors).add(value);
   if (Array.isArray(value)) {
-    const result: ApiErrorExtensionValue[] = [];
+    const result: IApiErrorExtensionValue[] = [];
     for (const item of value) {
       const safeItem = toSafeExtensionValue(item, nextAncestors);
       if (safeItem !== undefined) {
@@ -75,7 +75,7 @@ const toSafeExtensionValue = (
     return result;
   }
 
-  const result: { [key: string]: ApiErrorExtensionValue } = {};
+  const result: { [key: string]: IApiErrorExtensionValue } = {};
   for (const [key, item] of Object.entries(value)) {
     if (UNSAFE_KEYS.has(key)) {
       continue;
@@ -139,7 +139,7 @@ export const normalizeApiError = (error: unknown): INormalizedApiError => {
 export const resolveApiErrorDisplayMessage = (
   error: unknown,
   localFallback: string,
-  catalogResolver?: ApiErrorCatalogResolver,
+  catalogResolver?: IApiErrorCatalogResolver,
 ): string => {
   const normalized = normalizeApiError(error);
   const backendMessage = normalized.message;

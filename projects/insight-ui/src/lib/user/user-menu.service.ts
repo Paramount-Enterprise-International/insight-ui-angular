@@ -3,14 +3,14 @@ import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 
 import { environment as defaultEnvironment } from '../../environments/environment';
-import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { I_AUTH_CONFIG } from '../auth/auth-config';
 import { IApiService } from '../api/api.service';
 
 import type {
-  IInsightFavoriteMenuItem,
-  IInsightFavoriteOrderItem,
-  IInsightMenuNode,
-  IInsightUserMenuEnvelope,
+  IFavoriteMenuItemDto,
+  IFavoriteOrderItemDto,
+  IMenuNodeDto,
+  IUserMenuEnvelopeDto,
 } from './user.types';
 
 /**
@@ -21,32 +21,32 @@ import type {
  *
  * Base URL: `{api.user}` from the resolved auth config (defaults to the
  * library environment file). Consumer apps override via
- * `provideInsightAuth({ api: { user: '...' } })`.
+ * `provideIAuth({ api: { user: '...' } })`.
  */
 @Injectable({ providedIn: 'root' })
 export class IUserMenuService {
   private readonly api = inject(IApiService);
-  private readonly config = inject(INSIGHT_AUTH_CONFIG);
+  private readonly config = inject(I_AUTH_CONFIG);
 
   private get baseUrl(): string {
     return this.config.api['user'] ?? defaultEnvironment.api.user;
   }
 
   /** GET `{api.user}/me/menus` — effective navigation tree for one or all active applications. Output type overridable via `T`. */
-  getEffectiveMenus<T = IInsightMenuNode[]>(applicationId?: string): Observable<T> {
+  getEffectiveMenus<T = IMenuNodeDto[]>(applicationId?: string): Observable<T> {
     const id = applicationId ?? this.config.appId;
     const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
     return this.api
-      .get<IInsightUserMenuEnvelope<T>>('/me/menus', params, { apiUrl: this.baseUrl })
+      .get<IUserMenuEnvelopeDto<T>>('/me/menus', params, { apiUrl: this.baseUrl })
       .pipe(map((response) => response.data));
   }
 
   /** GET `{api.user}/me/menus/favorites` — effective favorite items, sorted by name. Output type overridable via `T`. */
-  getFavorites<T = IInsightFavoriteMenuItem[]>(applicationId?: string): Observable<T> {
+  getFavorites<T = IFavoriteMenuItemDto[]>(applicationId?: string): Observable<T> {
     const id = applicationId ?? this.config.appId;
     const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
     return this.api
-      .get<IInsightUserMenuEnvelope<T>>('/me/menus/favorites', params, { apiUrl: this.baseUrl })
+      .get<IUserMenuEnvelopeDto<T>>('/me/menus/favorites', params, { apiUrl: this.baseUrl })
       .pipe(map((response) => response.data));
   }
 
@@ -66,7 +66,7 @@ export class IUserMenuService {
    * complete sequence 1..n. Returns 204 No Content.
    */
   reorderFavorites(menuIds: (string | number)[]): Observable<void> {
-    const items: IInsightFavoriteOrderItem[] = menuIds.map((menuId, index) => ({
+    const items: IFavoriteOrderItemDto[] = menuIds.map((menuId, index) => ({
       menuId: String(menuId),
       displayOrder: index + 1,
     }));
