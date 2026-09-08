@@ -204,6 +204,7 @@ describe('IHSidebar (modern menus + favorites)', () => {
       imports: [SidebarHost, RouterTestingModule],
       providers: [
         { provide: APP_BASE_HREF, useValue: '/' },
+        provideHttpClient(),
         {
           provide: IConfirmService,
           useValue: { warning: (): Observable<boolean> => of(confirmChoice) },
@@ -551,7 +552,7 @@ describe('IHMenu icon fallback', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [FallbackIconHost, RouterTestingModule],
-      providers: [{ provide: APP_BASE_HREF, useValue: '/' }],
+      providers: [{ provide: APP_BASE_HREF, useValue: '/' }, provideHttpClient()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(FallbackIconHost);

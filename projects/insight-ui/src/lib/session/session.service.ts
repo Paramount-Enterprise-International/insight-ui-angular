@@ -9,9 +9,9 @@ import { normalizeApiError } from '../api/api-error';
 import { ICsrfService } from '../csrf/csrf.service';
 import {
   extractProblemDetailsErrorCode,
-  isSessionExpiredError,
   ISessionExpiredReason,
   ISessionExpiredService,
+  isSessionExpiredError,
   toSessionExpiredReason,
 } from '../session-expired/session-expired.service';
 import { IUserMenuStore } from '../store/user-menu.store';

@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { IApiService } from './api.service';
 import { ICsrfService } from '../csrf/csrf.service';
-import { IAuthConfig, I_AUTH_CONFIG } from '../auth/auth-config';
+import { I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
 
 const testConfig: IAuthConfig = {
   api: { identity: 'http://localhost:3001/api' },

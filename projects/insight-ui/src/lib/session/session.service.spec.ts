@@ -3,7 +3,7 @@ import { of, Subject, throwError } from 'rxjs';
 
 import { ISessionService } from './session.service';
 import { IAuthService, IRefreshResponse } from '../auth/auth.service';
-import { IAuthConfig, I_AUTH_CONFIG } from '../auth/auth-config';
+import { I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
 import { ICsrfService } from '../csrf/csrf.service';
 import { ISessionExpiredService } from '../session-expired/session-expired.service';
 import { IUserMenuStore } from '../store/user-menu.store';

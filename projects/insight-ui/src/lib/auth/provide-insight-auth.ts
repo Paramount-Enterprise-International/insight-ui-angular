@@ -2,9 +2,9 @@ import { APP_INITIALIZER, EnvironmentProviders, inject, makeEnvironmentProviders
 
 import {
   getDefaultIAuthConfig,
+  I_AUTH_CONFIG,
   IAuthConfig,
   IAuthConfigOverrides,
-  I_AUTH_CONFIG,
   validateIAuthConfig,
 } from './auth-config';
 import { ISessionService } from '../session/session.service';

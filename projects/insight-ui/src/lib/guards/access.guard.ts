@@ -20,7 +20,7 @@ export type IAccessCheckSource = 'menu' | 'role' | 'permission';
  * - `permission` → the store has been granted a matching feature permission
  *   (`IUserMenuStore.hasPermission`; granted out-of-band via `setPermissions`).
  */
-export interface IAccessCheck {
+export type IAccessCheck = {
   source: IAccessCheckSource;
   value: string | string[];
 }

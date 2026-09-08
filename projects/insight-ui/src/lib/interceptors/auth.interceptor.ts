@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 
-import { getAuthEndpointPath, IAuthConfig, I_AUTH_CONFIG } from '../auth/auth-config';
+import { getAuthEndpointPath, I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
 import { normalizeApiError } from '../api/api-error';
 import { ISessionService } from '../session/session.service';

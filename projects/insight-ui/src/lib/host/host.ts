@@ -1183,9 +1183,9 @@ export class IHMenu implements OnChanges {
     <div class="ih-sidebar-header">
       @if (user) {
         <button
-          type="button"
-          class="ih-user-chip"
           aria-haspopup="menu"
+          class="ih-user-chip"
+          type="button"
           [attr.aria-expanded]="accountMenuOpen()"
           (click)="toggleAccountMenu()"
         >
@@ -1208,8 +1208,8 @@ export class IHMenu implements OnChanges {
           <div class="ih-user-dropdown" role="menu">
             <a
               class="ih-user-dropdown-item"
-              role="menuitem"
               rel="noopener noreferrer"
+              role="menuitem"
               target="_blank"
               [attr.href]="resolvedPersonalProfileUrl"
               (click)="closeAccountMenu()"
@@ -1218,9 +1218,9 @@ export class IHMenu implements OnChanges {
               <span>Personal Profile</span>
             </a>
             <button
-              type="button"
               class="ih-user-dropdown-item"
               role="menuitem"
+              type="button"
               (click)="onLogoutClick()"
             >
               <i class="fa-solid fa-right-from-bracket fa-fw"></i>

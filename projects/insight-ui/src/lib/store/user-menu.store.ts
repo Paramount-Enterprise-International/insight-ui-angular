@@ -7,8 +7,8 @@ import { type INormalizedApiError, normalizeApiError, resolveApiErrorDisplayMess
 import { getMenuKey, IMenu, IUser } from '../host';
 import { ISessionService } from '../session/session.service';
 import {
-  ICurrentUserService,
   ICurrentUserDto,
+  ICurrentUserService,
   IFavoriteMenuItemDto,
   IMenuNodeDto,
   IUserMenuService,

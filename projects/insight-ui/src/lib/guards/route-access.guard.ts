@@ -10,7 +10,7 @@ import { ISessionService } from '../session/session.service';
 export type IRouteCanOpen = (path: string, store: IUserMenuStore) => boolean;
 
 /** Options for {@link requireRouteAccess}. */
-export interface IRouteAccessOptions {
+export type IRouteAccessOptions = {
   /**
    * Override the open-decision. Default: the path is one of the user's granted
    * leaf menu routes (`store.hasRoute`). Apps whose menus carry host-formatted
@@ -47,7 +47,7 @@ function ensureMenusLoaded(store: IUserMenuStore): Observable<void> {
  * into their host-prefixed menu-route space.
  */
 export function requireRouteAccess(options: IRouteAccessOptions = {}): CanActivateFn {
-  const canOpen: IRouteCanOpen = options.canOpen ?? ((path, store) => store.hasRoute(path));
+  const canOpen: IRouteCanOpen = options.canOpen ?? ((path, store): boolean => store.hasRoute(path));
 
   return (_route, state): Observable<boolean | UrlTree> => {
     const session = inject(ISessionService);

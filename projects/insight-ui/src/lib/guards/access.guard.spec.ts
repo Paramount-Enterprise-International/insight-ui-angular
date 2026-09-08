@@ -3,7 +3,7 @@ import { provideRouter, Router } from '@angular/router';
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { firstValueFrom, of } from 'rxjs';
 
-import { requireAccess, UNAUTHORIZED_ACCESS_PATH, IAccessCheck } from './access.guard';
+import { IAccessCheck, requireAccess, UNAUTHORIZED_ACCESS_PATH } from './access.guard';
 import { IUserMenuStore } from '../store/user-menu.store';
 import { ISessionService } from '../session/session.service';
 
@@ -11,7 +11,9 @@ describe('requireAccess', () => {
   const route = {} as ActivatedRouteSnapshot;
   const state = {} as RouterStateSnapshot;
 
-  function sessionMock(overrides: Partial<{ initializing: boolean; isAuth: boolean; hasRole: boolean }> = {}) {
+  function sessionMock(
+    overrides: Partial<{ initializing: boolean; isAuth: boolean; hasRole: boolean }> = {},
+  ): ISessionService {
     return {
       initializing: () => overrides.initializing ?? false,
       isAuth: () => overrides.isAuth ?? true,
@@ -27,7 +29,7 @@ describe('requireAccess', () => {
       menusLoaded: boolean;
       menusError: boolean;
     }> = {},
-  ) {
+  ): IUserMenuStore {
     const store = {
       hasMenu: () => overrides.hasMenu ?? false,
       hasPermission: () => overrides.hasPermission ?? false,
@@ -58,7 +60,7 @@ describe('requireAccess', () => {
       sessionMock({ initializing: true, isAuth: false }),
       storeMock(),
     );
-    await expect(firstValueFrom(result as never)).resolves.toBe(true);
+    await expectAsync(firstValueFrom(result as never)).toBeResolvedTo(true);
   });
 
   it('defers to the auth guard when no valid session exists', async () => {
@@ -67,7 +69,7 @@ describe('requireAccess', () => {
       sessionMock({ isAuth: false }),
       storeMock(),
     );
-    await expect(firstValueFrom(result as never)).resolves.toBe(true);
+    await expectAsync(firstValueFrom(result as never)).toBeResolvedTo(true);
   });
 
   it('grants role-based access when the token has the role', async () => {
@@ -76,7 +78,7 @@ describe('requireAccess', () => {
       sessionMock({ hasRole: true }),
       storeMock(),
     );
-    await expect(firstValueFrom(result as never)).resolves.toBe(true);
+    await expectAsync(firstValueFrom(result as never)).toBeResolvedTo(true);
   });
 
   it('denies role-based access with a redirect to the unauthorized-access page', async () => {
@@ -103,12 +105,12 @@ describe('requireAccess', () => {
       sessionMock(),
       storeMock({ menusLoaded: true, hasMenu: true }),
     );
-    await expect(firstValueFrom(result as never)).resolves.toBe(true);
+    await expectAsync(firstValueFrom(result as never)).toBeResolvedTo(true);
   });
 
   it('triggers the menu load when menus have not been fetched yet, then grants on success', async () => {
     const store = storeMock({ menusLoaded: false, hasMenu: true });
     const result = await runGuard({ source: 'menu', value: 'admin-iam' }, sessionMock(), store);
-    await expect(firstValueFrom(result as never)).resolves.toBe(true);
+    await expectAsync(firstValueFrom(result as never)).toBeResolvedTo(true);
   });
 });

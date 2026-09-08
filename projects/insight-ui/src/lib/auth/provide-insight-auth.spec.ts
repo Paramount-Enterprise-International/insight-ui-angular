@@ -3,8 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { environment as defaultEnvironment } from '../../environments/environment';
 import {
   getDefaultIAuthConfig,
-  IAuthConfig,
   I_AUTH_CONFIG,
+  IAuthConfig,
   validateIAuthConfig,
 } from './auth-config';
 import { provideIAuth } from './provide-insight-auth';

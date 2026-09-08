@@ -15,7 +15,7 @@ describe('requireRouteAccess', () => {
     return { url } as RouterStateSnapshot;
   }
 
-  function sessionMock(overrides: Partial<{ initializing: boolean; isAuth: boolean }> = {}) {
+  function sessionMock(overrides: Partial<{ initializing: boolean; isAuth: boolean }> = {}): ISessionService {
     return {
       initializing: () => overrides.initializing ?? false,
       isAuth: () => overrides.isAuth ?? true,
@@ -24,7 +24,7 @@ describe('requireRouteAccess', () => {
 
   function storeMock(
     overrides: Partial<{ hasRoute: boolean; initializing: boolean; menusLoaded: boolean }> = {},
-  ) {
+  ): IUserMenuStore {
     return {
       initializing: () => overrides.initializing ?? false,
       menus: () => (overrides.menusLoaded ? [{ id: 1, name: 'Overview', route: '/overview' }] : []),
@@ -48,12 +48,12 @@ describe('requireRouteAccess', () => {
 
   it('allows navigation while the session is still restoring', async () => {
     const result = await runGuard('/overview', sessionMock({ initializing: true, isAuth: false }), storeMock());
-    await expect(firstValueFrom(result as never)).resolves.toBe(true);
+    await expectAsync(firstValueFrom(result as never)).toBeResolvedTo(true);
   });
 
   it('allows a path that is among the granted leaf menu routes', async () => {
     const result = await runGuard('/overview', sessionMock(), storeMock({ hasRoute: true, menusLoaded: true }));
-    await expect(firstValueFrom(result as never)).resolves.toBe(true);
+    await expectAsync(firstValueFrom(result as never)).toBeResolvedTo(true);
   });
 
   it('denies a path that is not among the granted menus, redirecting to the unauthorized-access page', async () => {

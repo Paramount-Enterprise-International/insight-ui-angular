@@ -3,8 +3,8 @@ import { of, Subject, throwError } from 'rxjs';
 
 import { ISessionService, type ISessionUser } from '../session/session.service';
 import {
-  ICurrentUserService,
   ICurrentUserDto,
+  ICurrentUserService,
   IFavoriteMenuItemDto,
   IMenuNodeDto,
   IUserMenuService,
