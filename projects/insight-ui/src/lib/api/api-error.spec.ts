@@ -1,5 +1,5 @@
 import {
-  ApiErrorCatalogResolver,
+  IApiErrorCatalogResolver,
   normalizeApiError,
   resolveApiErrorDisplayMessage,
 } from './api-error';
@@ -40,7 +40,7 @@ describe('API error helpers', () => {
   });
 
   it('uses backend message before catalog, then legacy detail/title and local fallback', () => {
-    const resolver: ApiErrorCatalogResolver = jasmine.createSpy('resolver').and.returnValue('Catalog message');
+    const resolver: IApiErrorCatalogResolver = jasmine.createSpy('resolver').and.returnValue('Catalog message');
 
     expect(
       resolveApiErrorDisplayMessage(
@@ -64,7 +64,7 @@ describe('API error helpers', () => {
   });
 
   it('does not treat an Angular transport message as a backend message', () => {
-    const resolver: ApiErrorCatalogResolver = jasmine.createSpy('resolver').and.returnValue('Catalog message');
+    const resolver: IApiErrorCatalogResolver = jasmine.createSpy('resolver').and.returnValue('Catalog message');
     const error = {
       error: { errorCode: 'AUTH_SESSION_REVOKED', detail: 'Legacy detail' },
       message: 'Http failure response for /auth/refresh: 401 Unauthorized',

@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 
-import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { I_AUTH_CONFIG } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
 import { INormalizedApiError, resolveApiErrorDisplayMessage } from '../api/api-error';
-import { SessionExpiredService } from './session-expired.service';
+import { ISessionExpiredService } from './session-expired.service';
 
 /**
  * Library-provided session-expired overlay. Consumer apps render it once near
@@ -14,7 +14,7 @@ import { SessionExpiredService } from './session-expired.service';
  * ```
  *
  * It is self-gating (renders nothing while hidden), reads its state from the
- * shared `SessionExpiredService` (shown by the auth interceptor when a token
+ * shared `ISessionExpiredService` (shown by the auth interceptor when a token
  * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
  * again", performs a full-page redirect to the configured signinUrl via
  * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
@@ -100,8 +100,8 @@ import { SessionExpiredService } from './session-expired.service';
   ],
 })
 export class ISessionExpiredDialog {
-  private readonly sessionExpired = inject(SessionExpiredService);
-  private readonly config = inject(INSIGHT_AUTH_CONFIG);
+  private readonly sessionExpired = inject(ISessionExpiredService);
+  private readonly config = inject(I_AUTH_CONFIG);
 
   protected readonly visible = this.sessionExpired.visible;
 

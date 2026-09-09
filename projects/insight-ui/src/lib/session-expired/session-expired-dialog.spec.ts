@@ -1,12 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { getDefaultInsightAuthConfig, INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { getDefaultIAuthConfig, I_AUTH_CONFIG } from '../auth/auth-config';
 import { ISessionExpiredDialog } from './session-expired-dialog';
-import { SessionExpiredService } from './session-expired.service';
+import { ISessionExpiredService } from './session-expired.service';
 
 describe('ISessionExpiredDialog', () => {
   let fixture: ComponentFixture<ISessionExpiredDialog>;
-  let service: SessionExpiredService;
+  let service: ISessionExpiredService;
   const catalogResolver = jasmine.createSpy('catalogResolver');
 
   beforeEach(async () => {
@@ -16,13 +16,13 @@ describe('ISessionExpiredDialog', () => {
       imports: [ISessionExpiredDialog],
       providers: [
         {
-          provide: INSIGHT_AUTH_CONFIG,
-          useValue: { ...getDefaultInsightAuthConfig(), errorCatalogResolver: catalogResolver },
+          provide: I_AUTH_CONFIG,
+          useValue: { ...getDefaultIAuthConfig(), errorCatalogResolver: catalogResolver },
         },
       ],
     }).compileComponents();
 
-    service = TestBed.inject(SessionExpiredService);
+    service = TestBed.inject(ISessionExpiredService);
     // The root-level service is a shared singleton across spec files — reset it
     // so each test starts from a hidden overlay.
     service.hide();

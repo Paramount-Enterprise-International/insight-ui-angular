@@ -4,9 +4,9 @@ import { TestBed } from '@angular/core/testing';
 
 import { IApiService } from './api.service';
 import { ICsrfService } from '../csrf/csrf.service';
-import { IInsightAuthConfig, INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
 
-const testConfig: IInsightAuthConfig = {
+const testConfig: IAuthConfig = {
   api: { identity: 'http://localhost:3001/api' },
   signinUrl: 'http://localhost:4200/auth/signin',
   allowedReturnOrigins: ['http://localhost:4207'],
@@ -28,7 +28,7 @@ describe('IApiService', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: ICsrfService, useValue: csrfSpy },
-        { provide: INSIGHT_AUTH_CONFIG, useValue: testConfig },
+        { provide: I_AUTH_CONFIG, useValue: testConfig },
       ],
     });
     service = TestBed.inject(IApiService);

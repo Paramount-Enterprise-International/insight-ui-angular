@@ -1,7 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { INSIGHT_AUTH_CONFIG } from './auth-config';
+import { I_AUTH_CONFIG } from './auth-config';
 import { sanitizeReturnUrl } from './sanitize-return-url';
 import { ISessionService } from '../session/session.service';
 
@@ -43,7 +43,7 @@ export function extractAccessTokenFromHash(): string | null {
 })
 export class IAuthCallback implements OnInit {
   private readonly session = inject(ISessionService);
-  private readonly config = inject(INSIGHT_AUTH_CONFIG);
+  private readonly config = inject(I_AUTH_CONFIG);
   private readonly router = inject(Router);
 
   ngOnInit(): void {

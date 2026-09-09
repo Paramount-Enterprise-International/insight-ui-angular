@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
-import { getAuthEndpointUrl, INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { getAuthEndpointUrl, I_AUTH_CONFIG } from '../auth/auth-config';
 
 /**
  * CSRF token management - cookie-to-header pattern for @insight/ui consumer apps.
@@ -21,7 +21,7 @@ import { getAuthEndpointUrl, INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
 @Injectable({ providedIn: 'root' })
 export class ICsrfService {
   private readonly http = inject(HttpClient);
-  private readonly config = inject(INSIGHT_AUTH_CONFIG);
+  private readonly config = inject(I_AUTH_CONFIG);
 
   /** In-memory CSRF token — retrieved from the backend response body, never from document.cookie directly. */
   private token: string | null = null;

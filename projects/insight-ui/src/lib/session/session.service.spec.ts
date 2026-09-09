@@ -3,11 +3,14 @@ import { of, Subject, throwError } from 'rxjs';
 
 import { ISessionService } from './session.service';
 import { IAuthService, IRefreshResponse } from '../auth/auth.service';
-import { IInsightAuthConfig, INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
 import { ICsrfService } from '../csrf/csrf.service';
-import { SessionExpiredService } from '../session-expired/session-expired.service';
+import { ISessionExpiredService } from '../session-expired/session-expired.service';
+import { IUserMenuStore } from '../store/user-menu.store';
+import { ICurrentUserService } from '../user/current-user.service';
+import { IUserMenuService } from '../user/user-menu.service';
 
-const testConfig: IInsightAuthConfig = {
+const testConfig: IAuthConfig = {
   api: { identity: 'http://localhost:3001/api' },
   signinUrl: 'http://localhost:4200/auth/signin',
   allowedReturnOrigins: ['http://localhost:4207'],
@@ -25,11 +28,11 @@ function makeJwt(payload: Record<string, unknown>): string {
 describe('ISessionService', () => {
   let service: ISessionService;
   let authSpy: jasmine.SpyObj<IAuthService>;
-  let sessionExpiredSpy: jasmine.SpyObj<SessionExpiredService>;
+  let sessionExpiredSpy: jasmine.SpyObj<ISessionExpiredService>;
 
   beforeEach(() => {
     authSpy = jasmine.createSpyObj<IAuthService>('IAuthService', ['refresh', 'logout']);
-    sessionExpiredSpy = jasmine.createSpyObj<SessionExpiredService>('SessionExpiredService', ['show', 'hide']);
+    sessionExpiredSpy = jasmine.createSpyObj<ISessionExpiredService>('ISessionExpiredService', ['show', 'hide']);
     TestBed.configureTestingModule({
       providers: [
         { provide: IAuthService, useValue: authSpy },
@@ -38,10 +41,15 @@ describe('ISessionService', () => {
           useValue: { ensureToken: jasmine.createSpy('ensureToken').and.returnValue(of(undefined)) },
         },
         {
-          provide: SessionExpiredService,
+          provide: ISessionExpiredService,
           useValue: sessionExpiredSpy,
         },
-        { provide: INSIGHT_AUTH_CONFIG, useValue: testConfig },
+        // Real store construction only needs these two to resolve — they never
+        // make HTTP calls during construction, so empty stubs keep the test
+        // free of an HttpClient dependency.
+        { provide: ICurrentUserService, useValue: {} as ICurrentUserService },
+        { provide: IUserMenuService, useValue: {} as IUserMenuService },
+        { provide: I_AUTH_CONFIG, useValue: testConfig },
       ],
     });
     service = TestBed.inject(ISessionService);
@@ -163,5 +171,16 @@ describe('ISessionService', () => {
     expect(call[4]).toBe('Your session was revoked by an administrator.');
     expect(call[5]?.revision).toBe(6);
     expect(call[5]?.['traceId'] as unknown).toBe('trace-restore');
+  });
+
+  it('logout() resets the cached user menu store', (done) => {
+    authSpy.logout.and.returnValue(of(undefined));
+    const store = TestBed.inject(IUserMenuStore);
+    spyOn(store, 'reset');
+
+    service.logout().subscribe(() => {
+      expect(store.reset).toHaveBeenCalled();
+      done();
+    });
   });
 });

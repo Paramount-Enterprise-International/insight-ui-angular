@@ -7,16 +7,17 @@ import { type INormalizedApiError, normalizeApiError, resolveApiErrorDisplayMess
 import { getMenuKey, IMenu, IUser } from '../host';
 import { ISessionService } from '../session/session.service';
 import {
+  ICurrentUserDto,
   ICurrentUserService,
-  IInsightCurrentUser,
-  IInsightFavoriteMenuItem,
-  IInsightMenuNode,
+  IFavoriteMenuItemDto,
+  IMenuNodeDto,
   IUserMenuService,
 } from '../user';
 import {
   findFirstLeafRoute,
   findMenuNameById,
   hasAnyMenuCode,
+  hasAnyRoute,
   mapToSidebarUser,
   toIMenuFavorite,
   toIMenus,
@@ -32,10 +33,10 @@ import {
  * `ihNotHasMn`) re-renders reactively once data is available (async-aware).
  */
 /** Load branch keys for the cold-start sidebar data load. */
-export type UserMenuLoadSource = 'user' | 'menus' | 'favorites';
+export type IUserMenuLoadSource = 'user' | 'menus' | 'favorites';
 
 /** Per-branch normalized errors from the last `load()` — mirrors the service API error contract. */
-export type UserMenuLoadErrors = Record<UserMenuLoadSource, INormalizedApiError | null>;
+export type IUserMenuLoadErrors = Record<IUserMenuLoadSource, INormalizedApiError | null>;
 
 @Injectable({ providedIn: 'root' })
 export class IUserMenuStore {
@@ -49,7 +50,7 @@ export class IUserMenuStore {
   /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
   readonly currentUser = signal<IUser | null>(null);
   /** Raw current-user DTO as returned by the backend — `null` until loaded. */
-  readonly rawCurrentUser = signal<IInsightCurrentUser | null>(null);
+  readonly rawCurrentUser = signal<ICurrentUserDto | null>(null);
   /** Effective navigation tree (`IMenu` modern shape). */
   readonly menus = signal<IMenu[]>([]);
   /** Favorite menus (`IMenu` modern shape). */
@@ -67,7 +68,7 @@ export class IUserMenuStore {
   /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
   readonly loadError = signal<string | null>(null);
   /** Normalized per-branch errors from the last `load()` — mirrors the service API error contract. */
-  readonly loadErrors = signal<UserMenuLoadErrors>({ user: null, menus: null, favorites: null });
+  readonly loadErrors = signal<IUserMenuLoadErrors>({ user: null, menus: null, favorites: null });
 
   // Reactive observable projections (used by directives/components that prefer
   // observables over signals).
@@ -165,6 +166,15 @@ export class IUserMenuStore {
     return hasAnyMenuCode(this.menus(), code);
   }
 
+  /**
+   * Route-membership check: can the user open `path`? True when any granted
+   * leaf menu route equals it (slash-normalized). Used by route-level access
+   * guards (e.g. `requireRouteAccess`).
+   */
+  hasRoute(path: string): boolean {
+    return hasAnyRoute(this.menus(), path);
+  }
+
   /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
   hasRole(code: string | string[]): boolean {
     const roles = this.roles();
@@ -244,7 +254,7 @@ export class IUserMenuStore {
    * mapped `IMenu[]`.
    */
   loadMenus(applicationId?: string): Observable<IMenu[]> {
-    return this.menuService.getEffectiveMenus<IInsightMenuNode[]>(applicationId).pipe(
+    return this.menuService.getEffectiveMenus<IMenuNodeDto[]>(applicationId).pipe(
       tap((nodes) => this.menus.set(toIMenus(nodes))),
       map((nodes) => toIMenus(nodes)),
     );
@@ -252,7 +262,7 @@ export class IUserMenuStore {
 
   /** Loads favorites into `favorites` — optionally for a single application. Returns the mapped `IMenu[]`. */
   loadFavorites(applicationId?: string): Observable<IMenu[]> {
-    return this.menuService.getFavorites<IInsightFavoriteMenuItem[]>(applicationId).pipe(
+    return this.menuService.getFavorites<IFavoriteMenuItemDto[]>(applicationId).pipe(
       tap((items) => this.favorites.set(items.map(toIMenuFavorite))),
       map((items) => items.map(toIMenuFavorite)),
     );
@@ -294,7 +304,7 @@ export class IUserMenuStore {
   }
 
   private loadUserInternal(): Observable<null> {
-    return this.currentUserService.getCurrentUser<IInsightCurrentUser>().pipe(
+    return this.currentUserService.getCurrentUser<ICurrentUserDto>().pipe(
       tap((raw) => {
         this.rawCurrentUser.set(raw);
         this.currentUser.set(mapToSidebarUser(raw));
@@ -322,7 +332,7 @@ export class IUserMenuStore {
     this.loadErrors.set({ user: null, menus: null, favorites: null });
   }
 
-  private recordError(source: UserMenuLoadSource, err: unknown): Observable<null> {
+  private recordError(source: IUserMenuLoadSource, err: unknown): Observable<null> {
     const normalized = normalizeApiError(err);
     this.loadErrors.update((errors) => ({ ...errors, [source]: normalized }));
     this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(err, 'Failed to load')}`);
