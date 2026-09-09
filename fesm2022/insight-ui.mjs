@@ -1,13 +1,13 @@
 import * as i0 from '@angular/core';
-import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, effect, ViewChildren, computed, makeEnvironmentProviders, APP_INITIALIZER } from '@angular/core';
+import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, makeEnvironmentProviders, APP_INITIALIZER, effect, ViewChildren, computed } from '@angular/core';
 import * as i1$1 from '@angular/common';
 import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { firstValueFrom, Subject, BehaviorSubject, map, throwError, of, timeout, lastValueFrom, forkJoin, filter as filter$1, startWith, shareReplay as shareReplay$1, Observable, tap as tap$1, combineLatest, distinctUntilChanged } from 'rxjs';
+import { firstValueFrom, Subject, BehaviorSubject, map, throwError, forkJoin, of, timeout, lastValueFrom, filter as filter$1, startWith, shareReplay as shareReplay$1, Observable, tap as tap$1, combineLatest, take as take$1, distinctUntilChanged } from 'rxjs';
 import * as i1 from '@angular/forms';
 import { Validators, NG_VALUE_ACCESSOR, NgControl, FormGroupDirective, FormBuilder, FormControl, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { debounceTime, tap, map as map$1, catchError, switchMap, shareReplay, filter, take, finalize } from 'rxjs/operators';
+import { debounceTime, tap, map as map$1, catchError, switchMap, filter, take, finalize, shareReplay } from 'rxjs/operators';
 import { toObservable } from '@angular/core/rxjs-interop';
 
 /**
@@ -9553,173 +9553,12 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
         }] });
 
 /**
- * IAvatar
- * Version: 1.0.0
- * <i-avatar />
- *
- * Displays a user photo in a circle, square, or rounded-square container.
- * Falls back to a FontAwesome user icon when no image is available.
- */
-// ─── Size Mapping ────────────────────────────────────────────────────────────
-const SIZE_PRESETS = {
-    '3xs': 12,
-    '2xs': 16,
-    xs: 20,
-    sm: 32,
-    md: 48,
-    lg: 64,
-    xl: 96,
-    '2xl': 128,
-    '3xl': 160,
-    '4xl': 200,
-};
-/**
- * Resolve the best IIconSize for a given avatar pixel size.
- * The icon should fill roughly 50–60% of the container.
- */
-function resolveIconSizeFromPx(px) {
-    if (px <= 24)
-        return 'sm';
-    if (px <= 40)
-        return 'md';
-    if (px <= 64)
-        return 'lg';
-    if (px <= 96)
-        return 'xl';
-    if (px <= 128)
-        return '2xl';
-    if (px <= 160)
-        return '3xl';
-    return '4xl';
-}
-// ─── Component ───────────────────────────────────────────────────────────────
-class IAvatar {
-    // ─── Inputs ────────────────────────────────────────────────────────────
-    /** Image URL. When empty or on error, falls back to fallbackSrc or icon. */
-    src;
-    /** Alt text for the image. */
-    alt;
-    /**
-     * Container size.
-     * - `number` → treated as pixels (e.g. `200` = 200px)
-     * - `IIconSize` string → uses a preset mapping (e.g. `'lg'` = 64px)
-     * @default 40
-     */
-    size = 40;
-    /**
-     * Container shape.
-     * @default 'circle'
-     */
-    shape = 'circle';
-    /** Fallback image URL. Used when `src` fails to load. If not set (or also fails), shows the user icon. */
-    fallbackSrc;
-    /** Additional CSS classes to inject onto the host element (e.g. `"border-2 border-primary"`). */
-    className;
-    // ─── Internal state ────────────────────────────────────────────────────
-    /** Whether the primary `src` image failed to load. */
-    hasError = false;
-    /** Whether the `fallbackSrc` image also failed to load. */
-    hasFallbackError = false;
-    // ─── Host bindings ─────────────────────────────────────────────────────
-    baseClass = true;
-    get attrShape() {
-        return this.shape ?? 'circle';
-    }
-    get resolvedSizePx() {
-        if (typeof this.size === 'number')
-            return this.size;
-        return SIZE_PRESETS[this.size] ?? 40;
-    }
-    get hostClass() {
-        return this.className;
-    }
-    // ─── Computed ──────────────────────────────────────────────────────────
-    /** Icon size for the fallback `<i-icon>`. */
-    get resolvedIconSize() {
-        if (typeof this.size === 'string')
-            return this.size;
-        return resolveIconSizeFromPx(this.size);
-    }
-    // ─── Event handlers ────────────────────────────────────────────────────
-    onImgError() {
-        this.hasError = true;
-    }
-    onFallbackError() {
-        this.hasFallbackError = true;
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAvatar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IAvatar, isStandalone: true, selector: "i-avatar", inputs: { src: "src", alt: "alt", size: "size", shape: "shape", fallbackSrc: "fallbackSrc", className: "className" }, host: { properties: { "class.i-avatar": "this.baseClass", "attr.data-shape": "this.attrShape", "style.width.px": "this.resolvedSizePx", "style.height.px": "this.resolvedSizePx", "class": "this.hostClass" } }, ngImport: i0, template: `
-    <!-- Primary image -->
-    @if (!hasError && src) {
-      <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
-    }
-    <!-- Fallback image -->
-    @else if (fallbackSrc && !hasFallbackError) {
-      <img [alt]="alt ?? ''" [src]="fallbackSrc" (error)="onFallbackError()" />
-    }
-    <!-- Ultimate fallback: user icon -->
-    @else {
-      <i-icon icon="user" [size]="resolvedIconSize" />
-    }
-  `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }] });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAvatar, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-avatar',
-                    standalone: true,
-                    imports: [IIcon],
-                    template: `
-    <!-- Primary image -->
-    @if (!hasError && src) {
-      <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
-    }
-    <!-- Fallback image -->
-    @else if (fallbackSrc && !hasFallbackError) {
-      <img [alt]="alt ?? ''" [src]="fallbackSrc" (error)="onFallbackError()" />
-    }
-    <!-- Ultimate fallback: user icon -->
-    @else {
-      <i-icon icon="user" [size]="resolvedIconSize" />
-    }
-  `,
-                }]
-        }], propDecorators: { src: [{
-                type: Input
-            }], alt: [{
-                type: Input
-            }], size: [{
-                type: Input
-            }], shape: [{
-                type: Input
-            }], fallbackSrc: [{
-                type: Input
-            }], className: [{
-                type: Input
-            }], baseClass: [{
-                type: HostBinding,
-                args: ['class.i-avatar']
-            }], attrShape: [{
-                type: HostBinding,
-                args: ['attr.data-shape']
-            }], resolvedSizePx: [{
-                type: HostBinding,
-                args: ['style.width.px']
-            }, {
-                type: HostBinding,
-                args: ['style.height.px']
-            }], hostClass: [{
-                type: HostBinding,
-                args: ['class']
-            }] } });
-
-/**
  * Default environment for `@insight/ui`'s shared data layer.
  *
  * `api.identity`, `signinUrl` and `authCallbackUrl` are intentionally EMPTY -
  * the library does not default to any shared identity provider. Each consumer
  * app supplies its own values (its own BFF/identity host) via
- * `provideInsightAuth()`. The `user`/`configuration`/`application` keys keep
+ * `provideIAuth()`. The `user`/`configuration`/`application` keys keep
  * defaulting to the platform services and can still be overridden.
  */
 const environment = {
@@ -9751,7 +9590,7 @@ const environment = {
 };
 
 /** Default relative endpoint paths for the configured identity host. */
-function getDefaultInsightAuthEndpoints() {
+function getDefaultIAuthEndpoints() {
     return {
         csrf: '/auth/csrf',
         login: '/auth/login',
@@ -9761,14 +9600,14 @@ function getDefaultInsightAuthEndpoints() {
     };
 }
 /**
- * Default `IInsightAuthConfig`. `api.identity` and `signinUrl` are left EMPTY
+ * Default `IAuthConfig`. `api.identity` and `signinUrl` are left EMPTY
  * (no shared identity host is baked in) - a consumer app MUST supply its own
- * values via `provideInsightAuth({ ... })` and is validated fail-fast when it
+ * values via `provideIAuth({ ... })` and is validated fail-fast when it
  * forgets. All other fields default sensibly: `allowedReturnOrigins` to this
  * app's own origin, `endpoints` to the platform/BFF path contract, and lifespan /
  * csrf / api-key values from the library's default environment.
  */
-function getDefaultInsightAuthConfig() {
+function getDefaultIAuthConfig() {
     return {
         api: {
             identity: '', // no default identity host - the consumer app supplies its own
@@ -9781,22 +9620,22 @@ function getDefaultInsightAuthConfig() {
         allowedReturnOrigins: [window.location.origin],
         tokenLifespan: { ...environment.tokenLifespan },
         csrfTokenMaxAgeSeconds: environment.csrfTokenMaxAgeSeconds,
-        endpoints: { ...getDefaultInsightAuthEndpoints() },
+        endpoints: { ...getDefaultIAuthEndpoints() },
         apiKey: environment.apiKey,
         appId: environment.appId,
         unauthorizedHandling: 'dialog',
     };
 }
 /**
- * Injection token carrying the consumer app's `IInsightAuthConfig`. Provided via
- * `provideInsightAuth()`. Falls back to `getDefaultInsightAuthConfig()` (empty
+ * Injection token carrying the consumer app's `IAuthConfig`. Provided via
+ * `provideIAuth()`. Falls back to `getDefaultIAuthConfig()` (empty
  * `api.identity`/`signinUrl`) so services still resolve when the provider is
  * omitted - any auth call then throws a descriptive "identity host not
  * configured" error instead of silently hitting a default host.
  */
-const INSIGHT_AUTH_CONFIG = new InjectionToken('INSIGHT_AUTH_CONFIG', {
+const I_AUTH_CONFIG = new InjectionToken('I_AUTH_CONFIG', {
     providedIn: 'root',
-    factory: () => getDefaultInsightAuthConfig(),
+    factory: () => getDefaultIAuthConfig(),
 });
 /**
  * The configured identity host (`api.identity`) or a descriptive error. Used by
@@ -9806,16 +9645,16 @@ const INSIGHT_AUTH_CONFIG = new InjectionToken('INSIGHT_AUTH_CONFIG', {
 function requireIdentityHost(config) {
     if (!config.api.identity) {
         throw new Error('[@insight/ui] api.identity is not configured. Point it at this app\'s own auth host/BFF ' +
-            '(e.g. provideInsightAuth({ api: { identity: "https://<your-app>/api" }, signinUrl: "..." })).');
+            '(e.g. provideIAuth({ api: { identity: "https://<your-app>/api" }, signinUrl: "..." })).');
     }
     return config.api.identity;
 }
 /**
  * Relative path of an identity endpoint for the current config. Falls back to
- * `getDefaultInsightAuthEndpoints()` when the consumer did not override it.
+ * `getDefaultIAuthEndpoints()` when the consumer did not override it.
  */
 function getAuthEndpointPath(config, key) {
-    return config.endpoints?.[key] ?? getDefaultInsightAuthEndpoints()[key] ?? '';
+    return config.endpoints?.[key] ?? getDefaultIAuthEndpoints()[key] ?? '';
 }
 /**
  * Absolute URL of an identity endpoint: `{api.identity}{path}`. Throws a
@@ -9830,15 +9669,103 @@ function getAuthEndpointUrl(config, key) {
  * misconfigured consumer fails fast instead of silently calling an undefined
  * host.
  */
-function validateInsightAuthConfig(config) {
+function validateIAuthConfig(config) {
     if (!config.api.identity) {
-        throw new Error('[@insight/ui] provideInsightAuth() requires api.identity - the base URL of this app\'s own ' +
+        throw new Error('[@insight/ui] provideIAuth() requires api.identity - the base URL of this app\'s own ' +
             'auth host/BFF. The library no longer defaults to a shared identity provider.');
     }
     if (!config.signinUrl) {
-        throw new Error('[@insight/ui] provideInsightAuth() requires signinUrl - the full URL of this app\'s ' +
+        throw new Error('[@insight/ui] provideIAuth() requires signinUrl - the full URL of this app\'s ' +
             'sign-in page / BFF login route.');
     }
+}
+
+/**
+ * Validate and sanitize a `returnUrl` for post-login / post-callback redirect.
+ * Ported from iam-web's `signin.ts::sanitizeReturnUrl()` — behavior is kept
+ * identical so consumer apps and iam-web enforce the exact same open-redirect
+ * protection:
+ *
+ * - Relative paths (starting with `/`) are always allowed.
+ * - Protocol-relative URLs (`//`) are rejected — always fall back to `/`.
+ * - Absolute URLs are checked against `allowedReturnOrigins` (wildcard
+ *   supported, e.g. `https://*.paramount-land.com`).
+ * - Anything else (invalid URL, untrusted origin, unknown scheme) falls back to `/`.
+ *
+ * `isExternal: true` means the caller must do a full `window.location.href`
+ * navigation, not an in-app router navigation.
+ */
+function sanitizeReturnUrl(url, allowedReturnOrigins) {
+    if (!url) {
+        return { returnUrl: '/', isExternal: false };
+    }
+    // Block protocol-relative URLs (//evil.com)
+    if (url.startsWith('//')) {
+        return { returnUrl: '/', isExternal: false };
+    }
+    // Relative path — always safe
+    if (url.startsWith('/')) {
+        return { returnUrl: url, isExternal: false };
+    }
+    // Absolute URL — validate against trusted origins
+    if (/^https?:\/\//i.test(url)) {
+        try {
+            const parsed = new URL(url);
+            if (isAllowedOrigin(parsed.origin, allowedReturnOrigins)) {
+                return { returnUrl: url, isExternal: true };
+            }
+        }
+        catch {
+            // Invalid URL — reject
+        }
+    }
+    // Unknown scheme or untrusted origin — fall back to home
+    return { returnUrl: '/', isExternal: false };
+}
+/** Check whether an origin matches the `allowedReturnOrigins` whitelist (wildcard supported). */
+function isAllowedOrigin(origin, allowedReturnOrigins) {
+    const allowed = allowedReturnOrigins ?? [];
+    return allowed.some((pattern) => {
+        // Convert wildcard pattern to regex: https://*.example.com → ^https:\/\/[^.]+\.example\.com$
+        // Escape each literal segment separately so `*` itself is never escaped away.
+        const regexStr = pattern
+            .split('*')
+            .map((segment) => segment.replace(/[.+^${}()|[\]\\]/g, '\\$&')) // escape regex specials
+            .join('[^.]+'); // * matches a single subdomain label
+        try {
+            return new RegExp(`^${regexStr}$`, 'i').test(origin);
+        }
+        catch {
+            return origin === pattern; // fallback: exact match
+        }
+    });
+}
+
+/**
+ * Build the full external URL to the app's configured sign-in page
+ * (`config.signinUrl` - its own BFF login or iam-web signin) for a cross-domain
+ * SSO redirect, routing the eventual handoff through THIS APP'S OWN callback
+ * route (`config.callbackPath`, default `/auth/callback`) — never through the
+ * page the user originally tried to visit.
+ *
+ * This is deliberate and fixes a real redirect loop: if the guard/interceptor
+ * used `window.location.href` (the current page) as the returnUrl directly,
+ * the sign-in page's handoff would append `#at=<token>` to THAT SAME page. Since that
+ * page still doesn't have a stored session yet at the moment it re-renders,
+ * the guard would fire again, capture `window.location.href` again — which
+ * NOW ALREADY CONTAINS the previous `#at=` fragment — and redirect back to
+ * back to the sign-in page with an ever-growing `returnUrl`, eventually overflowing header
+ * size limits (HTTP 431).
+ *
+ * Routing through a dedicated callback route breaks the loop: the callback
+ * page (`IAuthCallback`) consumes and strips the token BEFORE navigating
+ * (via the in-app router, not a full reload) to `targetPath` — so the guard
+ * only ever sees a clean, token-free URL on its next check.
+ */
+function buildExternalSigninUrl(config, targetPath) {
+    const callbackPath = config.callbackPath ?? '/auth/callback';
+    const callbackUrl = `${window.location.origin}${callbackPath}?returnUrl=${encodeURIComponent(targetPath)}`;
+    return `${config.signinUrl}?returnUrl=${encodeURIComponent(callbackUrl)}`;
 }
 
 /**
@@ -9856,7 +9783,7 @@ function validateInsightAuthConfig(config) {
  */
 class ICsrfService {
     http = inject(HttpClient);
-    config = inject(INSIGHT_AUTH_CONFIG);
+    config = inject(I_AUTH_CONFIG);
     /** In-memory CSRF token — retrieved from the backend response body, never from document.cookie directly. */
     token = null;
     tokenFetchedAt = null;
@@ -9903,33 +9830,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
-
-/**
- * Build the full external URL to the app's configured sign-in page
- * (`config.signinUrl` - its own BFF login or iam-web signin) for a cross-domain
- * SSO redirect, routing the eventual handoff through THIS APP'S OWN callback
- * route (`config.callbackPath`, default `/auth/callback`) — never through the
- * page the user originally tried to visit.
- *
- * This is deliberate and fixes a real redirect loop: if the guard/interceptor
- * used `window.location.href` (the current page) as the returnUrl directly,
- * the sign-in page's handoff would append `#at=<token>` to THAT SAME page. Since that
- * page still doesn't have a stored session yet at the moment it re-renders,
- * the guard would fire again, capture `window.location.href` again — which
- * NOW ALREADY CONTAINS the previous `#at=` fragment — and redirect back to
- * back to the sign-in page with an ever-growing `returnUrl`, eventually overflowing header
- * size limits (HTTP 431).
- *
- * Routing through a dedicated callback route breaks the loop: the callback
- * page (`IAuthCallback`) consumes and strips the token BEFORE navigating
- * (via the in-app router, not a full reload) to `targetPath` — so the guard
- * only ever sees a clean, token-free URL on its next check.
- */
-function buildExternalSigninUrl(config, targetPath) {
-    const callbackPath = config.callbackPath ?? '/auth/callback';
-    const callbackUrl = `${window.location.origin}${callbackPath}?returnUrl=${encodeURIComponent(targetPath)}`;
-    return `${config.signinUrl}?returnUrl=${encodeURIComponent(callbackUrl)}`;
-}
 
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -10097,9 +9997,9 @@ const isSessionExpiredError = (error) => {
  * fields and legacy `detail` so the shared dialog or consumer UI can resolve
  * display text without making its own configuration API call.
  *
- * @overridable — consumers may provide `{ provide: SessionExpiredService, useClass: ... }`.
+ * @overridable — consumers may provide `{ provide: ISessionExpiredService, useClass: ... }`.
  */
-class SessionExpiredService {
+class ISessionExpiredService {
     visible = signal(false, ...(ngDevMode ? [{ debugName: "visible" }] : []));
     returnUrl = signal('/', ...(ngDevMode ? [{ debugName: "returnUrl" }] : []));
     reason = signal(undefined, ...(ngDevMode ? [{ debugName: "reason" }] : []));
@@ -10123,10 +10023,10 @@ class SessionExpiredService {
     hide() {
         this.visible.set(false);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: SessionExpiredService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: SessionExpiredService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISessionExpiredService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISessionExpiredService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: SessionExpiredService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ISessionExpiredService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -10156,8 +10056,8 @@ const addAuthHeader = (req, token) => req.clone({ headers: req.headers.set('Auth
  */
 const authInterceptor = (req, next) => {
     const session = inject(ISessionService);
-    const config = inject(INSIGHT_AUTH_CONFIG);
-    const sessionExpired = inject(SessionExpiredService);
+    const config = inject(I_AUTH_CONFIG);
+    const sessionExpired = inject(ISessionExpiredService);
     if (isAuthSkipUrl(req.url, config)) {
         return next(req);
     }
@@ -10211,7 +10111,7 @@ const authInterceptor = (req, next) => {
 class IApiService {
     http = inject(HttpClient);
     csrf = inject(ICsrfService);
-    config = inject(INSIGHT_AUTH_CONFIG);
+    config = inject(I_AUTH_CONFIG);
     get headers() {
         const base = {
             Accept: 'application/json',
@@ -10243,7 +10143,7 @@ class IApiService {
     resolveBaseUrl(options) {
         const baseUrl = options?.apiUrl ?? this.config.api.identity;
         if (!baseUrl) {
-            throw new Error('[@insight/ui] No API base URL configured. Set api.identity via provideInsightAuth() ' +
+            throw new Error('[@insight/ui] No API base URL configured. Set api.identity via provideIAuth() ' +
                 'or pass IApiOptions.apiUrl before calling this service.');
         }
         return baseUrl;
@@ -10348,7 +10248,7 @@ const LOCK_STORAGE_KEY = 'iam.mock.login_lockout';
  */
 class IAuthService {
     api = inject(IApiService);
-    config = inject(INSIGHT_AUTH_CONFIG);
+    config = inject(I_AUTH_CONFIG);
     get identityUrl() {
         return requireIdentityHost(this.config);
     }
@@ -10489,6 +10389,504 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
             args: [{ providedIn: 'root' }]
         }] });
 
+/**
+ * Known API error codes surfaced by the platform services (mirrors the
+ * iam-user-api error catalog — see `iam-user-api/src/common/errors/user-errors.ts`).
+ *
+ * Consumers branch on these to tailor UX (e.g. showing the "Access Unavailable"
+ * page when the current user has no application mapping).
+ */
+const USER_APPLICATION_MAPPING_NOT_FOUND = 'USER_APPLICATION_MAPPING_NOT_FOUND';
+
+/**
+ * Types for the current-user navigation & favorites data, matched to the
+ * iam-user-api user-menu service contract (`GET {api.user}/me/menus*` and
+ * `GET {api.user}/users/user`). These are the raw backend shapes; the library
+ * maps them onto the UI-facing `IMenu` / `IUser` contracts via `user.mapper.ts`.
+ */
+
+/**
+ * Maps the backend current-user DTO to `@insight/ui`'s sidebar `IUser` shape
+ * (`employeeCode` / `fullName` / `userImagePath`), falling back to `username`.
+ * `userImagePath` is `''` when no photo exists — the sidebar renders it with
+ * `i-avatar`, which falls back to a user icon when the image is empty/errors.
+ */
+function mapToSidebarUser(user) {
+    return {
+        employeeCode: user.employeeCode ?? user.username ?? '',
+        fullName: user.fullName ?? user.username ?? '',
+        userImagePath: user.photoUrl ?? '',
+    };
+}
+/** Maps a backend effective-menu node onto the UI-facing `IMenu` (modern shape). */
+function toIMenu(node) {
+    return {
+        id: node.id,
+        name: node.name,
+        type: node.type,
+        menuCode: node.menuCode,
+        route: node.route,
+        icon: node.icon,
+        openIn: node.openIn,
+        application: node.application ? { ...node.application } : null,
+        companies: node.companies?.map((company) => ({ ...company })) ?? [],
+        isFavorite: node.isFavorite,
+        children: node.children?.map(toIMenu) ?? [],
+    };
+}
+/** Maps an array of backend effective-menu nodes onto `IMenu[]`. */
+function toIMenus(nodes) {
+    return (nodes ?? []).map(toIMenu);
+}
+/** Maps a backend favorite item onto the UI-facing `IMenu` (modern shape). */
+function toIMenuFavorite(item) {
+    return {
+        id: item.id,
+        name: item.name,
+        menuCode: item.menuCode,
+        route: item.route,
+        icon: item.icon,
+        openIn: item.openIn,
+        application: item.application ? { ...item.application } : null,
+        companies: item.companies?.map((company) => ({ ...company })) ?? [],
+        isFavorite: true,
+    };
+}
+/**
+ * Recursively collects the `menuCode` of every navigable leaf item across a
+ * menu tree (deduplicated, order preserved). Structural group/module nodes are
+ * excluded so a container code never counts as a grant - matching the flat
+ * granted-code list the legacy menu token carried (`ihHasMn` menu mode).
+ */
+function collectMenuCodes(menus) {
+    const codes = new Set();
+    const walk = (nodes) => {
+        for (const node of nodes) {
+            if (isLeafItem(node) && node.menuCode) {
+                codes.add(node.menuCode);
+            }
+            walk(getMenuChildren(node));
+        }
+    };
+    walk(menus);
+    return [...codes];
+}
+/** Normalizes a route path for comparison (strips surrounding slashes). */
+function normalizeRoutePath(route) {
+    return route.trim().replace(/^\/+/g, '').replace(/\/+$/g, '');
+}
+/**
+ * Recursively collects the `route` of every navigable leaf item across a menu
+ * tree (deduplicated, order preserved). The union of these routes is the set
+ * of pages the current user is granted to open.
+ */
+function collectLeafRoutes(menus) {
+    const routes = new Set();
+    const walk = (nodes) => {
+        for (const node of nodes) {
+            if (isLeafItem(node)) {
+                const route = getMenuRoute(node);
+                if (route) {
+                    routes.add(route);
+                }
+            }
+            walk(getMenuChildren(node));
+        }
+    };
+    walk(menus);
+    return [...routes];
+}
+/** True when any granted leaf menu route equals `path` (slash-normalized). */
+function hasAnyRoute(menus, path) {
+    const normalized = normalizeRoutePath(path);
+    return collectLeafRoutes(menus).some((route) => normalizeRoutePath(route) === normalized);
+}
+/**
+ * Menu-mode permission check: returns true if the user's loaded menus contain
+ * ANY of the given menu codes. An empty set of menus (not yet loaded) always
+ * returns `false` — gated UI renders only once the store has data.
+ */
+function hasAnyMenuCode(menus, code) {
+    const codes = new Set(collectMenuCodes(menus));
+    if (Array.isArray(code)) {
+        return code.some((item) => codes.has(item));
+    }
+    return codes.has(code);
+}
+/** First navigable leaf route in a menu tree — a sensible post-login default landing. */
+function findFirstLeafRoute(menus) {
+    for (const menu of menus) {
+        if (isLeafItem(menu)) {
+            const route = getMenuRoute(menu);
+            if (route) {
+                return route;
+            }
+        }
+        const childRoute = findFirstLeafRoute(getMenuChildren(menu));
+        if (childRoute) {
+            return childRoute;
+        }
+    }
+    return null;
+}
+/** Finds a menu node's display name by id (recursive), or null. */
+function findMenuNameById(menus, menuId) {
+    for (const menu of menus) {
+        if (getMenuKey(menu) === menuId) {
+            const label = getMenuLabel(menu);
+            return label || null;
+        }
+        const child = findMenuNameById(getMenuChildren(menu), menuId);
+        if (child) {
+            return child;
+        }
+    }
+    return null;
+}
+
+/**
+ * Current-user navigation & favorites service — calls iam-user-api's
+ * `/me/menus*` endpoints (user-menu service contract). These endpoints return
+ * a `{ meta, data }` envelope; this service unwraps `.data` so callers keep
+ * the app-wide body-as-data convention.
+ *
+ * Base URL: `{api.user}` from the resolved auth config (defaults to the
+ * library environment file). Consumer apps override via
+ * `provideIAuth({ api: { user: '...' } })`.
+ */
+class IUserMenuService {
+    api = inject(IApiService);
+    config = inject(I_AUTH_CONFIG);
+    get baseUrl() {
+        return this.config.api['user'] ?? environment.api.user;
+    }
+    /** GET `{api.user}/me/menus` — effective navigation tree for one or all active applications. Output type overridable via `T`. */
+    getEffectiveMenus(applicationId) {
+        const id = applicationId ?? this.config.appId;
+        const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
+        return this.api
+            .get('/me/menus', params, { apiUrl: this.baseUrl })
+            .pipe(map((response) => response.data));
+    }
+    /** GET `{api.user}/me/menus/favorites` — effective favorite items, sorted by name. Output type overridable via `T`. */
+    getFavorites(applicationId) {
+        const id = applicationId ?? this.config.appId;
+        const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
+        return this.api
+            .get('/me/menus/favorites', params, { apiUrl: this.baseUrl })
+            .pipe(map((response) => response.data));
+    }
+    /** PUT `{api.user}/me/menus/{menuId}/favorite` — pin an effective menu item (204 No Content). */
+    addFavorite(menuId) {
+        return this.api.put(`/me/menus/${menuId}/favorite`, {}, { apiUrl: this.baseUrl });
+    }
+    /** DELETE `{api.user}/me/menus/{menuId}/favorite` — unpin a menu item (204 No Content). */
+    removeFavorite(menuId) {
+        return this.api.delete(`/me/menus/${menuId}/favorite`, { apiUrl: this.baseUrl });
+    }
+    /**
+     * PUT `{api.user}/me/menus/favorites` — atomically replace the complete
+     * favorite collection after a drag-drop. `displayOrder` values form the
+     * complete sequence 1..n. Returns 204 No Content.
+     */
+    reorderFavorites(menuIds) {
+        const items = menuIds.map((menuId, index) => ({
+            menuId: String(menuId),
+            displayOrder: index + 1,
+        }));
+        return this.api.put('/me/menus/favorites', { items }, { apiUrl: this.baseUrl });
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Current-user profile service — calls iam-user-api's `GET {api.user}/users/user`
+ * endpoint (`CurrentUserDto`). The sidebar-shaped mapping (`IUser`) lives in
+ * `user.mapper.ts` (`mapToSidebarUser`).
+ *
+ * Base URL: `{api.user}` from the resolved auth config (defaults to the
+ * library environment file). Output type overridable via the generic — the
+ * library default is the raw `ICurrentUserDto` DTO.
+ */
+class ICurrentUserService {
+    api = inject(IApiService);
+    config = inject(I_AUTH_CONFIG);
+    get baseUrl() {
+        return this.config.api['user'] ?? environment.api.user;
+    }
+    /** GET `{api.user}/users/user` — raw current-user DTO. Override `T` to use your own response type. */
+    getCurrentUser() {
+        return this.api.get('/users/user', undefined, { apiUrl: this.baseUrl });
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICurrentUserService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICurrentUserService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICurrentUserService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+class IUserMenuStore {
+    currentUserService = inject(ICurrentUserService);
+    menuService = inject(IUserMenuService);
+    session = inject(ISessionService);
+    /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
+    loadedUserSub = null;
+    /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
+    currentUser = signal(null, ...(ngDevMode ? [{ debugName: "currentUser" }] : []));
+    /** Raw current-user DTO as returned by the backend — `null` until loaded. */
+    rawCurrentUser = signal(null, ...(ngDevMode ? [{ debugName: "rawCurrentUser" }] : []));
+    /** Effective navigation tree (`IMenu` modern shape). */
+    menus = signal([], ...(ngDevMode ? [{ debugName: "menus" }] : []));
+    /** Favorite menus (`IMenu` modern shape). */
+    favorites = signal([], ...(ngDevMode ? [{ debugName: "favorites" }] : []));
+    /** Roles decoded from the access token (for `source: 'role'` permission checks). */
+    roles = signal([], ...(ngDevMode ? [{ debugName: "roles" }] : []));
+    /**
+     * Feature permissions granted by the backend (for `source: 'permission'`
+     * checks). NOT hydrated by `load()` yet - a loader calls `setPermissions()`
+     * once the endpoint is available.
+     */
+    permissions = signal([], ...(ngDevMode ? [{ debugName: "permissions" }] : []));
+    /** True while the cold-start `load()` is in flight. */
+    initializing = signal(false, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
+    /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
+    loadError = signal(null, ...(ngDevMode ? [{ debugName: "loadError" }] : []));
+    /** Normalized per-branch errors from the last `load()` — mirrors the service API error contract. */
+    loadErrors = signal({ user: null, menus: null, favorites: null }, ...(ngDevMode ? [{ debugName: "loadErrors" }] : []));
+    // Reactive observable projections (used by directives/components that prefer
+    // observables over signals).
+    currentUser$ = toObservable(this.currentUser);
+    menus$ = toObservable(this.menus);
+    favorites$ = toObservable(this.favorites);
+    roles$ = toObservable(this.roles);
+    permissions$ = toObservable(this.permissions);
+    initializing$ = toObservable(this.initializing);
+    /**
+     * Post-login default landing (when no return URL is present).
+     * Order: (1) first navigable favorite route, (2) first navigable menu route.
+     */
+    get defaultRoute() {
+        return findFirstLeafRoute(this.favorites()) ?? findFirstLeafRoute(this.menus());
+    }
+    /** Finds a menu node's display name by id (recursive), or null. */
+    findMenuName(menuId) {
+        return findMenuNameById(this.menus(), menuId);
+    }
+    /**
+     * Cold-start: fetch user + menus + favorites concurrently. A failure in one
+     * branch does not block the others; `initializing` clears once all settle.
+     *
+     * Returns an observable that completes when the load settles, so callers can
+     * await it (e.g. to navigate to `defaultRoute` after login). The load starts
+     * immediately even if the caller ignores the returned observable — a shared
+     * source is kept alive by an internal subscribe (fire-and-forget compatible).
+     */
+    load() {
+        if (this.initializing()) {
+            return this.initializing$.pipe(filter((init) => !init), take(1), map(() => undefined));
+        }
+        // Invalidate cross-session cache: if this load is for a different user
+        // (`sub`) than the one whose data is cached, drop the stale data first so
+        // a failed refetch (e.g. USER_APPLICATION_MAPPING_NOT_FOUND) never leaks
+        // the previous user's menus/favorites into the sidebar.
+        const sessionSub = this.session.getUser()?.sub ?? null;
+        if (sessionSub !== this.loadedUserSub) {
+            this.clearData();
+            this.loadedUserSub = sessionSub;
+        }
+        this.initializing.set(true);
+        this.loadError.set(null);
+        this.loadErrors.set({ user: null, menus: null, favorites: null });
+        this.roles.set(this.session.getRoles());
+        const result$ = forkJoin({
+            user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err))),
+            menus: this.loadMenusInternal().pipe(catchError((err) => this.recordError('menus', err))),
+            favorites: this.loadFavoritesInternal().pipe(catchError((err) => this.recordError('favorites', err))),
+        }).pipe(map(() => undefined), catchError(() => of(undefined)), finalize(() => this.initializing.set(false)), shareReplay({ bufferSize: 1, refCount: false }));
+        // Fire-and-forget: always start the load even if the caller ignores the result.
+        result$.subscribe();
+        return result$;
+    }
+    /**
+     * Clears every cached user/menu/favorite value and error state, and forgets
+     * the identity they belonged to. Call on logout / session clear so no stale
+     * data survives into the next login.
+     */
+    reset() {
+        this.clearData();
+        this.loadedUserSub = null;
+    }
+    /** Refresh roles from the current access token (call after login / token change). */
+    syncRoles() {
+        this.roles.set(this.session.getRoles());
+    }
+    /**
+     * Menu-mode permission check against the in-memory menu codes (ANY match).
+     * Returns `false` while menus are not yet loaded — gated UI renders only
+     * after the store has data (async-aware via the reactive directives).
+     */
+    hasMenu(code) {
+        return hasAnyMenuCode(this.menus(), code);
+    }
+    /**
+     * Route-membership check: can the user open `path`? True when any granted
+     * leaf menu route equals it (slash-normalized). Used by route-level access
+     * guards (e.g. `requireRouteAccess`).
+     */
+    hasRoute(path) {
+        return hasAnyRoute(this.menus(), path);
+    }
+    /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
+    hasRole(code) {
+        const roles = this.roles();
+        if (Array.isArray(code)) {
+            return code.some((role) => roles.includes(role));
+        }
+        return roles.includes(code);
+    }
+    /**
+     * Replaces the granted permission list (feature/action codes). Called by a
+     * loader once the backend endpoint is available - `load()` does not fetch
+     * permissions.
+     */
+    setPermissions(permissions) {
+        this.permissions.set(permissions);
+    }
+    /**
+     * Permission-mode check against the granted permissions (ANY match). Returns
+     * `false` while the list is empty/not loaded - gated UI renders only after
+     * the store has data (async-aware via the reactive directives).
+     */
+    hasPermission(code) {
+        const granted = this.permissions();
+        if (Array.isArray(code)) {
+            return code.some((permission) => granted.includes(permission));
+        }
+        return granted.includes(code);
+    }
+    /**
+     * Pin (`isFavorite: true`) or unpin a menu item. Flips the star icon in the
+     * `menus` tree immediately (optimistic), calls the backend, then re-fetches
+     * favorites so the server remains the source of truth for the favorites
+     * section. The menu-star change is reverted on error.
+     */
+    toggleFavorite(menuId, isFavorite) {
+        const previousMenus = this.menus();
+        this.menus.set(this.applyMenuFavorite(previousMenus, menuId, isFavorite));
+        const call = isFavorite
+            ? this.menuService.addFavorite(menuId)
+            : this.menuService.removeFavorite(menuId);
+        return call.pipe(switchMap(() => this.reloadFavorites()), catchError((err) => {
+            this.menus.set(previousMenus);
+            return throwError(() => err);
+        }));
+    }
+    /**
+     * Persists the new favorite order after a drag-drop. Reorders the in-memory
+     * `favorites` signal locally (optimistic) and calls the backend — no GET
+     * refetch after the write. The local change is reverted on error.
+     */
+    reorderFavorites(menuIds) {
+        const previous = this.favorites();
+        this.favorites.set(this.applyFavoriteReorder(previous, menuIds));
+        return this.menuService.reorderFavorites(menuIds).pipe(catchError((err) => {
+            this.favorites.set(previous);
+            return throwError(() => err);
+        }));
+    }
+    /** Re-fetches the favorites from the backend (manual refresh). */
+    reloadFavorites() {
+        return this.loadFavoritesInternal().pipe(map(() => undefined));
+    }
+    /**
+     * Loads the effective navigation tree into `menus` — for one application
+     * (`applicationId`) or all active applications when omitted. Returns the
+     * mapped `IMenu[]`.
+     */
+    loadMenus(applicationId) {
+        return this.menuService.getEffectiveMenus(applicationId).pipe(tap((nodes) => this.menus.set(toIMenus(nodes))), map((nodes) => toIMenus(nodes)));
+    }
+    /** Loads favorites into `favorites` — optionally for a single application. Returns the mapped `IMenu[]`. */
+    loadFavorites(applicationId) {
+        return this.menuService.getFavorites(applicationId).pipe(tap((items) => this.favorites.set(items.map(toIMenuFavorite))), map((items) => items.map(toIMenuFavorite)));
+    }
+    /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
+    applyMenuFavorite(menus, menuId, isFavorite) {
+        return menus.map((menu) => {
+            if (getMenuKey(menu) === menuId) {
+                return { ...menu, isFavorite };
+            }
+            if (menu.children?.length) {
+                return { ...menu, children: this.applyMenuFavorite(menu.children, menuId, isFavorite) };
+            }
+            if (menu.child?.length) {
+                return { ...menu, child: this.applyMenuFavorite(menu.child, menuId, isFavorite) };
+            }
+            return menu;
+        });
+    }
+    applyFavoriteReorder(favorites, menuIds) {
+        const byId = new Map(favorites.map((favorite) => [String(getMenuKey(favorite)), favorite]));
+        const ordered = [];
+        const seen = new Set();
+        for (const id of menuIds) {
+            const item = byId.get(String(id));
+            if (item) {
+                ordered.push(item);
+                seen.add(String(id));
+            }
+        }
+        for (const favorite of favorites) {
+            if (!seen.has(String(getMenuKey(favorite)))) {
+                ordered.push(favorite);
+            }
+        }
+        return ordered;
+    }
+    loadUserInternal() {
+        return this.currentUserService.getCurrentUser().pipe(tap((raw) => {
+            this.rawCurrentUser.set(raw);
+            this.currentUser.set(mapToSidebarUser(raw));
+        }), map(() => null));
+    }
+    loadMenusInternal() {
+        return this.loadMenus().pipe(map(() => null));
+    }
+    loadFavoritesInternal() {
+        return this.loadFavorites().pipe(map(() => null));
+    }
+    clearData() {
+        this.currentUser.set(null);
+        this.rawCurrentUser.set(null);
+        this.menus.set([]);
+        this.favorites.set([]);
+        this.roles.set([]);
+        this.permissions.set([]);
+        this.loadError.set(null);
+        this.loadErrors.set({ user: null, menus: null, favorites: null });
+    }
+    recordError(source, err) {
+        const normalized = normalizeApiError(err);
+        this.loadErrors.update((errors) => ({ ...errors, [source]: normalized }));
+        this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(err, 'Failed to load')}`);
+        // Never log sensitive data — only the load source and normalized error details.
+        console.error(`[@insight/ui][STORE] load "${source}" failed`, err);
+        return of(null);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuStore, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuStore, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuStore, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
 /** Hard timeout for the single-flight refresh call (ms). */
 const REFRESH_TIMEOUT_MS = 30_000;
 /**
@@ -10544,9 +10942,13 @@ function decodeUser(accessToken) {
  */
 class ISessionService {
     authService = inject(IAuthService);
-    config = inject(INSIGHT_AUTH_CONFIG);
-    sessionExpiredService = inject(SessionExpiredService);
+    config = inject(I_AUTH_CONFIG);
+    sessionExpiredService = inject(ISessionExpiredService);
     csrf = inject(ICsrfService);
+    // The user-menu store is resolved lazily at logout time (not in the
+    // constructor): the store already depends on this session service, so eager
+    // injection would create a circular dependency.
+    injector = inject(Injector);
     // In-memory token storage — intentionally NOT persisted to Web Storage.
     accessToken = null;
     _refreshToken = null;
@@ -10566,7 +10968,7 @@ class ISessionService {
     // Single-flight refresh: one in-flight /auth/refresh shared by all callers,
     // retained until it completes/errors so a cancelled caller cannot abort it.
     refreshInFlight = null;
-    // Single-flight cold-start restore so multiple callers (e.g. provideInsightAuth()
+    // Single-flight cold-start restore so multiple callers (e.g. provideIAuth()
     // via APP_INITIALIZER and a consumer's root component) never trigger duplicate
     // /auth/refresh requests.
     restoreInFlight = null;
@@ -10720,6 +11122,9 @@ class ISessionService {
         // tryRestoreSession() treats the next load as a cold start, not a
         // refresh-after-revocation.
         sessionStorage.removeItem('iam.session.active');
+        // Drop any cached sidebar data (user/menus/favorites/permissions) so no
+        // stale data from this session leaks into the next login.
+        this.injector.get(IUserMenuStore, null, { optional: true })?.reset();
         // Ensure a valid CSRF token first: the backend CsrfGuard requires
         // X-CSRF-Token on POST /auth/logout. Consumers that only hold the access
         // token (e.g. `#at=` handoff) never fetched a CSRF token, so without this
@@ -10855,464 +11260,287 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
         }] });
 
 /**
- * Known API error codes surfaced by the platform services (mirrors the
- * iam-user-api error catalog — see `iam-user-api/src/common/errors/user-errors.ts`).
+ * Registers the @insight/ui shared auth package (`IApiService`,
+ * `ISessionService`, `ICsrfService`, `authGuard`) for a consumer app.
  *
- * Consumers branch on these to tailor UX (e.g. showing the "Access Unavailable"
- * page when the current user has no application mapping).
- */
-const USER_APPLICATION_MAPPING_NOT_FOUND = 'USER_APPLICATION_MAPPING_NOT_FOUND';
-
-/**
- * Types for the current-user navigation & favorites data, matched to the
- * iam-user-api user-menu service contract (`GET {api.user}/me/menus*` and
- * `GET {api.user}/users/user`). These are the raw backend shapes; the library
- * maps them onto the UI-facing `IMenu` / `IUser` contracts via `user.mapper.ts`.
- */
-
-/**
- * Maps the backend current-user DTO to `@insight/ui`'s sidebar `IUser` shape
- * (`employeeCode` / `fullName` / `userImagePath`), falling back to `username`.
- * `userImagePath` is `''` when no photo exists — the sidebar renders it with
- * `i-avatar`, which falls back to a user icon when the image is empty/errors.
- */
-function mapToSidebarUser(user) {
-    return {
-        employeeCode: user.employeeCode ?? user.username ?? '',
-        fullName: user.fullName ?? user.username ?? '',
-        userImagePath: user.photoUrl ?? '',
-    };
-}
-/** Maps a backend effective-menu node onto the UI-facing `IMenu` (modern shape). */
-function toIMenu(node) {
-    return {
-        id: node.id,
-        name: node.name,
-        type: node.type,
-        menuCode: node.menuCode,
-        route: node.route,
-        icon: node.icon,
-        openIn: node.openIn,
-        application: node.application ? { ...node.application } : null,
-        companies: node.companies?.map((company) => ({ ...company })) ?? [],
-        isFavorite: node.isFavorite,
-        children: node.children?.map(toIMenu) ?? [],
-    };
-}
-/** Maps an array of backend effective-menu nodes onto `IMenu[]`. */
-function toIMenus(nodes) {
-    return (nodes ?? []).map(toIMenu);
-}
-/** Maps a backend favorite item onto the UI-facing `IMenu` (modern shape). */
-function toIMenuFavorite(item) {
-    return {
-        id: item.id,
-        name: item.name,
-        menuCode: item.menuCode,
-        route: item.route,
-        icon: item.icon,
-        openIn: item.openIn,
-        application: item.application ? { ...item.application } : null,
-        companies: item.companies?.map((company) => ({ ...company })) ?? [],
-        isFavorite: true,
-    };
-}
-/**
- * Recursively collects the `menuCode` of every navigable leaf item across a
- * menu tree (deduplicated, order preserved). Structural group/module nodes are
- * excluded so a container code never counts as a grant - matching the flat
- * granted-code list the legacy menu token carried (`ihHasMn` menu mode).
- */
-function collectMenuCodes(menus) {
-    const codes = new Set();
-    const walk = (nodes) => {
-        for (const node of nodes) {
-            if (isLeafItem(node) && node.menuCode) {
-                codes.add(node.menuCode);
-            }
-            walk(getMenuChildren(node));
-        }
-    };
-    walk(menus);
-    return [...codes];
-}
-/**
- * Menu-mode permission check: returns true if the user's loaded menus contain
- * ANY of the given menu codes. An empty set of menus (not yet loaded) always
- * returns `false` — gated UI renders only once the store has data.
- */
-function hasAnyMenuCode(menus, code) {
-    const codes = new Set(collectMenuCodes(menus));
-    if (Array.isArray(code)) {
-        return code.some((item) => codes.has(item));
-    }
-    return codes.has(code);
-}
-/** First navigable leaf route in a menu tree — a sensible post-login default landing. */
-function findFirstLeafRoute(menus) {
-    for (const menu of menus) {
-        if (isLeafItem(menu)) {
-            const route = getMenuRoute(menu);
-            if (route) {
-                return route;
-            }
-        }
-        const childRoute = findFirstLeafRoute(getMenuChildren(menu));
-        if (childRoute) {
-            return childRoute;
-        }
-    }
-    return null;
-}
-/** Finds a menu node's display name by id (recursive), or null. */
-function findMenuNameById(menus, menuId) {
-    for (const menu of menus) {
-        if (getMenuKey(menu) === menuId) {
-            const label = getMenuLabel(menu);
-            return label || null;
-        }
-        const child = findMenuNameById(getMenuChildren(menu), menuId);
-        if (child) {
-            return child;
-        }
-    }
-    return null;
-}
-
-/**
- * Current-user navigation & favorites service — calls iam-user-api's
- * `/me/menus*` endpoints (user-menu service contract). These endpoints return
- * a `{ meta, data }` envelope; this service unwraps `.data` so callers keep
- * the app-wide body-as-data convention.
+ * `api.identity` and `signinUrl` are MANDATORY and app-specific: they must
+ * point at THIS app's own auth backend. In the BFF-per-app model the app's
+ * session cookie stays first-party on its own origin (SameSite-safe), so the
+ * library no longer ships a default pointing at any shared identity provider.
+ * A config that omits them throws at bootstrap (fail-fast). Every other field
+ * is optional and can be overridden individually, down to a single nested
+ * `api.*`, `tokenLifespan.*` or `endpoints.*` entry.
  *
- * Base URL: `{api.user}` from the resolved auth config (defaults to the
- * library environment file). Consumer apps override via
- * `provideInsightAuth({ api: { user: '...' } })`.
+ * Consumers must still register `authInterceptor` themselves via
+ * `provideHttpClient(withInterceptors([authInterceptor]))` in their own
+ * `app.config.ts`.
+ *
+ * Usage - point at your own auth host/BFF:
+ * ```ts
+ * provideIAuth({
+ *   // this app's own backend: a same-origin BFF (e.g. atlas-api) or identity-api
+ *   api: { identity: 'https://<your-app>.example.com/api' },
+ *   // this app's own login entry (BFF login route or the app's signin page)
+ *   signinUrl: 'https://<your-app>.example.com/api/auth/login',
+ * });
+ * ```
  */
-class IUserMenuService {
-    api = inject(IApiService);
-    config = inject(INSIGHT_AUTH_CONFIG);
-    get baseUrl() {
-        return this.config.api['user'] ?? environment.api.user;
-    }
-    /** GET `{api.user}/me/menus` — effective navigation tree for one or all active applications. Output type overridable via `T`. */
-    getEffectiveMenus(applicationId) {
-        const id = applicationId ?? this.config.appId;
-        const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
-        return this.api
-            .get('/me/menus', params, { apiUrl: this.baseUrl })
-            .pipe(map((response) => response.data));
-    }
-    /** GET `{api.user}/me/menus/favorites` — effective favorite items, sorted by name. Output type overridable via `T`. */
-    getFavorites(applicationId) {
-        const id = applicationId ?? this.config.appId;
-        const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
-        return this.api
-            .get('/me/menus/favorites', params, { apiUrl: this.baseUrl })
-            .pipe(map((response) => response.data));
-    }
-    /** PUT `{api.user}/me/menus/{menuId}/favorite` — pin an effective menu item (204 No Content). */
-    addFavorite(menuId) {
-        return this.api.put(`/me/menus/${menuId}/favorite`, {}, { apiUrl: this.baseUrl });
-    }
-    /** DELETE `{api.user}/me/menus/{menuId}/favorite` — unpin a menu item (204 No Content). */
-    removeFavorite(menuId) {
-        return this.api.delete(`/me/menus/${menuId}/favorite`, { apiUrl: this.baseUrl });
-    }
-    /**
-     * PUT `{api.user}/me/menus/favorites` — atomically replace the complete
-     * favorite collection after a drag-drop. `displayOrder` values form the
-     * complete sequence 1..n. Returns 204 No Content.
-     */
-    reorderFavorites(menuIds) {
-        const items = menuIds.map((menuId, index) => ({
-            menuId: String(menuId),
-            displayOrder: index + 1,
-        }));
-        return this.api.put('/me/menus/favorites', { items }, { apiUrl: this.baseUrl });
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuService, providedIn: 'root' });
+function provideIAuth(overrides) {
+    const defaults = getDefaultIAuthConfig();
+    const config = {
+        ...defaults,
+        ...overrides,
+        // Cast needed: `Partial<...>`'s index signature widens to `string | undefined`,
+        // but real callers only ever pass actual string URLs, never `undefined` values.
+        api: { ...defaults.api, ...overrides?.api },
+        tokenLifespan: { ...defaults.tokenLifespan, ...overrides?.tokenLifespan },
+        endpoints: { ...defaults.endpoints, ...overrides?.endpoints },
+    };
+    validateIAuthConfig(config);
+    return makeEnvironmentProviders([
+        { provide: I_AUTH_CONFIG, useValue: config },
+        {
+            provide: APP_INITIALIZER,
+            multi: true,
+            useFactory: () => {
+                const session = inject(ISessionService);
+                return () => session.tryRestoreSession();
+            },
+        },
+    ]);
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
 
 /**
- * Current-user profile service — calls iam-user-api's `GET {api.user}/users/user`
- * endpoint (`CurrentUserDto`). The sidebar-shaped mapping (`IUser`) lives in
- * `user.mapper.ts` (`mapToSidebarUser`).
- *
- * Base URL: `{api.user}` from the resolved auth config (defaults to the
- * library environment file). Output type overridable via the generic — the
- * library default is the raw `IInsightCurrentUser` DTO.
+ * Extract the access token appended by the sign-in host after a successful
+ * external SSO redirect. Reads the URL HASH FRAGMENT (`#at=<token>`) -
+ * deliberately NOT a query parameter - so the token is never sent to the
+ * server and never appears in access/gateway logs (fragments are browser-only
+ * and are unconditionally stripped from the `Referer` header).
  */
-class ICurrentUserService {
-    api = inject(IApiService);
-    config = inject(INSIGHT_AUTH_CONFIG);
-    get baseUrl() {
-        return this.config.api['user'] ?? environment.api.user;
+function extractAccessTokenFromHash() {
+    const hash = window.location.hash;
+    if (!hash || hash.length < 2) {
+        return null;
     }
-    /** GET `{api.user}/users/user` — raw current-user DTO. Override `T` to use your own response type. */
-    getCurrentUser() {
-        return this.api.get('/users/user', undefined, { apiUrl: this.baseUrl });
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICurrentUserService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICurrentUserService, providedIn: 'root' });
+    const params = new URLSearchParams(hash.substring(1));
+    return params.get('at');
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: ICurrentUserService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
-
-class IUserMenuStore {
-    currentUserService = inject(ICurrentUserService);
-    menuService = inject(IUserMenuService);
+/**
+ * Reusable SSO callback route component for @insight/ui consumer apps.
+ * Register it at whatever route path is used as the `returnUrl` when
+ * redirecting to the configured signinUrl, e.g.
+ * `{ path: 'auth/callback', component: IAuthCallback }`.
+ *
+ * Flow:
+ *  1. Extract the `at` token from the URL hash fragment.
+ *  2. Store it via `ISessionService` (in-memory only).
+ *  3. Clear the fragment from the URL immediately (never leave the token
+ *     sitting in browser history).
+ *  4. Validate & redirect to the original in-app `returnUrl` (query param
+ *     `returnUrl`, defaulting to `/`), using the same `sanitizeReturnUrl`
+ *     rules as the sign-in page.
+ */
+class IAuthCallback {
     session = inject(ISessionService);
-    /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
-    loadedUserSub = null;
-    /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
-    currentUser = signal(null, ...(ngDevMode ? [{ debugName: "currentUser" }] : []));
-    /** Raw current-user DTO as returned by the backend — `null` until loaded. */
-    rawCurrentUser = signal(null, ...(ngDevMode ? [{ debugName: "rawCurrentUser" }] : []));
-    /** Effective navigation tree (`IMenu` modern shape). */
-    menus = signal([], ...(ngDevMode ? [{ debugName: "menus" }] : []));
-    /** Favorite menus (`IMenu` modern shape). */
-    favorites = signal([], ...(ngDevMode ? [{ debugName: "favorites" }] : []));
-    /** Roles decoded from the access token (for `source: 'role'` permission checks). */
-    roles = signal([], ...(ngDevMode ? [{ debugName: "roles" }] : []));
-    /**
-     * Feature permissions granted by the backend (for `source: 'permission'`
-     * checks). NOT hydrated by `load()` yet - a loader calls `setPermissions()`
-     * once the endpoint is available.
-     */
-    permissions = signal([], ...(ngDevMode ? [{ debugName: "permissions" }] : []));
-    /** True while the cold-start `load()` is in flight. */
-    initializing = signal(false, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
-    /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
-    loadError = signal(null, ...(ngDevMode ? [{ debugName: "loadError" }] : []));
-    /** Normalized per-branch errors from the last `load()` — mirrors the service API error contract. */
-    loadErrors = signal({ user: null, menus: null, favorites: null }, ...(ngDevMode ? [{ debugName: "loadErrors" }] : []));
-    // Reactive observable projections (used by directives/components that prefer
-    // observables over signals).
-    currentUser$ = toObservable(this.currentUser);
-    menus$ = toObservable(this.menus);
-    favorites$ = toObservable(this.favorites);
-    roles$ = toObservable(this.roles);
-    permissions$ = toObservable(this.permissions);
-    initializing$ = toObservable(this.initializing);
-    /**
-     * Post-login default landing (when no return URL is present).
-     * Order: (1) first navigable favorite route, (2) first navigable menu route.
-     */
-    get defaultRoute() {
-        return findFirstLeafRoute(this.favorites()) ?? findFirstLeafRoute(this.menus());
-    }
-    /** Finds a menu node's display name by id (recursive), or null. */
-    findMenuName(menuId) {
-        return findMenuNameById(this.menus(), menuId);
-    }
-    /**
-     * Cold-start: fetch user + menus + favorites concurrently. A failure in one
-     * branch does not block the others; `initializing` clears once all settle.
-     *
-     * Returns an observable that completes when the load settles, so callers can
-     * await it (e.g. to navigate to `defaultRoute` after login). The load starts
-     * immediately even if the caller ignores the returned observable — a shared
-     * source is kept alive by an internal subscribe (fire-and-forget compatible).
-     */
-    load() {
-        if (this.initializing()) {
-            return this.initializing$.pipe(filter((init) => !init), take(1), map(() => undefined));
+    config = inject(I_AUTH_CONFIG);
+    router = inject(Router);
+    ngOnInit() {
+        const accessToken = extractAccessTokenFromHash();
+        // Clear the fragment immediately regardless of outcome — the token must
+        // never remain visible in the URL / browser history.
+        if (window.location.hash) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
         }
-        // Invalidate cross-session cache: if this load is for a different user
-        // (`sub`) than the one whose data is cached, drop the stale data first so
-        // a failed refetch (e.g. USER_APPLICATION_MAPPING_NOT_FOUND) never leaks
-        // the previous user's menus/favorites into the sidebar.
-        const sessionSub = this.session.getUser()?.sub ?? null;
-        if (sessionSub !== this.loadedUserSub) {
-            this.clearData();
-            this.loadedUserSub = sessionSub;
+        if (!accessToken) {
+            window.location.href = this.config.signinUrl;
+            return;
         }
-        this.initializing.set(true);
-        this.loadError.set(null);
-        this.loadErrors.set({ user: null, menus: null, favorites: null });
-        this.roles.set(this.session.getRoles());
-        const result$ = forkJoin({
-            user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err))),
-            menus: this.loadMenusInternal().pipe(catchError((err) => this.recordError('menus', err))),
-            favorites: this.loadFavoritesInternal().pipe(catchError((err) => this.recordError('favorites', err))),
-        }).pipe(map(() => undefined), catchError(() => of(undefined)), finalize(() => this.initializing.set(false)), shareReplay({ bufferSize: 1, refCount: false }));
-        // Fire-and-forget: always start the load even if the caller ignores the result.
-        result$.subscribe();
-        return result$;
-    }
-    /**
-     * Clears every cached user/menu/favorite value and error state, and forgets
-     * the identity they belonged to. Call on logout / session clear so no stale
-     * data survives into the next login.
-     */
-    reset() {
-        this.clearData();
-        this.loadedUserSub = null;
-    }
-    /** Refresh roles from the current access token (call after login / token change). */
-    syncRoles() {
-        this.roles.set(this.session.getRoles());
-    }
-    /**
-     * Menu-mode permission check against the in-memory menu codes (ANY match).
-     * Returns `false` while menus are not yet loaded — gated UI renders only
-     * after the store has data (async-aware via the reactive directives).
-     */
-    hasMenu(code) {
-        return hasAnyMenuCode(this.menus(), code);
-    }
-    /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
-    hasRole(code) {
-        const roles = this.roles();
-        if (Array.isArray(code)) {
-            return code.some((role) => roles.includes(role));
+        this.session.setAccessToken(accessToken);
+        const rawReturnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/';
+        const { returnUrl, isExternal } = sanitizeReturnUrl(rawReturnUrl, this.config.allowedReturnOrigins);
+        // Self-redirect loop guard — a relative returnUrl must never point back
+        // at this app's own callback route.
+        const callbackPath = this.config.callbackPath ?? '/auth/callback';
+        const safeReturnUrl = !isExternal && returnUrl.startsWith(callbackPath) ? '/' : returnUrl;
+        if (isExternal) {
+            window.location.href = returnUrl;
         }
-        return roles.includes(code);
-    }
-    /**
-     * Replaces the granted permission list (feature/action codes). Called by a
-     * loader once the backend endpoint is available - `load()` does not fetch
-     * permissions.
-     */
-    setPermissions(permissions) {
-        this.permissions.set(permissions);
-    }
-    /**
-     * Permission-mode check against the granted permissions (ANY match). Returns
-     * `false` while the list is empty/not loaded - gated UI renders only after
-     * the store has data (async-aware via the reactive directives).
-     */
-    hasPermission(code) {
-        const granted = this.permissions();
-        if (Array.isArray(code)) {
-            return code.some((permission) => granted.includes(permission));
+        else {
+            this.router.navigateByUrl(safeReturnUrl);
         }
-        return granted.includes(code);
     }
-    /**
-     * Pin (`isFavorite: true`) or unpin a menu item. Flips the star icon in the
-     * `menus` tree immediately (optimistic), calls the backend, then re-fetches
-     * favorites so the server remains the source of truth for the favorites
-     * section. The menu-star change is reverted on error.
-     */
-    toggleFavorite(menuId, isFavorite) {
-        const previousMenus = this.menus();
-        this.menus.set(this.applyMenuFavorite(previousMenus, menuId, isFavorite));
-        const call = isFavorite
-            ? this.menuService.addFavorite(menuId)
-            : this.menuService.removeFavorite(menuId);
-        return call.pipe(switchMap(() => this.reloadFavorites()), catchError((err) => {
-            this.menus.set(previousMenus);
-            return throwError(() => err);
-        }));
-    }
-    /**
-     * Persists the new favorite order after a drag-drop. Reorders the in-memory
-     * `favorites` signal locally (optimistic) and calls the backend — no GET
-     * refetch after the write. The local change is reverted on error.
-     */
-    reorderFavorites(menuIds) {
-        const previous = this.favorites();
-        this.favorites.set(this.applyFavoriteReorder(previous, menuIds));
-        return this.menuService.reorderFavorites(menuIds).pipe(catchError((err) => {
-            this.favorites.set(previous);
-            return throwError(() => err);
-        }));
-    }
-    /** Re-fetches the favorites from the backend (manual refresh). */
-    reloadFavorites() {
-        return this.loadFavoritesInternal().pipe(map(() => undefined));
-    }
-    /**
-     * Loads the effective navigation tree into `menus` — for one application
-     * (`applicationId`) or all active applications when omitted. Returns the
-     * mapped `IMenu[]`.
-     */
-    loadMenus(applicationId) {
-        return this.menuService.getEffectiveMenus(applicationId).pipe(tap((nodes) => this.menus.set(toIMenus(nodes))), map((nodes) => toIMenus(nodes)));
-    }
-    /** Loads favorites into `favorites` — optionally for a single application. Returns the mapped `IMenu[]`. */
-    loadFavorites(applicationId) {
-        return this.menuService.getFavorites(applicationId).pipe(tap((items) => this.favorites.set(items.map(toIMenuFavorite))), map((items) => items.map(toIMenuFavorite)));
-    }
-    /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
-    applyMenuFavorite(menus, menuId, isFavorite) {
-        return menus.map((menu) => {
-            if (getMenuKey(menu) === menuId) {
-                return { ...menu, isFavorite };
-            }
-            if (menu.children?.length) {
-                return { ...menu, children: this.applyMenuFavorite(menu.children, menuId, isFavorite) };
-            }
-            if (menu.child?.length) {
-                return { ...menu, child: this.applyMenuFavorite(menu.child, menuId, isFavorite) };
-            }
-            return menu;
-        });
-    }
-    applyFavoriteReorder(favorites, menuIds) {
-        const byId = new Map(favorites.map((favorite) => [String(getMenuKey(favorite)), favorite]));
-        const ordered = [];
-        const seen = new Set();
-        for (const id of menuIds) {
-            const item = byId.get(String(id));
-            if (item) {
-                ordered.push(item);
-                seen.add(String(id));
-            }
-        }
-        for (const favorite of favorites) {
-            if (!seen.has(String(getMenuKey(favorite)))) {
-                ordered.push(favorite);
-            }
-        }
-        return ordered;
-    }
-    loadUserInternal() {
-        return this.currentUserService.getCurrentUser().pipe(tap((raw) => {
-            this.rawCurrentUser.set(raw);
-            this.currentUser.set(mapToSidebarUser(raw));
-        }), map(() => null));
-    }
-    loadMenusInternal() {
-        return this.loadMenus().pipe(map(() => null));
-    }
-    loadFavoritesInternal() {
-        return this.loadFavorites().pipe(map(() => null));
-    }
-    clearData() {
-        this.currentUser.set(null);
-        this.rawCurrentUser.set(null);
-        this.menus.set([]);
-        this.favorites.set([]);
-        this.roles.set([]);
-        this.permissions.set([]);
-        this.loadError.set(null);
-        this.loadErrors.set({ user: null, menus: null, favorites: null });
-    }
-    recordError(source, err) {
-        const normalized = normalizeApiError(err);
-        this.loadErrors.update((errors) => ({ ...errors, [source]: normalized }));
-        this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(err, 'Failed to load')}`);
-        // Never log sensitive data — only the load source and normalized error details.
-        console.error(`[@insight/ui][STORE] load "${source}" failed`, err);
-        return of(null);
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuStore, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuStore, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAuthCallback, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: IAuthCallback, isStandalone: true, selector: "i-auth-callback", ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IUserMenuStore, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAuthCallback, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-auth-callback',
+                    standalone: true,
+                    template: '',
+                }]
         }] });
+
+/**
+ * IAvatar
+ * Version: 1.0.0
+ * <i-avatar />
+ *
+ * Displays a user photo in a circle, square, or rounded-square container.
+ * Falls back to a FontAwesome user icon when no image is available.
+ */
+// ─── Size Mapping ────────────────────────────────────────────────────────────
+const SIZE_PRESETS = {
+    '3xs': 12,
+    '2xs': 16,
+    xs: 20,
+    sm: 32,
+    md: 48,
+    lg: 64,
+    xl: 96,
+    '2xl': 128,
+    '3xl': 160,
+    '4xl': 200,
+};
+/**
+ * Resolve the best IIconSize for a given avatar pixel size.
+ * The icon should fill roughly 50–60% of the container.
+ */
+function resolveIconSizeFromPx(px) {
+    if (px <= 24)
+        return 'sm';
+    if (px <= 40)
+        return 'md';
+    if (px <= 64)
+        return 'lg';
+    if (px <= 96)
+        return 'xl';
+    if (px <= 128)
+        return '2xl';
+    if (px <= 160)
+        return '3xl';
+    return '4xl';
+}
+// ─── Component ───────────────────────────────────────────────────────────────
+class IAvatar {
+    // ─── Inputs ────────────────────────────────────────────────────────────
+    /** Image URL. When empty or on error, falls back to fallbackSrc or icon. */
+    src;
+    /** Alt text for the image. */
+    alt;
+    /**
+     * Container size.
+     * - `number` → treated as pixels (e.g. `200` = 200px)
+     * - `IIconSize` string → uses a preset mapping (e.g. `'lg'` = 64px)
+     * @default 40
+     */
+    size = 40;
+    /**
+     * Container shape.
+     * @default 'circle'
+     */
+    shape = 'circle';
+    /** Fallback image URL. Used when `src` fails to load. If not set (or also fails), shows the user icon. */
+    fallbackSrc;
+    /** Additional CSS classes to inject onto the host element (e.g. `"border-2 border-primary"`). */
+    className;
+    // ─── Internal state ────────────────────────────────────────────────────
+    /** Whether the primary `src` image failed to load. */
+    hasError = false;
+    /** Whether the `fallbackSrc` image also failed to load. */
+    hasFallbackError = false;
+    // ─── Host bindings ─────────────────────────────────────────────────────
+    baseClass = true;
+    get attrShape() {
+        return this.shape ?? 'circle';
+    }
+    get resolvedSizePx() {
+        if (typeof this.size === 'number')
+            return this.size;
+        return SIZE_PRESETS[this.size] ?? 40;
+    }
+    get hostClass() {
+        return this.className;
+    }
+    // ─── Computed ──────────────────────────────────────────────────────────
+    /** Icon size for the fallback `<i-icon>`. */
+    get resolvedIconSize() {
+        if (typeof this.size === 'string')
+            return this.size;
+        return resolveIconSizeFromPx(this.size);
+    }
+    // ─── Event handlers ────────────────────────────────────────────────────
+    onImgError() {
+        this.hasError = true;
+    }
+    onFallbackError() {
+        this.hasFallbackError = true;
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAvatar, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IAvatar, isStandalone: true, selector: "i-avatar", inputs: { src: "src", alt: "alt", size: "size", shape: "shape", fallbackSrc: "fallbackSrc", className: "className" }, host: { properties: { "class.i-avatar": "this.baseClass", "attr.data-shape": "this.attrShape", "style.width.px": "this.resolvedSizePx", "style.height.px": "this.resolvedSizePx", "class": "this.hostClass" } }, ngImport: i0, template: `
+    <!-- Primary image -->
+    @if (!hasError && src) {
+      <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
+    }
+    <!-- Fallback image -->
+    @else if (fallbackSrc && !hasFallbackError) {
+      <img [alt]="alt ?? ''" [src]="fallbackSrc" (error)="onFallbackError()" />
+    }
+    <!-- Ultimate fallback: user icon -->
+    @else {
+      <i-icon icon="user" [size]="resolvedIconSize" />
+    }
+  `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }] });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAvatar, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-avatar',
+                    standalone: true,
+                    imports: [IIcon],
+                    template: `
+    <!-- Primary image -->
+    @if (!hasError && src) {
+      <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
+    }
+    <!-- Fallback image -->
+    @else if (fallbackSrc && !hasFallbackError) {
+      <img [alt]="alt ?? ''" [src]="fallbackSrc" (error)="onFallbackError()" />
+    }
+    <!-- Ultimate fallback: user icon -->
+    @else {
+      <i-icon icon="user" [size]="resolvedIconSize" />
+    }
+  `,
+                }]
+        }], propDecorators: { src: [{
+                type: Input
+            }], alt: [{
+                type: Input
+            }], size: [{
+                type: Input
+            }], shape: [{
+                type: Input
+            }], fallbackSrc: [{
+                type: Input
+            }], className: [{
+                type: Input
+            }], baseClass: [{
+                type: HostBinding,
+                args: ['class.i-avatar']
+            }], attrShape: [{
+                type: HostBinding,
+                args: ['attr.data-shape']
+            }], resolvedSizePx: [{
+                type: HostBinding,
+                args: ['style.width.px']
+            }, {
+                type: HostBinding,
+                args: ['style.height.px']
+            }], hostClass: [{
+                type: HostBinding,
+                args: ['class']
+            }] } });
 
 /* =========================================================
  * host.ts (insight-ui-angular)
@@ -11497,6 +11725,11 @@ const SIDEBAR_FAVORITES_GROUP_ID = 'favorites';
  * icon or the icon is not a valid FontAwesome class
  */
 const MENU_ICON_FALLBACK = 'fa-brands fa-microsoft';
+/**
+ * Default Personal Profile URL opened from the sidebar user dropdown. Consumer
+ * apps override it via the `personalProfileUrl` input (per environment).
+ */
+const DEFAULT_PERSONAL_PROFILE_URL = 'https://account-dev.paramountenterprise.co.id/personal-profile';
 class IHTitleBreadcrumbService {
     /**
      * null = use normal (route-based) title/breadcrumbs
@@ -12524,6 +12757,24 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
 class IHSidebar {
     router = inject(Router);
     hostElement = inject(ElementRef);
+    sessionService = inject(ISessionService);
+    config = inject(I_AUTH_CONFIG);
+    /** Sidebar user chip dropdown (Personal Profile / Logout) open state. */
+    accountMenuOpen = signal(false, ...(ngDevMode ? [{ debugName: "accountMenuOpen" }] : []));
+    onDocumentKeydown = (event) => {
+        if (event.key === 'Escape') {
+            this.accountMenuOpen.set(false);
+        }
+    };
+    /** Closes the dropdown when a click lands outside the chip or the menu. */
+    onDocumentPointerDown = (event) => {
+        if (!this.accountMenuOpen())
+            return;
+        const target = event.target;
+        if (!target || !target.closest('.ih-user-chip, .ih-user-dropdown')) {
+            this.accountMenuOpen.set(false);
+        }
+    };
     /* ---------------------------
      * INPUTS (from parent)
      * --------------------------- */
@@ -12539,6 +12790,11 @@ class IHSidebar {
     groupByApplication = false;
     /** When true, groups collapse/expand via a chevron (flat is the default). */
     collapsible = false;
+    /**
+     * Personal Profile page URL opened in a new tab from the sidebar user
+     * dropdown. Falls back to DEFAULT_PERSONAL_PROFILE_URL when empty.
+     */
+    personalProfileUrl = '';
     /* ---------------------------
      * OUTPUTS (to parent)
      * --------------------------- */
@@ -12574,7 +12830,29 @@ class IHSidebar {
     get sidebarVisibility() {
         return !this.visible;
     }
+    /** Personal Profile target; falls back to the shared default. */
+    get resolvedPersonalProfileUrl() {
+        return (this.personalProfileUrl ?? '').trim() || DEFAULT_PERSONAL_PROFILE_URL;
+    }
+    toggleAccountMenu() {
+        this.accountMenuOpen.update((open) => !open);
+    }
+    closeAccountMenu() {
+        this.accountMenuOpen.set(false);
+    }
+    /** Centralized logout - clears the session, then redirects to the app signin. */
+    onLogoutClick() {
+        this.closeAccountMenu();
+        this.sessionService.logout().subscribe({
+            complete: () => {
+                const signinUrl = this.config.signinUrl?.trim();
+                window.location.href = signinUrl && signinUrl.length > 0 ? signinUrl : '/';
+            },
+        });
+    }
     ngOnInit() {
+        document.addEventListener('keydown', this.onDocumentKeydown);
+        document.addEventListener('pointerdown', this.onDocumentPointerDown);
         const searchParams = new URLSearchParams(window.location.search);
         const initialQueryParams = {};
         searchParams.forEach((value, key) => {
@@ -12600,6 +12878,8 @@ class IHSidebar {
         }
     }
     ngOnDestroy() {
+        document.removeEventListener('keydown', this.onDocumentKeydown);
+        document.removeEventListener('pointerdown', this.onDocumentPointerDown);
         this.favoritesSubscription?.unsubscribe();
         this.fullMenusSubscription?.unsubscribe();
         // Make sure no document-level drag listeners leak if destroyed mid-drag.
@@ -12988,18 +13268,56 @@ class IHSidebar {
         this.queryParams = queryParams;
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHSidebar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder" }, host: { properties: { "class.hidden": "this.sidebarVisibility" } }, usesOnChanges: true, ngImport: i0, template: `
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.30", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible", personalProfileUrl: "personalProfileUrl" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder" }, host: { properties: { "class.hidden": "this.sidebarVisibility" } }, usesOnChanges: true, ngImport: i0, template: `
     @let user = user$ | async;
     <div class="ih-sidebar-header">
       @if (user) {
-        <div class="user-image">
-          <i-avatar [alt]="user.fullName" [size]="28" [src]="user.userImagePath" />
-        </div>
+        <button
+          aria-haspopup="menu"
+          class="ih-user-chip"
+          type="button"
+          [attr.aria-expanded]="accountMenuOpen()"
+          (click)="toggleAccountMenu()"
+        >
+          <span class="user-image">
+            <i-avatar [alt]="user.fullName" [size]="28" [src]="user.userImagePath" />
+          </span>
 
-        <div class="user-info">
-          <small class="text-subtle">{{ user.employeeCode }}</small>
-          <h6>{{ user.fullName }}</h6>
-        </div>
+          <span class="user-info">
+            <small class="text-subtle">{{ user.employeeCode }}</small>
+            <h6>{{ user.fullName }}</h6>
+          </span>
+
+          <i
+            class="ih-user-caret"
+            [ngClass]="accountMenuOpen() ? 'fas fa-angle-up' : 'fas fa-angle-down'"
+          ></i>
+        </button>
+
+        @if (accountMenuOpen()) {
+          <div class="ih-user-dropdown" role="menu">
+            <a
+              class="ih-user-dropdown-item"
+              rel="noopener noreferrer"
+              role="menuitem"
+              target="_blank"
+              [attr.href]="resolvedPersonalProfileUrl"
+              (click)="closeAccountMenu()"
+            >
+              <i class="fa-solid fa-user fa-fw"></i>
+              <span>Personal Profile</span>
+            </a>
+            <button
+              class="ih-user-dropdown-item"
+              role="menuitem"
+              type="button"
+              (click)="onLogoutClick()"
+            >
+              <i class="fa-solid fa-right-from-bracket fa-fw"></i>
+              <span>Logout</span>
+            </button>
+          </div>
+        }
       }
     </div>
 
@@ -13068,25 +13386,63 @@ class IHSidebar {
     <div class="ih-sidebar-footer">
       <small>{{ footerText }}</small>
     </div>
-  `, isInline: true, dependencies: [{ kind: "component", type: IAvatar, selector: "i-avatar", inputs: ["src", "alt", "size", "shape", "fallbackSrc", "className"] }, { kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.DefaultValueAccessor, selector: "input:not([type=checkbox])[formControlName],textarea[formControlName],input:not([type=checkbox])[formControl],textarea[formControl],input:not([type=checkbox])[ngModel],textarea[ngModel],[ngDefaultControl]" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.FormControlDirective, selector: "[formControl]", inputs: ["formControl", "disabled", "ngModel"], outputs: ["ngModelChange"], exportAs: ["ngForm"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
+  `, isInline: true, dependencies: [{ kind: "component", type: IAvatar, selector: "i-avatar", inputs: ["src", "alt", "size", "shape", "fallbackSrc", "className"] }, { kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.DefaultValueAccessor, selector: "input:not([type=checkbox])[formControlName],textarea[formControlName],input:not([type=checkbox])[formControl],textarea[formControl],input:not([type=checkbox])[ngModel],textarea[ngModel],[ngDefaultControl]" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.FormControlDirective, selector: "[formControl]", inputs: ["formControl", "disabled", "ngModel"], outputs: ["ngModelChange"], exportAs: ["ngForm"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IHSidebar, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-sidebar',
-                    imports: [AsyncPipe, IAvatar, IHMenu, ReactiveFormsModule],
+                    imports: [AsyncPipe, IAvatar, IHMenu, NgClass, ReactiveFormsModule],
                     template: `
     @let user = user$ | async;
     <div class="ih-sidebar-header">
       @if (user) {
-        <div class="user-image">
-          <i-avatar [alt]="user.fullName" [size]="28" [src]="user.userImagePath" />
-        </div>
+        <button
+          aria-haspopup="menu"
+          class="ih-user-chip"
+          type="button"
+          [attr.aria-expanded]="accountMenuOpen()"
+          (click)="toggleAccountMenu()"
+        >
+          <span class="user-image">
+            <i-avatar [alt]="user.fullName" [size]="28" [src]="user.userImagePath" />
+          </span>
 
-        <div class="user-info">
-          <small class="text-subtle">{{ user.employeeCode }}</small>
-          <h6>{{ user.fullName }}</h6>
-        </div>
+          <span class="user-info">
+            <small class="text-subtle">{{ user.employeeCode }}</small>
+            <h6>{{ user.fullName }}</h6>
+          </span>
+
+          <i
+            class="ih-user-caret"
+            [ngClass]="accountMenuOpen() ? 'fas fa-angle-up' : 'fas fa-angle-down'"
+          ></i>
+        </button>
+
+        @if (accountMenuOpen()) {
+          <div class="ih-user-dropdown" role="menu">
+            <a
+              class="ih-user-dropdown-item"
+              rel="noopener noreferrer"
+              role="menuitem"
+              target="_blank"
+              [attr.href]="resolvedPersonalProfileUrl"
+              (click)="closeAccountMenu()"
+            >
+              <i class="fa-solid fa-user fa-fw"></i>
+              <span>Personal Profile</span>
+            </a>
+            <button
+              class="ih-user-dropdown-item"
+              role="menuitem"
+              type="button"
+              (click)="onLogoutClick()"
+            >
+              <i class="fa-solid fa-right-from-bracket fa-fw"></i>
+              <span>Logout</span>
+            </button>
+          </div>
+        }
       }
     </div>
 
@@ -13172,6 +13528,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
             }], groupByApplication: [{
                 type: Input
             }], collapsible: [{
+                type: Input
+            }], personalProfileUrl: [{
                 type: Input
             }], onFavoriteToggle: [{
                 type: Output
@@ -14337,189 +14695,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
         }] });
 
 /**
- * Validate and sanitize a `returnUrl` for post-login / post-callback redirect.
- * Ported from iam-web's `signin.ts::sanitizeReturnUrl()` — behavior is kept
- * identical so consumer apps and iam-web enforce the exact same open-redirect
- * protection:
- *
- * - Relative paths (starting with `/`) are always allowed.
- * - Protocol-relative URLs (`//`) are rejected — always fall back to `/`.
- * - Absolute URLs are checked against `allowedReturnOrigins` (wildcard
- *   supported, e.g. `https://*.paramount-land.com`).
- * - Anything else (invalid URL, untrusted origin, unknown scheme) falls back to `/`.
- *
- * `isExternal: true` means the caller must do a full `window.location.href`
- * navigation, not an in-app router navigation.
- */
-function sanitizeReturnUrl(url, allowedReturnOrigins) {
-    if (!url) {
-        return { returnUrl: '/', isExternal: false };
-    }
-    // Block protocol-relative URLs (//evil.com)
-    if (url.startsWith('//')) {
-        return { returnUrl: '/', isExternal: false };
-    }
-    // Relative path — always safe
-    if (url.startsWith('/')) {
-        return { returnUrl: url, isExternal: false };
-    }
-    // Absolute URL — validate against trusted origins
-    if (/^https?:\/\//i.test(url)) {
-        try {
-            const parsed = new URL(url);
-            if (isAllowedOrigin(parsed.origin, allowedReturnOrigins)) {
-                return { returnUrl: url, isExternal: true };
-            }
-        }
-        catch {
-            // Invalid URL — reject
-        }
-    }
-    // Unknown scheme or untrusted origin — fall back to home
-    return { returnUrl: '/', isExternal: false };
-}
-/** Check whether an origin matches the `allowedReturnOrigins` whitelist (wildcard supported). */
-function isAllowedOrigin(origin, allowedReturnOrigins) {
-    const allowed = allowedReturnOrigins ?? [];
-    return allowed.some((pattern) => {
-        // Convert wildcard pattern to regex: https://*.example.com → ^https:\/\/[^.]+\.example\.com$
-        // Escape each literal segment separately so `*` itself is never escaped away.
-        const regexStr = pattern
-            .split('*')
-            .map((segment) => segment.replace(/[.+^${}()|[\]\\]/g, '\\$&')) // escape regex specials
-            .join('[^.]+'); // * matches a single subdomain label
-        try {
-            return new RegExp(`^${regexStr}$`, 'i').test(origin);
-        }
-        catch {
-            return origin === pattern; // fallback: exact match
-        }
-    });
-}
-
-/**
- * Registers the @insight/ui shared auth package (`IApiService`,
- * `ISessionService`, `ICsrfService`, `authGuard`) for a consumer app.
- *
- * `api.identity` and `signinUrl` are MANDATORY and app-specific: they must
- * point at THIS app's own auth backend. In the BFF-per-app model the app's
- * session cookie stays first-party on its own origin (SameSite-safe), so the
- * library no longer ships a default pointing at any shared identity provider.
- * A config that omits them throws at bootstrap (fail-fast). Every other field
- * is optional and can be overridden individually, down to a single nested
- * `api.*`, `tokenLifespan.*` or `endpoints.*` entry.
- *
- * Consumers must still register `authInterceptor` themselves via
- * `provideHttpClient(withInterceptors([authInterceptor]))` in their own
- * `app.config.ts`.
- *
- * Usage - point at your own auth host/BFF:
- * ```ts
- * provideInsightAuth({
- *   // this app's own backend: a same-origin BFF (e.g. atlas-api) or identity-api
- *   api: { identity: 'https://<your-app>.example.com/api' },
- *   // this app's own login entry (BFF login route or the app's signin page)
- *   signinUrl: 'https://<your-app>.example.com/api/auth/login',
- * });
- * ```
- */
-function provideInsightAuth(overrides) {
-    const defaults = getDefaultInsightAuthConfig();
-    const config = {
-        ...defaults,
-        ...overrides,
-        // Cast needed: `Partial<...>`'s index signature widens to `string | undefined`,
-        // but real callers only ever pass actual string URLs, never `undefined` values.
-        api: { ...defaults.api, ...overrides?.api },
-        tokenLifespan: { ...defaults.tokenLifespan, ...overrides?.tokenLifespan },
-        endpoints: { ...defaults.endpoints, ...overrides?.endpoints },
-    };
-    validateInsightAuthConfig(config);
-    return makeEnvironmentProviders([
-        { provide: INSIGHT_AUTH_CONFIG, useValue: config },
-        {
-            provide: APP_INITIALIZER,
-            multi: true,
-            useFactory: () => {
-                const session = inject(ISessionService);
-                return () => session.tryRestoreSession();
-            },
-        },
-    ]);
-}
-
-/**
- * Extract the access token appended by the sign-in host after a successful
- * external SSO redirect. Reads the URL HASH FRAGMENT (`#at=<token>`) -
- * deliberately NOT a query parameter - so the token is never sent to the
- * server and never appears in access/gateway logs (fragments are browser-only
- * and are unconditionally stripped from the `Referer` header).
- */
-function extractAccessTokenFromHash() {
-    const hash = window.location.hash;
-    if (!hash || hash.length < 2) {
-        return null;
-    }
-    const params = new URLSearchParams(hash.substring(1));
-    return params.get('at');
-}
-/**
- * Reusable SSO callback route component for @insight/ui consumer apps.
- * Register it at whatever route path is used as the `returnUrl` when
- * redirecting to the configured signinUrl, e.g.
- * `{ path: 'auth/callback', component: IAuthCallback }`.
- *
- * Flow:
- *  1. Extract the `at` token from the URL hash fragment.
- *  2. Store it via `ISessionService` (in-memory only).
- *  3. Clear the fragment from the URL immediately (never leave the token
- *     sitting in browser history).
- *  4. Validate & redirect to the original in-app `returnUrl` (query param
- *     `returnUrl`, defaulting to `/`), using the same `sanitizeReturnUrl`
- *     rules as the sign-in page.
- */
-class IAuthCallback {
-    session = inject(ISessionService);
-    config = inject(INSIGHT_AUTH_CONFIG);
-    router = inject(Router);
-    ngOnInit() {
-        const accessToken = extractAccessTokenFromHash();
-        // Clear the fragment immediately regardless of outcome — the token must
-        // never remain visible in the URL / browser history.
-        if (window.location.hash) {
-            history.replaceState(null, '', window.location.pathname + window.location.search);
-        }
-        if (!accessToken) {
-            window.location.href = this.config.signinUrl;
-            return;
-        }
-        this.session.setAccessToken(accessToken);
-        const rawReturnUrl = new URLSearchParams(window.location.search).get('returnUrl') || '/';
-        const { returnUrl, isExternal } = sanitizeReturnUrl(rawReturnUrl, this.config.allowedReturnOrigins);
-        // Self-redirect loop guard — a relative returnUrl must never point back
-        // at this app's own callback route.
-        const callbackPath = this.config.callbackPath ?? '/auth/callback';
-        const safeReturnUrl = !isExternal && returnUrl.startsWith(callbackPath) ? '/' : returnUrl;
-        if (isExternal) {
-            window.location.href = returnUrl;
-        }
-        else {
-            this.router.navigateByUrl(safeReturnUrl);
-        }
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAuthCallback, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.30", type: IAuthCallback, isStandalone: true, selector: "i-auth-callback", ngImport: i0, template: '', isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImport: i0, type: IAuthCallback, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-auth-callback',
-                    standalone: true,
-                    template: '',
-                }]
-        }] });
-
-/**
  * Cross-domain auth guard for @insight/ui consumer apps.
  *
  * Unlike an identity-owner app's internal Router-based guard, this performs a
@@ -14532,14 +14707,24 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
  */
 const authGuard = (_route, state) => {
     const session = inject(ISessionService);
-    const config = inject(INSIGHT_AUTH_CONFIG);
-    // provideInsightAuth() registers an APP_INITIALIZER that calls
+    const config = inject(I_AUTH_CONFIG);
+    const sessionExpired = inject(ISessionExpiredService);
+    // provideIAuth() registers an APP_INITIALIZER that calls
     // tryRestoreSession(), so by the time the router runs this guard
     // initializing() should already be false. If a consumer bypasses
-    // provideInsightAuth() or the guard runs earlier, allow navigation to
+    // provideIAuth() or the guard runs earlier, allow navigation to
     // proceed — the consumer's root component is responsible for gating the
     // outlet with session.initializing().
     if (session.initializing()) {
+        return true;
+    }
+    // A pending session-expired overlay owns the UX. It is shown on a cold
+    // start when a previously-active session is detected (tryRestoreSession)
+    // or mid-session by the auth interceptor. Allow the navigation so the
+    // consumer shell can render the overlay — its "Log in again" action
+    // performs the redirect. Without this, the guard would full-redirect
+    // before the dialog ever appears, making the cold-start overlay dead code.
+    if (sessionExpired.visible()) {
         return true;
     }
     if (session.isAuth()) {
@@ -14548,6 +14733,104 @@ const authGuard = (_route, state) => {
     window.location.href = buildExternalSigninUrl(config, state.url);
     return false;
 };
+
+/** Route that renders the "account lacks the required access/role" (403) page. */
+const UNAUTHORIZED_ACCESS_PATH = '/unauthorized-access';
+/**
+ * Waits until the store has settled its menu data, triggering the cold-start
+ * load when it has not run yet. Menu checks cannot be judged against an empty
+ * tree — a deep link into a guarded route may fire before the shell's boot
+ * load has populated menus, and denying then would be a false negative.
+ */
+function ensureMenusLoaded$1(store) {
+    if (store.initializing()) {
+        return store.initializing$.pipe(filter$1((initializing) => !initializing), take$1(1), map(() => undefined));
+    }
+    const menusSettled = store.menus().length > 0 || store.loadErrors().menus !== null;
+    return menusSettled ? of(undefined) : store.load();
+}
+/**
+ * Route guard factory that denies navigation to users who lack a required
+ * menu/role/permission, redirecting them to {@link UNAUTHORIZED_ACCESS_PATH}.
+ *
+ * Compose AFTER `authGuard` in the `canActivate` array — this guard only
+ * handles the authenticated-but-not-allowed branch and returns `true` while the
+ * session is still restoring (or no valid session exists) so `authGuard` /
+ * the session-expired overlay own sign-in redirects:
+ *
+ * ```ts
+ * const routes = [{
+ *   path: 'admin',
+ *   canActivate: [authGuard, requireAccess({ source: 'menu', value: 'admin-iam' })],
+ *   ...
+ * }];
+ * ```
+ */
+function requireAccess(check) {
+    return () => {
+        const session = inject(ISessionService);
+        const store = inject(IUserMenuStore);
+        const router = inject(Router);
+        // The auth guard (composed first) owns unauthenticated redirects and the
+        // session-expired overlay UX — defer to it while the session is unresolved.
+        if (session.initializing() || !session.isAuth()) {
+            return of(true);
+        }
+        if (check.source === 'role') {
+            const granted = session.hasRole(check.value);
+            return of(granted || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]));
+        }
+        if (check.source === 'permission') {
+            // Permissions are granted out-of-band (setPermissions), never by load().
+            const granted = store.hasPermission(check.value);
+            return of(granted || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]));
+        }
+        // Menu source — wait for (or trigger) the menu load before judging.
+        return ensureMenusLoaded$1(store).pipe(map(() => {
+            const granted = store.hasMenu(check.value);
+            return granted || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
+        }));
+    };
+}
+
+/** Waits until the store has settled its menu data (triggering the cold-start load if needed). */
+function ensureMenusLoaded(store) {
+    if (store.initializing()) {
+        return store.initializing$.pipe(filter$1((initializing) => !initializing), take$1(1), map(() => undefined));
+    }
+    const menusSettled = store.menus().length > 0 || store.loadErrors().menus !== null;
+    return menusSettled ? of(undefined) : store.load();
+}
+/**
+ * Route-membership guard: denies navigation to pages the user has no granted
+ * menu for, redirecting to {@link UNAUTHORIZED_ACCESS_PATH}. Compose AFTER
+ * `authGuard` in the `canActivate` array:
+ *
+ * ```ts
+ * const routes = [{ path: 'sales/nup', canActivate: [authGuard, requireRouteAccess()], ... }];
+ * ```
+ *
+ * The default matcher works where menu routes live in the same path space as
+ * the router (a host shell). Remotes pass `{ canOpen }` to map the local path
+ * into their host-prefixed menu-route space.
+ */
+function requireRouteAccess(options = {}) {
+    const canOpen = options.canOpen ?? ((path, store) => store.hasRoute(path));
+    return (_route, state) => {
+        const session = inject(ISessionService);
+        const store = inject(IUserMenuStore);
+        const router = inject(Router);
+        // The auth guard (composed first) owns unauthenticated redirects and the
+        // session-expired overlay UX — defer to it while the session is unresolved.
+        if (session.initializing() || !session.isAuth()) {
+            return of(true);
+        }
+        return ensureMenusLoaded(store).pipe(map(() => {
+            const allowed = canOpen(state.url, store);
+            return allowed || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
+        }));
+    };
+}
 
 /**
  * Session-storage wrapper for non-sensitive UI state (returnUrl, nonce/state).
@@ -14603,15 +14886,15 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
  * ```
  *
  * It is self-gating (renders nothing while hidden), reads its state from the
- * shared `SessionExpiredService` (shown by the auth interceptor when a token
+ * shared `ISessionExpiredService` (shown by the auth interceptor when a token
  * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
  * again", performs a full-page redirect to the configured signinUrl via
  * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
  * clicking the backdrop.
  */
 class ISessionExpiredDialog {
-    sessionExpired = inject(SessionExpiredService);
-    config = inject(INSIGHT_AUTH_CONFIG);
+    sessionExpired = inject(ISessionExpiredService);
+    config = inject(I_AUTH_CONFIG);
     visible = this.sessionExpired.visible;
     iconClass() {
         return this.sessionExpired.reason() === 'SESSION_REPLACED'
@@ -14842,5 +15125,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.30", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectMenuChain, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultInsightAuthConfig, getDefaultInsightAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, requireIdentityHost, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateInsightAuthConfig };
+export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
 //# sourceMappingURL=insight-ui.mjs.map

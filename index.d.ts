@@ -1671,6 +1671,11 @@ declare function isSpaMenu(menu: IMenu | null | undefined): boolean;
  * application-grouping rendering. Legacy nodes pass through untouched.
  */
 declare function normalizeMenuTree(menus: IMenu[] | null | undefined): IMenu[];
+/**
+ * Default Personal Profile URL opened from the sidebar user dropdown. Consumer
+ * apps override it via the `personalProfileUrl` input (per environment).
+ */
+declare const DEFAULT_PERSONAL_PROFILE_URL = "https://account-dev.paramountenterprise.co.id/personal-profile";
 type IHNavigationSnapshot = {
     fullUrl: string;
     basePath: string;
@@ -1817,6 +1822,13 @@ declare class IHMenu implements OnChanges {
 declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private router;
     private hostElement;
+    private readonly sessionService;
+    private readonly config;
+    /** Sidebar user chip dropdown (Personal Profile / Logout) open state. */
+    readonly accountMenuOpen: i0.WritableSignal<boolean>;
+    private readonly onDocumentKeydown;
+    /** Closes the dropdown when a click lands outside the chip or the menu. */
+    private readonly onDocumentPointerDown;
     user$: Observable<IUser>;
     menusInput$: Observable<IMenu[]>;
     visible: boolean;
@@ -1829,6 +1841,11 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     groupByApplication: boolean;
     /** When true, groups collapse/expand via a chevron (flat is the default). */
     collapsible: boolean;
+    /**
+     * Personal Profile page URL opened in a new tab from the sidebar user
+     * dropdown. Falls back to DEFAULT_PERSONAL_PROFILE_URL when empty.
+     */
+    personalProfileUrl: string;
     /** Bubbled up from leaf pin toggles — the host app persists via the favorites API. */
     readonly onFavoriteToggle: EventEmitter<IMenuFavoriteToggleEvent>;
     /** Emitted after a favorites drag-drop with the ordered favorite menu ids — the host app persists via the reorder API. */
@@ -1856,6 +1873,12 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private navigableMenus;
     private originalMenus$;
     get sidebarVisibility(): boolean;
+    /** Personal Profile target; falls back to the shared default. */
+    get resolvedPersonalProfileUrl(): string;
+    toggleAccountMenu(): void;
+    closeAccountMenu(): void;
+    /** Centralized logout - clears the session, then redirects to the app signin. */
+    onLogoutClick(): void;
     ngOnInit(): void;
     ngOnChanges(changes: SimpleChanges): void;
     ngOnDestroy(): void;
@@ -1909,7 +1932,7 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private navigateToMenu;
     updateUrl(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHSidebar, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "favorites$": { "alias": "favorites$"; "required": false; }; "groupByApplication": { "alias": "groupByApplication"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; }, { "onFavoriteToggle": "onFavoriteToggle"; "onFavoriteReorder": "onFavoriteReorder"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "favorites$": { "alias": "favorites$"; "required": false; }; "groupByApplication": { "alias": "groupByApplication"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "personalProfileUrl": { "alias": "personalProfileUrl"; "required": false; }; }, { "onFavoriteToggle": "onFavoriteToggle"; "onFavoriteReorder": "onFavoriteReorder"; }, never, never, true, never>;
 }
 
 declare class ILoading {
@@ -2228,8 +2251,8 @@ declare class IUI {
 }
 
 /** JSON-safe values accepted from backend error extension fields. */
-type ApiErrorExtensionValue = string | number | boolean | null | ApiErrorExtensionValue[] | {
-    [key: string]: ApiErrorExtensionValue;
+type IApiErrorExtensionValue = string | number | boolean | null | IApiErrorExtensionValue[] | {
+    [key: string]: IApiErrorExtensionValue;
 };
 /**
  * Normalized API error shared by all @insight/ui consumers.
@@ -2251,7 +2274,7 @@ type INormalizedApiError = {
     retryAfter?: number;
 };
 /** Optional synchronous lookup used between backend and legacy/local messages. */
-type ApiErrorCatalogResolver = (errorCode: string, revision: number | undefined, error: INormalizedApiError) => string | null | undefined;
+type IApiErrorCatalogResolver = (errorCode: string, revision: number | undefined, error: INormalizedApiError) => string | null | undefined;
 /**
  * Purely normalizes current error bodies, legacy Problem Details bodies, and
  * raw Angular `HttpErrorResponse`-like values into one strict shape.
@@ -2261,7 +2284,7 @@ declare const normalizeApiError: (error: unknown) => INormalizedApiError;
  * Resolves display text in the approved order: backend `message`, optional
  * catalog lookup, legacy `detail`/`title`, then the caller's local fallback.
  */
-declare const resolveApiErrorDisplayMessage: (error: unknown, localFallback: string, catalogResolver?: ApiErrorCatalogResolver) => string;
+declare const resolveApiErrorDisplayMessage: (error: unknown, localFallback: string, catalogResolver?: IApiErrorCatalogResolver) => string;
 
 /**
  * Token lifespan configuration (seconds). Mirrors the platform-wide AC used by
@@ -2269,7 +2292,7 @@ declare const resolveApiErrorDisplayMessage: (error: unknown, localFallback: str
  * apps should reuse the exact same values as iam-web for consistency, not
  * invent their own policy.
  */
-type IInsightTokenLifespan = {
+type ITokenLifespan = {
     accessTokenSeconds: number;
     refreshTokenSeconds: number;
     ssoSessionMaxSeconds: number;
@@ -2286,7 +2309,7 @@ type IInsightTokenLifespan = {
  * Only the auth-facade endpoints are configurable. MFA/password routes are used
  * by identity-owner apps only (e.g. iam-web) and stay fixed.
  */
-type IInsightAuthEndpoints = {
+type IAuthEndpoints = {
     /** CSRF bootstrap: `GET {identity}{csrf}` returns `{ csrfToken }` and sets the CSRF cookie. */
     csrf?: string;
     /** Mode-2 username/password login: `POST {identity}{login}` (identity-owner apps only). */
@@ -2299,15 +2322,15 @@ type IInsightAuthEndpoints = {
     exchange?: string;
 };
 /** Default relative endpoint paths for the configured identity host. */
-declare function getDefaultInsightAuthEndpoints(): IInsightAuthEndpoints;
+declare function getDefaultIAuthEndpoints(): IAuthEndpoints;
 /**
  * Configuration required by @insight/ui's shared auth package
  * (IApiService, ISessionService, ICsrfService, authGuard, authInterceptor).
  *
- * Consumer apps provide this via `provideInsightAuth(config)` in their
+ * Consumer apps provide this via `provideIAuth(config)` in their
  * `app.config.ts` / bootstrap `ApplicationConfig`.
  */
-type IInsightAuthConfig = {
+type IAuthConfig = {
     /**
      * API base URLs grouped by backend service. `identity` is REQUIRED and must
      * point at this app's OWN auth backend (typically a same-origin BFF that
@@ -2343,7 +2366,7 @@ type IInsightAuthConfig = {
      * with `/`) are always allowed regardless of this list.
      */
     allowedReturnOrigins: string[];
-    tokenLifespan: IInsightTokenLifespan;
+    tokenLifespan: ITokenLifespan;
     /** CSRF token max age in seconds (backend cookie maxAge minus a safety buffer). */
     csrfTokenMaxAgeSeconds: number;
     /**
@@ -2351,7 +2374,7 @@ type IInsightAuthConfig = {
      * (`api.identity`). Defaults match the platform / reference-BFF contract -
      * override when this app's backend exposes different routes.
      */
-    endpoints?: IInsightAuthEndpoints;
+    endpoints?: IAuthEndpoints;
     /**
      * This app's registered application API key (iam-user-api `application.api_key`).
      * Attached as an `Api-Key` header on every request. Empty/undefined disables it.
@@ -2381,66 +2404,66 @@ type IInsightAuthConfig = {
      * Optional synchronous error-catalog lookup. Display helpers invoke it only
      * when the backend did not provide `message`, before legacy/local fallbacks.
      */
-    errorCatalogResolver?: ApiErrorCatalogResolver;
+    errorCatalogResolver?: IApiErrorCatalogResolver;
 };
 /**
- * Overrides accepted by `provideInsightAuth()`. Every field is optional and
- * merged on top of `getDefaultInsightAuthConfig()` — including individual
+ * Overrides accepted by `provideIAuth()`. Every field is optional and
+ * merged on top of `getDefaultIAuthConfig()` — including individual
  * `api.*`, `tokenLifespan.*` and `endpoints.*` entries, so a consumer app can
  * override just `api.identity` (e.g. for staging/production) without having to
  * restate the rest of the config.
  *
  * Deliberately NOT an open/arbitrary shape (no index signature at this
- * level) — `IInsightAuthConfig` is a narrow, well-defined auth contract, not
+ * level) — `IAuthConfig` is a narrow, well-defined auth contract, not
  * a general app environment object. The one exception is `api`, which is
  * intentionally open-ended (a named registry of backend base URLs) since
  * consumer apps may need to register additional service URLs beyond
  * `identity`.
  */
-type IInsightAuthConfigOverrides = Partial<Omit<IInsightAuthConfig, 'api' | 'tokenLifespan'>> & {
-    api?: Partial<IInsightAuthConfig['api']>;
-    tokenLifespan?: Partial<IInsightTokenLifespan>;
+type IAuthConfigOverrides = Partial<Omit<IAuthConfig, 'api' | 'tokenLifespan'>> & {
+    api?: Partial<IAuthConfig['api']>;
+    tokenLifespan?: Partial<ITokenLifespan>;
 };
 /**
- * Default `IInsightAuthConfig`. `api.identity` and `signinUrl` are left EMPTY
+ * Default `IAuthConfig`. `api.identity` and `signinUrl` are left EMPTY
  * (no shared identity host is baked in) - a consumer app MUST supply its own
- * values via `provideInsightAuth({ ... })` and is validated fail-fast when it
+ * values via `provideIAuth({ ... })` and is validated fail-fast when it
  * forgets. All other fields default sensibly: `allowedReturnOrigins` to this
  * app's own origin, `endpoints` to the platform/BFF path contract, and lifespan /
  * csrf / api-key values from the library's default environment.
  */
-declare function getDefaultInsightAuthConfig(): IInsightAuthConfig;
+declare function getDefaultIAuthConfig(): IAuthConfig;
 /**
- * Injection token carrying the consumer app's `IInsightAuthConfig`. Provided via
- * `provideInsightAuth()`. Falls back to `getDefaultInsightAuthConfig()` (empty
+ * Injection token carrying the consumer app's `IAuthConfig`. Provided via
+ * `provideIAuth()`. Falls back to `getDefaultIAuthConfig()` (empty
  * `api.identity`/`signinUrl`) so services still resolve when the provider is
  * omitted - any auth call then throws a descriptive "identity host not
  * configured" error instead of silently hitting a default host.
  */
-declare const INSIGHT_AUTH_CONFIG: InjectionToken<IInsightAuthConfig>;
+declare const I_AUTH_CONFIG: InjectionToken<IAuthConfig>;
 /**
  * The configured identity host (`api.identity`) or a descriptive error. Used by
  * auth services before building a request URL so a missing per-app host fails
  * loudly instead of producing a relative/undefined URL.
  */
-declare function requireIdentityHost(config: IInsightAuthConfig): string;
+declare function requireIdentityHost(config: IAuthConfig): string;
 /**
  * Relative path of an identity endpoint for the current config. Falls back to
- * `getDefaultInsightAuthEndpoints()` when the consumer did not override it.
+ * `getDefaultIAuthEndpoints()` when the consumer did not override it.
  */
-declare function getAuthEndpointPath(config: IInsightAuthConfig, key: keyof IInsightAuthEndpoints): string;
+declare function getAuthEndpointPath(config: IAuthConfig, key: keyof IAuthEndpoints): string;
 /**
  * Absolute URL of an identity endpoint: `{api.identity}{path}`. Throws a
  * descriptive error when the identity host is not configured.
  */
-declare function getAuthEndpointUrl(config: IInsightAuthConfig, key: keyof IInsightAuthEndpoints): string;
+declare function getAuthEndpointUrl(config: IAuthConfig, key: keyof IAuthEndpoints): string;
 /**
  * Validate a resolved auth config at bootstrap. Throws a descriptive error when
  * the mandatory per-app values (`api.identity`, `signinUrl`) are missing so a
  * misconfigured consumer fails fast instead of silently calling an undefined
  * host.
  */
-declare function validateInsightAuthConfig(config: IInsightAuthConfig): void;
+declare function validateIAuthConfig(config: IAuthConfig): void;
 
 type ISanitizedReturnUrl = {
     returnUrl: string;
@@ -2484,7 +2507,7 @@ declare function sanitizeReturnUrl(url: string | null | undefined, allowedReturn
  * (via the in-app router, not a full reload) to `targetPath` — so the guard
  * only ever sees a clean, token-free URL on its next check.
  */
-declare function buildExternalSigninUrl(config: IInsightAuthConfig, targetPath: string): string;
+declare function buildExternalSigninUrl(config: IAuthConfig, targetPath: string): string;
 
 /**
  * Registers the @insight/ui shared auth package (`IApiService`,
@@ -2504,7 +2527,7 @@ declare function buildExternalSigninUrl(config: IInsightAuthConfig, targetPath: 
  *
  * Usage - point at your own auth host/BFF:
  * ```ts
- * provideInsightAuth({
+ * provideIAuth({
  *   // this app's own backend: a same-origin BFF (e.g. atlas-api) or identity-api
  *   api: { identity: 'https://<your-app>.example.com/api' },
  *   // this app's own login entry (BFF login route or the app's signin page)
@@ -2512,7 +2535,7 @@ declare function buildExternalSigninUrl(config: IInsightAuthConfig, targetPath: 
  * });
  * ```
  */
-declare function provideInsightAuth(overrides?: IInsightAuthConfigOverrides): EnvironmentProviders;
+declare function provideIAuth(overrides?: IAuthConfigOverrides): EnvironmentProviders;
 
 /**
  * Extract the access token appended by the sign-in host after a successful
@@ -2762,13 +2785,13 @@ declare class IApiService {
  */
 declare const USER_APPLICATION_MAPPING_NOT_FOUND: "USER_APPLICATION_MAPPING_NOT_FOUND";
 /** Union of error codes the @insight/ui consumers may need to branch on. */
-type KnownErrorCode = typeof USER_APPLICATION_MAPPING_NOT_FOUND;
+type IKnownErrorCode = typeof USER_APPLICATION_MAPPING_NOT_FOUND;
 
-type SessionExpiredReason = 'TOKEN_EXPIRED' | 'SESSION_REVOKED' | 'SESSION_REPLACED';
+type ISessionExpiredReason = 'TOKEN_EXPIRED' | 'SESSION_REVOKED' | 'SESSION_REPLACED';
 /** Supports normalized Problem Details errors and raw legacy HTTP error bodies. */
 declare const extractProblemDetailsErrorCode: (error: unknown) => string | undefined;
 /** Maps current backend and legacy error codes to the session-expired UI states. */
-declare const toSessionExpiredReason: (errorCode: string | undefined) => SessionExpiredReason | undefined;
+declare const toSessionExpiredReason: (errorCode: string | undefined) => ISessionExpiredReason | undefined;
 /**
  * True when an error is semantically a session-expiry event (HTTP 401/498 or a
  * recognized session-related error code). Other statuses are business/transport
@@ -2782,12 +2805,12 @@ declare const isSessionExpiredError: (error: unknown) => boolean;
  * fields and legacy `detail` so the shared dialog or consumer UI can resolve
  * display text without making its own configuration API call.
  *
- * @overridable — consumers may provide `{ provide: SessionExpiredService, useClass: ... }`.
+ * @overridable — consumers may provide `{ provide: ISessionExpiredService, useClass: ... }`.
  */
-declare class SessionExpiredService {
+declare class ISessionExpiredService {
     readonly visible: i0.WritableSignal<boolean>;
     readonly returnUrl: i0.WritableSignal<string>;
-    readonly reason: i0.WritableSignal<SessionExpiredReason | undefined>;
+    readonly reason: i0.WritableSignal<ISessionExpiredReason | undefined>;
     /** Raw error code from the backend Problem Details response (e.g. `AUTH_TOKEN_EXPIRED`). */
     readonly errorCode: i0.WritableSignal<string | null>;
     /** Backend-provided `detail` message from the Problem Details response — display fallback. */
@@ -2796,10 +2819,10 @@ declare class SessionExpiredService {
     readonly message: i0.WritableSignal<string | null>;
     /** Full normalized error, including revision and safe extension fields. */
     readonly apiError: i0.WritableSignal<INormalizedApiError | null>;
-    show(returnUrl: string, reason?: SessionExpiredReason, errorCode?: string | null, detail?: string | null, message?: string | null, apiError?: INormalizedApiError | null): void;
+    show(returnUrl: string, reason?: ISessionExpiredReason, errorCode?: string | null, detail?: string | null, message?: string | null, apiError?: INormalizedApiError | null): void;
     hide(): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<SessionExpiredService, never>;
-    static ɵprov: i0.ɵɵInjectableDeclaration<SessionExpiredService>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionExpiredService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<ISessionExpiredService>;
 }
 
 /** User derived from Keycloak JWT claims. */
@@ -2830,6 +2853,7 @@ declare class ISessionService {
     private readonly config;
     private readonly sessionExpiredService;
     private readonly csrf;
+    private readonly injector;
     private accessToken;
     private _refreshToken;
     private expiresAt;
@@ -2925,7 +2949,7 @@ declare class ISessionService {
      * extracted from the error so the guard can decide overlay vs. signin.
      */
     tryRestoreSession(): Promise<{
-        reason?: SessionExpiredReason;
+        reason?: ISessionExpiredReason;
     }>;
     private readExpiresInFromToken;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISessionService, never>;
@@ -2945,18 +2969,41 @@ declare class ISessionService {
  */
 declare const authGuard: CanActivateFn;
 
-declare const IH_SKIP_BEARER_HEADER = "X-IH-Skip-Bearer";
+/** Route that renders the "account lacks the required access/role" (403) page. */
+declare const UNAUTHORIZED_ACCESS_PATH = "/unauthorized-access";
+/** Sources a route access requirement can be checked against. */
+type IAccessCheckSource = 'menu' | 'role' | 'permission';
 /**
- * Auth HTTP interceptor for @insight/ui consumer apps.
- *
- * Attaches the in-memory access token as a Bearer header. On 401, attempts a
- * single silent refresh (via the HttpOnly session cookie) and retries once;
- * on refresh failure, clears the session and redirects to the configured
- * signinUrl (the app's own login). 429 (rate-limit) and 423 (lockout)
- * responses are passed through; `IApiService` normalizes their current or
- * legacy backend error fields.
+ * Route access requirement — deny navigation unless the current user holds it.
+ * `value` is a single code or a list of codes (ANY match).
+ * - `menu` → the user's effective menu tree contains a matching leaf menu code
+ *   (`IUserMenuStore.hasMenu`).
+ * - `role` → the access token claims a matching role (`ISessionService.hasRole`).
+ * - `permission` → the store has been granted a matching feature permission
+ *   (`IUserMenuStore.hasPermission`; granted out-of-band via `setPermissions`).
  */
-declare const authInterceptor: HttpInterceptorFn;
+type IAccessCheck = {
+    source: IAccessCheckSource;
+    value: string | string[];
+};
+/**
+ * Route guard factory that denies navigation to users who lack a required
+ * menu/role/permission, redirecting them to {@link UNAUTHORIZED_ACCESS_PATH}.
+ *
+ * Compose AFTER `authGuard` in the `canActivate` array — this guard only
+ * handles the authenticated-but-not-allowed branch and returns `true` while the
+ * session is still restoring (or no valid session exists) so `authGuard` /
+ * the session-expired overlay own sign-in redirects:
+ *
+ * ```ts
+ * const routes = [{
+ *   path: 'admin',
+ *   canActivate: [authGuard, requireAccess({ source: 'menu', value: 'admin-iam' })],
+ *   ...
+ * }];
+ * ```
+ */
+declare function requireAccess(check: IAccessCheck): CanActivateFn;
 
 /**
  * Types for the current-user navigation & favorites data, matched to the
@@ -2965,16 +3012,16 @@ declare const authInterceptor: HttpInterceptorFn;
  * maps them onto the UI-facing `IMenu` / `IUser` contracts via `user.mapper.ts`.
  */
 /** Standard `{ meta, data }` response envelope used by the user-menu endpoints. */
-type IInsightUserMenuEnvelope<T> = {
+type IUserMenuEnvelopeDto<T> = {
     meta: {
         timestamp: string;
     };
     data: T;
 };
 /** Navigation target for a menu node. */
-type IInsightMenuOpenIn = 'CURRENT_TAB' | 'NEW_TAB' | 'NEW_WINDOW';
+type IMenuOpenInDto = 'CURRENT_TAB' | 'NEW_TAB' | 'NEW_WINDOW';
 /** Owning application reference for a menu node. */
-type IInsightMenuApplication = {
+type IMenuApplicationDto = {
     id: string;
     code: string;
     name: string;
@@ -2982,13 +3029,13 @@ type IInsightMenuApplication = {
     version: string | null;
 };
 /** Effective company access for a menu node. */
-type IInsightMenuCompany = {
+type IMenuCompanyDto = {
     id: string;
     code: string;
     name: string;
 };
 /** Effective menu node returned by `GET {api.user}/me/menus` (user-menu contract). */
-type IInsightMenuNode = {
+type IMenuNodeDto = {
     id: string;
     name: string;
     type: 'group' | 'item';
@@ -2996,15 +3043,15 @@ type IInsightMenuNode = {
     parentId: string | null;
     route: string | null;
     icon: string | null;
-    openIn: IInsightMenuOpenIn | null;
+    openIn: IMenuOpenInDto | null;
     sequence: number;
-    application: IInsightMenuApplication;
-    companies: IInsightMenuCompany[];
+    application: IMenuApplicationDto;
+    companies: IMenuCompanyDto[];
     isFavorite: boolean;
-    children: IInsightMenuNode[];
+    children: IMenuNodeDto[];
 };
 /** Favorite item returned by `GET {api.user}/me/menus/favorites`. */
-type IInsightFavoriteMenuItem = {
+type IFavoriteMenuItemDto = {
     id: string;
     name: string;
     /** User-controlled display order (1..n). */
@@ -3012,17 +3059,17 @@ type IInsightFavoriteMenuItem = {
     menuCode: string | null;
     route: string | null;
     icon: string | null;
-    openIn: IInsightMenuOpenIn | null;
-    application: IInsightMenuApplication;
-    companies: IInsightMenuCompany[];
+    openIn: IMenuOpenInDto | null;
+    application: IMenuApplicationDto;
+    companies: IMenuCompanyDto[];
 };
 /** One entry of the reorder payload for `PUT {api.user}/me/menus/favorites`. */
-type IInsightFavoriteOrderItem = {
+type IFavoriteOrderItemDto = {
     menuId: string;
     displayOrder: number;
 };
 /** Current user returned by `GET {api.user}/users/user` (iam-user-api `CurrentUserDto`). */
-type IInsightCurrentUser = {
+type ICurrentUserDto = {
     userId: string;
     username: string;
     fullName: string;
@@ -3041,13 +3088,13 @@ type IInsightCurrentUser = {
  * `userImagePath` is `''` when no photo exists — the sidebar renders it with
  * `i-avatar`, which falls back to a user icon when the image is empty/errors.
  */
-declare function mapToSidebarUser(user: IInsightCurrentUser): IUser;
+declare function mapToSidebarUser(user: ICurrentUserDto): IUser;
 /** Maps a backend effective-menu node onto the UI-facing `IMenu` (modern shape). */
-declare function toIMenu(node: IInsightMenuNode): IMenu;
+declare function toIMenu(node: IMenuNodeDto): IMenu;
 /** Maps an array of backend effective-menu nodes onto `IMenu[]`. */
-declare function toIMenus(nodes: IInsightMenuNode[]): IMenu[];
+declare function toIMenus(nodes: IMenuNodeDto[]): IMenu[];
 /** Maps a backend favorite item onto the UI-facing `IMenu` (modern shape). */
-declare function toIMenuFavorite(item: IInsightFavoriteMenuItem): IMenu;
+declare function toIMenuFavorite(item: IFavoriteMenuItemDto): IMenu;
 /**
  * Recursively collects the `menuCode` of every navigable leaf item across a
  * menu tree (deduplicated, order preserved). Structural group/module nodes are
@@ -3055,6 +3102,16 @@ declare function toIMenuFavorite(item: IInsightFavoriteMenuItem): IMenu;
  * granted-code list the legacy menu token carried (`ihHasMn` menu mode).
  */
 declare function collectMenuCodes(menus: IMenu[]): string[];
+/** Normalizes a route path for comparison (strips surrounding slashes). */
+declare function normalizeRoutePath(route: string): string;
+/**
+ * Recursively collects the `route` of every navigable leaf item across a menu
+ * tree (deduplicated, order preserved). The union of these routes is the set
+ * of pages the current user is granted to open.
+ */
+declare function collectLeafRoutes(menus: IMenu[]): string[];
+/** True when any granted leaf menu route equals `path` (slash-normalized). */
+declare function hasAnyRoute(menus: IMenu[], path: string): boolean;
 /**
  * Menu-mode permission check: returns true if the user's loaded menus contain
  * ANY of the given menu codes. An empty set of menus (not yet loaded) always
@@ -3074,16 +3131,16 @@ declare function findMenuNameById(menus: IMenu[], menuId: string | number): stri
  *
  * Base URL: `{api.user}` from the resolved auth config (defaults to the
  * library environment file). Consumer apps override via
- * `provideInsightAuth({ api: { user: '...' } })`.
+ * `provideIAuth({ api: { user: '...' } })`.
  */
 declare class IUserMenuService {
     private readonly api;
     private readonly config;
     private get baseUrl();
     /** GET `{api.user}/me/menus` — effective navigation tree for one or all active applications. Output type overridable via `T`. */
-    getEffectiveMenus<T = IInsightMenuNode[]>(applicationId?: string): Observable<T>;
+    getEffectiveMenus<T = IMenuNodeDto[]>(applicationId?: string): Observable<T>;
     /** GET `{api.user}/me/menus/favorites` — effective favorite items, sorted by name. Output type overridable via `T`. */
-    getFavorites<T = IInsightFavoriteMenuItem[]>(applicationId?: string): Observable<T>;
+    getFavorites<T = IFavoriteMenuItemDto[]>(applicationId?: string): Observable<T>;
     /** PUT `{api.user}/me/menus/{menuId}/favorite` — pin an effective menu item (204 No Content). */
     addFavorite(menuId: string | number): Observable<void>;
     /** DELETE `{api.user}/me/menus/{menuId}/favorite` — unpin a menu item (204 No Content). */
@@ -3105,67 +3162,16 @@ declare class IUserMenuService {
  *
  * Base URL: `{api.user}` from the resolved auth config (defaults to the
  * library environment file). Output type overridable via the generic — the
- * library default is the raw `IInsightCurrentUser` DTO.
+ * library default is the raw `ICurrentUserDto` DTO.
  */
 declare class ICurrentUserService {
     private readonly api;
     private readonly config;
     private get baseUrl();
     /** GET `{api.user}/users/user` — raw current-user DTO. Override `T` to use your own response type. */
-    getCurrentUser<T = IInsightCurrentUser>(): Observable<T>;
+    getCurrentUser<T = ICurrentUserDto>(): Observable<T>;
     static ɵfac: i0.ɵɵFactoryDeclaration<ICurrentUserService, never>;
     static ɵprov: i0.ɵɵInjectableDeclaration<ICurrentUserService>;
-}
-
-/**
- * Session-storage wrapper for non-sensitive UI state (returnUrl, nonce/state).
- * Tokens are NEVER stored here — the access token lives in-memory
- * (`ISessionService`) and the refresh token lives in an HttpOnly cookie set by
- * iam-identity-api.
- *
- * @overridable — consumers may provide `{ provide: IStorageService, useClass: ... }`.
- */
-declare class IStorageService {
-    private readonly storageKey;
-    get(key: string): string;
-    set(key: string, value: string): void;
-    delete(key: string): void;
-    clear(): void;
-    /** Save the return URL for post-login/post-password-change redirect (keyed `ru`). */
-    setReturnUrl(url: string): void;
-    /** Retrieve and clear the saved return URL. Returns `'/'` when none is saved. */
-    getReturnUrl(): string;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IStorageService, never>;
-    static ɵprov: i0.ɵɵInjectableDeclaration<IStorageService>;
-}
-
-/**
- * Library-provided session-expired overlay. Consumer apps render it once near
- * the app root (mirroring `<i-dialog-outlet />`):
- *
- * ```html
- * <i-session-expired-dialog />
- * ```
- *
- * It is self-gating (renders nothing while hidden), reads its state from the
- * shared `SessionExpiredService` (shown by the auth interceptor when a token
- * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
- * again", performs a full-page redirect to the configured signinUrl via
- * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
- * clicking the backdrop.
- */
-declare class ISessionExpiredDialog {
-    private readonly sessionExpired;
-    private readonly config;
-    protected readonly visible: i0.WritableSignal<boolean>;
-    protected iconClass(): string;
-    protected title(): string;
-    protected message(): string;
-    private localFallbackMessage;
-    /** Perform the SSO handoff to the configured signinUrl, then clear the overlay state. */
-    onConfirm(): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionExpiredDialog, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISessionExpiredDialog, "i-session-expired-dialog", never, {}, {}, never, never, true, never>;
 }
 
 /**
@@ -3178,9 +3184,9 @@ declare class ISessionExpiredDialog {
  * `ihNotHasMn`) re-renders reactively once data is available (async-aware).
  */
 /** Load branch keys for the cold-start sidebar data load. */
-type UserMenuLoadSource = 'user' | 'menus' | 'favorites';
+type IUserMenuLoadSource = 'user' | 'menus' | 'favorites';
 /** Per-branch normalized errors from the last `load()` — mirrors the service API error contract. */
-type UserMenuLoadErrors = Record<UserMenuLoadSource, INormalizedApiError | null>;
+type IUserMenuLoadErrors = Record<IUserMenuLoadSource, INormalizedApiError | null>;
 declare class IUserMenuStore {
     private readonly currentUserService;
     private readonly menuService;
@@ -3190,7 +3196,7 @@ declare class IUserMenuStore {
     /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
     readonly currentUser: i0.WritableSignal<IUser | null>;
     /** Raw current-user DTO as returned by the backend — `null` until loaded. */
-    readonly rawCurrentUser: i0.WritableSignal<IInsightCurrentUser | null>;
+    readonly rawCurrentUser: i0.WritableSignal<ICurrentUserDto | null>;
     /** Effective navigation tree (`IMenu` modern shape). */
     readonly menus: i0.WritableSignal<IMenu[]>;
     /** Favorite menus (`IMenu` modern shape). */
@@ -3208,7 +3214,7 @@ declare class IUserMenuStore {
     /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
     readonly loadError: i0.WritableSignal<string | null>;
     /** Normalized per-branch errors from the last `load()` — mirrors the service API error contract. */
-    readonly loadErrors: i0.WritableSignal<UserMenuLoadErrors>;
+    readonly loadErrors: i0.WritableSignal<IUserMenuLoadErrors>;
     readonly currentUser$: Observable<IUser | null>;
     readonly menus$: Observable<IMenu[]>;
     readonly favorites$: Observable<IMenu[]>;
@@ -3246,6 +3252,12 @@ declare class IUserMenuStore {
      * after the store has data (async-aware via the reactive directives).
      */
     hasMenu(code: string | string[]): boolean;
+    /**
+     * Route-membership check: can the user open `path`? True when any granted
+     * leaf menu route equals it (slash-normalized). Used by route-level access
+     * guards (e.g. `requireRouteAccess`).
+     */
+    hasRoute(path: string): boolean;
     /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
     hasRole(code: string | string[]): boolean;
     /**
@@ -3295,11 +3307,102 @@ declare class IUserMenuStore {
     static ɵprov: i0.ɵɵInjectableDeclaration<IUserMenuStore>;
 }
 
+/** Decides whether the current path may be opened for the given store state. */
+type IRouteCanOpen = (path: string, store: IUserMenuStore) => boolean;
+/** Options for {@link requireRouteAccess}. */
+type IRouteAccessOptions = {
+    /**
+     * Override the open-decision. Default: the path is one of the user's granted
+     * leaf menu routes (`store.hasRoute`). Apps whose menus carry host-formatted
+     * routes (remotes mounted under a host prefix) supply a matcher that maps
+     * the local path into the menu-route space.
+     */
+    canOpen?: IRouteCanOpen;
+};
+/**
+ * Route-membership guard: denies navigation to pages the user has no granted
+ * menu for, redirecting to {@link UNAUTHORIZED_ACCESS_PATH}. Compose AFTER
+ * `authGuard` in the `canActivate` array:
+ *
+ * ```ts
+ * const routes = [{ path: 'sales/nup', canActivate: [authGuard, requireRouteAccess()], ... }];
+ * ```
+ *
+ * The default matcher works where menu routes live in the same path space as
+ * the router (a host shell). Remotes pass `{ canOpen }` to map the local path
+ * into their host-prefixed menu-route space.
+ */
+declare function requireRouteAccess(options?: IRouteAccessOptions): CanActivateFn;
+
+declare const IH_SKIP_BEARER_HEADER = "X-IH-Skip-Bearer";
+/**
+ * Auth HTTP interceptor for @insight/ui consumer apps.
+ *
+ * Attaches the in-memory access token as a Bearer header. On 401, attempts a
+ * single silent refresh (via the HttpOnly session cookie) and retries once;
+ * on refresh failure, clears the session and redirects to the configured
+ * signinUrl (the app's own login). 429 (rate-limit) and 423 (lockout)
+ * responses are passed through; `IApiService` normalizes their current or
+ * legacy backend error fields.
+ */
+declare const authInterceptor: HttpInterceptorFn;
+
+/**
+ * Session-storage wrapper for non-sensitive UI state (returnUrl, nonce/state).
+ * Tokens are NEVER stored here — the access token lives in-memory
+ * (`ISessionService`) and the refresh token lives in an HttpOnly cookie set by
+ * iam-identity-api.
+ *
+ * @overridable — consumers may provide `{ provide: IStorageService, useClass: ... }`.
+ */
+declare class IStorageService {
+    private readonly storageKey;
+    get(key: string): string;
+    set(key: string, value: string): void;
+    delete(key: string): void;
+    clear(): void;
+    /** Save the return URL for post-login/post-password-change redirect (keyed `ru`). */
+    setReturnUrl(url: string): void;
+    /** Retrieve and clear the saved return URL. Returns `'/'` when none is saved. */
+    getReturnUrl(): string;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IStorageService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IStorageService>;
+}
+
+/**
+ * Library-provided session-expired overlay. Consumer apps render it once near
+ * the app root (mirroring `<i-dialog-outlet />`):
+ *
+ * ```html
+ * <i-session-expired-dialog />
+ * ```
+ *
+ * It is self-gating (renders nothing while hidden), reads its state from the
+ * shared `ISessionExpiredService` (shown by the auth interceptor when a token
+ * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
+ * again", performs a full-page redirect to the configured signinUrl via
+ * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
+ * clicking the backdrop.
+ */
+declare class ISessionExpiredDialog {
+    private readonly sessionExpired;
+    private readonly config;
+    protected readonly visible: i0.WritableSignal<boolean>;
+    protected iconClass(): string;
+    protected title(): string;
+    protected message(): string;
+    private localFallbackMessage;
+    /** Perform the SSO handoff to the configured signinUrl, then clear the overlay state. */
+    onConfirm(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionExpiredDialog, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISessionExpiredDialog, "i-session-expired-dialog", never, {}, {}, never, never, true, never>;
+}
+
 /** Permission source selector used by `ihHasMn` / `ihNotHasMn`. */
-type IInsightPermissionSource = 'menu' | 'role' | 'permission';
+type IPermissionSource = 'menu' | 'role' | 'permission';
 /** Object form: inline source + value. */
-type IInsightPermission = {
-    source: IInsightPermissionSource;
+type IPermission = {
+    source: IPermissionSource;
     value: string | string[];
 };
 /**
@@ -3307,10 +3410,10 @@ type IInsightPermission = {
  * - a plain `string | string[]` → menu-mode check (default), or
  * - an object `{ source, value }` to select the source explicitly.
  */
-type IInsightPermissionInput = string | string[] | IInsightPermission;
+type IPermissionInput = string | string[] | IPermission;
 /** Resolves an input into a concrete `{ source, codes }` pair (or `null`). */
-declare function resolvePermission(value: IInsightPermissionInput | null): {
-    source: IInsightPermissionSource;
+declare function resolvePermission(value: IPermissionInput | null): {
+    source: IPermissionSource;
     codes: string | string[];
 } | null;
 /**
@@ -3332,7 +3435,7 @@ declare abstract class IHMenuGateDirective implements OnInit, OnDestroy {
     protected readonly store: IUserMenuStore;
     private readonly templateRef;
     private readonly viewContainer;
-    protected readonly value$: BehaviorSubject<IInsightPermissionInput | null>;
+    protected readonly value$: BehaviorSubject<IPermissionInput | null>;
     private viewCreated;
     private subscription?;
     ngOnInit(): void;
@@ -3362,7 +3465,7 @@ declare abstract class IHMenuGateDirective implements OnInit, OnDestroy {
  */
 declare class IHHasMnDirective extends IHMenuGateDirective {
     protected readonly invert = false;
-    set ihHasMn(value: IInsightPermissionInput);
+    set ihHasMn(value: IPermissionInput);
     static ɵfac: i0.ɵɵFactoryDeclaration<IHHasMnDirective, never>;
     static ɵdir: i0.ɵɵDirectiveDeclaration<IHHasMnDirective, "[ihHasMn]", never, { "ihHasMn": { "alias": "ihHasMn"; "required": false; }; }, {}, never, never, true, never>;
 }
@@ -3379,7 +3482,7 @@ declare class IHHasMnDirective extends IHMenuGateDirective {
  */
 declare class IHNotHasMnDirective extends IHMenuGateDirective {
     protected readonly invert = true;
-    set ihNotHasMn(value: IInsightPermissionInput);
+    set ihNotHasMn(value: IPermissionInput);
     static ɵfac: i0.ɵɵFactoryDeclaration<IHNotHasMnDirective, never>;
     static ɵdir: i0.ɵɵDirectiveDeclaration<IHNotHasMnDirective, "[ihNotHasMn]", never, { "ihNotHasMn": { "alias": "ihNotHasMn"; "required": false; }; }, {}, never, never, true, never>;
 }
@@ -3425,6 +3528,8 @@ type IEnvironment = {
     apiKey?: string;
     /** This app's application id (used as the default filter when loading effective menus). */
     appId?: string;
+    /** Personal Profile page URL opened from the sidebar user dropdown. Defaults to the shared account URL when empty. */
+    personalProfileUrl?: string;
 };
 
 /**
@@ -3433,10 +3538,10 @@ type IEnvironment = {
  * `api.identity`, `signinUrl` and `authCallbackUrl` are intentionally EMPTY -
  * the library does not default to any shared identity provider. Each consumer
  * app supplies its own values (its own BFF/identity host) via
- * `provideInsightAuth()`. The `user`/`configuration`/`application` keys keep
+ * `provideIAuth()`. The `user`/`configuration`/`application` keys keep
  * defaulting to the platform services and can still be overridden.
  */
 declare const environment: IEnvironment;
 
-export { IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, INSIGHT_AUTH_CONFIG, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, SessionExpiredService, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectMenuChain, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultInsightAuthConfig, getDefaultInsightAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, provideInsightAuth, requireIdentityHost, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateInsightAuthConfig };
-export type { ApiErrorCatalogResolver, ApiErrorExtensionValue, IAlertData, IApiOptions, IApiResponse, IAuthUser, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEnvironment, IErrorContext, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IInsightAuthConfig, IInsightAuthConfigOverrides, IInsightAuthEndpoints, IInsightCurrentUser, IInsightFavoriteMenuItem, IInsightFavoriteOrderItem, IInsightMenuApplication, IInsightMenuCompany, IInsightMenuNode, IInsightMenuOpenIn, IInsightPermission, IInsightPermissionInput, IInsightPermissionSource, IInsightTokenLifespan, IInsightUserMenuEnvelope, ILoginResponse, IMenu, IMenuApplication, IMenuCompany, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuOpenIn, IMfaChallengeResponse, INormalizedApiError, IPaginatorState, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, IUISize, IUIVariant, IUser, IValidateResetTokenResponse, KnownErrorCode, SessionExpiredReason, UserMenuLoadErrors, UserMenuLoadSource };
+export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
+export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEnvironment, IErrorContext, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, INormalizedApiError, IPaginatorState, IPermission, IPermissionInput, IPermissionSource, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteCanOpen, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
