@@ -1,7 +1,7 @@
 import { buildExternalSigninUrl } from './build-signin-redirect-url';
-import { IInsightAuthConfig } from './auth-config';
+import { IAuthConfig } from './auth-config';
 
-const testConfig: IInsightAuthConfig = {
+const testConfig: IAuthConfig = {
   api: { identity: 'http://localhost:3001/api' },
   signinUrl: 'http://localhost:4200/signin',
   callbackPath: '/auth/callback',

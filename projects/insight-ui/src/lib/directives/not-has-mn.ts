@@ -1,6 +1,6 @@
 import { Directive, Input } from '@angular/core';
 
-import { IHMenuGateDirective, IInsightPermissionInput } from './has-mn';
+import { IHMenuGateDirective, IPermissionInput } from './has-mn';
 
 /**
  * Structural directive `*ihNotHasMn` — the inverse of `ihHasMn`: renders the
@@ -17,7 +17,7 @@ export class IHNotHasMnDirective extends IHMenuGateDirective {
   protected readonly invert = true;
 
   @Input()
-  set ihNotHasMn(value: IInsightPermissionInput) {
+  set ihNotHasMn(value: IPermissionInput) {
     this.value$.next(value);
   }
 }

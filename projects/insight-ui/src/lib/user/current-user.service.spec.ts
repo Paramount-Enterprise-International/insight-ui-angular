@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
-import { IInsightAuthConfig, INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
 import { IApiService } from '../api/api.service';
 import { ICurrentUserService } from './current-user.service';
 
-const testConfig: IInsightAuthConfig = {
+const testConfig: IAuthConfig = {
   api: {
     identity: 'http://localhost:3001/api',
     user: 'http://localhost:3002/api/users',
@@ -25,7 +25,7 @@ describe('ICurrentUserService', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: IApiService, useValue: apiSpy },
-        { provide: INSIGHT_AUTH_CONFIG, useValue: testConfig },
+        { provide: I_AUTH_CONFIG, useValue: testConfig },
       ],
     });
     service = TestBed.inject(ICurrentUserService);
@@ -48,7 +48,7 @@ describe('ICurrentUserService', () => {
       providers: [
         { provide: IApiService, useValue: apiSpy },
         {
-          provide: INSIGHT_AUTH_CONFIG,
+          provide: I_AUTH_CONFIG,
           useValue: {
             ...testConfig,
             api: { ...testConfig.api, user: 'https://account-dev.paramountenterprise.co.id/api/v1/users' },

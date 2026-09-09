@@ -1,19 +1,20 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, Injector, signal } from '@angular/core';
 import { lastValueFrom, Observable, of, throwError, timeout } from 'rxjs';
 import { catchError, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 
-import { INSIGHT_AUTH_CONFIG } from '../auth/auth-config';
+import { I_AUTH_CONFIG } from '../auth/auth-config';
 import { IAuthService, IAuthUser } from '../auth/auth.service';
 import { normalizeApiError } from '../api/api-error';
 import { ICsrfService } from '../csrf/csrf.service';
 import {
   extractProblemDetailsErrorCode,
+  ISessionExpiredReason,
+  ISessionExpiredService,
   isSessionExpiredError,
-  SessionExpiredReason,
-  SessionExpiredService,
   toSessionExpiredReason,
 } from '../session-expired/session-expired.service';
+import { IUserMenuStore } from '../store/user-menu.store';
 
 /** Hard timeout for the single-flight refresh call (ms). */
 const REFRESH_TIMEOUT_MS = 30_000;
@@ -84,9 +85,13 @@ function decodeUser(accessToken: string): IAuthUser {
 @Injectable({ providedIn: 'root' })
 export class ISessionService {
   private readonly authService = inject(IAuthService);
-  private readonly config = inject(INSIGHT_AUTH_CONFIG);
-  private readonly sessionExpiredService = inject(SessionExpiredService);
+  private readonly config = inject(I_AUTH_CONFIG);
+  private readonly sessionExpiredService = inject(ISessionExpiredService);
   private readonly csrf = inject(ICsrfService);
+  // The user-menu store is resolved lazily at logout time (not in the
+  // constructor): the store already depends on this session service, so eager
+  // injection would create a circular dependency.
+  private readonly injector = inject(Injector);
 
   // In-memory token storage — intentionally NOT persisted to Web Storage.
   private accessToken: string | null = null;
@@ -110,10 +115,10 @@ export class ISessionService {
   // retained until it completes/errors so a cancelled caller cannot abort it.
   private refreshInFlight: Observable<string> | null = null;
 
-  // Single-flight cold-start restore so multiple callers (e.g. provideInsightAuth()
+  // Single-flight cold-start restore so multiple callers (e.g. provideIAuth()
   // via APP_INITIALIZER and a consumer's root component) never trigger duplicate
   // /auth/refresh requests.
-  private restoreInFlight: Promise<{ reason?: SessionExpiredReason }> | null = null;
+  private restoreInFlight: Promise<{ reason?: ISessionExpiredReason }> | null = null;
 
   isAuth(): boolean {
     return !!this.accessToken && !this.isTokenExpired() && !this.isSsoSessionExpired();
@@ -284,6 +289,9 @@ export class ISessionService {
     // tryRestoreSession() treats the next load as a cold start, not a
     // refresh-after-revocation.
     sessionStorage.removeItem('iam.session.active');
+    // Drop any cached sidebar data (user/menus/favorites/permissions) so no
+    // stale data from this session leaks into the next login.
+    this.injector.get(IUserMenuStore, null, { optional: true })?.reset();
     // Ensure a valid CSRF token first: the backend CsrfGuard requires
     // X-CSRF-Token on POST /auth/logout. Consumers that only hold the access
     // token (e.g. `#at=` handoff) never fetched a CSRF token, so without this
@@ -379,7 +387,7 @@ export class ISessionService {
    * refreshing after a previously-active session. Returns the reason (if any)
    * extracted from the error so the guard can decide overlay vs. signin.
    */
-  tryRestoreSession(): Promise<{ reason?: SessionExpiredReason }> {
+  tryRestoreSession(): Promise<{ reason?: ISessionExpiredReason }> {
     if (this.restoreInFlight) {
       return this.restoreInFlight;
     }
@@ -398,10 +406,10 @@ export class ISessionService {
         tap((res) => {
           this.setSession(res.accessToken, res.expiresIn, decodeUser(res.accessToken), res.refreshToken);
         }),
-        map((): { reason?: SessionExpiredReason } => ({})),
+        map((): { reason?: ISessionExpiredReason } => ({})),
       ),
-      { defaultValue: {} as { reason?: SessionExpiredReason } },
-    ).catch((err): { reason?: SessionExpiredReason } => {
+      { defaultValue: {} as { reason?: ISessionExpiredReason } },
+    ).catch((err): { reason?: ISessionExpiredReason } => {
       console.debug('[@insight/ui][SESSION] tryRestoreSession: FAILED', {
         status: (err as HttpErrorResponse)?.status,
       });
@@ -435,7 +443,7 @@ export class ISessionService {
       return { reason: code };
     });
 
-    const safetyTimer = new Promise<{ reason?: SessionExpiredReason }>((r) => setTimeout(() => r({}), 10_000));
+    const safetyTimer = new Promise<{ reason?: ISessionExpiredReason }>((r) => setTimeout(() => r({}), 10_000));
     this.restoreInFlight = Promise.race([restorePromise, safetyTimer]).finally(() => {
       this.initializing.set(false);
     });

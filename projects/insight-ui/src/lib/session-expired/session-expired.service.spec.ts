@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { SessionExpiredService } from './session-expired.service';
+import { ISessionExpiredService } from './session-expired.service';
 
-describe('SessionExpiredService', () => {
-  let service: SessionExpiredService;
+describe('ISessionExpiredService', () => {
+  let service: ISessionExpiredService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(SessionExpiredService);
+    service = TestBed.inject(ISessionExpiredService);
   });
 
   it('starts hidden with no reason or backend error state', () => {

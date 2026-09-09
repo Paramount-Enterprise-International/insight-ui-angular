@@ -57,6 +57,7 @@ import {
   Subscription,
   tap,
 } from 'rxjs';
+import { I_AUTH_CONFIG } from '../auth';
 import { IAvatar } from '../avatar';
 import { IConfirmService } from '../dialog/dialog';
 import { IHighlightSearchPipe } from '../highlight-search.pipe';
@@ -377,6 +378,13 @@ const SIDEBAR_FAVORITES_GROUP_ID = 'favorites';
  * icon or the icon is not a valid FontAwesome class
  */
 const MENU_ICON_FALLBACK = 'fa-brands fa-microsoft';
+
+/**
+ * Default Personal Profile URL opened from the sidebar user dropdown. Consumer
+ * apps override it via the `personalProfileUrl` input (per environment).
+ */
+export const DEFAULT_PERSONAL_PROFILE_URL =
+  'https://account-dev.paramountenterprise.co.id/personal-profile';
 
 export type IHNavigationSnapshot = {
   fullUrl: string;
@@ -1169,19 +1177,57 @@ export class IHMenu implements OnChanges {
 
 @Component({
   selector: 'ih-sidebar',
-  imports: [AsyncPipe, IAvatar, IHMenu, ReactiveFormsModule],
+  imports: [AsyncPipe, IAvatar, IHMenu, NgClass, ReactiveFormsModule],
   template: `
     @let user = user$ | async;
     <div class="ih-sidebar-header">
       @if (user) {
-        <div class="user-image">
-          <i-avatar [alt]="user.fullName" [size]="28" [src]="user.userImagePath" />
-        </div>
+        <button
+          aria-haspopup="menu"
+          class="ih-user-chip"
+          type="button"
+          [attr.aria-expanded]="accountMenuOpen()"
+          (click)="toggleAccountMenu()"
+        >
+          <span class="user-image">
+            <i-avatar [alt]="user.fullName" [size]="28" [src]="user.userImagePath" />
+          </span>
 
-        <div class="user-info">
-          <small class="text-subtle">{{ user.employeeCode }}</small>
-          <h6>{{ user.fullName }}</h6>
-        </div>
+          <span class="user-info">
+            <small class="text-subtle">{{ user.employeeCode }}</small>
+            <h6>{{ user.fullName }}</h6>
+          </span>
+
+          <i
+            class="ih-user-caret"
+            [ngClass]="accountMenuOpen() ? 'fas fa-angle-up' : 'fas fa-angle-down'"
+          ></i>
+        </button>
+
+        @if (accountMenuOpen()) {
+          <div class="ih-user-dropdown" role="menu">
+            <a
+              class="ih-user-dropdown-item"
+              rel="noopener noreferrer"
+              role="menuitem"
+              target="_blank"
+              [attr.href]="resolvedPersonalProfileUrl"
+              (click)="closeAccountMenu()"
+            >
+              <i class="fa-solid fa-user fa-fw"></i>
+              <span>Personal Profile</span>
+            </a>
+            <button
+              class="ih-user-dropdown-item"
+              role="menuitem"
+              type="button"
+              (click)="onLogoutClick()"
+            >
+              <i class="fa-solid fa-right-from-bracket fa-fw"></i>
+              <span>Logout</span>
+            </button>
+          </div>
+        }
       }
     </div>
 
@@ -1255,6 +1301,26 @@ export class IHMenu implements OnChanges {
 export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   private router = inject(Router);
   private hostElement = inject(ElementRef);
+  private readonly sessionService = inject(ISessionService);
+  private readonly config = inject(I_AUTH_CONFIG);
+
+  /** Sidebar user chip dropdown (Personal Profile / Logout) open state. */
+  readonly accountMenuOpen = signal(false);
+
+  private readonly onDocumentKeydown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') {
+      this.accountMenuOpen.set(false);
+    }
+  };
+
+  /** Closes the dropdown when a click lands outside the chip or the menu. */
+  private readonly onDocumentPointerDown = (event: PointerEvent): void => {
+    if (!this.accountMenuOpen()) return;
+    const target = event.target as Element | null;
+    if (!target || !target.closest('.ih-user-chip, .ih-user-dropdown')) {
+      this.accountMenuOpen.set(false);
+    }
+  };
 
   /* ---------------------------
    * INPUTS (from parent)
@@ -1272,6 +1338,11 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   @Input() groupByApplication = false;
   /** When true, groups collapse/expand via a chevron (flat is the default). */
   @Input() collapsible = false;
+  /**
+   * Personal Profile page URL opened in a new tab from the sidebar user
+   * dropdown. Falls back to DEFAULT_PERSONAL_PROFILE_URL when empty.
+   */
+  @Input() personalProfileUrl = '';
 
   /* ---------------------------
    * OUTPUTS (to parent)
@@ -1325,7 +1396,34 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
     return !this.visible;
   }
 
+  /** Personal Profile target; falls back to the shared default. */
+  get resolvedPersonalProfileUrl(): string {
+    return (this.personalProfileUrl ?? '').trim() || DEFAULT_PERSONAL_PROFILE_URL;
+  }
+
+  toggleAccountMenu(): void {
+    this.accountMenuOpen.update((open) => !open);
+  }
+
+  closeAccountMenu(): void {
+    this.accountMenuOpen.set(false);
+  }
+
+  /** Centralized logout - clears the session, then redirects to the app signin. */
+  onLogoutClick(): void {
+    this.closeAccountMenu();
+    this.sessionService.logout().subscribe({
+      complete: () => {
+        const signinUrl = this.config.signinUrl?.trim();
+        window.location.href = signinUrl && signinUrl.length > 0 ? signinUrl : '/';
+      },
+    });
+  }
+
   ngOnInit(): void {
+    document.addEventListener('keydown', this.onDocumentKeydown);
+    document.addEventListener('pointerdown', this.onDocumentPointerDown);
+
     const searchParams = new URLSearchParams(window.location.search);
     const initialQueryParams: any = {};
 
@@ -1362,6 +1460,8 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    document.removeEventListener('keydown', this.onDocumentKeydown);
+    document.removeEventListener('pointerdown', this.onDocumentPointerDown);
     this.favoritesSubscription?.unsubscribe();
     this.fullMenusSubscription?.unsubscribe();
     // Make sure no document-level drag listeners leak if destroyed mid-drag.

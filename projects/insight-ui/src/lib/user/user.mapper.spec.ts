@@ -8,11 +8,11 @@ import {
   toIMenuFavorite,
   toIMenus,
 } from './user.mapper';
-import type { IInsightCurrentUser, IInsightFavoriteMenuItem, IInsightMenuNode } from './user.types';
+import type { ICurrentUserDto, IFavoriteMenuItemDto, IMenuNodeDto } from './user.types';
 
 const app = { id: 'a1', code: 'APP', name: 'App', url: null, version: null };
 
-function makeNode(partial: Partial<IInsightMenuNode>): IInsightMenuNode {
+function makeNode(partial: Partial<IMenuNodeDto>): IMenuNodeDto {
   return {
     id: 'm1',
     name: 'Dashboard',
@@ -32,7 +32,7 @@ function makeNode(partial: Partial<IInsightMenuNode>): IInsightMenuNode {
 }
 
 describe('mapToSidebarUser', () => {
-  const raw: IInsightCurrentUser = {
+  const raw: ICurrentUserDto = {
     userId: 'u1',
     username: 'jdoe',
     fullName: 'John Doe',
@@ -85,12 +85,12 @@ describe('toIMenu / toIMenus', () => {
 
   it('maps arrays via toIMenus and tolerates null input lists', () => {
     expect(toIMenus([makeNode({})]).length).toBe(1);
-    expect(toIMenus(null as unknown as IInsightMenuNode[])).toEqual([]);
+    expect(toIMenus(null as unknown as IMenuNodeDto[])).toEqual([]);
   });
 });
 
 describe('toIMenuFavorite', () => {
-  const favorite: IInsightFavoriteMenuItem = {
+  const favorite: IFavoriteMenuItemDto = {
     id: 'm1',
     name: 'Dashboard',
     displayOrder: 1,
