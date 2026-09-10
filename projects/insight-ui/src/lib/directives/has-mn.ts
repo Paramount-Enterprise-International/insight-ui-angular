@@ -1,4 +1,12 @@
-import { Directive, inject, Input, OnDestroy, OnInit, TemplateRef, ViewContainerRef } from '@angular/core';
+import {
+  Directive,
+  inject,
+  Input,
+  OnDestroy,
+  OnInit,
+  TemplateRef,
+  ViewContainerRef,
+} from '@angular/core';
 import { BehaviorSubject, combineLatest, distinctUntilChanged, map, Subscription } from 'rxjs';
 
 import { IUserMenuStore } from '../store/user-menu.store';
@@ -10,7 +18,7 @@ export type IPermissionSource = 'menu' | 'role' | 'permission';
 export type IPermission = {
   source: IPermissionSource;
   value: string | string[];
-}
+};
 
 /**
  * Accepted input for the permission directives:
