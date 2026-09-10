@@ -96,7 +96,10 @@ describe('IUserMenuService — getAuthorizations', () => {
   let service: IUserMenuService;
   let apiSpy: jasmine.SpyObj<IApiService>;
 
-  const envelope = (data: unknown) => ({ meta: { timestamp: '2026-09-10T00:00:00Z' }, data });
+  const envelope = (data: unknown): { meta: { timestamp: string }; data: unknown } => ({
+    meta: { timestamp: '2026-09-10T00:00:00Z' },
+    data,
+  });
 
   /** Re-configures TestBed so each case can use its own `IAuthConfig`. */
   const configure = (config: IAuthConfig): void => {
