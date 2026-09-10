@@ -3006,8 +3006,9 @@ type IAccessCheck = {
 declare function requireAccess(check: IAccessCheck): CanActivateFn;
 
 /**
- * Types for the current-user navigation & favorites data, matched to the
- * iam-user-api user-menu service contract (`GET {api.user}/me/menus*` and
+ * Types for the current-user navigation, favorites and effective-authorization
+ * data, matched to the iam-user-api user-menu service contract
+ * (`GET {api.user}/me/menus*`, `GET {api.user}/me/authorizations` and
  * `GET {api.user}/users/user`). These are the raw backend shapes; the library
  * maps them onto the UI-facing `IMenu` / `IUser` contracts via `user.mapper.ts`.
  */
@@ -3081,6 +3082,31 @@ type ICurrentUserDto = {
     departmentName: string | null;
     enabled: boolean;
 };
+/**
+ * Kind of effective authorization entry:
+ * - `item` = navigable `MENU_ITEM`
+ * - `function` = feature/action grant (`FUNCTION`)
+ */
+type IEffectiveAuthorizationType = 'item' | 'function';
+/**
+ * One entry returned by `GET {api.user}/me/authorizations` (iam-user-api
+ * `EffectiveAuthorizationDto`). The backend already applied the full effective
+ * authorization pipeline (active application mapping, roles + additional-menu
+ * grants, company scope, denied menu/company) and returns ONLY entries whose
+ * final decision is `allowed`, restricted to `MENU_ITEM` / `FUNCTION` menus,
+ * sorted by `menuCode`.
+ */
+type IEffectiveAuthorizationDto = {
+    menuCode: string;
+    menuId: string;
+    type: IEffectiveAuthorizationType;
+    /**
+     * Companies the grant is scoped to. Follows the menu's company scope, so a
+     * `function` entry with scope `ALL` carries the full company list; an empty
+     * array means the resolved company pool was empty.
+     */
+    companies: IMenuCompanyDto[];
+};
 
 /**
  * Maps the backend current-user DTO to `@insight/ui`'s sidebar `IUser` shape
@@ -3141,6 +3167,17 @@ declare class IUserMenuService {
     getEffectiveMenus<T = IMenuNodeDto[]>(applicationId?: string): Observable<T>;
     /** GET `{api.user}/me/menus/favorites` — effective favorite items, sorted by name. Output type overridable via `T`. */
     getFavorites<T = IFavoriteMenuItemDto[]>(applicationId?: string): Observable<T>;
+    /**
+     * GET `{api.user}/me/authorizations?applicationId=...` — the complete set of
+     * effective authorizations (menu items + functions) for the current user,
+     * already reduced to `allowed` entries by the backend. Output type overridable
+     * via `T`.
+     *
+     * The backend REQUIRES `applicationId`, so it falls back to `config.appId`
+     * and fails loudly when neither is configured (fail-closed: the caller's
+     * permission list simply stays empty).
+     */
+    getAuthorizations<T = IEffectiveAuthorizationDto[]>(applicationId?: string): Observable<T>;
     /** PUT `{api.user}/me/menus/{menuId}/favorite` — pin an effective menu item (204 No Content). */
     addFavorite(menuId: string | number): Observable<void>;
     /** DELETE `{api.user}/me/menus/{menuId}/favorite` — unpin a menu item (204 No Content). */
@@ -3179,12 +3216,13 @@ declare class ICurrentUserService {
  * navigation menus, favorites — and permission checks.
  *
  * Everything lives in memory (signals); NOTHING is persisted to Web Storage.
- * On a cold start (page load) consumers call `load()` to re-fetch user, menus
- * and favorites; the store then re-emits so gated UI (`ihHasMn` /
- * `ihNotHasMn`) re-renders reactively once data is available (async-aware).
+ * On a cold start (page load) consumers call `load()` to re-fetch user, menus,
+ * favorites and effective authorizations; the store then re-emits so gated UI
+ * (`ihHasMn` / `ihNotHasMn`) re-renders reactively once data is available
+ * (async-aware).
  */
 /** Load branch keys for the cold-start sidebar data load. */
-type IUserMenuLoadSource = 'user' | 'menus' | 'favorites';
+type IUserMenuLoadSource = 'user' | 'menus' | 'favorites' | 'permissions';
 /** Per-branch normalized errors from the last `load()` — mirrors the service API error contract. */
 type IUserMenuLoadErrors = Record<IUserMenuLoadSource, INormalizedApiError | null>;
 declare class IUserMenuStore {
@@ -3205,8 +3243,10 @@ declare class IUserMenuStore {
     readonly roles: i0.WritableSignal<string[]>;
     /**
      * Feature permissions granted by the backend (for `source: 'permission'`
-     * checks). NOT hydrated by `load()` yet - a loader calls `setPermissions()`
-     * once the endpoint is available.
+     * checks). Hydrated by `load()` from the effective authorizations endpoint
+     * (`GET {api.user}/me/authorizations`) as the deduplicated set of
+     * `data[].menuCode`; `setPermissions()` remains available for a caller that
+     * wants to supply the list itself.
      */
     readonly permissions: i0.WritableSignal<string[]>;
     /** True while the cold-start `load()` is in flight. */
@@ -3229,8 +3269,9 @@ declare class IUserMenuStore {
     /** Finds a menu node's display name by id (recursive), or null. */
     findMenuName(menuId: string | number): string | null;
     /**
-     * Cold-start: fetch user + menus + favorites concurrently. A failure in one
-     * branch does not block the others; `initializing` clears once all settle.
+     * Cold-start: fetch user + menus + favorites + permissions concurrently. A
+     * failure in one branch does not block the others; `initializing` clears once
+     * all settle.
      *
      * Returns an observable that completes when the load settles, so callers can
      * await it (e.g. to navigate to `defaultRoute` after login). The load starts
@@ -3261,9 +3302,10 @@ declare class IUserMenuStore {
     /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
     hasRole(code: string | string[]): boolean;
     /**
-     * Replaces the granted permission list (feature/action codes). Called by a
-     * loader once the backend endpoint is available - `load()` does not fetch
-     * permissions.
+     * Replaces the granted permission list (feature/action codes). `load()`
+     * hydrates this automatically — call this only to override it explicitly.
+     * Codes are deduplicated so an accidental duplicate in the source list can
+     * never make `hasPermission()` behave differently.
      */
     setPermissions(permissions: string[]): void;
     /**
@@ -3295,12 +3337,19 @@ declare class IUserMenuStore {
     loadMenus(applicationId?: string): Observable<IMenu[]>;
     /** Loads favorites into `favorites` — optionally for a single application. Returns the mapped `IMenu[]`. */
     loadFavorites(applicationId?: string): Observable<IMenu[]>;
+    /**
+     * Loads the granted feature permissions into `permissions` — the deduplicated
+     * set of `data[].menuCode` from the effective authorizations endpoint.
+     * Returns the resulting permission list.
+     */
+    loadPermissions(applicationId?: string): Observable<string[]>;
     /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
     private applyMenuFavorite;
     private applyFavoriteReorder;
     private loadUserInternal;
     private loadMenusInternal;
     private loadFavoritesInternal;
+    private loadPermissionsInternal;
     private clearData;
     private recordError;
     static ɵfac: i0.ɵɵFactoryDeclaration<IUserMenuStore, never>;
@@ -3544,4 +3593,4 @@ type IEnvironment = {
 declare const environment: IEnvironment;
 
 export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
-export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEnvironment, IErrorContext, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, INormalizedApiError, IPaginatorState, IPermission, IPermissionInput, IPermissionSource, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteCanOpen, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
+export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEnvironment, IErrorContext, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, INormalizedApiError, IPaginatorState, IPermission, IPermissionInput, IPermissionSource, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteCanOpen, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
