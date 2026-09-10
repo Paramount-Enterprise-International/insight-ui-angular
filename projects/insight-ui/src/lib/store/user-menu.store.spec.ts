@@ -5,6 +5,7 @@ import { ISessionService, type ISessionUser } from '../session/session.service';
 import {
   ICurrentUserDto,
   ICurrentUserService,
+  IEffectiveAuthorizationDto,
   IFavoriteMenuItemDto,
   IMenuNodeDto,
   IUserMenuService,
@@ -74,6 +75,11 @@ const favorites: IFavoriteMenuItemDto[] = [
   },
 ];
 
+const authorizations: IEffectiveAuthorizationDto[] = [
+  { menuCode: 'dashboard', menuId: 'm1', type: 'item', companies: [] },
+  { menuCode: 'report.export', menuId: 'm2', type: 'function', companies: [] },
+];
+
 describe('IUserMenuStore', () => {
   let store: IUserMenuStore;
   let userSpy: jasmine.SpyObj<ICurrentUserService>;
@@ -85,6 +91,7 @@ describe('IUserMenuStore', () => {
     menuSpy = jasmine.createSpyObj<IUserMenuService>('IUserMenuService', [
       'getEffectiveMenus',
       'getFavorites',
+      'getAuthorizations',
       'addFavorite',
       'removeFavorite',
       'reorderFavorites',
@@ -94,6 +101,7 @@ describe('IUserMenuStore', () => {
     userSpy.getCurrentUser.and.returnValue(of(rawUser));
     menuSpy.getEffectiveMenus.and.returnValue(of(nodes));
     menuSpy.getFavorites.and.returnValue(of(favorites));
+    menuSpy.getAuthorizations.and.returnValue(of(authorizations));
     sessionSpy.getRoles.and.returnValue(['iam-admin']);
     sessionSpy.getUser.and.returnValue({ sub: 'sub-a' } as ISessionUser);
 
@@ -107,7 +115,7 @@ describe('IUserMenuStore', () => {
     store = TestBed.inject(IUserMenuStore);
   });
 
-  it('load() populates user, menus, favorites and roles from memory signals', () => {
+  it('load() populates user, menus, favorites, roles and permissions from memory signals', () => {
     store.load();
 
     expect(store.currentUser()).toEqual({
@@ -121,6 +129,7 @@ describe('IUserMenuStore', () => {
     expect(store.favorites().length).toBe(1);
     expect(store.favorites()[0].isFavorite).toBeTrue();
     expect(store.roles()).toEqual(['iam-admin']);
+    expect(store.permissions()).toEqual(['dashboard', 'report.export']);
     expect(store.initializing()).toBeFalse();
     expect(store.loadError()).toBeNull();
   });
@@ -349,10 +358,85 @@ describe('IUserMenuStore', () => {
     expect(store.menus().length).toBe(1);
   });
 
+  it('load() hydrates permissions from the effective authorizations menuCode list', () => {
+    store.load();
+
+    expect(menuSpy.getAuthorizations).toHaveBeenCalled();
+    expect(store.permissions()).toEqual(['dashboard', 'report.export']);
+    expect(store.hasPermission('report.export')).toBeTrue();
+    expect(store.hasPermission(['nope', 'dashboard'])).toBeTrue();
+    expect(store.hasPermission('nope')).toBeFalse();
+  });
+
+  it('load() deduplicates repeated menu codes', () => {
+    menuSpy.getAuthorizations.and.returnValue(
+      of([
+        { menuCode: 'report.export', menuId: 'm2', type: 'function', companies: [] },
+        { menuCode: 'report.export', menuId: 'm3', type: 'function', companies: [] },
+      ]),
+    );
+
+    store.load();
+
+    expect(store.permissions()).toEqual(['report.export']);
+  });
+
+  it('load() yields an empty permission list for an empty response (fail-closed)', () => {
+    menuSpy.getAuthorizations.and.returnValue(of([]));
+
+    store.load();
+
+    expect(store.permissions()).toEqual([]);
+    expect(store.hasPermission('report.export')).toBeFalse();
+    expect(store.loadErrors().permissions).toBeNull();
+  });
+
+  it('records an authorizations error without losing the other branches', () => {
+    menuSpy.getAuthorizations.and.returnValue(
+      throwError(() => ({ status: 500, message: 'authorizations exploded' })),
+    );
+
+    store.load();
+
+    expect(store.loadErrors().permissions?.status).toBe(500);
+    expect(store.loadErrors().permissions?.message).toBe('authorizations exploded');
+    // The other branches still succeed.
+    expect(store.menus().length).toBe(1);
+    expect(store.favorites().length).toBe(1);
+    expect(store.currentUser()).not.toBeNull();
+    expect(store.loadErrors().menus).toBeNull();
+    // Fail-closed: nothing is granted.
+    expect(store.permissions()).toEqual([]);
+    expect(store.hasPermission('report.export')).toBeFalse();
+  });
+
+  it('drops the previous user\'s permissions when load() runs for a different user', () => {
+    store.load();
+    expect(store.permissions()).toEqual(['dashboard', 'report.export']);
+
+    sessionSpy.getUser.and.returnValue({ sub: 'sub-b' } as ISessionUser);
+    menuSpy.getAuthorizations.and.returnValue(of([]));
+
+    store.load();
+
+    expect(store.permissions()).toEqual([]);
+    expect(store.hasPermission('report.export')).toBeFalse();
+  });
+
+  it('setPermissions deduplicates the supplied codes', () => {
+    store.setPermissions(['a', 'b', 'a']);
+
+    expect(store.permissions()).toEqual(['a', 'b']);
+    expect(store.hasPermission('a')).toBeTrue();
+    expect(store.hasPermission(['nope', 'b'])).toBeTrue();
+    expect(store.hasPermission(['nope', 'other'])).toBeFalse();
+  });
+
   it('reset() clears all cached data and forgets the identity', () => {
     store.load();
     expect(store.menus().length).toBe(1);
     expect(store.favorites().length).toBe(1);
+    expect(store.permissions()).toEqual(['dashboard', 'report.export']);
 
     store.reset();
 
@@ -361,6 +445,25 @@ describe('IUserMenuStore', () => {
     expect(store.currentUser()).toBeNull();
     expect(store.rawCurrentUser()).toBeNull();
     expect(store.roles()).toEqual([]);
-    expect(store.loadErrors()).toEqual({ user: null, menus: null, favorites: null });
+    expect(store.permissions()).toEqual([]);
+    expect(store.loadErrors()).toEqual({
+      user: null,
+      menus: null,
+      favorites: null,
+      permissions: null,
+    });
+  });
+
+  it('reset() clears a recorded permissions error too', () => {
+    menuSpy.getAuthorizations.and.returnValue(
+      throwError(() => ({ status: 500, message: 'boom' })),
+    );
+    store.load();
+    expect(store.loadErrors().permissions).not.toBeNull();
+
+    store.reset();
+
+    expect(store.loadErrors().permissions).toBeNull();
+    expect(store.permissions()).toEqual([]);
   });
 });

@@ -9,6 +9,7 @@ import { ISessionService } from '../session/session.service';
 import {
   ICurrentUserDto,
   ICurrentUserService,
+  IEffectiveAuthorizationDto,
   IFavoriteMenuItemDto,
   IMenuNodeDto,
   IUserMenuService,
@@ -28,12 +29,13 @@ import {
  * navigation menus, favorites — and permission checks.
  *
  * Everything lives in memory (signals); NOTHING is persisted to Web Storage.
- * On a cold start (page load) consumers call `load()` to re-fetch user, menus
- * and favorites; the store then re-emits so gated UI (`ihHasMn` /
- * `ihNotHasMn`) re-renders reactively once data is available (async-aware).
+ * On a cold start (page load) consumers call `load()` to re-fetch user, menus,
+ * favorites and effective authorizations; the store then re-emits so gated UI
+ * (`ihHasMn` / `ihNotHasMn`) re-renders reactively once data is available
+ * (async-aware).
  */
 /** Load branch keys for the cold-start sidebar data load. */
-export type IUserMenuLoadSource = 'user' | 'menus' | 'favorites';
+export type IUserMenuLoadSource = 'user' | 'menus' | 'favorites' | 'permissions';
 
 /** Per-branch normalized errors from the last `load()` — mirrors the service API error contract. */
 export type IUserMenuLoadErrors = Record<IUserMenuLoadSource, INormalizedApiError | null>;
@@ -59,8 +61,10 @@ export class IUserMenuStore {
   readonly roles = signal<string[]>([]);
   /**
    * Feature permissions granted by the backend (for `source: 'permission'`
-   * checks). NOT hydrated by `load()` yet - a loader calls `setPermissions()`
-   * once the endpoint is available.
+   * checks). Hydrated by `load()` from the effective authorizations endpoint
+   * (`GET {api.user}/me/authorizations`) as the deduplicated set of
+   * `data[].menuCode`; `setPermissions()` remains available for a caller that
+   * wants to supply the list itself.
    */
   readonly permissions = signal<string[]>([]);
   /** True while the cold-start `load()` is in flight. */
@@ -68,7 +72,12 @@ export class IUserMenuStore {
   /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
   readonly loadError = signal<string | null>(null);
   /** Normalized per-branch errors from the last `load()` — mirrors the service API error contract. */
-  readonly loadErrors = signal<IUserMenuLoadErrors>({ user: null, menus: null, favorites: null });
+  readonly loadErrors = signal<IUserMenuLoadErrors>({
+    user: null,
+    menus: null,
+    favorites: null,
+    permissions: null,
+  });
 
   // Reactive observable projections (used by directives/components that prefer
   // observables over signals).
@@ -93,8 +102,9 @@ export class IUserMenuStore {
   }
 
   /**
-   * Cold-start: fetch user + menus + favorites concurrently. A failure in one
-   * branch does not block the others; `initializing` clears once all settle.
+   * Cold-start: fetch user + menus + favorites + permissions concurrently. A
+   * failure in one branch does not block the others; `initializing` clears once
+   * all settle.
    *
    * Returns an observable that completes when the load settles, so callers can
    * await it (e.g. to navigate to `defaultRoute` after login). The load starts
@@ -120,7 +130,7 @@ export class IUserMenuStore {
     }
     this.initializing.set(true);
     this.loadError.set(null);
-    this.loadErrors.set({ user: null, menus: null, favorites: null });
+    this.loadErrors.set({ user: null, menus: null, favorites: null, permissions: null });
     this.roles.set(this.session.getRoles());
 
     const result$ = forkJoin({
@@ -128,6 +138,9 @@ export class IUserMenuStore {
       menus: this.loadMenusInternal().pipe(catchError((err) => this.recordError('menus', err))),
       favorites: this.loadFavoritesInternal().pipe(
         catchError((err) => this.recordError('favorites', err)),
+      ),
+      permissions: this.loadPermissionsInternal().pipe(
+        catchError((err) => this.recordError('permissions', err)),
       ),
     }).pipe(
       map(() => undefined),
@@ -185,12 +198,13 @@ export class IUserMenuStore {
   }
 
   /**
-   * Replaces the granted permission list (feature/action codes). Called by a
-   * loader once the backend endpoint is available - `load()` does not fetch
-   * permissions.
+   * Replaces the granted permission list (feature/action codes). `load()`
+   * hydrates this automatically — call this only to override it explicitly.
+   * Codes are deduplicated so an accidental duplicate in the source list can
+   * never make `hasPermission()` behave differently.
    */
   setPermissions(permissions: string[]): void {
-    this.permissions.set(permissions);
+    this.permissions.set([...new Set(permissions)]);
   }
 
   /**
@@ -268,6 +282,18 @@ export class IUserMenuStore {
     );
   }
 
+  /**
+   * Loads the granted feature permissions into `permissions` — the deduplicated
+   * set of `data[].menuCode` from the effective authorizations endpoint.
+   * Returns the resulting permission list.
+   */
+  loadPermissions(applicationId?: string): Observable<string[]> {
+    return this.menuService.getAuthorizations<IEffectiveAuthorizationDto[]>(applicationId).pipe(
+      map((items) => [...new Set(items.map((item) => item.menuCode))]),
+      tap((permissions) => this.permissions.set(permissions)),
+    );
+  }
+
   /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
   private applyMenuFavorite(menus: IMenu[], menuId: string | number, isFavorite: boolean): IMenu[] {
     return menus.map((menu) => {
@@ -321,6 +347,10 @@ export class IUserMenuStore {
     return this.loadFavorites().pipe(map(() => null));
   }
 
+  private loadPermissionsInternal(): Observable<null> {
+    return this.loadPermissions().pipe(map(() => null));
+  }
+
   private clearData(): void {
     this.currentUser.set(null);
     this.rawCurrentUser.set(null);
@@ -329,7 +359,7 @@ export class IUserMenuStore {
     this.roles.set([]);
     this.permissions.set([]);
     this.loadError.set(null);
-    this.loadErrors.set({ user: null, menus: null, favorites: null });
+    this.loadErrors.set({ user: null, menus: null, favorites: null, permissions: null });
   }
 
   private recordError(source: IUserMenuLoadSource, err: unknown): Observable<null> {

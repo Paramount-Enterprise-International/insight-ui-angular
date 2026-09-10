@@ -1,3 +1,4 @@
+import { HttpParams } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
@@ -88,5 +89,82 @@ describe('IUserMenuService', () => {
       ] },
       { apiUrl: 'http://localhost:3002/api/users' },
     );
+  });
+});
+
+describe('IUserMenuService — getAuthorizations', () => {
+  let service: IUserMenuService;
+  let apiSpy: jasmine.SpyObj<IApiService>;
+
+  const envelope = (data: unknown) => ({ meta: { timestamp: '2026-09-10T00:00:00Z' }, data });
+
+  /** Re-configures TestBed so each case can use its own `IAuthConfig`. */
+  const configure = (config: IAuthConfig): void => {
+    apiSpy = jasmine.createSpyObj<IApiService>('IApiService', ['get', 'put', 'delete']);
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: IApiService, useValue: apiSpy },
+        { provide: I_AUTH_CONFIG, useValue: config },
+      ],
+    });
+    service = TestBed.inject(IUserMenuService);
+  };
+
+  beforeEach(() => configure(testConfig));
+
+  it('calls GET {api.user}/me/authorizations and unwraps .data', (done) => {
+    const data = [
+      { menuCode: 'report.export', menuId: 'm2', type: 'function', companies: [] },
+    ];
+    apiSpy.get.and.returnValue(of(envelope(data)));
+
+    service.getAuthorizations('app-1').subscribe((res) => {
+      expect(apiSpy.get).toHaveBeenCalledWith('/me/authorizations', jasmine.any(HttpParams), {
+        apiUrl: 'http://localhost:3002/api/users',
+      });
+      expect(res).toEqual(data as never);
+      done();
+    });
+  });
+
+  it('passes the given applicationId as a query param', () => {
+    apiSpy.get.and.returnValue(of(envelope([])));
+
+    service.getAuthorizations('app-1').subscribe();
+
+    const [path, params] = apiSpy.get.calls.mostRecent().args;
+    expect(path).toBe('/me/authorizations');
+    expect((params as HttpParams).get('applicationId')).toBe('app-1');
+  });
+
+  it('falls back to config.appId when no applicationId is given', () => {
+    configure({ ...testConfig, appId: 'cfg-app' });
+    apiSpy.get.and.returnValue(of(envelope([])));
+
+    service.getAuthorizations().subscribe();
+
+    const [, params] = apiSpy.get.calls.mostRecent().args;
+    expect((params as HttpParams).get('applicationId')).toBe('cfg-app');
+  });
+
+  it('errors without issuing a request when neither applicationId nor config.appId is set', (done) => {
+    service.getAuthorizations().subscribe({
+      next: () => done.fail('expected an error'),
+      error: (err: Error) => {
+        expect(err.message).toContain('applicationId is required');
+        expect(apiSpy.get).not.toHaveBeenCalled();
+        done();
+      },
+    });
+  });
+
+  it('yields an empty list for an empty response', (done) => {
+    apiSpy.get.and.returnValue(of(envelope([])));
+
+    service.getAuthorizations('app-1').subscribe((res) => {
+      expect(res).toEqual([] as never);
+      done();
+    });
   });
 });
