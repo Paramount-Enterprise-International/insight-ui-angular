@@ -1,12 +1,13 @@
 import { HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { map, Observable, throwError } from 'rxjs';
 
 import { environment as defaultEnvironment } from '../../environments/environment';
 import { I_AUTH_CONFIG } from '../auth/auth-config';
 import { IApiService } from '../api/api.service';
 
 import type {
+  IEffectiveAuthorizationDto,
   IFavoriteMenuItemDto,
   IFavoriteOrderItemDto,
   IMenuNodeDto,
@@ -47,6 +48,35 @@ export class IUserMenuService {
     const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
     return this.api
       .get<IUserMenuEnvelopeDto<T>>('/me/menus/favorites', params, { apiUrl: this.baseUrl })
+      .pipe(map((response) => response.data));
+  }
+
+  /**
+   * GET `{api.user}/me/authorizations?applicationId=...` — the complete set of
+   * effective authorizations (menu items + functions) for the current user,
+   * already reduced to `allowed` entries by the backend. Output type overridable
+   * via `T`.
+   *
+   * The backend REQUIRES `applicationId`, so it falls back to `config.appId`
+   * and fails loudly when neither is configured (fail-closed: the caller's
+   * permission list simply stays empty).
+   */
+  getAuthorizations<T = IEffectiveAuthorizationDto[]>(applicationId?: string): Observable<T> {
+    const id = applicationId ?? this.config.appId;
+
+    if (!id) {
+      return throwError(
+        () =>
+          new Error(
+            '[@insight/ui] applicationId is required to load current-user authorizations.',
+          ),
+      );
+    }
+
+    const params = new HttpParams({ fromObject: { applicationId: id } });
+
+    return this.api
+      .get<IUserMenuEnvelopeDto<T>>('/me/authorizations', params, { apiUrl: this.baseUrl })
       .pipe(map((response) => response.data));
   }
 

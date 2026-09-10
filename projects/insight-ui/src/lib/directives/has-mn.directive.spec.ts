@@ -98,6 +98,22 @@ describe('IHHasMnDirective / IHNotHasMnDirective', () => {
     expect(query('.not-delete')).toBeTruthy();
   });
 
+  it('permission mode reacts when permissions are hydrated after the initial render', async () => {
+    // Store still cold-starting → the gate stays closed in BOTH directions.
+    store.initializing.set(true);
+    await settle();
+    expect(query('.perm-export')).toBeFalsy();
+    expect(query('.not-delete')).toBeFalsy();
+
+    // load() settled and hydrated the permission list from the authorizations endpoint.
+    store.permissions.set(['report.export']);
+    store.initializing.set(false);
+    await settle();
+
+    expect(query('.perm-export')).toBeTruthy();
+    expect(query('.not-delete')).toBeTruthy();
+  });
+
   it('initializing gate hides BOTH has and not-has views until the store settles', async () => {
     store.menus.set([{ id: 'm1', name: 'Admin', type: 'item', menuCode: 'admin', route: '/admin' }]);
     store.initializing.set(true);
