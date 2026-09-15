@@ -1,5 +1,5 @@
 import * as i0 from '@angular/core';
-import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, makeEnvironmentProviders, APP_INITIALIZER, effect, ViewChildren, computed } from '@angular/core';
+import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, computed, makeEnvironmentProviders, APP_INITIALIZER, effect, ViewChildren } from '@angular/core';
 import * as i1$1 from '@angular/common';
 import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
@@ -3144,7 +3144,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
 // select.ts (Angular)
 /**
  * ISelect
- * Version: 2.2.7
+ * Version: 2.2.8
  *
  * Fixes:
  * - Render options container as <i-options>
@@ -3155,6 +3155,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
  * - Fix dropdown not reopening after selecting an option
  * - Fix selected long value poisoning trigger measurement on next open
  * - Fix panel staying hidden when reposition callback does not reveal it
+ * - Stabilize initial panel alignment after overflow and scrollbar layout settles
  */
 class ISelectOptionDefDirective {
     template = inject(TemplateRef);
@@ -3498,7 +3499,7 @@ class ISelect {
          * Do not rely only on an after-callback to reveal the panel.
          * repositionPanelNow() reveals the panel after positioning succeeds.
          */
-        this.scheduleReposition();
+        this.scheduleReposition(undefined, true);
         const len = this.filteredOptions.length;
         if (len === 0) {
             this.highlightIndex = -1;
@@ -3730,7 +3731,7 @@ class ISelect {
         this.panelOriginalParent = null;
         this.panelOriginalNextSibling = null;
     }
-    scheduleReposition(after) {
+    scheduleReposition(after, doubleRaf = false) {
         if (!this.isOpen)
             return;
         if (this.repositionRaf) {
@@ -3739,8 +3740,17 @@ class ISelect {
         this.zone.runOutsideAngular(() => {
             this.repositionRaf = requestAnimationFrame(() => {
                 this.repositionRaf = 0;
-                this.repositionPanelNow();
-                after?.();
+                this.repositionPanelNow(!doubleRaf);
+                if (doubleRaf) {
+                    this.repositionRaf = requestAnimationFrame(() => {
+                        this.repositionRaf = 0;
+                        this.repositionPanelNow();
+                        after?.();
+                    });
+                }
+                else {
+                    after?.();
+                }
             });
         });
     }
@@ -3763,7 +3773,7 @@ class ISelect {
         panel.style.left = '';
         panel.style.top = '';
     }
-    repositionPanelNow() {
+    repositionPanelNow(reveal = true) {
         if (!this.isOpen)
             return;
         const panel = this.getPanelElement();
@@ -3815,7 +3825,8 @@ class ISelect {
             panel.style.top = `${Math.round(top)}px`;
             const maxH = Math.max(60, vh - top - gap);
             panel.style.maxHeight = `${Math.floor(maxH)}px`;
-            this.revealPanel(panel);
+            if (reveal)
+                this.revealPanel(panel);
             return;
         }
         if (pos === 'right') {
@@ -3827,7 +3838,8 @@ class ISelect {
             panel.style.top = `${Math.round(top)}px`;
             const maxH = Math.max(60, vh - top - gap);
             panel.style.maxHeight = `${Math.floor(maxH)}px`;
-            this.revealPanel(panel);
+            if (reveal)
+                this.revealPanel(panel);
             return;
         }
         const spaceBelow = vh - rect.bottom - this.panelOffset - gap;
@@ -3849,7 +3861,8 @@ class ISelect {
         const top = Math.min(Math.max(gap, rawTop), maxTop);
         panel.style.left = `${Math.round(left)}px`;
         panel.style.top = `${Math.round(top)}px`;
-        this.revealPanel(panel);
+        if (reveal)
+            this.revealPanel(panel);
     }
     ensureGlobalListeners() {
         if (this.listeningGlobal)
@@ -10401,7 +10414,8 @@ const USER_APPLICATION_MAPPING_NOT_FOUND = 'USER_APPLICATION_MAPPING_NOT_FOUND';
 /**
  * Types for the current-user navigation, favorites and effective-authorization
  * data, matched to the iam-user-api user-menu service contract
- * (`GET {api.user}/me/menus*`, `GET {api.user}/me/authorizations` and
+ * (`GET {api.user}/me/applications/:applicationId/menus*`,
+ * `GET {api.user}/me/applications/:applicationId/authorizations` and
  * `GET {api.user}/users/user`). These are the raw backend shapes; the library
  * maps them onto the UI-facing `IMenu` / `IUser` contracts via `user.mapper.ts`.
  */
@@ -10457,7 +10471,7 @@ function toIMenuFavorite(item) {
  * Recursively collects the `menuCode` of every navigable leaf item across a
  * menu tree (deduplicated, order preserved). Structural group/module nodes are
  * excluded so a container code never counts as a grant - matching the flat
- * granted-code list the legacy menu token carried (`ihHasMn` menu mode).
+ * granted-code list the menu shorthand carried by `iHasMn`.
  */
 function collectMenuCodes(menus) {
     const codes = new Set();
@@ -10547,7 +10561,7 @@ function findMenuNameById(menus, menuId) {
 
 /**
  * Current-user navigation & favorites service — calls iam-user-api's
- * `/me/menus*` endpoints (user-menu service contract). These endpoints return
+ * application-scoped `/me/applications/:applicationId/*` endpoints. These endpoints return
  * a `{ meta, data }` envelope; this service unwraps `.data` so callers keep
  * the app-wide body-as-data convention.
  *
@@ -10561,24 +10575,40 @@ class IUserMenuService {
     get baseUrl() {
         return this.config.api['user'] ?? environment.api.user;
     }
-    /** GET `{api.user}/me/menus` — effective navigation tree for one or all active applications. Output type overridable via `T`. */
-    getEffectiveMenus(applicationId) {
+    resolveApplicationId(applicationId) {
         const id = applicationId ?? this.config.appId;
-        const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
+        return id?.trim() || null;
+    }
+    applicationPath(applicationId, suffix) {
+        return `/me/applications/${encodeURIComponent(applicationId)}/${suffix}`;
+    }
+    missingApplicationId() {
+        return throwError(() => new Error('[@insight/ui] applicationId is required to load current-user application data.'));
+    }
+    /** GET `{api.user}/me/applications/:applicationId/menus` - effective navigation tree. */
+    getEffectiveMenus(applicationId) {
+        const id = this.resolveApplicationId(applicationId);
+        if (!id)
+            return this.missingApplicationId();
         return this.api
-            .get('/me/menus', params, { apiUrl: this.baseUrl })
+            .get(this.applicationPath(id, 'menus'), undefined, {
+            apiUrl: this.baseUrl,
+        })
             .pipe(map((response) => response.data));
     }
-    /** GET `{api.user}/me/menus/favorites` — effective favorite items, sorted by name. Output type overridable via `T`. */
+    /** GET `{api.user}/me/applications/:applicationId/menus/favorites` - effective favorites. */
     getFavorites(applicationId) {
-        const id = applicationId ?? this.config.appId;
-        const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
+        const id = this.resolveApplicationId(applicationId);
+        if (!id)
+            return this.missingApplicationId();
         return this.api
-            .get('/me/menus/favorites', params, { apiUrl: this.baseUrl })
+            .get(this.applicationPath(id, 'menus/favorites'), undefined, {
+            apiUrl: this.baseUrl,
+        })
             .pipe(map((response) => response.data));
     }
     /**
-     * GET `{api.user}/me/authorizations?applicationId=...` — the complete set of
+     * GET `{api.user}/me/applications/:applicationId/authorizations` - the complete set of
      * effective authorizations (menu items + functions) for the current user,
      * already reduced to `allowed` entries by the backend. Output type overridable
      * via `T`.
@@ -10588,13 +10618,13 @@ class IUserMenuService {
      * permission list simply stays empty).
      */
     getAuthorizations(applicationId) {
-        const id = applicationId ?? this.config.appId;
-        if (!id) {
-            return throwError(() => new Error('[@insight/ui] applicationId is required to load current-user authorizations.'));
-        }
-        const params = new HttpParams({ fromObject: { applicationId: id } });
+        const id = this.resolveApplicationId(applicationId);
+        if (!id)
+            return this.missingApplicationId();
         return this.api
-            .get('/me/authorizations', params, { apiUrl: this.baseUrl })
+            .get(this.applicationPath(id, 'authorizations'), undefined, {
+            apiUrl: this.baseUrl,
+        })
             .pipe(map((response) => response.data));
     }
     /** PUT `{api.user}/me/menus/{menuId}/favorite` — pin an effective menu item (204 No Content). */
@@ -10658,6 +10688,7 @@ class IUserMenuStore {
     session = inject(ISessionService);
     /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
     loadedUserSub = null;
+    loadedApplicationId = null;
     /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
     currentUser = signal(null, ...(ngDevMode ? [{ debugName: "currentUser" }] : []));
     /** Raw current-user DTO as returned by the backend — `null` until loaded. */
@@ -10671,13 +10702,34 @@ class IUserMenuStore {
     /**
      * Feature permissions granted by the backend (for `source: 'permission'`
      * checks). Hydrated by `load()` from the effective authorizations endpoint
-     * (`GET {api.user}/me/authorizations`) as the deduplicated set of
+     * (application-scoped authorizations endpoint) as the deduplicated set of
      * `data[].menuCode`; `setPermissions()` remains available for a caller that
      * wants to supply the list itself.
      */
     permissions = signal([], ...(ngDevMode ? [{ debugName: "permissions" }] : []));
+    /** Raw effective authorization entries returned by iam-user-api. */
+    authorizations = signal([], ...(ngDevMode ? [{ debugName: "authorizations" }] : []));
+    /** Deduplicated companies from the effective authorization entries. */
+    companies = signal([], ...(ngDevMode ? [{ debugName: "companies" }] : []));
+    /** Deduplicated company codes from the effective authorization entries. */
+    companyCodes = signal([], ...(ngDevMode ? [{ debugName: "companyCodes" }] : []));
+    /** Company codes grouped by menu code. */
+    menuCompanies = signal({}, ...(ngDevMode ? [{ debugName: "menuCompanies" }] : []));
+    /** Deduplicated navigable menu codes from the effective menu tree. */
+    menuCodes = computed(() => collectMenuCodes(this.menus()), ...(ngDevMode ? [{ debugName: "menuCodes" }] : []));
+    /** Immutable authorization snapshot used by permission predicates. */
+    authorizationSource = computed(() => ({
+        menu: this.menuCodes(),
+        permission: this.permissions(),
+        roles: this.roles(),
+        companyCodes: this.companyCodes(),
+        companies: this.companies(),
+        menuCompanies: this.menuCompanies(),
+    }), ...(ngDevMode ? [{ debugName: "authorizationSource" }] : []));
     /** True while the cold-start `load()` is in flight. */
     initializing = signal(false, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
+    /** True after the most recent load has settled, including partial failures. */
+    initialized = signal(false, ...(ngDevMode ? [{ debugName: "initialized" }] : []));
     /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
     loadError = signal(null, ...(ngDevMode ? [{ debugName: "loadError" }] : []));
     /** Normalized per-branch errors from the last `load()` — mirrors the service API error contract. */
@@ -10694,7 +10746,14 @@ class IUserMenuStore {
     favorites$ = toObservable(this.favorites);
     roles$ = toObservable(this.roles);
     permissions$ = toObservable(this.permissions);
+    authorizations$ = toObservable(this.authorizations);
+    companies$ = toObservable(this.companies);
+    companyCodes$ = toObservable(this.companyCodes);
+    menuCompanies$ = toObservable(this.menuCompanies);
+    menuCodes$ = toObservable(this.menuCodes);
+    authorizationSource$ = toObservable(this.authorizationSource);
     initializing$ = toObservable(this.initializing);
+    initialized$ = toObservable(this.initialized);
     /**
      * Post-login default landing (when no return URL is present).
      * Order: (1) first navigable favorite route, (2) first navigable menu route.
@@ -10716,7 +10775,7 @@ class IUserMenuStore {
      * immediately even if the caller ignores the returned observable — a shared
      * source is kept alive by an internal subscribe (fire-and-forget compatible).
      */
-    load() {
+    load(applicationId) {
         if (this.initializing()) {
             return this.initializing$.pipe(filter((init) => !init), take(1), map(() => undefined));
         }
@@ -10725,20 +10784,28 @@ class IUserMenuStore {
         // a failed refetch (e.g. USER_APPLICATION_MAPPING_NOT_FOUND) never leaks
         // the previous user's menus/favorites into the sidebar.
         const sessionSub = this.session.getUser()?.sub ?? null;
-        if (sessionSub !== this.loadedUserSub) {
+        const applicationKey = applicationId?.trim() || null;
+        if (sessionSub !== this.loadedUserSub ||
+            (this.initialized() && applicationKey !== this.loadedApplicationId)) {
             this.clearData();
-            this.loadedUserSub = sessionSub;
         }
+        this.loadedUserSub = sessionSub;
+        this.loadedApplicationId = applicationKey;
         this.initializing.set(true);
+        this.initialized.set(false);
         this.loadError.set(null);
         this.loadErrors.set({ user: null, menus: null, favorites: null, permissions: null });
         this.roles.set(this.session.getRoles());
+        this.clearAuthorizationData();
         const result$ = forkJoin({
             user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err))),
-            menus: this.loadMenusInternal().pipe(catchError((err) => this.recordError('menus', err))),
-            favorites: this.loadFavoritesInternal().pipe(catchError((err) => this.recordError('favorites', err))),
-            permissions: this.loadPermissionsInternal().pipe(catchError((err) => this.recordError('permissions', err))),
-        }).pipe(map(() => undefined), catchError(() => of(undefined)), finalize(() => this.initializing.set(false)), shareReplay({ bufferSize: 1, refCount: false }));
+            menus: this.loadMenusInternal(applicationId).pipe(catchError((err) => this.recordError('menus', err))),
+            favorites: this.loadFavoritesInternal(applicationId).pipe(catchError((err) => this.recordError('favorites', err))),
+            permissions: this.loadPermissionsInternal(applicationId).pipe(catchError((err) => this.recordError('permissions', err))),
+        }).pipe(map(() => undefined), catchError(() => of(undefined)), finalize(() => {
+            this.initializing.set(false);
+            this.initialized.set(true);
+        }), shareReplay({ bufferSize: 1, refCount: false }));
         // Fire-and-forget: always start the load even if the caller ignores the result.
         result$.subscribe();
         return result$;
@@ -10751,6 +10818,7 @@ class IUserMenuStore {
     reset() {
         this.clearData();
         this.loadedUserSub = null;
+        this.loadedApplicationId = null;
     }
     /** Refresh roles from the current access token (call after login / token change). */
     syncRoles() {
@@ -10853,7 +10921,43 @@ class IUserMenuStore {
      * Returns the resulting permission list.
      */
     loadPermissions(applicationId) {
-        return this.menuService.getAuthorizations(applicationId).pipe(map((items) => [...new Set(items.map((item) => item.menuCode))]), tap((permissions) => this.permissions.set(permissions)));
+        return this.menuService.getAuthorizations(applicationId).pipe(tap((items) => this.applyAuthorizations(items)), map(() => this.permissions()), catchError((error) => {
+            this.clearAuthorizationData();
+            return throwError(() => error);
+        }));
+    }
+    applyAuthorizations(items) {
+        const authorizations = items.map((item) => ({
+            ...item,
+            companies: item.companies.map((company) => ({ ...company })),
+        }));
+        const permissionCodes = new Set();
+        const seenCompanyIds = new Set();
+        const companyCodes = new Set();
+        const companies = [];
+        const menuCompanySets = new Map();
+        for (const authorization of authorizations) {
+            permissionCodes.add(authorization.menuCode);
+            const scopedCodes = menuCompanySets.get(authorization.menuCode) ?? new Set();
+            menuCompanySets.set(authorization.menuCode, scopedCodes);
+            for (const company of authorization.companies) {
+                scopedCodes.add(company.code);
+                companyCodes.add(company.code);
+                if (!seenCompanyIds.has(company.id)) {
+                    seenCompanyIds.add(company.id);
+                    companies.push(company);
+                }
+            }
+        }
+        const menuCompanies = {};
+        for (const [menuCode, codes] of menuCompanySets) {
+            menuCompanies[menuCode] = [...codes];
+        }
+        this.authorizations.set(authorizations);
+        this.permissions.set([...permissionCodes]);
+        this.companies.set(companies);
+        this.companyCodes.set([...companyCodes]);
+        this.menuCompanies.set(menuCompanies);
     }
     /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
     applyMenuFavorite(menus, menuId, isFavorite) {
@@ -10894,14 +10998,14 @@ class IUserMenuStore {
             this.currentUser.set(mapToSidebarUser(raw));
         }), map(() => null));
     }
-    loadMenusInternal() {
-        return this.loadMenus().pipe(map(() => null));
+    loadMenusInternal(applicationId) {
+        return this.loadMenus(applicationId).pipe(map(() => null));
     }
-    loadFavoritesInternal() {
-        return this.loadFavorites().pipe(map(() => null));
+    loadFavoritesInternal(applicationId) {
+        return this.loadFavorites(applicationId).pipe(map(() => null));
     }
-    loadPermissionsInternal() {
-        return this.loadPermissions().pipe(map(() => null));
+    loadPermissionsInternal(applicationId) {
+        return this.loadPermissions(applicationId).pipe(map(() => null));
     }
     clearData() {
         this.currentUser.set(null);
@@ -10909,9 +11013,17 @@ class IUserMenuStore {
         this.menus.set([]);
         this.favorites.set([]);
         this.roles.set([]);
-        this.permissions.set([]);
+        this.clearAuthorizationData();
+        this.initialized.set(false);
         this.loadError.set(null);
         this.loadErrors.set({ user: null, menus: null, favorites: null, permissions: null });
+    }
+    clearAuthorizationData() {
+        this.permissions.set([]);
+        this.authorizations.set([]);
+        this.companies.set([]);
+        this.companyCodes.set([]);
+        this.menuCompanies.set({});
     }
     recordError(source, err) {
         const normalized = normalizeApiError(err);
@@ -11083,7 +11195,7 @@ class ISessionService {
     /**
      * Roles claimed by the current access token (Keycloak `realm_access.roles`).
      * Returns an empty array while no token is set. Used by role-mode permission
-     * checks (`ihHasMn` / `ihNotHasMn` with `source: 'role'`).
+     * checks (`iHasMn` / `iNotHasMn` authorization predicates).
      */
     getRoles() {
         if (!this.accessToken) {
@@ -13337,9 +13449,9 @@ class IHSidebar {
         </button>
 
         @if (accountMenuOpen()) {
-          <div class="ih-user-dropdown" role="menu">
+          <div class="ih-user-dropdown i-options" role="menu">
             <a
-              class="ih-user-dropdown-item"
+              class="ih-user-dropdown-item i-option"
               rel="noopener noreferrer"
               role="menuitem"
               target="_blank"
@@ -13347,16 +13459,16 @@ class IHSidebar {
               (click)="closeAccountMenu()"
             >
               <i class="fa-solid fa-user fa-fw"></i>
-              <span>Personal Profile</span>
+              <span class="i-option-label">Personal Profile</span>
             </a>
             <button
-              class="ih-user-dropdown-item"
+              class="ih-user-dropdown-item i-option"
               role="menuitem"
               type="button"
               (click)="onLogoutClick()"
             >
               <i class="fa-solid fa-right-from-bracket fa-fw"></i>
-              <span>Logout</span>
+              <span class="i-option-label">Logout</span>
             </button>
           </div>
         }
@@ -13462,9 +13574,9 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
         </button>
 
         @if (accountMenuOpen()) {
-          <div class="ih-user-dropdown" role="menu">
+          <div class="ih-user-dropdown i-options" role="menu">
             <a
-              class="ih-user-dropdown-item"
+              class="ih-user-dropdown-item i-option"
               rel="noopener noreferrer"
               role="menuitem"
               target="_blank"
@@ -13472,16 +13584,16 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
               (click)="closeAccountMenu()"
             >
               <i class="fa-solid fa-user fa-fw"></i>
-              <span>Personal Profile</span>
+              <span class="i-option-label">Personal Profile</span>
             </a>
             <button
-              class="ih-user-dropdown-item"
+              class="ih-user-dropdown-item i-option"
               role="menuitem"
               type="button"
               (click)="onLogoutClick()"
             >
               <i class="fa-solid fa-right-from-bracket fa-fw"></i>
-              <span>Logout</span>
+              <span class="i-option-label">Logout</span>
             </button>
           </div>
         }
@@ -14788,8 +14900,7 @@ function ensureMenusLoaded$1(store) {
     if (store.initializing()) {
         return store.initializing$.pipe(filter$1((initializing) => !initializing), take$1(1), map(() => undefined));
     }
-    const menusSettled = store.menus().length > 0 || store.loadErrors().menus !== null;
-    return menusSettled ? of(undefined) : store.load();
+    return store.initialized() ? of(undefined) : store.load();
 }
 /**
  * Route guard factory that denies navigation to users who lack a required
@@ -14835,41 +14946,37 @@ function requireAccess(check) {
     };
 }
 
-/** Waits until the store has settled its menu data (triggering the cold-start load if needed). */
+function menuCodeFromRouteData(route) {
+    const menuCode = route.data['menuCode'];
+    return typeof menuCode === 'string' && menuCode.trim() ? menuCode.trim() : null;
+}
+/** Waits until the store has settled its menu data, triggering a cold-start load if needed. */
 function ensureMenusLoaded(store) {
     if (store.initializing()) {
         return store.initializing$.pipe(filter$1((initializing) => !initializing), take$1(1), map(() => undefined));
     }
-    const menusSettled = store.menus().length > 0 || store.loadErrors().menus !== null;
-    return menusSettled ? of(undefined) : store.load();
+    return store.initialized() ? of(undefined) : store.load();
 }
-/**
- * Route-membership guard: denies navigation to pages the user has no granted
- * menu for, redirecting to {@link UNAUTHORIZED_ACCESS_PATH}. Compose AFTER
- * `authGuard` in the `canActivate` array:
- *
- * ```ts
- * const routes = [{ path: 'sales/nup', canActivate: [authGuard, requireRouteAccess()], ... }];
- * ```
- *
- * The default matcher works where menu routes live in the same path space as
- * the router (a host shell). Remotes pass `{ canOpen }` to map the local path
- * into their host-prefixed menu-route space.
- */
+/** Authorizes a route by its resolved menu code instead of comparing backend routes. */
 function requireRouteAccess(options = {}) {
-    const canOpen = options.canOpen ?? ((path, store) => store.hasRoute(path));
-    return (_route, state) => {
+    const resolveMenuCode = options.resolveMenuCode ?? menuCodeFromRouteData;
+    const missingMenuCode = options.missingMenuCode ?? 'allow';
+    return (route, state) => {
         const session = inject(ISessionService);
         const store = inject(IUserMenuStore);
         const router = inject(Router);
-        // The auth guard (composed first) owns unauthenticated redirects and the
-        // session-expired overlay UX — defer to it while the session is unresolved.
         if (session.initializing() || !session.isAuth()) {
             return of(true);
         }
         return ensureMenusLoaded(store).pipe(map(() => {
-            const allowed = canOpen(state.url, store);
-            return allowed || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
+            const menuCode = resolveMenuCode(route, state)?.trim();
+            if (!menuCode) {
+                console.warn(`[@insight/ui] No menu code mapping found for route "${state.url}".`);
+                return missingMenuCode === 'allow'
+                    ? true
+                    : router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
+            }
+            return store.hasMenu(menuCode) || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
         }));
     };
 }
@@ -15019,30 +15126,24 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
   `, styles: [".session-expired-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background-color:#00000080;z-index:9999}.session-expired-card{background:var(--i-color-surface, #ffffff);border-radius:8px;padding:32px;max-width:380px;width:calc(100% - 32px);box-shadow:0 8px 24px #0003;text-align:center}.session-expired-icon{font-size:48px;color:var(--i-color-warning, #f59e0b);margin-bottom:16px}h1{margin:0 0 8px;font-size:22px;font-weight:600;color:var(--i-text-color, #1f2937)}p{margin:0 0 24px;font-size:14px;line-height:1.5;color:var(--i-text-subtle-color, #6b7280)}.session-expired-action{border:none;border-radius:6px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;background:var(--i-color-primary, #2563eb);color:#fff}.session-expired-action:hover{filter:brightness(1.05)}\n"] }]
         }] });
 
-/** Resolves an input into a concrete `{ source, codes }` pair (or `null`). */
-function resolvePermission(value) {
-    if (!value) {
-        return null;
+/** Evaluates permission input without exposing mutable store state. */
+function evaluatePermission(value, source) {
+    if (!value)
+        return false;
+    if (typeof value === 'function') {
+        try {
+            return value(source);
+        }
+        catch {
+            console.error('[@insight/ui] Permission predicate failed.');
+            return false;
+        }
     }
-    if (typeof value === 'object' && !Array.isArray(value)) {
-        return { source: value.source, codes: value.value };
-    }
-    return { source: 'menu', codes: value };
+    const codes = Array.isArray(value) ? value : [value];
+    return codes.some((code) => source.menu.includes(code));
 }
-/**
- * Base structural permission directive shared by `IHHasMnDirective` and
- * `IHNotHasMnDirective`.
- *
- * ASYNC-AWARE: instead of a one-shot input setter, it subscribes to the
- * `IUserMenuStore`'s reactive menu/role/permission state (`menus$` / `roles$` /
- * `permissions$`) and re-renders the embedded view whenever the permission
- * resolves or changes. While the store cold-starts (`initializing`), the view
- * stays hidden for BOTH `ihHasMn` and `ihNotHasMn` - a not-yet-loaded
- * permission must not flash a denied element. Once data arrives the view
- * appears (or stays hidden if the user lacks the code), and disappears again
- * if a role/menu/permission change revokes access.
- */
-class IHMenuGateDirective {
+/** Shared reactive implementation for the positive and inverse permission directives. */
+class IMenuGateDirective {
     store = inject(IUserMenuStore);
     templateRef = inject((TemplateRef));
     viewContainer = inject(ViewContainerRef);
@@ -15052,36 +15153,18 @@ class IHMenuGateDirective {
     ngOnInit() {
         this.subscription = combineLatest([
             this.value$,
-            this.store.menus$,
-            this.store.roles$,
-            this.store.permissions$,
+            this.store.authorizationSource$,
             this.store.initializing$,
+            this.store.initialized$,
         ])
-            .pipe(map(([value]) => (this.store.initializing() ? null : this.evaluate(value))), distinctUntilChanged())
+            .pipe(map(([value]) => this.store.initializing() || !this.store.initialized()
+            ? null
+            : evaluatePermission(value, this.store.authorizationSource())), distinctUntilChanged())
             .subscribe((state) => this.renderView(state));
     }
     ngOnDestroy() {
         this.subscription?.unsubscribe();
     }
-    evaluate(value) {
-        const resolved = resolvePermission(value);
-        if (!resolved) {
-            return false;
-        }
-        if (resolved.source === 'role') {
-            return this.store.hasRole(resolved.codes);
-        }
-        if (resolved.source === 'permission') {
-            return this.store.hasPermission(resolved.codes);
-        }
-        return this.store.hasMenu(resolved.codes);
-    }
-    /**
-     * Renders the embedded view for a resolved state:
-     * - `null` = store still initializing / permission unknown - keep hidden for
-     *   BOTH `ihHasMn` and `ihNotHasMn` (gate lifts once `initializing` flips false).
-     * - `boolean` = final allow/deny, resolved against `invert`.
-     */
     renderView(state) {
         if (state === null) {
             if (this.viewCreated) {
@@ -15100,62 +15183,42 @@ class IHMenuGateDirective {
             this.viewCreated = false;
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHMenuGateDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IHMenuGateDirective, isStandalone: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IMenuGateDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IMenuGateDirective, isStandalone: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHMenuGateDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IMenuGateDirective, decorators: [{
             type: Directive,
             args: [{ standalone: true }]
         }] });
-/**
- * Structural directive `*ihHasMn` — renders the element only while the current
- * user has the given menu code / role / feature permission.
- *
- * Usage:
- * ```html
- * <button *ihHasMn="'admin'">Admin only</button>                 <!-- menu mode (default) -->
- * <div *ihHasMn="['read', 'write']">R/W</div>
- * <i *ihHasMn="{ source: 'role', value: 'iam-admin' }">Role check</i>
- * <i *ihHasMn="{ source: 'permission', value: 'report.export' }">Permission check</i>
- * ```
- */
-class IHHasMnDirective extends IHMenuGateDirective {
+/** Renders the template when a menu shorthand or authorization predicate allows it. */
+class IHasMnDirective extends IMenuGateDirective {
     invert = false;
-    set ihHasMn(value) {
+    set iHasMn(value) {
         this.value$.next(value);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IHHasMnDirective, isStandalone: true, selector: "[ihHasMn]", inputs: { ihHasMn: "ihHasMn" }, usesInheritance: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IHasMnDirective, isStandalone: true, selector: "[iHasMn]", inputs: { iHasMn: "iHasMn" }, usesInheritance: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHHasMnDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnDirective, decorators: [{
             type: Directive,
-            args: [{ selector: '[ihHasMn]', standalone: true }]
-        }], propDecorators: { ihHasMn: [{
+            args: [{ selector: '[iHasMn]', standalone: true }]
+        }], propDecorators: { iHasMn: [{
                 type: Input
             }] } });
 
-/**
- * Structural directive `*ihNotHasMn` — the inverse of `ihHasMn`: renders the
- * element only while the current user does NOT have the given menu code / role.
- *
- * Usage:
- * ```html
- * <div *ihNotHasMn="'super-admin'">Everyone except super-admin</div>
- * <i *ihNotHasMn="{ source: 'role', value: 'iam-admin' }">Non-admin</i>
- * ```
- */
-class IHNotHasMnDirective extends IHMenuGateDirective {
+/** Renders the template when a menu shorthand or authorization predicate denies it. */
+class INotHasMnDirective extends IMenuGateDirective {
     invert = true;
-    set ihNotHasMn(value) {
+    set iNotHasMn(value) {
         this.value$.next(value);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHNotHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IHNotHasMnDirective, isStandalone: true, selector: "[ihNotHasMn]", inputs: { ihNotHasMn: "ihNotHasMn" }, usesInheritance: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: INotHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: INotHasMnDirective, isStandalone: true, selector: "[iNotHasMn]", inputs: { iNotHasMn: "iNotHasMn" }, usesInheritance: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHNotHasMnDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: INotHasMnDirective, decorators: [{
             type: Directive,
-            args: [{ selector: '[ihNotHasMn]', standalone: true }]
-        }], propDecorators: { ihNotHasMn: [{
+            args: [{ selector: '[iNotHasMn]', standalone: true }]
+        }], propDecorators: { iNotHasMn: [{
                 type: Input
             }] } });
 
@@ -15167,5 +15230,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHHasMnDirective, IHMenu, IHMenuGateDirective, IHNotHasMnDirective, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolvePermission, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
+export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
 //# sourceMappingURL=insight-ui.mjs.map
