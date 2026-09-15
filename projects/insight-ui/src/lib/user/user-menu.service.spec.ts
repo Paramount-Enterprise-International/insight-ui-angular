@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
-import { I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
 import { IApiService } from '../api/api.service';
+import { I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
 import { IUserMenuService } from './user-menu.service';
 
 const testConfig: IAuthConfig = {
@@ -12,7 +12,11 @@ const testConfig: IAuthConfig = {
   },
   signinUrl: 'http://localhost:4200/auth/signin',
   allowedReturnOrigins: ['http://localhost:4207'],
-  tokenLifespan: { accessTokenSeconds: 3600, refreshTokenSeconds: 7200, ssoSessionMaxSeconds: 54000 },
+  tokenLifespan: {
+    accessTokenSeconds: 3600,
+    refreshTokenSeconds: 7200,
+    ssoSessionMaxSeconds: 54000,
+  },
   csrfTokenMaxAgeSeconds: 7170,
   appId: 'cfg-app',
 };
@@ -33,11 +37,16 @@ describe('IUserMenuService', () => {
   });
 
   it('getEffectiveMenus calls the canonical application menu endpoint and unwraps .data', (done) => {
-    const envelope = { meta: { timestamp: '2026-08-23T00:00:00Z' }, data: [{ id: 'm1', name: 'Dashboard' }] };
+    const envelope = {
+      meta: { timestamp: '2026-08-23T00:00:00Z' },
+      data: [{ id: 'm1', name: 'Dashboard' }],
+    };
     apiSpy.get.and.returnValue(of(envelope));
 
     service.getEffectiveMenus().subscribe((res) => {
-      expect(apiSpy.get).toHaveBeenCalledWith('/me/applications/cfg-app/menus', undefined, { apiUrl: 'http://localhost:3002/api/users' });
+      expect(apiSpy.get).toHaveBeenCalledWith('/me/applications/cfg-app/menus', undefined, {
+        apiUrl: 'http://localhost:3002/api/users',
+      });
       expect(res).toEqual([{ id: 'm1', name: 'Dashboard' }] as never);
       done();
     });
@@ -56,9 +65,13 @@ describe('IUserMenuService', () => {
     apiSpy.get.and.returnValue(of({ meta: { timestamp: '' }, data: [{ id: 'f1' }] }));
 
     service.getFavorites().subscribe((res) => {
-      expect(apiSpy.get).toHaveBeenCalledWith('/me/applications/cfg-app/menus/favorites', undefined, {
-        apiUrl: 'http://localhost:3002/api/users',
-      });
+      expect(apiSpy.get).toHaveBeenCalledWith(
+        '/me/applications/cfg-app/menus/favorites',
+        undefined,
+        {
+          apiUrl: 'http://localhost:3002/api/users',
+        },
+      );
       expect(res).toEqual([{ id: 'f1' }] as never);
       done();
     });
@@ -71,8 +84,14 @@ describe('IUserMenuService', () => {
     service.addFavorite('m1').subscribe();
     service.removeFavorite('m1').subscribe();
 
-    expect(apiSpy.put).toHaveBeenCalledWith('/me/menus/m1/favorite', {}, { apiUrl: 'http://localhost:3002/api/users' });
-    expect(apiSpy.delete).toHaveBeenCalledWith('/me/menus/m1/favorite', { apiUrl: 'http://localhost:3002/api/users' });
+    expect(apiSpy.put).toHaveBeenCalledWith(
+      '/me/menus/m1/favorite',
+      {},
+      { apiUrl: 'http://localhost:3002/api/users' },
+    );
+    expect(apiSpy.delete).toHaveBeenCalledWith('/me/menus/m1/favorite', {
+      apiUrl: 'http://localhost:3002/api/users',
+    });
   });
 
   it('reorderFavorites builds the full 1..n displayOrder sequence', () => {
@@ -82,11 +101,13 @@ describe('IUserMenuService', () => {
 
     expect(apiSpy.put).toHaveBeenCalledWith(
       '/me/menus/favorites',
-      { items: [
-        { menuId: 'a', displayOrder: 1 },
-        { menuId: 'b', displayOrder: 2 },
-        { menuId: 'c', displayOrder: 3 },
-      ] },
+      {
+        items: [
+          { menuId: 'a', displayOrder: 1 },
+          { menuId: 'b', displayOrder: 2 },
+          { menuId: 'c', displayOrder: 3 },
+        ],
+      },
       { apiUrl: 'http://localhost:3002/api/users' },
     );
   });
@@ -117,9 +138,7 @@ describe('IUserMenuService — getAuthorizations', () => {
   beforeEach(() => configure(testConfig));
 
   it('calls the canonical application authorization endpoint and unwraps .data', (done) => {
-    const data = [
-      { menuCode: 'report.export', menuId: 'm2', type: 'function', companies: [] },
-    ];
+    const data = [{ menuCode: 'report.export', menuId: 'm2', type: 'function', companies: [] }];
     apiSpy.get.and.returnValue(of(envelope(data)));
 
     service.getAuthorizations('app-1').subscribe((res) => {

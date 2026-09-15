@@ -7,18 +7,18 @@ import { type INormalizedApiError, normalizeApiError, resolveApiErrorDisplayMess
 import { getMenuKey, IMenu, IUser } from '../host';
 import { ISessionService } from '../session/session.service';
 import {
+  IAuthorizationSource,
   ICurrentUserDto,
   ICurrentUserService,
-  IAuthorizationSource,
   IEffectiveAuthorizationDto,
   IFavoriteMenuItemDto,
   IMenuNodeDto,
   IUserMenuService,
 } from '../user';
 import {
+  collectMenuCodes,
   findFirstLeafRoute,
   findMenuNameById,
-  collectMenuCodes,
   hasAnyMenuCode,
   hasAnyRoute,
   mapToSidebarUser,
