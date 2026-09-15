@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { forkJoin, map, Observable, of, throwError } from 'rxjs';
 import { catchError, filter, finalize, shareReplay, switchMap, take, tap } from 'rxjs/operators';
@@ -9,6 +9,7 @@ import { ISessionService } from '../session/session.service';
 import {
   ICurrentUserDto,
   ICurrentUserService,
+  IAuthorizationSource,
   IEffectiveAuthorizationDto,
   IFavoriteMenuItemDto,
   IMenuNodeDto,
@@ -17,6 +18,7 @@ import {
 import {
   findFirstLeafRoute,
   findMenuNameById,
+  collectMenuCodes,
   hasAnyMenuCode,
   hasAnyRoute,
   mapToSidebarUser,
@@ -31,7 +33,7 @@ import {
  * Everything lives in memory (signals); NOTHING is persisted to Web Storage.
  * On a cold start (page load) consumers call `load()` to re-fetch user, menus,
  * favorites and effective authorizations; the store then re-emits so gated UI
- * (`ihHasMn` / `ihNotHasMn`) re-renders reactively once data is available
+ * (`iHasMn` / `iNotHasMn`) re-renders reactively once data is available
  * (async-aware).
  */
 /** Load branch keys for the cold-start sidebar data load. */
@@ -48,6 +50,7 @@ export class IUserMenuStore {
 
   /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
   private loadedUserSub: string | null = null;
+  private loadedApplicationId: string | null = null;
 
   /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
   readonly currentUser = signal<IUser | null>(null);
@@ -62,13 +65,34 @@ export class IUserMenuStore {
   /**
    * Feature permissions granted by the backend (for `source: 'permission'`
    * checks). Hydrated by `load()` from the effective authorizations endpoint
-   * (`GET {api.user}/me/authorizations`) as the deduplicated set of
+   * (application-scoped authorizations endpoint) as the deduplicated set of
    * `data[].menuCode`; `setPermissions()` remains available for a caller that
    * wants to supply the list itself.
    */
   readonly permissions = signal<string[]>([]);
+  /** Raw effective authorization entries returned by iam-user-api. */
+  readonly authorizations = signal<IEffectiveAuthorizationDto[]>([]);
+  /** Deduplicated companies from the effective authorization entries. */
+  readonly companies = signal<IEffectiveAuthorizationDto['companies']>([]);
+  /** Deduplicated company codes from the effective authorization entries. */
+  readonly companyCodes = signal<string[]>([]);
+  /** Company codes grouped by menu code. */
+  readonly menuCompanies = signal<Record<string, string[]>>({});
+  /** Deduplicated navigable menu codes from the effective menu tree. */
+  readonly menuCodes = computed(() => collectMenuCodes(this.menus()));
+  /** Immutable authorization snapshot used by permission predicates. */
+  readonly authorizationSource = computed<IAuthorizationSource>(() => ({
+    menu: this.menuCodes(),
+    permission: this.permissions(),
+    roles: this.roles(),
+    companyCodes: this.companyCodes(),
+    companies: this.companies(),
+    menuCompanies: this.menuCompanies(),
+  }));
   /** True while the cold-start `load()` is in flight. */
   readonly initializing = signal(false);
+  /** True after the most recent load has settled, including partial failures. */
+  readonly initialized = signal(false);
   /** First error encountered during `load()`, if any (e.g. `menus: ...`). */
   readonly loadError = signal<string | null>(null);
   /** Normalized per-branch errors from the last `load()` — mirrors the service API error contract. */
@@ -86,7 +110,14 @@ export class IUserMenuStore {
   readonly favorites$ = toObservable(this.favorites);
   readonly roles$ = toObservable(this.roles);
   readonly permissions$ = toObservable(this.permissions);
+  readonly authorizations$ = toObservable(this.authorizations);
+  readonly companies$ = toObservable(this.companies);
+  readonly companyCodes$ = toObservable(this.companyCodes);
+  readonly menuCompanies$ = toObservable(this.menuCompanies);
+  readonly menuCodes$ = toObservable(this.menuCodes);
+  readonly authorizationSource$ = toObservable(this.authorizationSource);
   readonly initializing$ = toObservable(this.initializing);
+  readonly initialized$ = toObservable(this.initialized);
 
   /**
    * Post-login default landing (when no return URL is present).
@@ -111,7 +142,7 @@ export class IUserMenuStore {
    * immediately even if the caller ignores the returned observable — a shared
    * source is kept alive by an internal subscribe (fire-and-forget compatible).
    */
-  load(): Observable<void> {
+  load(applicationId?: string): Observable<void> {
     if (this.initializing()) {
       return this.initializing$.pipe(
         filter((init) => !init),
@@ -124,28 +155,40 @@ export class IUserMenuStore {
     // a failed refetch (e.g. USER_APPLICATION_MAPPING_NOT_FOUND) never leaks
     // the previous user's menus/favorites into the sidebar.
     const sessionSub = this.session.getUser()?.sub ?? null;
-    if (sessionSub !== this.loadedUserSub) {
+    const applicationKey = applicationId?.trim() || null;
+    if (
+      sessionSub !== this.loadedUserSub ||
+      (this.initialized() && applicationKey !== this.loadedApplicationId)
+    ) {
       this.clearData();
-      this.loadedUserSub = sessionSub;
     }
+    this.loadedUserSub = sessionSub;
+    this.loadedApplicationId = applicationKey;
     this.initializing.set(true);
+    this.initialized.set(false);
     this.loadError.set(null);
     this.loadErrors.set({ user: null, menus: null, favorites: null, permissions: null });
     this.roles.set(this.session.getRoles());
+    this.clearAuthorizationData();
 
     const result$ = forkJoin({
       user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err))),
-      menus: this.loadMenusInternal().pipe(catchError((err) => this.recordError('menus', err))),
-      favorites: this.loadFavoritesInternal().pipe(
+      menus: this.loadMenusInternal(applicationId).pipe(
+        catchError((err) => this.recordError('menus', err)),
+      ),
+      favorites: this.loadFavoritesInternal(applicationId).pipe(
         catchError((err) => this.recordError('favorites', err)),
       ),
-      permissions: this.loadPermissionsInternal().pipe(
+      permissions: this.loadPermissionsInternal(applicationId).pipe(
         catchError((err) => this.recordError('permissions', err)),
       ),
     }).pipe(
       map(() => undefined),
       catchError(() => of(undefined)),
-      finalize(() => this.initializing.set(false)),
+      finalize(() => {
+        this.initializing.set(false);
+        this.initialized.set(true);
+      }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
 
@@ -163,6 +206,7 @@ export class IUserMenuStore {
   reset(): void {
     this.clearData();
     this.loadedUserSub = null;
+    this.loadedApplicationId = null;
   }
 
   /** Refresh roles from the current access token (call after login / token change). */
@@ -289,9 +333,51 @@ export class IUserMenuStore {
    */
   loadPermissions(applicationId?: string): Observable<string[]> {
     return this.menuService.getAuthorizations<IEffectiveAuthorizationDto[]>(applicationId).pipe(
-      map((items) => [...new Set(items.map((item) => item.menuCode))]),
-      tap((permissions) => this.permissions.set(permissions)),
+      tap((items) => this.applyAuthorizations(items)),
+      map(() => this.permissions()),
+      catchError((error) => {
+        this.clearAuthorizationData();
+        return throwError(() => error);
+      }),
     );
+  }
+
+  private applyAuthorizations(items: IEffectiveAuthorizationDto[]): void {
+    const authorizations = items.map((item) => ({
+      ...item,
+      companies: item.companies.map((company) => ({ ...company })),
+    }));
+    const permissionCodes = new Set<string>();
+    const seenCompanyIds = new Set<string>();
+    const companyCodes = new Set<string>();
+    const companies: IEffectiveAuthorizationDto['companies'] = [];
+    const menuCompanySets = new Map<string, Set<string>>();
+
+    for (const authorization of authorizations) {
+      permissionCodes.add(authorization.menuCode);
+      const scopedCodes = menuCompanySets.get(authorization.menuCode) ?? new Set<string>();
+      menuCompanySets.set(authorization.menuCode, scopedCodes);
+
+      for (const company of authorization.companies) {
+        scopedCodes.add(company.code);
+        companyCodes.add(company.code);
+        if (!seenCompanyIds.has(company.id)) {
+          seenCompanyIds.add(company.id);
+          companies.push(company);
+        }
+      }
+    }
+
+    const menuCompanies: Record<string, string[]> = {};
+    for (const [menuCode, codes] of menuCompanySets) {
+      menuCompanies[menuCode] = [...codes];
+    }
+
+    this.authorizations.set(authorizations);
+    this.permissions.set([...permissionCodes]);
+    this.companies.set(companies);
+    this.companyCodes.set([...companyCodes]);
+    this.menuCompanies.set(menuCompanies);
   }
 
   /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
@@ -339,16 +425,16 @@ export class IUserMenuStore {
     );
   }
 
-  private loadMenusInternal(): Observable<null> {
-    return this.loadMenus().pipe(map(() => null));
+  private loadMenusInternal(applicationId?: string): Observable<null> {
+    return this.loadMenus(applicationId).pipe(map(() => null));
   }
 
-  private loadFavoritesInternal(): Observable<null> {
-    return this.loadFavorites().pipe(map(() => null));
+  private loadFavoritesInternal(applicationId?: string): Observable<null> {
+    return this.loadFavorites(applicationId).pipe(map(() => null));
   }
 
-  private loadPermissionsInternal(): Observable<null> {
-    return this.loadPermissions().pipe(map(() => null));
+  private loadPermissionsInternal(applicationId?: string): Observable<null> {
+    return this.loadPermissions(applicationId).pipe(map(() => null));
   }
 
   private clearData(): void {
@@ -357,9 +443,18 @@ export class IUserMenuStore {
     this.menus.set([]);
     this.favorites.set([]);
     this.roles.set([]);
-    this.permissions.set([]);
+    this.clearAuthorizationData();
+    this.initialized.set(false);
     this.loadError.set(null);
     this.loadErrors.set({ user: null, menus: null, favorites: null, permissions: null });
+  }
+
+  private clearAuthorizationData(): void {
+    this.permissions.set([]);
+    this.authorizations.set([]);
+    this.companies.set([]);
+    this.companyCodes.set([]);
+    this.menuCompanies.set({});
   }
 
   private recordError(source: IUserMenuLoadSource, err: unknown): Observable<null> {

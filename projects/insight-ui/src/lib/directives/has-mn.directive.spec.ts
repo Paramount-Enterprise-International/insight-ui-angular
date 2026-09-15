@@ -1,28 +1,37 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 
-import { IHHasMnDirective } from './has-mn';
-import { IHNotHasMnDirective } from './not-has-mn';
+import { IHasMnDirective } from './has-mn';
+import { INotHasMnDirective } from './not-has-mn';
 import { IUserMenuStore } from '../store/user-menu.store';
 import { ISessionService } from '../session/session.service';
 import { ICurrentUserService, IUserMenuService } from '../user';
 
 @Component({
   standalone: true,
-  imports: [IHHasMnDirective, IHNotHasMnDirective],
+  imports: [IHasMnDirective, INotHasMnDirective],
   template: `
-    <div *ihHasMn="'admin'"><span class="menu-admin">MENU-ADMIN</span></div>
-    <div *ihHasMn="'user'"><span class="menu-user">MENU-USER</span></div>
-    <div *ihNotHasMn="'admin'"><span class="not-admin">NOT-ADMIN</span></div>
-    <div *ihHasMn="{ source: 'role', value: 'iam-admin' }"><span class="role-admin">ROLE-ADMIN</span></div>
-    <div *ihNotHasMn="{ source: 'role', value: 'iam-super' }"><span class="not-super">NOT-SUPER</span></div>
-    <div *ihHasMn="{ source: 'permission', value: 'report.export' }"><span class="perm-export">PERM-EXPORT</span></div>
-    <div *ihNotHasMn="{ source: 'permission', value: 'report.delete' }"><span class="not-delete">NOT-DELETE</span></div>
+    <div *iHasMn="'admin'"><span class="menu-admin">MENU-ADMIN</span></div>
+    <div *iHasMn="'user'"><span class="menu-user">MENU-USER</span></div>
+    <div *iNotHasMn="'admin'"><span class="not-admin">NOT-ADMIN</span></div>
+    <div *iHasMn="hasAdminRole"><span class="role-admin">ROLE-ADMIN</span></div>
+    <div *iNotHasMn="hasSuperRole"><span class="not-super">NOT-SUPER</span></div>
+    <div *iHasMn="canExport"><span class="perm-export">PERM-EXPORT</span></div>
+    <div *iNotHasMn="canDelete"><span class="not-delete">NOT-DELETE</span></div>
   `,
 })
-class HostComponent {}
+class HostComponent {
+  readonly hasAdminRole = (source: { roles: readonly string[] }): boolean =>
+    source.roles.includes('iam-admin');
+  readonly hasSuperRole = (source: { roles: readonly string[] }): boolean =>
+    source.roles.includes('iam-super');
+  readonly canExport = (source: { permission: readonly string[] }): boolean =>
+    source.permission.includes('report.export');
+  readonly canDelete = (source: { permission: readonly string[] }): boolean =>
+    source.permission.includes('report.delete');
+}
 
-describe('IHHasMnDirective / IHNotHasMnDirective', () => {
+describe('IHasMnDirective / INotHasMnDirective', () => {
   let fixture: ComponentFixture<HostComponent>;
   let store: IUserMenuStore;
 
@@ -45,7 +54,7 @@ describe('IHHasMnDirective / IHNotHasMnDirective', () => {
 
     fixture = TestBed.createComponent(HostComponent);
     store = TestBed.inject(IUserMenuStore);
-    fixture.detectChanges();
+    store.initialized.set(true);
   }));
 
   it('menu mode: renders only when the menu code is present', async () => {
@@ -66,7 +75,7 @@ describe('IHHasMnDirective / IHNotHasMnDirective', () => {
     expect(query('.not-admin')).toBeTruthy();
   });
 
-  it('role mode (object form) renders when the role is claimed', async () => {
+  it('predicate mode renders when the role is claimed', async () => {
     store.roles.set(['iam-admin']);
     await settle();
 
@@ -127,6 +136,15 @@ describe('IHHasMnDirective / IHNotHasMnDirective', () => {
 
     expect(query('.menu-admin')).toBeTruthy();
     expect(query('.not-admin')).toBeFalsy();
+  });
+
+  it('hides BOTH has and not-has views before the first load starts', async () => {
+    store.initialized.set(false);
+    await settle();
+
+    expect(query('.menu-admin')).toBeFalsy();
+    expect(query('.not-admin')).toBeFalsy();
+    expect(query('.not-delete')).toBeFalsy();
   });
 
   it('async: hidden while the store is empty, then appears after data arrives', async () => {

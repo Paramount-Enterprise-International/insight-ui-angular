@@ -131,6 +131,7 @@ describe('IUserMenuStore', () => {
     expect(store.roles()).toEqual(['iam-admin']);
     expect(store.permissions()).toEqual(['dashboard', 'report.export']);
     expect(store.initializing()).toBeFalse();
+    expect(store.initialized()).toBeTrue();
     expect(store.loadError()).toBeNull();
   });
 
@@ -349,6 +350,23 @@ describe('IUserMenuStore', () => {
     expect(store.loadErrors().menus?.errorCode).toBe('USER_APPLICATION_MAPPING_NOT_FOUND');
   });
 
+  it('drops cached authorization data when load() switches application', () => {
+    store.load('app-a');
+    expect(store.permissions()).toEqual(['dashboard', 'report.export']);
+
+    menuSpy.getEffectiveMenus.and.returnValue(
+      throwError(() => ({ status: 404, message: 'application unavailable' })),
+    );
+    menuSpy.getAuthorizations.and.returnValue(of([]));
+    store.load('app-b');
+
+    expect(menuSpy.getEffectiveMenus).toHaveBeenCalledWith('app-b');
+    expect(menuSpy.getFavorites).toHaveBeenCalledWith('app-b');
+    expect(menuSpy.getAuthorizations).toHaveBeenCalledWith('app-b');
+    expect(store.menus()).toEqual([]);
+    expect(store.permissions()).toEqual([]);
+  });
+
   it('keeps cached menus across a same-user reload', () => {
     store.load();
     expect(store.menus().length).toBe(1);
@@ -381,12 +399,53 @@ describe('IUserMenuStore', () => {
     expect(store.permissions()).toEqual(['report.export']);
   });
 
+  it('exposes deduplicated companies and menu-company mappings', () => {
+    menuSpy.getAuthorizations.and.returnValue(
+      of([
+        {
+          menuCode: 'report.export',
+          menuId: 'm2',
+          type: 'function',
+          companies: [{ id: 'c1', code: 'ecomindo', name: 'Ecomindo' }],
+        },
+        {
+          menuCode: 'report.export',
+          menuId: 'm2',
+          type: 'function',
+          companies: [{ id: 'c1', code: 'ecomindo', name: 'Duplicate' }],
+        },
+        {
+          menuCode: 'report.read',
+          menuId: 'm3',
+          type: 'function',
+          companies: [],
+        },
+      ]),
+    );
+
+    store.load();
+
+    expect(store.authorizations().length).toBe(3);
+    expect(store.companies()).toEqual([{ id: 'c1', code: 'ecomindo', name: 'Ecomindo' }]);
+    expect(store.companyCodes()).toEqual(['ecomindo']);
+    expect(store.menuCompanies()).toEqual({
+      'report.export': ['ecomindo'],
+      'report.read': [],
+    });
+    expect(store.authorizationSource().menu).toEqual(['dashboard']);
+    expect(store.authorizationSource().permission).toEqual(['report.export', 'report.read']);
+  });
+
   it('load() yields an empty permission list for an empty response (fail-closed)', () => {
     menuSpy.getAuthorizations.and.returnValue(of([]));
 
     store.load();
 
     expect(store.permissions()).toEqual([]);
+    expect(store.authorizations()).toEqual([]);
+    expect(store.companies()).toEqual([]);
+    expect(store.companyCodes()).toEqual([]);
+    expect(store.menuCompanies()).toEqual({});
     expect(store.hasPermission('report.export')).toBeFalse();
     expect(store.loadErrors().permissions).toBeNull();
   });
@@ -446,6 +505,7 @@ describe('IUserMenuStore', () => {
     expect(store.rawCurrentUser()).toBeNull();
     expect(store.roles()).toEqual([]);
     expect(store.permissions()).toEqual([]);
+    expect(store.initialized()).toBeFalse();
     expect(store.loadErrors()).toEqual({
       user: null,
       menus: null,

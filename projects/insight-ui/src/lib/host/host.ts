@@ -151,7 +151,7 @@ export type IMenu = {
   application?: IMenuApplication | null;
   companies?: IMenuCompany[];
   isFavorite?: boolean;
-  /** Backend menu code — used by menu-mode permission checks (`ihHasMn` / `ihNotHasMn`). */
+  /** Backend menu code used by menu-mode permission checks (`iHasMn` / `iNotHasMn`). */
   menuCode?: string | null;
 
   /* ── Legacy ── */
