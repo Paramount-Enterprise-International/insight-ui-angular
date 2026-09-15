@@ -165,4 +165,46 @@ describe('IFCSelect', () => {
     expect(panel.style.overflowX).toBe('clip');
     expect(panel.style.overflowY).toBe('auto');
   });
+
+  it('keeps the panel hidden until the second initial positioning frame', () => {
+    const animationFrames: FrameRequestCallback[] = [];
+
+    spyOn(window, 'requestAnimationFrame').and.callFake((callback) => {
+      animationFrames.push(callback);
+      return animationFrames.length;
+    });
+
+    longFixture = TestBed.createComponent(LongSelectHost);
+    longFixture.detectChanges();
+
+    const select = longFixture.debugElement.query(By.directive(ISelect))
+      .componentInstance as ISelect<string>;
+
+    (select as any).openDropdown();
+    longFixture.detectChanges();
+
+    const panel = document.body.querySelector('i-options') as HTMLElement | null;
+
+    expect(panel).toBeTruthy();
+    if (!panel) return;
+
+    /*
+     * Angular's own change-detection scheduler books a frame on the same global
+     * rAF while the select opens. The select schedules its initial positioning
+     * frame last, so only that frame is relevant for this assertion.
+     */
+    animationFrames.splice(0, Math.max(0, animationFrames.length - 1));
+
+    expect(panel.style.visibility).toBe('hidden');
+    expect(animationFrames.length).toBe(1);
+
+    animationFrames.shift()?.(0);
+
+    expect(panel.style.visibility).toBe('hidden');
+    expect(animationFrames.length).toBe(1);
+
+    animationFrames.shift()?.(16);
+
+    expect(panel.style.visibility).toBe('visible');
+  });
 });

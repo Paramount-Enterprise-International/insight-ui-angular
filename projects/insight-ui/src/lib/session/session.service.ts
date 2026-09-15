@@ -202,7 +202,7 @@ export class ISessionService {
   /**
    * Roles claimed by the current access token (Keycloak `realm_access.roles`).
    * Returns an empty array while no token is set. Used by role-mode permission
-   * checks (`ihHasMn` / `ihNotHasMn` with `source: 'role'`).
+   * checks (`iHasMn` / `iNotHasMn` authorization predicates).
    */
   getRoles(): string[] {
     if (!this.accessToken) {

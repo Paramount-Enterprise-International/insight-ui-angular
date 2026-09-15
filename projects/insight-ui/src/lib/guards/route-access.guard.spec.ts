@@ -1,41 +1,40 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
-import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { ActivatedRouteSnapshot, provideRouter, Router, RouterStateSnapshot } from '@angular/router';
 import { firstValueFrom, of } from 'rxjs';
 
-import { requireRouteAccess } from './route-access.guard';
-import { UNAUTHORIZED_ACCESS_PATH } from './access.guard';
-import { IUserMenuStore } from '../store/user-menu.store';
 import { ISessionService } from '../session/session.service';
+import { IUserMenuStore } from '../store/user-menu.store';
+import { UNAUTHORIZED_ACCESS_PATH } from './access.guard';
+import { IRouteAccessOptions, requireRouteAccess } from './route-access.guard';
 
 describe('requireRouteAccess', () => {
-  const route = {} as ActivatedRouteSnapshot;
-
-  function makeState(url: string): RouterStateSnapshot {
-    return { url } as RouterStateSnapshot;
-  }
-
-  function sessionMock(overrides: Partial<{ initializing: boolean; isAuth: boolean }> = {}): ISessionService {
+  function sessionMock(initializing = false, isAuth = true): ISessionService {
     return {
-      initializing: () => overrides.initializing ?? false,
-      isAuth: () => overrides.isAuth ?? true,
+      initializing: () => initializing,
+      isAuth: () => isAuth,
     } as unknown as ISessionService;
   }
 
-  function storeMock(
-    overrides: Partial<{ hasRoute: boolean; initializing: boolean; menusLoaded: boolean }> = {},
-  ): IUserMenuStore {
+  function storeMock(hasMenu: boolean): IUserMenuStore {
     return {
-      initializing: () => overrides.initializing ?? false,
-      menus: () => (overrides.menusLoaded ? [{ id: 1, name: 'Overview', route: '/overview' }] : []),
+      initializing: () => false,
+      initialized: () => true,
+      menus: () => [{ id: 1, name: 'Overview', menuCode: 'atlas.overview' }],
       loadErrors: () => ({ menus: null }),
       initializing$: of(false),
+      initialized$: of(true),
       load: () => of(undefined),
-      hasRoute: () => overrides.hasRoute ?? false,
+      hasMenu: () => hasMenu,
     } as unknown as IUserMenuStore;
   }
 
-  async function runGuard(url: string, session: unknown, store: unknown): Promise<unknown> {
+  async function runGuard(
+    url: string,
+    store: IUserMenuStore,
+    options: IRouteAccessOptions = {},
+    routeData: Record<string, unknown> = {},
+    session: ISessionService = sessionMock(),
+  ): Promise<unknown> {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -43,23 +42,45 @@ describe('requireRouteAccess', () => {
         { provide: IUserMenuStore, useValue: store },
       ],
     });
-    return TestBed.runInInjectionContext(() => requireRouteAccess()(route, makeState(url))) as unknown;
+    const route = { data: routeData } as unknown as ActivatedRouteSnapshot;
+    const state = { url } as RouterStateSnapshot;
+    const result = TestBed.runInInjectionContext(() => requireRouteAccess(options)(route, state));
+    return firstValueFrom(result as never);
   }
 
-  it('allows navigation while the session is still restoring', async () => {
-    const result = await runGuard('/overview', sessionMock({ initializing: true, isAuth: false }), storeMock());
-    await expectAsync(firstValueFrom(result as never)).toBeResolvedTo(true);
+  it('allows navigation while the session is restoring', async () => {
+    await expectAsync(
+      runGuard('/overview', storeMock(false), {}, {}, sessionMock(true, false)),
+    ).toBeResolvedTo(true);
   });
 
-  it('allows a path that is among the granted leaf menu routes', async () => {
-    const result = await runGuard('/overview', sessionMock(), storeMock({ hasRoute: true, menusLoaded: true }));
-    await expectAsync(firstValueFrom(result as never)).toBeResolvedTo(true);
+  it('allows a route whose resolved menu code is granted', async () => {
+    await expectAsync(
+      runGuard('/overview', storeMock(true), {
+        resolveMenuCode: () => 'atlas.overview',
+      }),
+    ).toBeResolvedTo(true);
   });
 
-  it('denies a path that is not among the granted menus, redirecting to the unauthorized-access page', async () => {
-    const result = await runGuard('/nup', sessionMock(), storeMock({ hasRoute: false, menusLoaded: true }));
-    const value = await firstValueFrom(result as never);
-    const router = TestBed.inject(Router);
-    expect(value).toEqual(router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]));
+  it('reads a static menu code from route data', async () => {
+    await expectAsync(
+      runGuard('/overview', storeMock(true), {}, { menuCode: 'atlas.overview' }),
+    ).toBeResolvedTo(true);
+  });
+
+  it('redirects when the resolved menu code is not granted', async () => {
+    const value = await runGuard('/overview', storeMock(false), {
+      resolveMenuCode: () => 'atlas.overview',
+    });
+    expect(value).toEqual(TestBed.inject(Router).createUrlTree([UNAUTHORIZED_ACCESS_PATH]));
+  });
+
+  it('allows a missing mapping by default', async () => {
+    await expectAsync(runGuard('/unmapped', storeMock(false))).toBeResolvedTo(true);
+  });
+
+  it('can deny a missing mapping explicitly', async () => {
+    const value = await runGuard('/unmapped', storeMock(false), { missingMenuCode: 'deny' });
+    expect(value).toEqual(TestBed.inject(Router).createUrlTree([UNAUTHORIZED_ACCESS_PATH]));
   });
 });

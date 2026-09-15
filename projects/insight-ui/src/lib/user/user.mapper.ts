@@ -57,7 +57,7 @@ export function toIMenuFavorite(item: IFavoriteMenuItemDto): IMenu {
  * Recursively collects the `menuCode` of every navigable leaf item across a
  * menu tree (deduplicated, order preserved). Structural group/module nodes are
  * excluded so a container code never counts as a grant - matching the flat
- * granted-code list the legacy menu token carried (`ihHasMn` menu mode).
+ * granted-code list the menu shorthand carried by `iHasMn`.
  */
 export function collectMenuCodes(menus: IMenu[]): string[] {
   const codes = new Set<string>();
