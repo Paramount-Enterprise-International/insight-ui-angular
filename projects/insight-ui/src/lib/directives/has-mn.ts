@@ -10,52 +10,37 @@ import {
 import { BehaviorSubject, combineLatest, distinctUntilChanged, map, Subscription } from 'rxjs';
 
 import { IUserMenuStore } from '../store/user-menu.store';
+import type { IAuthorizationSource } from '../user';
 
-/** Permission source selector used by `ihHasMn` / `ihNotHasMn`. */
-export type IPermissionSource = 'menu' | 'role' | 'permission';
+/** Flexible permission check against the current authorization snapshot. */
+export type IPermissionPredicate = (source: IAuthorizationSource) => boolean;
 
-/** Object form: inline source + value. */
-export type IPermission = {
-  source: IPermissionSource;
-  value: string | string[];
-};
+/** Menu-code shorthand or a compound authorization predicate. */
+export type IPermissionInput = string | readonly string[] | IPermissionPredicate;
 
-/**
- * Accepted input for the permission directives:
- * - a plain `string | string[]` → menu-mode check (default), or
- * - an object `{ source, value }` to select the source explicitly.
- */
-export type IPermissionInput = string | string[] | IPermission;
-
-/** Resolves an input into a concrete `{ source, codes }` pair (or `null`). */
-export function resolvePermission(
+/** Evaluates permission input without exposing mutable store state. */
+export function evaluatePermission(
   value: IPermissionInput | null,
-): { source: IPermissionSource; codes: string | string[] } | null {
-  if (!value) {
-    return null;
+  source: IAuthorizationSource,
+): boolean {
+  if (!value) return false;
+
+  if (typeof value === 'function') {
+    try {
+      return value(source);
+    } catch {
+      console.error('[@insight/ui] Permission predicate failed.');
+      return false;
+    }
   }
-  if (typeof value === 'object' && !Array.isArray(value)) {
-    return { source: value.source, codes: value.value };
-  }
-  return { source: 'menu', codes: value };
+
+  const codes = Array.isArray(value) ? value : [value];
+  return codes.some((code) => source.menu.includes(code));
 }
 
-/**
- * Base structural permission directive shared by `IHHasMnDirective` and
- * `IHNotHasMnDirective`.
- *
- * ASYNC-AWARE: instead of a one-shot input setter, it subscribes to the
- * `IUserMenuStore`'s reactive menu/role/permission state (`menus$` / `roles$` /
- * `permissions$`) and re-renders the embedded view whenever the permission
- * resolves or changes. While the store cold-starts (`initializing`), the view
- * stays hidden for BOTH `ihHasMn` and `ihNotHasMn` - a not-yet-loaded
- * permission must not flash a denied element. Once data arrives the view
- * appears (or stays hidden if the user lacks the code), and disappears again
- * if a role/menu/permission change revokes access.
- */
+/** Shared reactive implementation for the positive and inverse permission directives. */
 @Directive({ standalone: true })
-export abstract class IHMenuGateDirective implements OnInit, OnDestroy {
-  /** `false` for `ihHasMn` (show when allowed), `true` for `ihNotHasMn` (show when denied). */
+export abstract class IMenuGateDirective implements OnInit, OnDestroy {
   protected abstract readonly invert: boolean;
 
   protected readonly store = inject(IUserMenuStore);
@@ -69,13 +54,16 @@ export abstract class IHMenuGateDirective implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.subscription = combineLatest([
       this.value$,
-      this.store.menus$,
-      this.store.roles$,
-      this.store.permissions$,
+      this.store.authorizationSource$,
       this.store.initializing$,
+      this.store.initialized$,
     ])
       .pipe(
-        map(([value]) => (this.store.initializing() ? null : this.evaluate(value))),
+        map(([value]) =>
+          this.store.initializing() || !this.store.initialized()
+            ? null
+            : evaluatePermission(value, this.store.authorizationSource()),
+        ),
         distinctUntilChanged(),
       )
       .subscribe((state) => this.renderView(state));
@@ -85,26 +73,6 @@ export abstract class IHMenuGateDirective implements OnInit, OnDestroy {
     this.subscription?.unsubscribe();
   }
 
-  private evaluate(value: IPermissionInput | null): boolean {
-    const resolved = resolvePermission(value);
-    if (!resolved) {
-      return false;
-    }
-    if (resolved.source === 'role') {
-      return this.store.hasRole(resolved.codes);
-    }
-    if (resolved.source === 'permission') {
-      return this.store.hasPermission(resolved.codes);
-    }
-    return this.store.hasMenu(resolved.codes);
-  }
-
-  /**
-   * Renders the embedded view for a resolved state:
-   * - `null` = store still initializing / permission unknown - keep hidden for
-   *   BOTH `ihHasMn` and `ihNotHasMn` (gate lifts once `initializing` flips false).
-   * - `boolean` = final allow/deny, resolved against `invert`.
-   */
   private renderView(state: boolean | null): void {
     if (state === null) {
       if (this.viewCreated) {
@@ -113,6 +81,7 @@ export abstract class IHMenuGateDirective implements OnInit, OnDestroy {
       }
       return;
     }
+
     const show = this.invert ? !state : state;
     if (show && !this.viewCreated) {
       this.viewContainer.createEmbeddedView(this.templateRef);
@@ -124,24 +93,13 @@ export abstract class IHMenuGateDirective implements OnInit, OnDestroy {
   }
 }
 
-/**
- * Structural directive `*ihHasMn` — renders the element only while the current
- * user has the given menu code / role / feature permission.
- *
- * Usage:
- * ```html
- * <button *ihHasMn="'admin'">Admin only</button>                 <!-- menu mode (default) -->
- * <div *ihHasMn="['read', 'write']">R/W</div>
- * <i *ihHasMn="{ source: 'role', value: 'iam-admin' }">Role check</i>
- * <i *ihHasMn="{ source: 'permission', value: 'report.export' }">Permission check</i>
- * ```
- */
-@Directive({ selector: '[ihHasMn]', standalone: true })
-export class IHHasMnDirective extends IHMenuGateDirective {
+/** Renders the template when a menu shorthand or authorization predicate allows it. */
+@Directive({ selector: '[iHasMn]', standalone: true })
+export class IHasMnDirective extends IMenuGateDirective {
   protected readonly invert = false;
 
   @Input()
-  set ihHasMn(value: IPermissionInput) {
+  set iHasMn(value: IPermissionInput) {
     this.value$.next(value);
   }
 }

@@ -1,23 +1,14 @@
 import { Directive, Input } from '@angular/core';
 
-import { IHMenuGateDirective, IPermissionInput } from './has-mn';
+import { IMenuGateDirective, IPermissionInput } from './has-mn';
 
-/**
- * Structural directive `*ihNotHasMn` — the inverse of `ihHasMn`: renders the
- * element only while the current user does NOT have the given menu code / role.
- *
- * Usage:
- * ```html
- * <div *ihNotHasMn="'super-admin'">Everyone except super-admin</div>
- * <i *ihNotHasMn="{ source: 'role', value: 'iam-admin' }">Non-admin</i>
- * ```
- */
-@Directive({ selector: '[ihNotHasMn]', standalone: true })
-export class IHNotHasMnDirective extends IHMenuGateDirective {
+/** Renders the template when a menu shorthand or authorization predicate denies it. */
+@Directive({ selector: '[iNotHasMn]', standalone: true })
+export class INotHasMnDirective extends IMenuGateDirective {
   protected readonly invert = true;
 
   @Input()
-  set ihNotHasMn(value: IPermissionInput) {
+  set iNotHasMn(value: IPermissionInput) {
     this.value$.next(value);
   }
 }

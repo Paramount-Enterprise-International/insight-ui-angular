@@ -41,7 +41,7 @@ export * from './lib/session-expired';
 // In-memory sidebar/user/menu store + permission checks
 export * from './lib/store';
 
-// Permission directives (ihHasMn / ihNotHasMn — async, menu or role source)
+// Permission directives (iHasMn / iNotHasMn - async authorization predicates)
 export * from './lib/directives';
 
 // Default environment (no identity host baked in - consumer apps supply their own)

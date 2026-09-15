@@ -39,8 +39,7 @@ function ensureMenusLoaded(store: IUserMenuStore): Observable<void> {
       map(() => undefined),
     );
   }
-  const menusSettled = store.menus().length > 0 || store.loadErrors().menus !== null;
-  return menusSettled ? of(undefined) : store.load();
+  return store.initialized() ? of(undefined) : store.load();
 }
 
 /**

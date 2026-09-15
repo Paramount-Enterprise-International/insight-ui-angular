@@ -1,7 +1,7 @@
 // select.ts (Angular)
 /**
  * ISelect
- * Version: 2.2.7
+ * Version: 2.2.8
  *
  * Fixes:
  * - Render options container as <i-options>
@@ -12,6 +12,7 @@
  * - Fix dropdown not reopening after selecting an option
  * - Fix selected long value poisoning trigger measurement on next open
  * - Fix panel staying hidden when reposition callback does not reveal it
+ * - Stabilize initial panel alignment after overflow and scrollbar layout settles
  */
 
 import { NgClass, NgTemplateOutlet } from '@angular/common';
@@ -547,7 +548,7 @@ export class ISelect<T = any>
      * Do not rely only on an after-callback to reveal the panel.
      * repositionPanelNow() reveals the panel after positioning succeeds.
      */
-    this.scheduleReposition();
+    this.scheduleReposition(undefined, true);
 
     const len = this.filteredOptions.length;
 
@@ -838,7 +839,7 @@ export class ISelect<T = any>
     this.panelOriginalNextSibling = null;
   }
 
-  private scheduleReposition(after?: () => void): void {
+  private scheduleReposition(after?: () => void, doubleRaf = false): void {
     if (!this.isOpen) return;
 
     if (this.repositionRaf) {
@@ -849,8 +850,17 @@ export class ISelect<T = any>
       this.repositionRaf = requestAnimationFrame(() => {
         this.repositionRaf = 0;
 
-        this.repositionPanelNow();
-        after?.();
+        this.repositionPanelNow(!doubleRaf);
+
+        if (doubleRaf) {
+          this.repositionRaf = requestAnimationFrame(() => {
+            this.repositionRaf = 0;
+            this.repositionPanelNow();
+            after?.();
+          });
+        } else {
+          after?.();
+        }
       });
     });
   }
@@ -876,7 +886,7 @@ export class ISelect<T = any>
     panel.style.top = '';
   }
 
-  private repositionPanelNow(): void {
+  private repositionPanelNow(reveal = true): void {
     if (!this.isOpen) return;
 
     const panel = this.getPanelElement();
@@ -946,7 +956,7 @@ export class ISelect<T = any>
       const maxH = Math.max(60, vh - top - gap);
       panel.style.maxHeight = `${Math.floor(maxH)}px`;
 
-      this.revealPanel(panel);
+      if (reveal) this.revealPanel(panel);
       return;
     }
 
@@ -963,7 +973,7 @@ export class ISelect<T = any>
       const maxH = Math.max(60, vh - top - gap);
       panel.style.maxHeight = `${Math.floor(maxH)}px`;
 
-      this.revealPanel(panel);
+      if (reveal) this.revealPanel(panel);
       return;
     }
 
@@ -995,7 +1005,7 @@ export class ISelect<T = any>
     panel.style.left = `${Math.round(left)}px`;
     panel.style.top = `${Math.round(top)}px`;
 
-    this.revealPanel(panel);
+    if (reveal) this.revealPanel(panel);
   }
 
   private ensureGlobalListeners(): void {

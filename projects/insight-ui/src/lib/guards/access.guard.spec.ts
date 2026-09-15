@@ -26,6 +26,7 @@ describe('requireAccess', () => {
       hasMenu: boolean;
       hasPermission: boolean;
       initializing: boolean;
+      initialized: boolean;
       menusLoaded: boolean;
       menusError: boolean;
     }> = {},
@@ -35,9 +36,11 @@ describe('requireAccess', () => {
       hasPermission: () => overrides.hasPermission ?? false,
       hasRole: () => overrides.hasMenu ?? false,
       initializing: () => overrides.initializing ?? false,
+      initialized: () => overrides.initialized ?? overrides.menusLoaded ?? overrides.menusError ?? false,
       menus: () => (overrides.menusLoaded ? [{ id: 1, name: 'Admin', menuCode: 'admin-iam' }] : []),
       loadErrors: () => ({ menus: overrides.menusError ? { errorCode: 'USER_APPLICATION_MAPPING_NOT_FOUND' } : null }),
       initializing$: of(false),
+      initialized$: of(overrides.initialized ?? overrides.menusLoaded ?? overrides.menusError ?? false),
       load: () => of(undefined),
     } as unknown as IUserMenuStore;
     return store;

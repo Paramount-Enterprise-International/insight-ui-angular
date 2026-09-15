@@ -1,4 +1,3 @@
-import { HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable, throwError } from 'rxjs';
 
@@ -16,7 +15,7 @@ import type {
 
 /**
  * Current-user navigation & favorites service — calls iam-user-api's
- * `/me/menus*` endpoints (user-menu service contract). These endpoints return
+ * application-scoped `/me/applications/:applicationId/*` endpoints. These endpoints return
  * a `{ meta, data }` envelope; this service unwraps `.data` so callers keep
  * the app-wide body-as-data convention.
  *
@@ -33,26 +32,48 @@ export class IUserMenuService {
     return this.config.api['user'] ?? defaultEnvironment.api.user;
   }
 
-  /** GET `{api.user}/me/menus` — effective navigation tree for one or all active applications. Output type overridable via `T`. */
-  getEffectiveMenus<T = IMenuNodeDto[]>(applicationId?: string): Observable<T> {
+  private resolveApplicationId(applicationId?: string): string | null {
     const id = applicationId ?? this.config.appId;
-    const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
+    return id?.trim() || null;
+  }
+
+  private applicationPath(applicationId: string, suffix: string): string {
+    return `/me/applications/${encodeURIComponent(applicationId)}/${suffix}`;
+  }
+
+  private missingApplicationId<T>(): Observable<T> {
+    return throwError(
+      () =>
+        new Error(
+          '[@insight/ui] applicationId is required to load current-user application data.',
+        ),
+    );
+  }
+
+  /** GET `{api.user}/me/applications/:applicationId/menus` - effective navigation tree. */
+  getEffectiveMenus<T = IMenuNodeDto[]>(applicationId?: string): Observable<T> {
+    const id = this.resolveApplicationId(applicationId);
+    if (!id) return this.missingApplicationId<T>();
     return this.api
-      .get<IUserMenuEnvelopeDto<T>>('/me/menus', params, { apiUrl: this.baseUrl })
+      .get<IUserMenuEnvelopeDto<T>>(this.applicationPath(id, 'menus'), undefined, {
+        apiUrl: this.baseUrl,
+      })
       .pipe(map((response) => response.data));
   }
 
-  /** GET `{api.user}/me/menus/favorites` — effective favorite items, sorted by name. Output type overridable via `T`. */
+  /** GET `{api.user}/me/applications/:applicationId/menus/favorites` - effective favorites. */
   getFavorites<T = IFavoriteMenuItemDto[]>(applicationId?: string): Observable<T> {
-    const id = applicationId ?? this.config.appId;
-    const params = id ? new HttpParams({ fromObject: { applicationId: id } }) : undefined;
+    const id = this.resolveApplicationId(applicationId);
+    if (!id) return this.missingApplicationId<T>();
     return this.api
-      .get<IUserMenuEnvelopeDto<T>>('/me/menus/favorites', params, { apiUrl: this.baseUrl })
+      .get<IUserMenuEnvelopeDto<T>>(this.applicationPath(id, 'menus/favorites'), undefined, {
+        apiUrl: this.baseUrl,
+      })
       .pipe(map((response) => response.data));
   }
 
   /**
-   * GET `{api.user}/me/authorizations?applicationId=...` — the complete set of
+   * GET `{api.user}/me/applications/:applicationId/authorizations` - the complete set of
    * effective authorizations (menu items + functions) for the current user,
    * already reduced to `allowed` entries by the backend. Output type overridable
    * via `T`.
@@ -62,21 +83,13 @@ export class IUserMenuService {
    * permission list simply stays empty).
    */
   getAuthorizations<T = IEffectiveAuthorizationDto[]>(applicationId?: string): Observable<T> {
-    const id = applicationId ?? this.config.appId;
-
-    if (!id) {
-      return throwError(
-        () =>
-          new Error(
-            '[@insight/ui] applicationId is required to load current-user authorizations.',
-          ),
-      );
-    }
-
-    const params = new HttpParams({ fromObject: { applicationId: id } });
+    const id = this.resolveApplicationId(applicationId);
+    if (!id) return this.missingApplicationId<T>();
 
     return this.api
-      .get<IUserMenuEnvelopeDto<T>>('/me/authorizations', params, { apiUrl: this.baseUrl })
+      .get<IUserMenuEnvelopeDto<T>>(this.applicationPath(id, 'authorizations'), undefined, {
+        apiUrl: this.baseUrl,
+      })
       .pipe(map((response) => response.data));
   }
 
