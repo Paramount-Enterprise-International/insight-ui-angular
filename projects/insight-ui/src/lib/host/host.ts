@@ -1205,9 +1205,9 @@ export class IHMenu implements OnChanges {
         </button>
 
         @if (accountMenuOpen()) {
-          <div class="ih-user-dropdown" role="menu">
+          <div class="ih-user-dropdown i-options" role="menu">
             <a
-              class="ih-user-dropdown-item"
+              class="ih-user-dropdown-item i-option"
               rel="noopener noreferrer"
               role="menuitem"
               target="_blank"
@@ -1215,16 +1215,16 @@ export class IHMenu implements OnChanges {
               (click)="closeAccountMenu()"
             >
               <i class="fa-solid fa-user fa-fw"></i>
-              <span>Personal Profile</span>
+              <span class="i-option-label">Personal Profile</span>
             </a>
             <button
-              class="ih-user-dropdown-item"
+              class="ih-user-dropdown-item i-option"
               role="menuitem"
               type="button"
               (click)="onLogoutClick()"
             >
               <i class="fa-solid fa-right-from-bracket fa-fw"></i>
-              <span>Logout</span>
+              <span class="i-option-label">Logout</span>
             </button>
           </div>
         }
