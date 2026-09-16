@@ -806,7 +806,11 @@ export class IHContent {
               }
 
               <i [class]="menuIcon"></i>
-              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
                 @if (applicationLabel) {
                   <small class="ih-menu-application">{{ applicationLabel }}</small>
@@ -845,7 +849,11 @@ export class IHContent {
               }
 
               <i [class]="menuIcon"></i>
-              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
                 @if (applicationLabel) {
                   <small class="ih-menu-application">{{ applicationLabel }}</small>
@@ -884,7 +892,11 @@ export class IHContent {
               }
 
               <i [class]="menuIcon"></i>
-              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
                 @if (applicationLabel) {
                   <small class="ih-menu-application">{{ applicationLabel }}</small>
