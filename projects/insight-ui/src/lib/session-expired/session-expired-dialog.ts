@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { IButton } from '../button/button';
+import { IIcon } from '../icon/icon';
 
+import { INormalizedApiError, resolveApiErrorDisplayMessage } from '../api/api-error';
 import { I_AUTH_CONFIG } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
-import { INormalizedApiError, resolveApiErrorDisplayMessage } from '../api/api-error';
 import { ISessionExpiredService } from './session-expired.service';
 
 /**
@@ -23,19 +25,21 @@ import { ISessionExpiredService } from './session-expired.service';
 @Component({
   selector: 'i-session-expired-dialog',
   standalone: true,
+  imports: [IButton, IIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (visible()) {
-      <div class="session-expired-overlay">
-        <div class="session-expired-card" (click)="$event.stopPropagation()">
-          <div class="session-expired-icon">
-            <i class="fa-solid {{ iconClass() }}"></i>
+      <div class="session-expired-overlay flex align-center justify-center">
+        <div
+          class="session-expired-card bg-white radius-md p-3xl text-center"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="text-warning mb-lg">
+            <i-icon size="4xl" [icon]="'fa-solid ' + iconClass()" />
           </div>
-          <h1>{{ title() }}</h1>
-          <p>{{ message() }}</p>
-          <button class="session-expired-action" type="button" (click)="onConfirm()">
-            Log in again
-          </button>
+          <h1 class="m-0 mb-xs text-2xl font-semibold text-gray-800">{{ title() }}</h1>
+          <p class="m-0 mb-2xl text-md leading-normal text-subtle">{{ message() }}</p>
+          <i-button type="button" (onClick)="onConfirm()"> Log in again </i-button>
         </div>
       </div>
     }
@@ -45,56 +49,14 @@ import { ISessionExpiredService } from './session-expired.service';
       .session-expired-overlay {
         position: fixed;
         inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
         background-color: rgba(0, 0, 0, 0.5);
         z-index: 9999;
       }
 
       .session-expired-card {
-        background: var(--i-color-surface, #ffffff);
-        border-radius: 8px;
-        padding: 32px;
         max-width: 380px;
         width: calc(100% - 32px);
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-        text-align: center;
-      }
-
-      .session-expired-icon {
-        font-size: 48px;
-        color: var(--i-color-warning, #f59e0b);
-        margin-bottom: 16px;
-      }
-
-      h1 {
-        margin: 0 0 8px;
-        font-size: 22px;
-        font-weight: 600;
-        color: var(--i-text-color, #1f2937);
-      }
-
-      p {
-        margin: 0 0 24px;
-        font-size: 14px;
-        line-height: 1.5;
-        color: var(--i-text-subtle-color, #6b7280);
-      }
-
-      .session-expired-action {
-        border: none;
-        border-radius: 6px;
-        padding: 10px 20px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        background: var(--i-color-primary, #2563eb);
-        color: #ffffff;
-      }
-
-      .session-expired-action:hover {
-        filter: brightness(1.05);
       }
     `,
   ],

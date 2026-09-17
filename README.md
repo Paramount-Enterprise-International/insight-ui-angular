@@ -1,5 +1,30 @@
 # InsightUiAngular
 
+## Menu-protected routes
+
+```ts
+import { hasMn } from '@insight/ui';
+
+hasMn('app.reports', {
+  path: 'reports/:id',
+  data: { title: 'Report' },
+  loadComponent: () => import('./report').then((m) => m.Report),
+})
+```
+
+The helper provides its own outlet boundary and Unauthorized Access fallback.
+It uses the same menu shorthand, ANY array input, and predicate evaluator as
+`iHasMn`, waits for session/menu readiness, and loads cold menus. Denial preserves
+the URL and shell; title/breadcrumb overrides are restored on grant or navigation.
+Route params, query, resolvers, providers, component layouts, and children remain
+available through empty-path outlet boundaries. Relative sibling navigation
+continues to use the consumer's mount path.
+
+A check on a parent layout protects its subtree. Wrap individual page routes when
+children have independent grants. Routes without `hasMn` have no menu check;
+unknown routes use the consumer's wildcard. `iHasMn`/`iNotHasMn` retain hide-only
+behavior for ordinary templates.
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.13.
 
 ## Development server
