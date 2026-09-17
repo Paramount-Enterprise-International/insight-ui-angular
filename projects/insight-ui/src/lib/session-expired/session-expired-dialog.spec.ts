@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { getDefaultIAuthConfig, I_AUTH_CONFIG } from '../auth/auth-config';
 import { ISessionExpiredDialog } from './session-expired-dialog';
-import { ISessionExpiredService } from './session-expired.service';
+import { ISessionExpiredService } from './session-expired';
 
 describe('ISessionExpiredDialog', () => {
   let fixture: ComponentFixture<ISessionExpiredDialog>;

@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 
 import { I_AUTH_CONFIG } from './auth-config';
 import { sanitizeReturnUrl } from './sanitize-return-url';
-import { ISessionService } from '../session/session.service';
+import { ISessionService } from '../session/session';
 
 /**
  * Extract the access token appended by the sign-in host after a successful

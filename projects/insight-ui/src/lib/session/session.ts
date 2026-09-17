@@ -4,17 +4,17 @@ import { lastValueFrom, Observable, of, throwError, timeout } from 'rxjs';
 import { catchError, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 
 import { I_AUTH_CONFIG } from '../auth/auth-config';
-import { IAuthService, IAuthUser } from '../auth/auth.service';
+import { IAuthService, IAuthUser } from '../auth/auth';
 import { normalizeApiError } from '../api/api-error';
-import { ICsrfService } from '../csrf/csrf.service';
+import { ICsrfService } from '../csrf/csrf';
 import {
   extractProblemDetailsErrorCode,
   ISessionExpiredReason,
   ISessionExpiredService,
   isSessionExpiredError,
   toSessionExpiredReason,
-} from '../session-expired/session-expired.service';
-import { IUserMenuStore } from '../store/user-menu.store';
+} from '../session-expired/session-expired';
+import { IUserMenuStore } from '../store/user-menu';
 
 /** Hard timeout for the single-flight refresh call (ms). */
 const REFRESH_TIMEOUT_MS = 30_000;

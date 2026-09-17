@@ -4,8 +4,8 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { I_AUTH_CONFIG } from '../auth/auth-config';
-import { ICsrfService } from '../csrf/csrf.service';
-import { IH_SKIP_BEARER_HEADER } from '../interceptors/auth.interceptor';
+import { ICsrfService } from '../csrf/csrf';
+import { IH_SKIP_BEARER_HEADER } from '../interceptors/auth';
 import { normalizeApiError } from './api-error';
 
 /** Response type is transparent — no `{ meta, data }` wrapper. */

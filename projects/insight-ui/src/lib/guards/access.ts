@@ -2,8 +2,8 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { filter, map, Observable, of, take } from 'rxjs';
 
-import { IUserMenuStore } from '../store/user-menu.store';
-import { ISessionService } from '../session/session.service';
+import { IUserMenuStore } from '../store/user-menu';
+import { ISessionService } from '../session/session';
 
 /** Route that renders the "account lacks the required access/role" (403) page. */
 export const UNAUTHORIZED_ACCESS_PATH = '/unauthorized-access';

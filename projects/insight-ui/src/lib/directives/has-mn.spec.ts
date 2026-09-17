@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 
-import { ISessionService } from '../session/session.service';
-import { IUserMenuStore } from '../store/user-menu.store';
+import { ISessionService } from '../session/session';
+import { IUserMenuStore } from '../store/user-menu';
 import { ICurrentUserService, IUserMenuService } from '../user';
 import { IHasMnDirective } from './has-mn';
 import { INotHasMnDirective } from './not-has-mn';

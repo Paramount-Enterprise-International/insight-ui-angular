@@ -8,9 +8,9 @@ import {
 } from '@angular/router';
 import { filter, map, Observable, of, take } from 'rxjs';
 
-import { ISessionService } from '../session/session.service';
-import { IUserMenuStore } from '../store/user-menu.store';
-import { UNAUTHORIZED_ACCESS_PATH } from './access.guard';
+import { ISessionService } from '../session/session';
+import { IUserMenuStore } from '../store/user-menu';
+import { UNAUTHORIZED_ACCESS_PATH } from './access';
 
 /** Resolves the menu code that protects a router navigation. */
 export type IRouteMenuCodeResolver = (

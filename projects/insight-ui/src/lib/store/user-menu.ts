@@ -5,7 +5,7 @@ import { catchError, filter, finalize, shareReplay, switchMap, take, tap } from 
 
 import { type INormalizedApiError, normalizeApiError, resolveApiErrorDisplayMessage } from '../api';
 import { getMenuKey, IMenu, IUser } from '../host';
-import { ISessionService } from '../session/session.service';
+import { ISessionService } from '../session/session';
 import {
   IAuthorizationSource,
   ICurrentUserDto,

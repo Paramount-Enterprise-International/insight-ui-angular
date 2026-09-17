@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
-import { IApiService } from '../api/api.service';
+import { IApiService } from '../api/api';
 import { I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
-import { IUserMenuService } from './user-menu.service';
+import { IUserMenuService } from './user-menu';
 
 const testConfig: IAuthConfig = {
   api: {

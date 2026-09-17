@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 
-import { ISessionService, type ISessionUser } from '../session/session.service';
+import { ISessionService, type ISessionUser } from '../session/session';
 import {
   ICurrentUserDto,
   ICurrentUserService,
@@ -10,7 +10,7 @@ import {
   IMenuNodeDto,
   IUserMenuService,
 } from '../user';
-import { IUserMenuStore } from './user-menu.store';
+import { IUserMenuStore } from './user-menu';
 
 const rawUser: ICurrentUserDto = {
   userId: 'u1',

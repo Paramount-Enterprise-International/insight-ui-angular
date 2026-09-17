@@ -6,6 +6,7 @@ import { ICardModule } from './card';
 import { ICodeViewerModule } from './code-viewer';
 import { IDatepicker, IFCDatepicker } from './datepicker';
 import { IDialogModule } from './dialog';
+import { IErrorPage } from './error-page';
 import { IGridModule } from './grid';
 import { IHContent, IHSidebar } from './host';
 import { IIcon } from './icon';
@@ -26,6 +27,7 @@ import { IToggle } from './toggle';
     IDatepicker,
     IFCDatepicker,
     IDialogModule,
+    IErrorPage,
     IGridModule,
     IHContent,
     IHSidebar,
@@ -48,6 +50,7 @@ import { IToggle } from './toggle';
     IDatepicker,
     IFCDatepicker,
     IDialogModule,
+    IErrorPage,
     IGridModule,
     IHContent,
     IHSidebar,

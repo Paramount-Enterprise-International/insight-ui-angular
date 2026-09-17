@@ -3,9 +3,9 @@ import { provideRouter, Router } from '@angular/router';
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { firstValueFrom, of } from 'rxjs';
 
-import { IAccessCheck, requireAccess, UNAUTHORIZED_ACCESS_PATH } from './access.guard';
-import { IUserMenuStore } from '../store/user-menu.store';
-import { ISessionService } from '../session/session.service';
+import { IAccessCheck, requireAccess, UNAUTHORIZED_ACCESS_PATH } from './access';
+import { IUserMenuStore } from '../store/user-menu';
+import { ISessionService } from '../session/session';
 
 describe('requireAccess', () => {
   const route = {} as ActivatedRouteSnapshot;

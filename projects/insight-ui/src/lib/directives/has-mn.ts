@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { BehaviorSubject, combineLatest, distinctUntilChanged, map, Subscription } from 'rxjs';
 
-import { IUserMenuStore } from '../store/user-menu.store';
+import { IUserMenuStore } from '../store/user-menu';
 import type { IAuthorizationSource } from '../user';
 
 /** Flexible permission check against the current authorization snapshot. */

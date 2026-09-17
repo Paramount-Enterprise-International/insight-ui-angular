@@ -5,7 +5,7 @@ import { IIcon } from '../icon/icon';
 import { INormalizedApiError, resolveApiErrorDisplayMessage } from '../api/api-error';
 import { I_AUTH_CONFIG } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
-import { ISessionExpiredService } from './session-expired.service';
+import { ISessionExpiredService } from './session-expired';
 
 /**
  * Library-provided session-expired overlay. Consumer apps render it once near

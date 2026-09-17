@@ -2,10 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, provideRouter, Router, RouterStateSnapshot } from '@angular/router';
 import { firstValueFrom, of } from 'rxjs';
 
-import { ISessionService } from '../session/session.service';
-import { IUserMenuStore } from '../store/user-menu.store';
-import { UNAUTHORIZED_ACCESS_PATH } from './access.guard';
-import { IRouteAccessOptions, requireRouteAccess } from './route-access.guard';
+import { ISessionService } from '../session/session';
+import { IUserMenuStore } from '../store/user-menu';
+import { UNAUTHORIZED_ACCESS_PATH } from './access';
+import { IRouteAccessOptions, requireRouteAccess } from './route-access';
 
 describe('requireRouteAccess', () => {
   function sessionMock(initializing = false, isAuth = true): ISessionService {
