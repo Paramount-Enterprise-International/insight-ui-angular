@@ -15,7 +15,7 @@ describe('requireRouteAccess', () => {
     } as unknown as ISessionService;
   }
 
-  function storeMock(hasMenu: boolean): IUserMenuStore {
+  function storeMock(hasMenuCode: boolean): IUserMenuStore {
     return {
       initializing: () => false,
       initialized: () => true,
@@ -24,7 +24,7 @@ describe('requireRouteAccess', () => {
       initializing$: of(false),
       initialized$: of(true),
       load: () => of(undefined),
-      hasMenu: () => hasMenu,
+      hasMenuCode: () => hasMenuCode,
     } as unknown as IUserMenuStore;
   }
 

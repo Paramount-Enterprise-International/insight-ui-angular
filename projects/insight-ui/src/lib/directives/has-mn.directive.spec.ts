@@ -1,11 +1,11 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
 
+import { ISessionService } from '../session/session.service';
+import { IUserMenuStore } from '../store/user-menu.store';
+import { ICurrentUserService, IUserMenuService } from '../user';
 import { IHasMnDirective } from './has-mn';
 import { INotHasMnDirective } from './not-has-mn';
-import { IUserMenuStore } from '../store/user-menu.store';
-import { ISessionService } from '../session/session.service';
-import { ICurrentUserService, IUserMenuService } from '../user';
 
 @Component({
   standalone: true,
@@ -18,6 +18,12 @@ import { ICurrentUserService, IUserMenuService } from '../user';
     <div *iNotHasMn="hasSuperRole"><span class="not-super">NOT-SUPER</span></div>
     <div *iHasMn="canExport"><span class="perm-export">PERM-EXPORT</span></div>
     <div *iNotHasMn="canDelete"><span class="not-delete">NOT-DELETE</span></div>
+    <button
+      *iHasMn="'atlas.sales-administration.menu.451.hasmn-button-example'"
+      class="function-example"
+    >
+      Example
+    </button>
   `,
 })
 class HostComponent {
@@ -25,10 +31,10 @@ class HostComponent {
     source.roles.includes('iam-admin');
   readonly hasSuperRole = (source: { roles: readonly string[] }): boolean =>
     source.roles.includes('iam-super');
-  readonly canExport = (source: { permission: readonly string[] }): boolean =>
-    source.permission.includes('report.export');
-  readonly canDelete = (source: { permission: readonly string[] }): boolean =>
-    source.permission.includes('report.delete');
+  readonly canExport = (source: { menuCodes: readonly string[] }): boolean =>
+    source.menuCodes.includes('report.export');
+  readonly canDelete = (source: { menuCodes: readonly string[] }): boolean =>
+    source.menuCodes.includes('report.delete');
 }
 
 describe('IHasMnDirective / INotHasMnDirective', () => {
@@ -48,7 +54,10 @@ describe('IHasMnDirective / INotHasMnDirective', () => {
       providers: [
         { provide: ICurrentUserService, useValue: {} },
         { provide: IUserMenuService, useValue: {} },
-        { provide: ISessionService, useValue: { getRoles: (): string[] => [], hasRole: (): boolean => false } },
+        {
+          provide: ISessionService,
+          useValue: { getRoles: (): string[] => [], hasRole: (): boolean => false },
+        },
       ],
     }).compileComponents();
 
@@ -58,7 +67,7 @@ describe('IHasMnDirective / INotHasMnDirective', () => {
   }));
 
   it('menu mode: renders only when the menu code is present', async () => {
-    store.menus.set([{ id: 'm1', name: 'Admin', type: 'item', menuCode: 'admin', route: '/admin' }]);
+    store.authorizations.set([{ menuId: 'm1', menuCode: 'admin', type: 'item', companies: [] }]);
     await settle();
 
     expect(query('.menu-admin')).toBeTruthy();
@@ -66,8 +75,27 @@ describe('IHasMnDirective / INotHasMnDirective', () => {
     expect(query('.not-admin')).toBeFalsy();
   });
 
+  it('renders a function shorthand absent from navigation and rejects navigation-only codes', async () => {
+    store.menus.set([
+      { id: 'admin', name: 'Admin', type: 'item', menuCode: 'admin', route: '/admin' },
+    ]);
+    store.authorizations.set([
+      {
+        menuId: 'example',
+        menuCode: 'atlas.sales-administration.menu.451.hasmn-button-example',
+        type: 'function',
+        companies: [],
+      },
+    ]);
+    await settle();
+
+    expect(query('.function-example')).toBeTruthy();
+    expect(query('.menu-admin')).toBeFalsy();
+    expect(store.hasNavigableMenu('admin')).toBeTrue();
+  });
+
   it('menu mode: not-has renders when the menu code is absent', async () => {
-    store.menus.set([{ id: 'm1', name: 'User', type: 'item', menuCode: 'user', route: '/user' }]);
+    store.authorizations.set([{ menuId: 'm1', menuCode: 'user', type: 'item', companies: [] }]);
     await settle();
 
     expect(query('.menu-admin')).toBeFalsy();
@@ -92,7 +120,9 @@ describe('IHasMnDirective / INotHasMnDirective', () => {
   });
 
   it('permission mode renders when the feature permission is granted', async () => {
-    store.permissions.set(['report.export']);
+    store.authorizations.set([
+      { menuCode: 'report.export', menuId: 'export', type: 'function', companies: [] },
+    ]);
     await settle();
 
     expect(query('.perm-export')).toBeTruthy();
@@ -100,7 +130,7 @@ describe('IHasMnDirective / INotHasMnDirective', () => {
   });
 
   it('permission mode does not render when the permission is missing', async () => {
-    store.permissions.set([]);
+    store.authorizations.set([]);
     await settle();
 
     expect(query('.perm-export')).toBeFalsy();
@@ -115,7 +145,9 @@ describe('IHasMnDirective / INotHasMnDirective', () => {
     expect(query('.not-delete')).toBeFalsy();
 
     // load() settled and hydrated the permission list from the authorizations endpoint.
-    store.permissions.set(['report.export']);
+    store.authorizations.set([
+      { menuCode: 'report.export', menuId: 'export', type: 'function', companies: [] },
+    ]);
     store.initializing.set(false);
     await settle();
 
@@ -124,7 +156,7 @@ describe('IHasMnDirective / INotHasMnDirective', () => {
   });
 
   it('initializing gate hides BOTH has and not-has views until the store settles', async () => {
-    store.menus.set([{ id: 'm1', name: 'Admin', type: 'item', menuCode: 'admin', route: '/admin' }]);
+    store.authorizations.set([{ menuId: 'm1', menuCode: 'admin', type: 'item', companies: [] }]);
     store.initializing.set(true);
     await settle();
 
@@ -151,17 +183,17 @@ describe('IHasMnDirective / INotHasMnDirective', () => {
     await settle();
     expect(query('.menu-admin')).toBeFalsy();
 
-    store.menus.set([{ id: 'm1', name: 'Admin', type: 'item', menuCode: 'admin', route: '/admin' }]);
+    store.authorizations.set([{ menuId: 'm1', menuCode: 'admin', type: 'item', companies: [] }]);
     await settle();
     expect(query('.menu-admin')).toBeTruthy();
   });
 
   it('reacts to a permission change that revokes access (view is removed)', async () => {
-    store.menus.set([{ id: 'm1', name: 'Admin', type: 'item', menuCode: 'admin', route: '/admin' }]);
+    store.authorizations.set([{ menuId: 'm1', menuCode: 'admin', type: 'item', companies: [] }]);
     await settle();
     expect(query('.menu-admin')).toBeTruthy();
 
-    store.menus.set([]);
+    store.authorizations.set([]);
     await settle();
     expect(query('.menu-admin')).toBeFalsy();
   });

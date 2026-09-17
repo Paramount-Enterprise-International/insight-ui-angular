@@ -35,7 +35,7 @@ export function evaluatePermission(
   }
 
   const codes = Array.isArray(value) ? value : [value];
-  return codes.some((code) => source.menu.includes(code));
+  return codes.some((code) => source.menuCodes.includes(code));
 }
 
 /** Shared reactive implementation for the positive and inverse permission directives. */

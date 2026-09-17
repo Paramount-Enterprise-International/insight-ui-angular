@@ -31,8 +31,8 @@ function menuCodeFromRouteData(route: ActivatedRouteSnapshot): string | null {
   return typeof menuCode === 'string' && menuCode.trim() ? menuCode.trim() : null;
 }
 
-/** Waits until the store has settled its menu data, triggering a cold-start load if needed. */
-function ensureMenusLoaded(store: IUserMenuStore): Observable<void> {
+/** Waits until the store has settled its authorization data, triggering a cold-start load if needed. */
+function ensureAuthorizationsLoaded(store: IUserMenuStore): Observable<void> {
   if (store.initializing()) {
     return store.initializing$.pipe(
       filter((initializing) => !initializing),
@@ -57,7 +57,7 @@ export function requireRouteAccess(options: IRouteAccessOptions = {}): CanActiva
       return of(true);
     }
 
-    return ensureMenusLoaded(store).pipe(
+    return ensureAuthorizationsLoaded(store).pipe(
       map(() => {
         const menuCode = resolveMenuCode(route, state)?.trim();
         if (!menuCode) {
@@ -67,7 +67,7 @@ export function requireRouteAccess(options: IRouteAccessOptions = {}): CanActiva
             : router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
         }
 
-        return store.hasMenu(menuCode) || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
+        return store.hasMenuCode(menuCode) || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
       }),
     );
   };
