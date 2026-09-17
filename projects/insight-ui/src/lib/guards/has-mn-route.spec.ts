@@ -12,22 +12,41 @@ import { hasMn } from './has-mn-route';
 
 let mounts = 0;
 
-@Component({ standalone: true, changeDetection: ChangeDetectionStrategy.OnPush, template: `report-{{ id }}-{{ tab }}-{{ resolved }}` })
+@Component({
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `report-{{ id }}-{{ tab }}-{{ resolved }}`,
+})
 class Report {
   private readonly route = inject(ActivatedRoute);
   readonly id = this.route.snapshot.params['id'];
   readonly tab = this.route.snapshot.queryParams['tab'];
   readonly resolved = this.route.snapshot.data['resolved'];
-  constructor() { mounts++; }
+  constructor() {
+    mounts++;
+  }
 }
 
-@Component({ standalone: true, changeDetection: ChangeDetectionStrategy.OnPush, template: 'open-page' })
+@Component({
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: 'open-page',
+})
 class OpenPage {}
 
-@Component({ standalone: true, changeDetection: ChangeDetectionStrategy.OnPush, imports: [RouterOutlet], template: 'layout <router-outlet />' })
+@Component({
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [RouterOutlet],
+  template: 'layout <router-outlet />',
+})
 class Layout {}
 
-@Component({ standalone: true, changeDetection: ChangeDetectionStrategy.OnPush, template: `document-{{ slug }}` })
+@Component({
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `document-{{ slug }}`,
+})
 class DocumentPage {
   readonly route = inject(ActivatedRoute);
   readonly slug = this.route.snapshot.data['slug'];
@@ -43,7 +62,9 @@ describe('hasMn Angular routes', () => {
     harness.detectChanges();
   };
   const grant = (code: string): void => {
-    store.menus.set([{ id: 'm1', name: 'Report', type: 'item', menuCode: code, route: '/reports' }]);
+    store.menus.set([
+      { id: 'm1', name: 'Report', type: 'item', menuCode: code, route: '/reports' },
+    ]);
   };
 
   beforeEach(async () => {
@@ -52,17 +73,38 @@ describe('hasMn Angular routes', () => {
       providers: [
         { provide: ICurrentUserService, useValue: {} },
         { provide: IUserMenuService, useValue: {} },
-        { provide: ISessionService, useValue: { initializing: signal(false), isAuth: () => true, getRoles: () => [] } },
+        {
+          provide: ISessionService,
+          useValue: {
+            initializing: signal(false),
+            isAuth: (): boolean => true,
+            getRoles: (): string[] => [],
+          },
+        },
         provideRouter([
           hasMn('reports', {
-            path: 'reports/:id', data: { title: 'Report' },
+            path: 'reports/:id',
+            data: { title: 'Report' },
             resolve: { resolved: () => of('resolved-value') },
             loadComponent: async () => Report,
           }),
           hasMn(['read', 'write'], { path: 'any', component: OpenPage }),
-          hasMn(() => { throw new Error('failed'); }, { path: 'broken', component: OpenPage }),
-          hasMn('layout', { path: 'layout/:id', component: Layout, children: [{ path: 'child', component: Report }] }),
-          hasMn('reports', { path: 'guide', data: { title: 'Guide', slug: 'guide' }, component: DocumentPage }),
+          hasMn(
+            () => {
+              throw new Error('failed');
+            },
+            { path: 'broken', component: OpenPage },
+          ),
+          hasMn('layout', {
+            path: 'layout/:id',
+            component: Layout,
+            children: [{ path: 'child', component: Report }],
+          }),
+          hasMn('reports', {
+            path: 'guide',
+            data: { title: 'Guide', slug: 'guide' },
+            component: DocumentPage,
+          }),
           { path: 'open', data: { title: 'Open' }, component: OpenPage },
           { path: '**', data: { title: 'Not Found' }, component: OpenPage },
         ]),
