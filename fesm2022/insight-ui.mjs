@@ -1,14 +1,14 @@
-import * as i0 from '@angular/core';
-import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, computed, makeEnvironmentProviders, APP_INITIALIZER, effect, ViewChildren } from '@angular/core';
 import * as i1$1 from '@angular/common';
 import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
+import * as i0 from '@angular/core';
+import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, computed, makeEnvironmentProviders, APP_INITIALIZER, effect, ViewChildren, DestroyRef, untracked } from '@angular/core';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { firstValueFrom, Subject, BehaviorSubject, map, throwError, forkJoin, of, timeout, lastValueFrom, filter as filter$1, startWith, shareReplay as shareReplay$1, Observable, tap as tap$1, combineLatest, take as take$1, distinctUntilChanged } from 'rxjs';
 import * as i1 from '@angular/forms';
 import { Validators, NG_VALUE_ACCESSOR, NgControl, FormGroupDirective, FormBuilder, FormControl, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { debounceTime, tap, map as map$1, catchError, switchMap, filter, take, finalize, shareReplay } from 'rxjs/operators';
-import { toObservable } from '@angular/core/rxjs-interop';
+import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 /**
  * IIcon
@@ -141,6 +141,7 @@ class IButton {
     disabled = false;
     loading = false;
     type = 'button';
+    ariaLabel;
     loadingText = '';
     variant = 'primary';
     size = 'md';
@@ -196,12 +197,13 @@ class IButton {
         this.onClick.emit(event);
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IButton, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IButton, isStandalone: true, selector: "i-button", inputs: { disabled: ["disabled", "disabled", booleanAttribute], loading: ["loading", "loading", booleanAttribute], type: "type", loadingText: "loadingText", variant: "variant", size: "size", icon: "icon", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", state: "state", href: "href", target: "target", rel: "rel" }, outputs: { onClick: "onClick" }, host: { properties: { "attr.variant": "this.hostVariant", "attr.size": "this.hostSize", "attr.aria-disabled": "this.ariaDisabled", "attr.aria-busy": "this.ariaBusy", "attr.data-mode": "this.mode" } }, ngImport: i0, template: `
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IButton, isStandalone: true, selector: "i-button", inputs: { disabled: ["disabled", "disabled", booleanAttribute], loading: ["loading", "loading", booleanAttribute], type: "type", ariaLabel: "ariaLabel", loadingText: "loadingText", variant: "variant", size: "size", icon: "icon", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", state: "state", href: "href", target: "target", rel: "rel" }, outputs: { onClick: "onClick" }, host: { properties: { "attr.variant": "this.hostVariant", "attr.size": "this.hostSize", "attr.aria-disabled": "this.ariaDisabled", "attr.aria-busy": "this.ariaBusy", "attr.data-mode": "this.mode" } }, ngImport: i0, template: `
     <!-- ROUTER LINK -->
     @if (routerLink) {
       <a
         class="i-button-inner"
         [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.aria-label]="ariaLabel"
         [attr.rel]="computedRel"
         [attr.target]="target"
         [fragment]="fragment"
@@ -219,6 +221,7 @@ class IButton {
       <a
         class="i-button-inner"
         [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.aria-label]="ariaLabel"
         [attr.href]="isDisabled ? null : href"
         [attr.rel]="computedRel"
         [attr.target]="target"
@@ -232,6 +235,7 @@ class IButton {
     @else {
       <button
         class="i-button-inner"
+        [attr.aria-label]="ariaLabel"
         [disabled]="isDisabled"
         [type]="type"
         (click)="handleClick($event)"
@@ -266,6 +270,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
       <a
         class="i-button-inner"
         [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.aria-label]="ariaLabel"
         [attr.rel]="computedRel"
         [attr.target]="target"
         [fragment]="fragment"
@@ -283,6 +288,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
       <a
         class="i-button-inner"
         [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.aria-label]="ariaLabel"
         [attr.href]="isDisabled ? null : href"
         [attr.rel]="computedRel"
         [attr.target]="target"
@@ -296,6 +302,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
     @else {
       <button
         class="i-button-inner"
+        [attr.aria-label]="ariaLabel"
         [disabled]="isDisabled"
         [type]="type"
         (click)="handleClick($event)"
@@ -324,6 +331,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 type: Input,
                 args: [{ transform: booleanAttribute }]
             }], type: [{
+                type: Input
+            }], ariaLabel: [{
                 type: Input
             }], loadingText: [{
                 type: Input
@@ -1033,7 +1042,7 @@ class ICodeViewer {
         </div>
       </div>
     </div>
-  `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICodeViewer, decorators: [{
             type: Component,
@@ -1266,7 +1275,7 @@ class IInputAddon {
       <!-- text -->
       <span>{{ addon.text }}</span>
     }
-  `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IInputAddon, decorators: [{
             type: Component,
@@ -5027,7 +5036,7 @@ class IDatepicker {
         }
       </div>
     </i-datepicker-panel>
-  `, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask", "autoDefault"] }, { kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask", "autoDefault"] }, { kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDatepicker, decorators: [{
             type: Component,
@@ -6017,7 +6026,7 @@ class IDialog {
           >
         }
       </div>
-    } `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: IDialogCloseDirective, selector: "[i-dialog-close], [iDialogClose]", inputs: ["iDialogClose"] }] });
+    } `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: IDialogCloseDirective, selector: "[i-dialog-close], [iDialogClose]", inputs: ["iDialogClose"] }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialog, decorators: [{
             type: Component,
@@ -6540,7 +6549,7 @@ class IPaginator {
         </div>
       }
     </div>
-  `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }] });
+  `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IPaginator, decorators: [{
             type: Component,
@@ -9127,7 +9136,7 @@ class IGrid {
           (onPageChange)="onPageChange($event)"
         />
       </div>
-    }`, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: IGridHeaderRowDirective, selector: "i-grid-header-row" }, { kind: "directive", type: IGridRowDirective, selector: "i-grid-row" }, { kind: "component", type: IGridHeaderCell, selector: "i-grid-header-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IGridCell, selector: "i-grid-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IPaginator, selector: "i-paginator", inputs: ["length", "pageIndex", "pageSize", "pageSizeOptions"], outputs: ["onPageChange"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: ITruncatedTooltipDirective, selector: "[truncatedTooltip]", inputs: ["truncatedTooltip"] }, { kind: "component", type: IGridHeaderCellGroup, selector: "i-grid-header-cell-group" }, { kind: "component", type: IGridHeaderCellGroupColumns, selector: "i-grid-header-cell-group-columns" }, { kind: "component", type: IGridViewport, selector: "i-grid-viewport" }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
+    }`, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: IGridHeaderRowDirective, selector: "i-grid-header-row" }, { kind: "directive", type: IGridRowDirective, selector: "i-grid-row" }, { kind: "component", type: IGridHeaderCell, selector: "i-grid-header-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IGridCell, selector: "i-grid-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IPaginator, selector: "i-paginator", inputs: ["length", "pageIndex", "pageSize", "pageSizeOptions"], outputs: ["onPageChange"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: ITruncatedTooltipDirective, selector: "[truncatedTooltip]", inputs: ["truncatedTooltip"] }, { kind: "component", type: IGridHeaderCellGroup, selector: "i-grid-header-cell-group" }, { kind: "component", type: IGridHeaderCellGroupColumns, selector: "i-grid-header-cell-group-columns" }, { kind: "component", type: IGridViewport, selector: "i-grid-viewport" }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGrid, decorators: [{
             type: Component,
@@ -12541,7 +12550,11 @@ class IHMenu {
               }
 
               <i [class]="menuIcon"></i>
-              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
                 @if (applicationLabel) {
                   <small class="ih-menu-application">{{ applicationLabel }}</small>
@@ -12580,7 +12593,11 @@ class IHMenu {
               }
 
               <i [class]="menuIcon"></i>
-              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
                 @if (applicationLabel) {
                   <small class="ih-menu-application">{{ applicationLabel }}</small>
@@ -12619,7 +12636,11 @@ class IHMenu {
               }
 
               <i [class]="menuIcon"></i>
-              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
                 @if (applicationLabel) {
                   <small class="ih-menu-application">{{ applicationLabel }}</small>
@@ -12747,7 +12768,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
               }
 
               <i [class]="menuIcon"></i>
-              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
                 @if (applicationLabel) {
                   <small class="ih-menu-application">{{ applicationLabel }}</small>
@@ -12786,7 +12811,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
               }
 
               <i [class]="menuIcon"></i>
-              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
                 @if (applicationLabel) {
                   <small class="ih-menu-application">{{ applicationLabel }}</small>
@@ -12825,7 +12854,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
               }
 
               <i [class]="menuIcon"></i>
-              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
                 @if (applicationLabel) {
                   <small class="ih-menu-application">{{ applicationLabel }}</small>
@@ -12916,9 +12949,27 @@ class IHSidebar {
     /** Sidebar user chip dropdown (Personal Profile / Logout) open state. */
     accountMenuOpen = signal(false, ...(ngDevMode ? [{ debugName: "accountMenuOpen" }] : []));
     onDocumentKeydown = (event) => {
+        if (!this.accountMenuOpen())
+            return;
+        const header = this.hostElement.nativeElement.querySelector('.ih-sidebar-header');
         if (event.key === 'Escape') {
             this.accountMenuOpen.set(false);
+            header?.querySelector('.ih-user-chip')?.focus();
+            return;
         }
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')
+            return;
+        if (!header?.contains(event.target))
+            return;
+        const items = Array.from(header.querySelectorAll('.ih-user-dropdown-item'));
+        if (!items.length)
+            return;
+        event.preventDefault();
+        const current = items.indexOf(document.activeElement);
+        const next = current < 0
+            ? event.key === 'ArrowDown' ? 0 : items.length - 1
+            : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+        items[next].focus();
     };
     /** Closes the dropdown when a click lands outside the chip or the menu. */
     onDocumentPointerDown = (event) => {
@@ -14981,6 +15032,197 @@ function requireRouteAccess(options = {}) {
     };
 }
 
+/** Evaluates permission input without exposing mutable store state. */
+function evaluatePermission(value, source) {
+    if (!value)
+        return false;
+    if (typeof value === 'function') {
+        try {
+            return value(source);
+        }
+        catch {
+            console.error('[@insight/ui] Permission predicate failed.');
+            return false;
+        }
+    }
+    const codes = Array.isArray(value) ? value : [value];
+    return codes.some((code) => source.menu.includes(code));
+}
+/** Shared reactive implementation for the positive and inverse permission directives. */
+class IMenuGateDirective {
+    store = inject(IUserMenuStore);
+    templateRef = inject((TemplateRef));
+    viewContainer = inject(ViewContainerRef);
+    value$ = new BehaviorSubject(null);
+    viewCreated = false;
+    subscription;
+    ngOnInit() {
+        this.subscription = combineLatest([
+            this.value$,
+            this.store.authorizationSource$,
+            this.store.initializing$,
+            this.store.initialized$,
+        ])
+            .pipe(map(([value]) => this.store.initializing() || !this.store.initialized()
+            ? null
+            : evaluatePermission(value, this.store.authorizationSource())), distinctUntilChanged())
+            .subscribe((state) => this.renderView(state));
+    }
+    ngOnDestroy() {
+        this.subscription?.unsubscribe();
+    }
+    renderView(state) {
+        if (state === null) {
+            if (this.viewCreated) {
+                this.viewContainer.clear();
+                this.viewCreated = false;
+            }
+            return;
+        }
+        const show = this.invert ? !state : state;
+        if (show && !this.viewCreated) {
+            this.viewContainer.createEmbeddedView(this.templateRef);
+            this.viewCreated = true;
+        }
+        else if (!show && this.viewCreated) {
+            this.viewContainer.clear();
+            this.viewCreated = false;
+        }
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IMenuGateDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IMenuGateDirective, isStandalone: true, ngImport: i0 });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IMenuGateDirective, decorators: [{
+            type: Directive,
+            args: [{ standalone: true }]
+        }] });
+/** Renders the template when a menu shorthand or authorization predicate allows it. */
+class IHasMnDirective extends IMenuGateDirective {
+    invert = false;
+    set iHasMn(value) {
+        this.value$.next(value);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IHasMnDirective, isStandalone: true, selector: "[iHasMn]", inputs: { iHasMn: "iHasMn" }, usesInheritance: true, ngImport: i0 });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnDirective, decorators: [{
+            type: Directive,
+            args: [{ selector: '[iHasMn]', standalone: true }]
+        }], propDecorators: { iHasMn: [{
+                type: Input
+            }] } });
+
+/** Library-owned outlet boundary for declarative route permission checks. */
+class IHasMnRoute {
+    route = inject(ActivatedRoute);
+    store = inject(IUserMenuStore);
+    session = inject(ISessionService);
+    shell = inject(IHTitleBreadcrumbService);
+    destroyRef = inject(DestroyRef);
+    permission = this.route.snapshot.data['hasMn'];
+    ready = computed(() => !this.session.initializing() &&
+        this.session.isAuth() &&
+        this.store.initialized() &&
+        !this.store.initializing(), ...(ngDevMode ? [{ debugName: "ready" }] : []));
+    allowed = computed(() => evaluatePermission(this.permission, this.store.authorizationSource()), ...(ngDevMode ? [{ debugName: "allowed" }] : []));
+    constructor() {
+        effect(() => {
+            if (!this.session.initializing() &&
+                this.session.isAuth() &&
+                !this.store.initialized() &&
+                !this.store.initializing()) {
+                untracked(() => this.store.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe());
+            }
+        });
+        effect((onCleanup) => {
+            if (!this.ready() || this.allowed())
+                return;
+            untracked(() => {
+                const previousTitle = this.shell.titleOverride();
+                const previousCrumbs = this.shell.breadcrumbsOverride();
+                const deniedCrumbs = [{ label: 'Unauthorized Access' }];
+                this.shell.setTitle('Unauthorized Access');
+                this.shell.setBreadcrumbs(deniedCrumbs);
+                onCleanup(() => {
+                    if (this.shell.titleOverride() === 'Unauthorized Access')
+                        this.shell.setTitle(previousTitle);
+                    if (this.shell.breadcrumbsOverride() === deniedCrumbs)
+                        this.shell.setBreadcrumbs(previousCrumbs);
+                });
+            });
+        });
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnRoute, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IHasMnRoute, isStandalone: true, selector: "i-has-mn-route", ngImport: i0, template: `
+    @if (!ready()) {
+      <i-loading aria-live="polite" label="Loading access..." />
+    } @else if (!allowed()) {
+      <i-section role="alert">
+        <i-section-header>
+          <i-icon icon="fa-solid fa-user-lock" /> Unauthorized Access
+        </i-section-header>
+        <i-section-body>
+          <p class="text-subtle">
+            You do not have access to this page. Please contact your administrator.
+          </p>
+        </i-section-body>
+      </i-section>
+    } @else {
+      <router-outlet />
+    }
+  `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }, { kind: "component", type: ISection, selector: "i-section" }, { kind: "component", type: ISectionBody, selector: "i-section-body" }, { kind: "component", type: ISectionHeader, selector: "i-section-header" }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnRoute, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-has-mn-route',
+                    standalone: true,
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    imports: [RouterOutlet, IIcon, ILoading, ISection, ISectionBody, ISectionHeader],
+                    template: `
+    @if (!ready()) {
+      <i-loading aria-live="polite" label="Loading access..." />
+    } @else if (!allowed()) {
+      <i-section role="alert">
+        <i-section-header>
+          <i-icon icon="fa-solid fa-user-lock" /> Unauthorized Access
+        </i-section-header>
+        <i-section-body>
+          <p class="text-subtle">
+            You do not have access to this page. Please contact your administrator.
+          </p>
+        </i-section-body>
+      </i-section>
+    } @else {
+      <router-outlet />
+    }
+  `,
+                }]
+        }], ctorParameters: () => [] });
+function hasMn(value, route) {
+    const { component, loadComponent, children, loadChildren, canDeactivate, ...recognition } = route;
+    return {
+        ...recognition,
+        children: [
+            {
+                path: '',
+                component: IHasMnRoute,
+                data: { hasMn: value },
+                children: [
+                    {
+                        path: '',
+                        component,
+                        loadComponent,
+                        children,
+                        loadChildren,
+                        canDeactivate,
+                    },
+                ],
+            },
+        ],
+    };
+}
+
 /**
  * Session-storage wrapper for non-sensitive UI state (returnUrl, nonce/state).
  * Tokens are NEVER stored here — the access token lives in-memory
@@ -15091,120 +15333,42 @@ class ISessionExpiredDialog {
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISessionExpiredDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
     static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: ISessionExpiredDialog, isStandalone: true, selector: "i-session-expired-dialog", ngImport: i0, template: `
     @if (visible()) {
-      <div class="session-expired-overlay">
-        <div class="session-expired-card" (click)="$event.stopPropagation()">
-          <div class="session-expired-icon">
-            <i class="fa-solid {{ iconClass() }}"></i>
+      <div class="session-expired-overlay flex align-center justify-center">
+        <div
+          class="session-expired-card bg-white radius-md p-3xl text-center"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="text-warning mb-lg">
+            <i-icon size="4xl" [icon]="'fa-solid ' + iconClass()" />
           </div>
-          <h1>{{ title() }}</h1>
-          <p>{{ message() }}</p>
-          <button class="session-expired-action" type="button" (click)="onConfirm()">
-            Log in again
-          </button>
+          <h1 class="m-0 mb-xs text-2xl font-semibold text-gray-800">{{ title() }}</h1>
+          <p class="m-0 mb-2xl text-md leading-normal text-subtle">{{ message() }}</p>
+          <i-button type="button" (onClick)="onConfirm()"> Log in again </i-button>
         </div>
       </div>
     }
-  `, isInline: true, styles: [".session-expired-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background-color:#00000080;z-index:9999}.session-expired-card{background:var(--i-color-surface, #ffffff);border-radius:8px;padding:32px;max-width:380px;width:calc(100% - 32px);box-shadow:0 8px 24px #0003;text-align:center}.session-expired-icon{font-size:48px;color:var(--i-color-warning, #f59e0b);margin-bottom:16px}h1{margin:0 0 8px;font-size:22px;font-weight:600;color:var(--i-text-color, #1f2937)}p{margin:0 0 24px;font-size:14px;line-height:1.5;color:var(--i-text-subtle-color, #6b7280)}.session-expired-action{border:none;border-radius:6px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;background:var(--i-color-primary, #2563eb);color:#fff}.session-expired-action:hover{filter:brightness(1.05)}\n"], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, styles: [".session-expired-overlay{position:fixed;inset:0;background-color:#00000080;z-index:9999}.session-expired-card{max-width:380px;width:calc(100% - 32px);box-shadow:0 8px 24px #0003}\n"], dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISessionExpiredDialog, decorators: [{
             type: Component,
-            args: [{ selector: 'i-session-expired-dialog', standalone: true, changeDetection: ChangeDetectionStrategy.OnPush, template: `
+            args: [{ selector: 'i-session-expired-dialog', standalone: true, imports: [IButton, IIcon], changeDetection: ChangeDetectionStrategy.OnPush, template: `
     @if (visible()) {
-      <div class="session-expired-overlay">
-        <div class="session-expired-card" (click)="$event.stopPropagation()">
-          <div class="session-expired-icon">
-            <i class="fa-solid {{ iconClass() }}"></i>
+      <div class="session-expired-overlay flex align-center justify-center">
+        <div
+          class="session-expired-card bg-white radius-md p-3xl text-center"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="text-warning mb-lg">
+            <i-icon size="4xl" [icon]="'fa-solid ' + iconClass()" />
           </div>
-          <h1>{{ title() }}</h1>
-          <p>{{ message() }}</p>
-          <button class="session-expired-action" type="button" (click)="onConfirm()">
-            Log in again
-          </button>
+          <h1 class="m-0 mb-xs text-2xl font-semibold text-gray-800">{{ title() }}</h1>
+          <p class="m-0 mb-2xl text-md leading-normal text-subtle">{{ message() }}</p>
+          <i-button type="button" (onClick)="onConfirm()"> Log in again </i-button>
         </div>
       </div>
     }
-  `, styles: [".session-expired-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background-color:#00000080;z-index:9999}.session-expired-card{background:var(--i-color-surface, #ffffff);border-radius:8px;padding:32px;max-width:380px;width:calc(100% - 32px);box-shadow:0 8px 24px #0003;text-align:center}.session-expired-icon{font-size:48px;color:var(--i-color-warning, #f59e0b);margin-bottom:16px}h1{margin:0 0 8px;font-size:22px;font-weight:600;color:var(--i-text-color, #1f2937)}p{margin:0 0 24px;font-size:14px;line-height:1.5;color:var(--i-text-subtle-color, #6b7280)}.session-expired-action{border:none;border-radius:6px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;background:var(--i-color-primary, #2563eb);color:#fff}.session-expired-action:hover{filter:brightness(1.05)}\n"] }]
+  `, styles: [".session-expired-overlay{position:fixed;inset:0;background-color:#00000080;z-index:9999}.session-expired-card{max-width:380px;width:calc(100% - 32px);box-shadow:0 8px 24px #0003}\n"] }]
         }] });
-
-/** Evaluates permission input without exposing mutable store state. */
-function evaluatePermission(value, source) {
-    if (!value)
-        return false;
-    if (typeof value === 'function') {
-        try {
-            return value(source);
-        }
-        catch {
-            console.error('[@insight/ui] Permission predicate failed.');
-            return false;
-        }
-    }
-    const codes = Array.isArray(value) ? value : [value];
-    return codes.some((code) => source.menu.includes(code));
-}
-/** Shared reactive implementation for the positive and inverse permission directives. */
-class IMenuGateDirective {
-    store = inject(IUserMenuStore);
-    templateRef = inject((TemplateRef));
-    viewContainer = inject(ViewContainerRef);
-    value$ = new BehaviorSubject(null);
-    viewCreated = false;
-    subscription;
-    ngOnInit() {
-        this.subscription = combineLatest([
-            this.value$,
-            this.store.authorizationSource$,
-            this.store.initializing$,
-            this.store.initialized$,
-        ])
-            .pipe(map(([value]) => this.store.initializing() || !this.store.initialized()
-            ? null
-            : evaluatePermission(value, this.store.authorizationSource())), distinctUntilChanged())
-            .subscribe((state) => this.renderView(state));
-    }
-    ngOnDestroy() {
-        this.subscription?.unsubscribe();
-    }
-    renderView(state) {
-        if (state === null) {
-            if (this.viewCreated) {
-                this.viewContainer.clear();
-                this.viewCreated = false;
-            }
-            return;
-        }
-        const show = this.invert ? !state : state;
-        if (show && !this.viewCreated) {
-            this.viewContainer.createEmbeddedView(this.templateRef);
-            this.viewCreated = true;
-        }
-        else if (!show && this.viewCreated) {
-            this.viewContainer.clear();
-            this.viewCreated = false;
-        }
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IMenuGateDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IMenuGateDirective, isStandalone: true, ngImport: i0 });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IMenuGateDirective, decorators: [{
-            type: Directive,
-            args: [{ standalone: true }]
-        }] });
-/** Renders the template when a menu shorthand or authorization predicate allows it. */
-class IHasMnDirective extends IMenuGateDirective {
-    invert = false;
-    set iHasMn(value) {
-        this.value$.next(value);
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IHasMnDirective, isStandalone: true, selector: "[iHasMn]", inputs: { iHasMn: "iHasMn" }, usesInheritance: true, ngImport: i0 });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnDirective, decorators: [{
-            type: Directive,
-            args: [{ selector: '[iHasMn]', standalone: true }]
-        }], propDecorators: { iHasMn: [{
-                type: Input
-            }] } });
 
 /** Renders the template when a menu shorthand or authorization predicate denies it. */
 class INotHasMnDirective extends IMenuGateDirective {
@@ -15230,5 +15394,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
+export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
 //# sourceMappingURL=insight-ui.mjs.map

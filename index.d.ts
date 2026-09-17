@@ -102,6 +102,7 @@ declare class IButton {
     disabled: boolean;
     loading: boolean;
     type: IButtonType;
+    ariaLabel: string | undefined;
     loadingText: string;
     variant: IButtonVariant;
     size: IButtonSize;
@@ -123,7 +124,7 @@ declare class IButton {
     get mode(): string;
     handleClick(event: MouseEvent): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IButton, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IButton, "i-button", never, { "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "type": { "alias": "type"; "required": false; }; "loadingText": { "alias": "loadingText"; "required": false; }; "variant": { "alias": "variant"; "required": false; }; "size": { "alias": "size"; "required": false; }; "icon": { "alias": "icon"; "required": false; }; "routerLink": { "alias": "routerLink"; "required": false; }; "queryParams": { "alias": "queryParams"; "required": false; }; "fragment": { "alias": "fragment"; "required": false; }; "state": { "alias": "state"; "required": false; }; "href": { "alias": "href"; "required": false; }; "target": { "alias": "target"; "required": false; }; "rel": { "alias": "rel"; "required": false; }; }, { "onClick": "onClick"; }, never, ["*"], true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IButton, "i-button", never, { "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "type": { "alias": "type"; "required": false; }; "ariaLabel": { "alias": "ariaLabel"; "required": false; }; "loadingText": { "alias": "loadingText"; "required": false; }; "variant": { "alias": "variant"; "required": false; }; "size": { "alias": "size"; "required": false; }; "icon": { "alias": "icon"; "required": false; }; "routerLink": { "alias": "routerLink"; "required": false; }; "queryParams": { "alias": "queryParams"; "required": false; }; "fragment": { "alias": "fragment"; "required": false; }; "state": { "alias": "state"; "required": false; }; "href": { "alias": "href"; "required": false; }; "target": { "alias": "target"; "required": false; }; "rel": { "alias": "rel"; "required": false; }; }, { "onClick": "onClick"; }, never, ["*"], true, never>;
     static ngAcceptInputType_disabled: unknown;
     static ngAcceptInputType_loading: unknown;
 }
@@ -3017,19 +3018,6 @@ type IRouteAccessOptions = {
 /** Authorizes a route by its resolved menu code instead of comparing backend routes. */
 declare function requireRouteAccess(options?: IRouteAccessOptions): CanActivateFn;
 
-declare const IH_SKIP_BEARER_HEADER = "X-IH-Skip-Bearer";
-/**
- * Auth HTTP interceptor for @insight/ui consumer apps.
- *
- * Attaches the in-memory access token as a Bearer header. On 401, attempts a
- * single silent refresh (via the HttpOnly session cookie) and retries once;
- * on refresh failure, clears the session and redirects to the configured
- * signinUrl (the app's own login). 429 (rate-limit) and 423 (lockout)
- * responses are passed through; `IApiService` normalizes their current or
- * legacy backend error fields.
- */
-declare const authInterceptor: HttpInterceptorFn;
-
 /**
  * Types for the current-user navigation, favorites and effective-authorization
  * data, matched to the iam-user-api user-menu service contract
@@ -3250,57 +3238,6 @@ declare class ICurrentUserService {
 }
 
 /**
- * Session-storage wrapper for non-sensitive UI state (returnUrl, nonce/state).
- * Tokens are NEVER stored here — the access token lives in-memory
- * (`ISessionService`) and the refresh token lives in an HttpOnly cookie set by
- * iam-identity-api.
- *
- * @overridable — consumers may provide `{ provide: IStorageService, useClass: ... }`.
- */
-declare class IStorageService {
-    private readonly storageKey;
-    get(key: string): string;
-    set(key: string, value: string): void;
-    delete(key: string): void;
-    clear(): void;
-    /** Save the return URL for post-login/post-password-change redirect (keyed `ru`). */
-    setReturnUrl(url: string): void;
-    /** Retrieve and clear the saved return URL. Returns `'/'` when none is saved. */
-    getReturnUrl(): string;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IStorageService, never>;
-    static ɵprov: i0.ɵɵInjectableDeclaration<IStorageService>;
-}
-
-/**
- * Library-provided session-expired overlay. Consumer apps render it once near
- * the app root (mirroring `<i-dialog-outlet />`):
- *
- * ```html
- * <i-session-expired-dialog />
- * ```
- *
- * It is self-gating (renders nothing while hidden), reads its state from the
- * shared `ISessionExpiredService` (shown by the auth interceptor when a token
- * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
- * again", performs a full-page redirect to the configured signinUrl via
- * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
- * clicking the backdrop.
- */
-declare class ISessionExpiredDialog {
-    private readonly sessionExpired;
-    private readonly config;
-    protected readonly visible: i0.WritableSignal<boolean>;
-    protected iconClass(): string;
-    protected title(): string;
-    protected message(): string;
-    private localFallbackMessage;
-    /** Perform the SSO handoff to the configured signinUrl, then clear the overlay state. */
-    onConfirm(): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionExpiredDialog, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISessionExpiredDialog, "i-session-expired-dialog", never, {}, {}, never, never, true, never>;
-}
-
-/**
  * In-memory store for the current user's sidebar data — user profile, effective
  * navigation menus, favorites — and permission checks.
  *
@@ -3498,6 +3435,88 @@ declare class IHasMnDirective extends IMenuGateDirective {
     static ɵdir: i0.ɵɵDirectiveDeclaration<IHasMnDirective, "[iHasMn]", never, { "iHasMn": { "alias": "iHasMn"; "required": false; }; }, {}, never, never, true, never>;
 }
 
+/** Library-owned outlet boundary for declarative route permission checks. */
+declare class IHasMnRoute {
+    private readonly route;
+    private readonly store;
+    private readonly session;
+    private readonly shell;
+    private readonly destroyRef;
+    readonly permission: IPermissionInput;
+    readonly ready: i0.Signal<boolean>;
+    readonly allowed: i0.Signal<boolean>;
+    constructor();
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHasMnRoute, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHasMnRoute, "i-has-mn-route", never, {}, {}, never, never, true, never>;
+}
+/** Preserves route recognition and resolvers while gating component activation. */
+declare function hasMn(value: IPermissionInput, route: IRoute): IRoute;
+declare function hasMn(value: IPermissionInput, route: Route): Route;
+
+declare const IH_SKIP_BEARER_HEADER = "X-IH-Skip-Bearer";
+/**
+ * Auth HTTP interceptor for @insight/ui consumer apps.
+ *
+ * Attaches the in-memory access token as a Bearer header. On 401, attempts a
+ * single silent refresh (via the HttpOnly session cookie) and retries once;
+ * on refresh failure, clears the session and redirects to the configured
+ * signinUrl (the app's own login). 429 (rate-limit) and 423 (lockout)
+ * responses are passed through; `IApiService` normalizes their current or
+ * legacy backend error fields.
+ */
+declare const authInterceptor: HttpInterceptorFn;
+
+/**
+ * Session-storage wrapper for non-sensitive UI state (returnUrl, nonce/state).
+ * Tokens are NEVER stored here — the access token lives in-memory
+ * (`ISessionService`) and the refresh token lives in an HttpOnly cookie set by
+ * iam-identity-api.
+ *
+ * @overridable — consumers may provide `{ provide: IStorageService, useClass: ... }`.
+ */
+declare class IStorageService {
+    private readonly storageKey;
+    get(key: string): string;
+    set(key: string, value: string): void;
+    delete(key: string): void;
+    clear(): void;
+    /** Save the return URL for post-login/post-password-change redirect (keyed `ru`). */
+    setReturnUrl(url: string): void;
+    /** Retrieve and clear the saved return URL. Returns `'/'` when none is saved. */
+    getReturnUrl(): string;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IStorageService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IStorageService>;
+}
+
+/**
+ * Library-provided session-expired overlay. Consumer apps render it once near
+ * the app root (mirroring `<i-dialog-outlet />`):
+ *
+ * ```html
+ * <i-session-expired-dialog />
+ * ```
+ *
+ * It is self-gating (renders nothing while hidden), reads its state from the
+ * shared `ISessionExpiredService` (shown by the auth interceptor when a token
+ * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
+ * again", performs a full-page redirect to the configured signinUrl via
+ * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
+ * clicking the backdrop.
+ */
+declare class ISessionExpiredDialog {
+    private readonly sessionExpired;
+    private readonly config;
+    protected readonly visible: i0.WritableSignal<boolean>;
+    protected iconClass(): string;
+    protected title(): string;
+    protected message(): string;
+    private localFallbackMessage;
+    /** Perform the SSO handoff to the configured signinUrl, then clear the overlay state. */
+    onConfirm(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionExpiredDialog, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISessionExpiredDialog, "i-session-expired-dialog", never, {}, {}, never, never, true, never>;
+}
+
 /** Renders the template when a menu shorthand or authorization predicate denies it. */
 declare class INotHasMnDirective extends IMenuGateDirective {
     protected readonly invert = true;
@@ -3562,5 +3581,5 @@ type IEnvironment = {
  */
 declare const environment: IEnvironment;
 
-export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
+export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
 export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEnvironment, IErrorContext, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
