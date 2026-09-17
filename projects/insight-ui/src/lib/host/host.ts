@@ -806,7 +806,11 @@ export class IHContent {
               }
 
               <i [class]="menuIcon"></i>
-              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
                 @if (applicationLabel) {
                   <small class="ih-menu-application">{{ applicationLabel }}</small>
@@ -845,7 +849,11 @@ export class IHContent {
               }
 
               <i [class]="menuIcon"></i>
-              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
                 @if (applicationLabel) {
                   <small class="ih-menu-application">{{ applicationLabel }}</small>
@@ -884,7 +892,11 @@ export class IHContent {
               }
 
               <i [class]="menuIcon"></i>
-              <span class="ih-menu-label" [class.ih-menu-label--compact]="showApplication">
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
                 <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
                 @if (applicationLabel) {
                   <small class="ih-menu-application">{{ applicationLabel }}</small>
@@ -1308,9 +1320,29 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   readonly accountMenuOpen = signal(false);
 
   private readonly onDocumentKeydown = (event: KeyboardEvent): void => {
+    if (!this.accountMenuOpen()) return;
+    const header = (this.hostElement.nativeElement as HTMLElement).querySelector(
+      '.ih-sidebar-header',
+    );
     if (event.key === 'Escape') {
       this.accountMenuOpen.set(false);
+      header?.querySelector<HTMLButtonElement>('.ih-user-chip')?.focus();
+      return;
     }
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    if (!header?.contains(event.target as Node | null)) return;
+
+    const items = Array.from(
+      header.querySelectorAll<HTMLElement>('.ih-user-dropdown-item'),
+    );
+    if (!items.length) return;
+
+    event.preventDefault();
+    const current = items.indexOf(document.activeElement as HTMLElement);
+    const next = current < 0
+      ? event.key === 'ArrowDown' ? 0 : items.length - 1
+      : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+    items[next].focus();
   };
 
   /** Closes the dropdown when a click lands outside the chip or the menu. */

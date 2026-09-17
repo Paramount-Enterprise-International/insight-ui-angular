@@ -217,6 +217,65 @@ describe('IHSidebar (modern menus + favorites)', () => {
     fixture.detectChanges();
   });
 
+  for (const key of ['ArrowDown', 'ArrowUp']) {
+    it(`moves account menu focus and wraps with ${key}`, () => {
+      const el = fixture.nativeElement as HTMLElement;
+      const chip = el.querySelector<HTMLButtonElement>('.ih-user-chip')!;
+      chip.click();
+      fixture.detectChanges();
+      chip.focus();
+      const items = el.querySelectorAll<HTMLElement>('.ih-user-dropdown-item');
+      const first = key === 'ArrowDown' ? 0 : 1;
+
+      for (const index of [first, 1 - first, first]) {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+        document.activeElement!.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(true);
+        expect(document.activeElement).toBe(items[index]);
+      }
+
+      items[first].dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+      expect(el.querySelector('.ih-user-dropdown')).toBeNull();
+      expect(document.activeElement).toBe(chip);
+      expect(chip.getAttribute('aria-expanded')).toBe('false');
+    });
+  }
+
+  it('preserves Tab and ignores account navigation outside the header', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    const chip = el.querySelector<HTMLButtonElement>('.ih-user-chip')!;
+    chip.click();
+    fixture.detectChanges();
+    chip.focus();
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    chip.dispatchEvent(tab);
+    expect(tab.defaultPrevented).toBe(false);
+
+    const search = el.querySelector<HTMLInputElement>('.ih-sidebar-search input')!;
+    search.focus();
+    const arrow = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+    search.dispatchEvent(arrow);
+    expect(arrow.defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(search);
+
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    fixture.detectChanges();
+    expect(el.querySelector('.ih-user-dropdown')).toBeNull();
+  });
+
+  it('closes the account menu when Personal Profile is activated', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    el.querySelector<HTMLButtonElement>('.ih-user-chip')!.click();
+    fixture.detectChanges();
+    const profile = el.querySelector<HTMLAnchorElement>('.ih-user-dropdown a')!;
+    expect(profile.target).toBe('_blank');
+    profile.addEventListener('click', (event) => event.preventDefault());
+    profile.click();
+    fixture.detectChanges();
+    expect(el.querySelector('.ih-user-dropdown')).toBeNull();
+  });
+
   it('renders the modern menu tree flat by default (no chevron, children visible)', () => {
     const el = fixture.nativeElement as HTMLElement;
 
