@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { BehaviorSubject, combineLatest, distinctUntilChanged, map, Subscription } from 'rxjs';
 
-import { IUserMenuStore } from '../store/user-menu.store';
+import { IUserMenuStore } from '../store/user-menu';
 import type { IAuthorizationSource } from '../user';
 
 /** Flexible permission check against the current authorization snapshot. */
@@ -35,7 +35,7 @@ export function evaluatePermission(
   }
 
   const codes = Array.isArray(value) ? value : [value];
-  return codes.some((code) => source.menu.includes(code));
+  return codes.some((code) => source.menuCodes.includes(code));
 }
 
 /** Shared reactive implementation for the positive and inverse permission directives. */

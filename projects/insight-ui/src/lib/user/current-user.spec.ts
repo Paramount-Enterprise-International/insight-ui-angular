@@ -2,8 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
 import { I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
-import { IApiService } from '../api/api.service';
-import { ICurrentUserService } from './current-user.service';
+import { IApiService } from '../api/api';
+import { ICurrentUserService } from './current-user';
 
 const testConfig: IAuthConfig = {
   api: {

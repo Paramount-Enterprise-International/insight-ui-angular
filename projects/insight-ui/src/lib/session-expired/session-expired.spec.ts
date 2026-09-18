@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import { ISessionExpiredService } from './session-expired.service';
+import { ISessionExpiredService } from './session-expired';
 
 describe('ISessionExpiredService', () => {
   let service: ISessionExpiredService;

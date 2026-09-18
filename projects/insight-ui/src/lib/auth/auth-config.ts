@@ -1,7 +1,7 @@
 import { InjectionToken } from '@angular/core';
 
 import { environment as defaultEnvironment } from '../../environments/environment';
-import type { IApiErrorCatalogResolver } from '../api/api-error';
+import type { IApiErrorCatalogResolver, IApiErrorDisplayFormatter } from '../api/api-error';
 
 /**
  * Token lifespan configuration (seconds). Mirrors the platform-wide AC used by
@@ -133,6 +133,8 @@ export type IAuthConfig = {
    * when the backend did not provide `message`, before legacy/local fallbacks.
    */
   errorCatalogResolver?: IApiErrorCatalogResolver;
+  /** Optional application-owned backend error display formatter. */
+  errorDisplayFormatter?: IApiErrorDisplayFormatter;
 }
 
 /**

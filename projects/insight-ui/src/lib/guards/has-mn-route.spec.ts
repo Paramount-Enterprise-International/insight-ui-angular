@@ -5,8 +5,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { of } from 'rxjs';
 
 import { IHTitleBreadcrumbService } from '../host/host';
-import { ISessionService } from '../session/session.service';
-import { IUserMenuStore } from '../store/user-menu.store';
+import { ISessionService } from '../session/session';
+import { IUserMenuStore } from '../store/user-menu';
 import { ICurrentUserService, IUserMenuService } from '../user';
 import { hasMn } from './has-mn-route';
 
@@ -62,9 +62,7 @@ describe('hasMn Angular routes', () => {
     harness.detectChanges();
   };
   const grant = (code: string): void => {
-    store.menus.set([
-      { id: 'm1', name: 'Report', type: 'item', menuCode: code, route: '/reports' },
-    ]);
+    store.authorizations.set([{ menuId: 'm1', menuCode: code, type: 'item', companies: [] }]);
   };
 
   beforeEach(async () => {
@@ -120,6 +118,8 @@ describe('hasMn Angular routes', () => {
     await harness.navigateByUrl('/reports/42?tab=info');
     await settle();
     expect(harness.routeNativeElement?.textContent).toContain('Unauthorized Access');
+    expect(harness.routeNativeElement?.querySelector('i-error-page i-section')).not.toBeNull();
+    expect(harness.routeNativeElement?.querySelector('.i-error-page__code')?.textContent?.trim()).toBe('403');
     expect(TestBed.inject(Router).url).toBe('/reports/42?tab=info');
     expect(mounts).toBe(0);
     expect(shell.titleOverride()).toBe('Unauthorized Access');
@@ -133,7 +133,7 @@ describe('hasMn Angular routes', () => {
     expect(harness.routeNativeElement?.textContent).toContain('report-42-info-resolved-value');
     expect(shell.titleOverride()).toBeNull();
     expect(shell.breadcrumbsOverride()).toBeNull();
-    store.menus.set([]);
+    store.authorizations.set([]);
     await settle();
     expect(harness.routeNativeElement?.textContent).toContain('Unauthorized Access');
     expect(harness.routeNativeElement?.textContent).not.toContain('report-42');
@@ -149,6 +149,7 @@ describe('hasMn Angular routes', () => {
     await settle();
     expect(store.load).toHaveBeenCalledTimes(1);
     expect(harness.routeNativeElement?.textContent).toContain('Loading access...');
+    expect(harness.routeNativeElement?.querySelector('i-error-page')).toBeNull();
     expect(harness.routeNativeElement?.textContent).not.toContain('Unauthorized Access');
     store.initialized.set(true);
     store.initializing.set(false);

@@ -61,8 +61,8 @@ import { I_AUTH_CONFIG } from '../auth';
 import { IAvatar } from '../avatar';
 import { IConfirmService } from '../dialog/dialog';
 import { IHighlightSearchPipe } from '../highlight-search.pipe';
-import { ISessionService } from '../session/session.service';
-import { IUserMenuStore } from '../store/user-menu.store';
+import { ISessionService } from '../session/session';
+import { IUserMenuStore } from '../store/user-menu';
 
 export type IRoute = Omit<Route, 'data' | 'children'> & {
   data: {

@@ -1,14 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 
-import { ISessionService } from './session.service';
-import { IAuthService, IRefreshResponse } from '../auth/auth.service';
+import { ISessionService } from './session';
+import { IAuthService, IRefreshResponse } from '../auth/auth';
 import { I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
-import { ICsrfService } from '../csrf/csrf.service';
-import { ISessionExpiredService } from '../session-expired/session-expired.service';
-import { IUserMenuStore } from '../store/user-menu.store';
-import { ICurrentUserService } from '../user/current-user.service';
-import { IUserMenuService } from '../user/user-menu.service';
+import { ICsrfService } from '../csrf/csrf';
+import { ISessionExpiredService } from '../session-expired/session-expired';
+import { IUserMenuStore } from '../store/user-menu';
+import { ICurrentUserService } from '../user/current-user';
+import { IUserMenuService } from '../user/user-menu';
 
 const testConfig: IAuthConfig = {
   api: { identity: 'http://localhost:3001/api' },

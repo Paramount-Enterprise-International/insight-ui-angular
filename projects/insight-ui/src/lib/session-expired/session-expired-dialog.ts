@@ -1,71 +1,49 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { IButton } from '../button/button';
+import { IDialog, IDialogAction, IDialogConfig, IDialogContainer } from '../dialog/dialog';
 import { IIcon } from '../icon/icon';
 
 import { INormalizedApiError, resolveApiErrorDisplayMessage } from '../api/api-error';
 import { I_AUTH_CONFIG } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
-import { ISessionExpiredService } from './session-expired.service';
+import { ISessionExpiredService } from './session-expired';
 
-/**
- * Library-provided session-expired overlay. Consumer apps render it once near
- * the app root (mirroring `<i-dialog-outlet />`):
- *
- * ```html
- * <i-session-expired-dialog />
- * ```
- *
- * It is self-gating (renders nothing while hidden), reads its state from the
- * shared `ISessionExpiredService` (shown by the auth interceptor when a token
- * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
- * again", performs a full-page redirect to the configured signinUrl via
- * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
- * clicking the backdrop.
- */
+/** Binds session-expiry state to a non-dismissible Insight dialog and SSO handoff. */
 @Component({
   selector: 'i-session-expired-dialog',
   standalone: true,
-  imports: [IButton, IIcon],
+  imports: [IDialogContainer, IDialog, IIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (visible()) {
-      <div class="session-expired-overlay flex align-center justify-center">
-        <div
-          class="session-expired-card bg-white radius-md p-3xl text-center"
-          (click)="$event.stopPropagation()"
-        >
-          <div class="text-warning mb-lg">
-            <i-icon size="4xl" [icon]="'fa-solid ' + iconClass()" />
+      <i-dialog-container
+        style="z-index: 9999"
+        [ariaLabel]="title()"
+        [config]="dialogConfig"
+        [isTopMost]="true"
+      >
+        <i-dialog [actions]="actions" [title]="title()" (onCustomAction)="onConfirm()">
+          <div class="flex flex-col align-center text-center gap-lg">
+            <i-icon class="text-warning" size="3xl" [icon]="iconClass()" />
+            <p class="m-0 text-md leading-normal text-subtle">{{ message() }}</p>
           </div>
-          <h1 class="m-0 mb-xs text-2xl font-semibold text-gray-800">{{ title() }}</h1>
-          <p class="m-0 mb-2xl text-md leading-normal text-subtle">{{ message() }}</p>
-          <i-button type="button" (onClick)="onConfirm()"> Log in again </i-button>
-        </div>
-      </div>
+        </i-dialog>
+      </i-dialog-container>
     }
   `,
-  styles: [
-    `
-      .session-expired-overlay {
-        position: fixed;
-        inset: 0;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 9999;
-      }
-
-      .session-expired-card {
-        max-width: 380px;
-        width: calc(100% - 32px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-      }
-    `,
-  ],
 })
 export class ISessionExpiredDialog {
   private readonly sessionExpired = inject(ISessionExpiredService);
   private readonly config = inject(I_AUTH_CONFIG);
 
   protected readonly visible = this.sessionExpired.visible;
+  protected readonly dialogConfig: IDialogConfig = {
+    width: '380px',
+    disableClose: true,
+    backdropClose: false,
+  };
+  protected readonly actions: IDialogAction[] = [
+    { type: 'custom', label: 'Log in again', className: 'w-full' },
+  ];
 
   protected iconClass(): string {
     return this.sessionExpired.reason() === 'SESSION_REPLACED'
@@ -91,7 +69,12 @@ export class ISessionExpiredDialog {
       message: this.sessionExpired.message() ?? undefined,
       detail: this.sessionExpired.detail() ?? undefined,
     };
-    return resolveApiErrorDisplayMessage(error, localFallback, this.config.errorCatalogResolver);
+    return resolveApiErrorDisplayMessage(
+      error,
+      localFallback,
+      this.config.errorCatalogResolver,
+      this.config.errorDisplayFormatter,
+    );
   }
 
   private localFallbackMessage(): string {

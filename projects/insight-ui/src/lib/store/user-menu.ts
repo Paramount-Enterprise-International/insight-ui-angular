@@ -5,7 +5,8 @@ import { catchError, filter, finalize, shareReplay, switchMap, take, tap } from 
 
 import { type INormalizedApiError, normalizeApiError, resolveApiErrorDisplayMessage } from '../api';
 import { getMenuKey, IMenu, IUser } from '../host';
-import { ISessionService } from '../session/session.service';
+import { I_AUTH_CONFIG } from '../auth/auth-config';
+import { ISessionService } from '../session/session';
 import {
   IAuthorizationSource,
   ICurrentUserDto,
@@ -16,7 +17,7 @@ import {
   IUserMenuService,
 } from '../user';
 import {
-  collectMenuCodes,
+  collectAuthorizationScope,
   findFirstLeafRoute,
   findMenuNameById,
   hasAnyMenuCode,
@@ -37,7 +38,7 @@ import {
  * (async-aware).
  */
 /** Load branch keys for the cold-start sidebar data load. */
-export type IUserMenuLoadSource = 'user' | 'menus' | 'favorites' | 'permissions';
+export type IUserMenuLoadSource = 'user' | 'menus' | 'favorites' | 'authorizations';
 
 /** Per-branch normalized errors from the last `load()` — mirrors the service API error contract. */
 export type IUserMenuLoadErrors = Record<IUserMenuLoadSource, INormalizedApiError | null>;
@@ -47,6 +48,7 @@ export class IUserMenuStore {
   private readonly currentUserService = inject(ICurrentUserService);
   private readonly menuService = inject(IUserMenuService);
   private readonly session = inject(ISessionService);
+  private readonly config = inject(I_AUTH_CONFIG);
 
   /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
   private loadedUserSub: string | null = null;
@@ -62,28 +64,17 @@ export class IUserMenuStore {
   readonly favorites = signal<IMenu[]>([]);
   /** Roles decoded from the access token (for `source: 'role'` permission checks). */
   readonly roles = signal<string[]>([]);
-  /**
-   * Feature permissions granted by the backend (for `source: 'permission'`
-   * checks). Hydrated by `load()` from the effective authorizations endpoint
-   * (application-scoped authorizations endpoint) as the deduplicated set of
-   * `data[].menuCode`; `setPermissions()` remains available for a caller that
-   * wants to supply the list itself.
-   */
-  readonly permissions = signal<string[]>([]);
   /** Raw effective authorization entries returned by iam-user-api. */
   readonly authorizations = signal<IEffectiveAuthorizationDto[]>([]);
-  /** Deduplicated companies from the effective authorization entries. */
-  readonly companies = signal<IEffectiveAuthorizationDto['companies']>([]);
-  /** Deduplicated company codes from the effective authorization entries. */
-  readonly companyCodes = signal<string[]>([]);
-  /** Company codes grouped by menu code. */
-  readonly menuCompanies = signal<Record<string, string[]>>({});
-  /** Deduplicated navigable menu codes from the effective menu tree. */
-  readonly menuCodes = computed(() => collectMenuCodes(this.menus()));
+  private readonly authorizationScope = computed(() => collectAuthorizationScope(this.authorizations()));
+  readonly companies = computed(() => this.authorizationScope().companies);
+  readonly companyCodes = computed(() => this.authorizationScope().companyCodes);
+  readonly menuCompanies = computed(() => this.authorizationScope().menuCompanies);
+  /** Deduplicated item/function codes from effective authorizations. */
+  readonly menuCodes = computed(() => [...new Set(this.authorizations().map((item) => item.menuCode))]);
   /** Immutable authorization snapshot used by permission predicates. */
   readonly authorizationSource = computed<IAuthorizationSource>(() => ({
-    menu: this.menuCodes(),
-    permission: this.permissions(),
+    menuCodes: this.menuCodes(),
     roles: this.roles(),
     companyCodes: this.companyCodes(),
     companies: this.companies(),
@@ -100,7 +91,7 @@ export class IUserMenuStore {
     user: null,
     menus: null,
     favorites: null,
-    permissions: null,
+    authorizations: null,
   });
 
   // Reactive observable projections (used by directives/components that prefer
@@ -109,7 +100,6 @@ export class IUserMenuStore {
   readonly menus$ = toObservable(this.menus);
   readonly favorites$ = toObservable(this.favorites);
   readonly roles$ = toObservable(this.roles);
-  readonly permissions$ = toObservable(this.permissions);
   readonly authorizations$ = toObservable(this.authorizations);
   readonly companies$ = toObservable(this.companies);
   readonly companyCodes$ = toObservable(this.companyCodes);
@@ -133,7 +123,7 @@ export class IUserMenuStore {
   }
 
   /**
-   * Cold-start: fetch user + menus + favorites + permissions concurrently. A
+   * Cold-start: fetch user + menus + favorites + authorizations concurrently. A
    * failure in one branch does not block the others; `initializing` clears once
    * all settle.
    *
@@ -167,7 +157,7 @@ export class IUserMenuStore {
     this.initializing.set(true);
     this.initialized.set(false);
     this.loadError.set(null);
-    this.loadErrors.set({ user: null, menus: null, favorites: null, permissions: null });
+    this.loadErrors.set({ user: null, menus: null, favorites: null, authorizations: null });
     this.roles.set(this.session.getRoles());
     this.clearAuthorizationData();
 
@@ -179,8 +169,8 @@ export class IUserMenuStore {
       favorites: this.loadFavoritesInternal(applicationId).pipe(
         catchError((err) => this.recordError('favorites', err)),
       ),
-      permissions: this.loadPermissionsInternal(applicationId).pipe(
-        catchError((err) => this.recordError('permissions', err)),
+      authorizations: this.loadAuthorizationsInternal(applicationId).pipe(
+        catchError((err) => this.recordError('authorizations', err)),
       ),
     }).pipe(
       map(() => undefined),
@@ -214,19 +204,20 @@ export class IUserMenuStore {
     this.roles.set(this.session.getRoles());
   }
 
-  /**
-   * Menu-mode permission check against the in-memory menu codes (ANY match).
-   * Returns `false` while menus are not yet loaded — gated UI renders only
-   * after the store has data (async-aware via the reactive directives).
-   */
-  hasMenu(code: string | string[]): boolean {
+  /** Checks whether the navigation tree contains any matching leaf menu. */
+  hasNavigableMenu(code: string | string[]): boolean {
     return hasAnyMenuCode(this.menus(), code);
+  }
+
+  /** Checks effective item/function authorization codes (ANY match). */
+  hasMenuCode(code: string | string[]): boolean {
+    const granted = this.menuCodes();
+    return (Array.isArray(code) ? code : [code]).some((item) => granted.includes(item));
   }
 
   /**
    * Route-membership check: can the user open `path`? True when any granted
-   * leaf menu route equals it (slash-normalized). Used by route-level access
-   * guards (e.g. `requireRouteAccess`).
+   * leaf menu route equals it (slash-normalized).
    */
   hasRoute(path: string): boolean {
     return hasAnyRoute(this.menus(), path);
@@ -239,29 +230,6 @@ export class IUserMenuStore {
       return code.some((role) => roles.includes(role));
     }
     return roles.includes(code);
-  }
-
-  /**
-   * Replaces the granted permission list (feature/action codes). `load()`
-   * hydrates this automatically — call this only to override it explicitly.
-   * Codes are deduplicated so an accidental duplicate in the source list can
-   * never make `hasPermission()` behave differently.
-   */
-  setPermissions(permissions: string[]): void {
-    this.permissions.set([...new Set(permissions)]);
-  }
-
-  /**
-   * Permission-mode check against the granted permissions (ANY match). Returns
-   * `false` while the list is empty/not loaded - gated UI renders only after
-   * the store has data (async-aware via the reactive directives).
-   */
-  hasPermission(code: string | string[]): boolean {
-    const granted = this.permissions();
-    if (Array.isArray(code)) {
-      return code.some((permission) => granted.includes(permission));
-    }
-    return granted.includes(code);
   }
 
   /**
@@ -308,7 +276,7 @@ export class IUserMenuStore {
 
   /**
    * Loads the effective navigation tree into `menus` — for one application
-   * (`applicationId`) or all active applications when omitted. Returns the
+   * (`applicationId`) or the configured application when omitted. Returns the
    * mapped `IMenu[]`.
    */
   loadMenus(applicationId?: string): Observable<IMenu[]> {
@@ -326,15 +294,12 @@ export class IUserMenuStore {
     );
   }
 
-  /**
-   * Loads the granted feature permissions into `permissions` — the deduplicated
-   * set of `data[].menuCode` from the effective authorizations endpoint.
-   * Returns the resulting permission list.
-   */
-  loadPermissions(applicationId?: string): Observable<string[]> {
+  /** Loads effective item/function authorizations and their company scope. */
+  loadAuthorizations(applicationId?: string): Observable<IEffectiveAuthorizationDto[]> {
+    this.clearAuthorizationData();
     return this.menuService.getAuthorizations<IEffectiveAuthorizationDto[]>(applicationId).pipe(
       tap((items) => this.applyAuthorizations(items)),
-      map(() => this.permissions()),
+      map(() => this.authorizations()),
       catchError((error) => {
         this.clearAuthorizationData();
         return throwError(() => error);
@@ -347,37 +312,7 @@ export class IUserMenuStore {
       ...item,
       companies: item.companies.map((company) => ({ ...company })),
     }));
-    const permissionCodes = new Set<string>();
-    const seenCompanyIds = new Set<string>();
-    const companyCodes = new Set<string>();
-    const companies: IEffectiveAuthorizationDto['companies'] = [];
-    const menuCompanySets = new Map<string, Set<string>>();
-
-    for (const authorization of authorizations) {
-      permissionCodes.add(authorization.menuCode);
-      const scopedCodes = menuCompanySets.get(authorization.menuCode) ?? new Set<string>();
-      menuCompanySets.set(authorization.menuCode, scopedCodes);
-
-      for (const company of authorization.companies) {
-        scopedCodes.add(company.code);
-        companyCodes.add(company.code);
-        if (!seenCompanyIds.has(company.id)) {
-          seenCompanyIds.add(company.id);
-          companies.push(company);
-        }
-      }
-    }
-
-    const menuCompanies: Record<string, string[]> = {};
-    for (const [menuCode, codes] of menuCompanySets) {
-      menuCompanies[menuCode] = [...codes];
-    }
-
     this.authorizations.set(authorizations);
-    this.permissions.set([...permissionCodes]);
-    this.companies.set(companies);
-    this.companyCodes.set([...companyCodes]);
-    this.menuCompanies.set(menuCompanies);
   }
 
   /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
@@ -433,8 +368,8 @@ export class IUserMenuStore {
     return this.loadFavorites(applicationId).pipe(map(() => null));
   }
 
-  private loadPermissionsInternal(applicationId?: string): Observable<null> {
-    return this.loadPermissions(applicationId).pipe(map(() => null));
+  private loadAuthorizationsInternal(applicationId?: string): Observable<null> {
+    return this.loadAuthorizations(applicationId).pipe(map(() => null));
   }
 
   private clearData(): void {
@@ -446,21 +381,19 @@ export class IUserMenuStore {
     this.clearAuthorizationData();
     this.initialized.set(false);
     this.loadError.set(null);
-    this.loadErrors.set({ user: null, menus: null, favorites: null, permissions: null });
+    this.loadErrors.set({ user: null, menus: null, favorites: null, authorizations: null });
   }
 
   private clearAuthorizationData(): void {
-    this.permissions.set([]);
     this.authorizations.set([]);
-    this.companies.set([]);
-    this.companyCodes.set([]);
-    this.menuCompanies.set({});
   }
 
   private recordError(source: IUserMenuLoadSource, err: unknown): Observable<null> {
     const normalized = normalizeApiError(err);
     this.loadErrors.update((errors) => ({ ...errors, [source]: normalized }));
-    this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(err, 'Failed to load')}`);
+    this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(
+      err, 'Failed to load', this.config.errorCatalogResolver, this.config.errorDisplayFormatter,
+    )}`);
     // Never log sensitive data — only the load source and normalized error details.
     console.error(`[@insight/ui][STORE] load "${source}" failed`, err);
     return of(null);

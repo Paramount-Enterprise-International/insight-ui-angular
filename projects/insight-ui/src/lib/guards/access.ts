@@ -2,23 +2,20 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { filter, map, Observable, of, take } from 'rxjs';
 
-import { IUserMenuStore } from '../store/user-menu.store';
-import { ISessionService } from '../session/session.service';
+import { IUserMenuStore } from '../store/user-menu';
+import { ISessionService } from '../session/session';
 
 /** Route that renders the "account lacks the required access/role" (403) page. */
 export const UNAUTHORIZED_ACCESS_PATH = '/unauthorized-access';
 
 /** Sources a route access requirement can be checked against. */
-export type IAccessCheckSource = 'menu' | 'role' | 'permission';
+export type IAccessCheckSource = 'menuCode' | 'role';
 
 /**
  * Route access requirement — deny navigation unless the current user holds it.
  * `value` is a single code or a list of codes (ANY match).
- * - `menu` → the user's effective menu tree contains a matching leaf menu code
- *   (`IUserMenuStore.hasMenu`).
- * - `role` → the access token claims a matching role (`ISessionService.hasRole`).
- * - `permission` → the store has been granted a matching feature permission
- *   (`IUserMenuStore.hasPermission`; granted out-of-band via `setPermissions`).
+ * - `menuCode` checks effective item/function authorizations.
+ * - `role` checks access-token roles.
  */
 export type IAccessCheck = {
   source: IAccessCheckSource;
@@ -26,12 +23,9 @@ export type IAccessCheck = {
 }
 
 /**
- * Waits until the store has settled its menu data, triggering the cold-start
- * load when it has not run yet. Menu checks cannot be judged against an empty
- * tree — a deep link into a guarded route may fire before the shell's boot
- * load has populated menus, and denying then would be a false negative.
+ * Waits for the authorization load before judging a cold-start navigation.
  */
-function ensureMenusLoaded(store: IUserMenuStore): Observable<void> {
+function ensureAuthorizationsLoaded(store: IUserMenuStore): Observable<void> {
   if (store.initializing()) {
     return store.initializing$.pipe(
       filter((initializing) => !initializing),
@@ -44,7 +38,7 @@ function ensureMenusLoaded(store: IUserMenuStore): Observable<void> {
 
 /**
  * Route guard factory that denies navigation to users who lack a required
- * menu/role/permission, redirecting them to {@link UNAUTHORIZED_ACCESS_PATH}.
+ * menu code/role, redirecting them to {@link UNAUTHORIZED_ACCESS_PATH}.
  *
  * Compose AFTER `authGuard` in the `canActivate` array — this guard only
  * handles the authenticated-but-not-allowed branch and returns `true` while the
@@ -54,7 +48,7 @@ function ensureMenusLoaded(store: IUserMenuStore): Observable<void> {
  * ```ts
  * const routes = [{
  *   path: 'admin',
- *   canActivate: [authGuard, requireAccess({ source: 'menu', value: 'admin-iam' })],
+ *   canActivate: [authGuard, requireAccess({ source: 'menuCode', value: 'admin-iam' })],
  *   ...
  * }];
  * ```
@@ -75,17 +69,10 @@ export function requireAccess(check: IAccessCheck): CanActivateFn {
       const granted = session.hasRole(check.value);
       return of(granted || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]));
     }
-
-    if (check.source === 'permission') {
-      // Permissions are granted out-of-band (setPermissions), never by load().
-      const granted = store.hasPermission(check.value);
-      return of(granted || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]));
-    }
-
-    // Menu source — wait for (or trigger) the menu load before judging.
-    return ensureMenusLoaded(store).pipe(
+    // Wait for effective authorizations before checking the requested code.
+    return ensureAuthorizationsLoaded(store).pipe(
       map(() => {
-        const granted = store.hasMenu(check.value);
+        const granted = store.hasMenuCode(check.value);
         return granted || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
       }),
     );

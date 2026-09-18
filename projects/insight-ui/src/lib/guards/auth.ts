@@ -3,8 +3,8 @@ import { CanActivateFn } from '@angular/router';
 
 import { I_AUTH_CONFIG } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
-import { ISessionExpiredService } from '../session-expired/session-expired.service';
-import { ISessionService } from '../session/session.service';
+import { ISessionExpiredService } from '../session-expired/session-expired';
+import { ISessionService } from '../session/session';
 
 /**
  * Cross-domain auth guard for @insight/ui consumer apps.

@@ -3,9 +3,9 @@ import { provideRouter, Router } from '@angular/router';
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { firstValueFrom, of } from 'rxjs';
 
-import { IAccessCheck, requireAccess, UNAUTHORIZED_ACCESS_PATH } from './access.guard';
-import { IUserMenuStore } from '../store/user-menu.store';
-import { ISessionService } from '../session/session.service';
+import { IAccessCheck, requireAccess, UNAUTHORIZED_ACCESS_PATH } from './access';
+import { IUserMenuStore } from '../store/user-menu';
+import { ISessionService } from '../session/session';
 
 describe('requireAccess', () => {
   const route = {} as ActivatedRouteSnapshot;
@@ -23,8 +23,7 @@ describe('requireAccess', () => {
 
   function storeMock(
     overrides: Partial<{
-      hasMenu: boolean;
-      hasPermission: boolean;
+      hasMenuCode: boolean;
       initializing: boolean;
       initialized: boolean;
       menusLoaded: boolean;
@@ -32,9 +31,8 @@ describe('requireAccess', () => {
     }> = {},
   ): IUserMenuStore {
     const store = {
-      hasMenu: () => overrides.hasMenu ?? false,
-      hasPermission: () => overrides.hasPermission ?? false,
-      hasRole: () => overrides.hasMenu ?? false,
+      hasMenuCode: () => overrides.hasMenuCode ?? false,
+      hasRole: () => overrides.hasMenuCode ?? false,
       initializing: () => overrides.initializing ?? false,
       initialized: () => overrides.initialized ?? overrides.menusLoaded ?? overrides.menusError ?? false,
       menus: () => (overrides.menusLoaded ? [{ id: 1, name: 'Admin', menuCode: 'admin-iam' }] : []),
@@ -59,7 +57,7 @@ describe('requireAccess', () => {
 
   it('allows navigation while the session is still restoring', async () => {
     const result = await runGuard(
-      { source: 'menu', value: 'admin-iam' },
+      { source: 'menuCode', value: 'admin-iam' },
       sessionMock({ initializing: true, isAuth: false }),
       storeMock(),
     );
@@ -68,7 +66,7 @@ describe('requireAccess', () => {
 
   it('defers to the auth guard when no valid session exists', async () => {
     const result = await runGuard(
-      { source: 'menu', value: 'admin-iam' },
+      { source: 'menuCode', value: 'admin-iam' },
       sessionMock({ isAuth: false }),
       storeMock(),
     );
@@ -93,9 +91,9 @@ describe('requireAccess', () => {
 
   it('denies menu-based access when the menus are loaded but lack the code', async () => {
     const result = await runGuard(
-      { source: 'menu', value: 'admin-iam' },
+      { source: 'menuCode', value: 'admin-iam' },
       sessionMock(),
-      storeMock({ menusLoaded: true, hasMenu: false }),
+      storeMock({ menusLoaded: true, hasMenuCode: false }),
     );
     const value = await firstValueFrom(result as never);
     const router = TestBed.inject(Router);
@@ -104,16 +102,16 @@ describe('requireAccess', () => {
 
   it('grants menu-based access when the loaded menus contain the code', async () => {
     const result = await runGuard(
-      { source: 'menu', value: 'admin-iam' },
+      { source: 'menuCode', value: 'admin-iam' },
       sessionMock(),
-      storeMock({ menusLoaded: true, hasMenu: true }),
+      storeMock({ menusLoaded: true, hasMenuCode: true }),
     );
     await expectAsync(firstValueFrom(result as never)).toBeResolvedTo(true);
   });
 
   it('triggers the menu load when menus have not been fetched yet, then grants on success', async () => {
-    const store = storeMock({ menusLoaded: false, hasMenu: true });
-    const result = await runGuard({ source: 'menu', value: 'admin-iam' }, sessionMock(), store);
+    const store = storeMock({ menusLoaded: false, hasMenuCode: true });
+    const result = await runGuard({ source: 'menuCode', value: 'admin-iam' }, sessionMock(), store);
     await expectAsync(firstValueFrom(result as never)).toBeResolvedTo(true);
   });
 });
