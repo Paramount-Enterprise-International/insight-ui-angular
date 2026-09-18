@@ -139,17 +139,28 @@ export class IDialogService {
   selector: 'i-dialog-container',
   standalone: true,
   imports: [NgComponentOutlet, NgStyle],
+  host: {
+    role: 'dialog',
+    'aria-modal': 'true',
+    '[attr.aria-label]': 'ariaLabel',
+  },
   template: `<div class="i-dialog-backdrop" (click)="onBackdropClick()"></div>
     <div class="i-dialog-wrapper">
       <div class="i-dialog-panel" [ngStyle]="panelStyles">
-        <ng-container *ngComponentOutlet="instance.component; injector: dialogInjector" />
+        @if (instance) {
+          <ng-container *ngComponentOutlet="instance.component; injector: dialogInjector" />
+        } @else {
+          <ng-content />
+        }
       </div>
     </div> `,
 })
 export class IDialogContainer implements OnChanges {
-  @Input({ required: true }) instance!: IDialogInstance;
-
+  @Input() instance!: IDialogInstance;
+  @Input() config: IDialogConfig = {};
+  @Input() ariaLabel: string | undefined;
   @Input() isTopMost = false;
+  @Output() readonly onClose = new EventEmitter<void>();
 
   private rootInjector = inject(Injector);
 
@@ -168,7 +179,7 @@ export class IDialogContainer implements OnChanges {
   }
 
   get panelStyles(): { [key: string]: string | undefined } {
-    const cfg = this.instance?.config;
+    const cfg = this.instance?.config ?? this.config;
     return {
       width: cfg?.width,
       height: cfg?.height,
@@ -178,15 +189,24 @@ export class IDialogContainer implements OnChanges {
   @HostListener('document:keydown.escape')
   onEscKey(): void {
     if (!this.isTopMost) return; // only the topmost dialog reacts
-    if (!this.instance?.config.disableClose) {
-      this.instance.ref.close();
+    if (!(this.instance?.config ?? this.config).disableClose) {
+      this.requestClose();
     }
   }
 
   onBackdropClick(): void {
     if (!this.isTopMost) return; // only topmost backdrop closes
-    if (!this.instance?.config.disableClose && this.instance?.config.backdropClose) {
+    const config = this.instance?.config ?? this.config;
+    if (!config.disableClose && (config.backdropClose ?? true)) {
+      this.requestClose();
+    }
+  }
+
+  private requestClose(): void {
+    if (this.instance) {
       this.instance.ref.close();
+    } else {
+      this.onClose.emit();
     }
   }
 }

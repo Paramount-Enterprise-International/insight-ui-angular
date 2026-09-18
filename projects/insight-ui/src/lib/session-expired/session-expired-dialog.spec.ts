@@ -31,14 +31,14 @@ describe('ISessionExpiredDialog', () => {
 
   it('renders nothing while the overlay is hidden', () => {
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.session-expired-overlay')).toBeNull();
+    expect(fixture.nativeElement.querySelector('i-dialog-container')).toBeNull();
   });
 
   it('renders the overlay with the reason-specific title when shown', () => {
     service.show('/home', 'SESSION_REPLACED');
     fixture.detectChanges();
 
-    const overlay = fixture.nativeElement.querySelector('.session-expired-overlay');
+    const overlay = fixture.nativeElement.querySelector('i-dialog-container');
     expect(overlay).not.toBeNull();
     expect(overlay.textContent).toContain('Signed Out Remotely');
   });
@@ -47,8 +47,36 @@ describe('ISessionExpiredDialog', () => {
     service.show('/home', 'TOKEN_EXPIRED');
     fixture.detectChanges();
 
-    const overlay = fixture.nativeElement.querySelector('.session-expired-overlay');
+    const overlay = fixture.nativeElement.querySelector('i-dialog-container');
     expect(overlay.textContent).toContain('Session Expired');
+  });
+
+  it('cannot be dismissed by backdrop or Escape, but follows service visibility', () => {
+    service.show('/home', 'SESSION_REPLACED');
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('i-dialog')).not.toBeNull();
+    expect(host.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Signed Out Remotely');
+    host.querySelector<HTMLElement>('.i-dialog-backdrop')!.click();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+    expect(service.visible()).toBeTrue();
+    expect(host.querySelector('i-dialog-container')).not.toBeNull();
+    service.hide();
+    fixture.detectChanges();
+    expect(host.querySelector('i-dialog-container')).toBeNull();
+  });
+
+  it('updates visible content and connects the standard action to the SSO handoff', () => {
+    service.show('/home', 'TOKEN_EXPIRED');
+    fixture.detectChanges();
+    service.show('/another-page', 'SESSION_REVOKED');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Session Ended');
+    const confirm = spyOn(fixture.componentInstance, 'onConfirm');
+    fixture.nativeElement.querySelector('.i-dialog-actions button').click();
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(service.returnUrl()).toBe('/another-page');
   });
 
   it('uses backend message before the configured catalog resolver', () => {
