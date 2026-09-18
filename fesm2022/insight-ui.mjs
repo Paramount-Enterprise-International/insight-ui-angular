@@ -1,10 +1,10 @@
 import * as i1$1 from '@angular/common';
 import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
 import * as i0 from '@angular/core';
-import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ViewContainerRef, ContentChildren, signal, computed, makeEnvironmentProviders, APP_INITIALIZER, effect, ViewChildren, DestroyRef, untracked } from '@angular/core';
+import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ContentChildren, ViewContainerRef, signal, computed, makeEnvironmentProviders, APP_INITIALIZER, effect, ViewChildren, DestroyRef, untracked } from '@angular/core';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { firstValueFrom, Subject, BehaviorSubject, map, throwError, forkJoin, of, timeout, lastValueFrom, filter as filter$1, startWith, shareReplay as shareReplay$1, Observable, tap as tap$1, combineLatest, take as take$1, distinctUntilChanged } from 'rxjs';
+import { firstValueFrom, Subject, BehaviorSubject, map, throwError, from, defer, Observable, forkJoin, of, timeout, lastValueFrom, filter as filter$1, startWith, shareReplay as shareReplay$1, tap as tap$1, combineLatest, take as take$1, distinctUntilChanged } from 'rxjs';
 import * as i1 from '@angular/forms';
 import { Validators, NG_VALUE_ACCESSOR, NgControl, FormGroupDirective, FormBuilder, FormControl, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { debounceTime, tap, map as map$1, catchError, switchMap, filter, take, finalize, shareReplay } from 'rxjs/operators';
@@ -5789,7 +5789,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
  */
 class IDialogContainer {
     instance;
+    config = {};
+    ariaLabel;
     isTopMost = false;
+    onClose = new EventEmitter();
     rootInjector = inject(Injector);
     dialogInjector;
     ngOnChanges(changes) {
@@ -5804,7 +5807,7 @@ class IDialogContainer {
         }
     }
     get panelStyles() {
-        const cfg = this.instance?.config;
+        const cfg = this.instance?.config ?? this.config;
         return {
             width: cfg?.width,
             height: cfg?.height,
@@ -5813,22 +5816,35 @@ class IDialogContainer {
     onEscKey() {
         if (!this.isTopMost)
             return; // only the topmost dialog reacts
-        if (!this.instance?.config.disableClose) {
-            this.instance.ref.close();
+        if (!(this.instance?.config ?? this.config).disableClose) {
+            this.requestClose();
         }
     }
     onBackdropClick() {
         if (!this.isTopMost)
             return; // only topmost backdrop closes
-        if (!this.instance?.config.disableClose && this.instance?.config.backdropClose) {
+        const config = this.instance?.config ?? this.config;
+        if (!config.disableClose && (config.backdropClose ?? true)) {
+            this.requestClose();
+        }
+    }
+    requestClose() {
+        if (this.instance) {
             this.instance.ref.close();
+        }
+        else {
+            this.onClose.emit();
         }
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogContainer, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: IDialogContainer, isStandalone: true, selector: "i-dialog-container", inputs: { instance: "instance", isTopMost: "isTopMost" }, host: { listeners: { "document:keydown.escape": "onEscKey()" } }, usesOnChanges: true, ngImport: i0, template: `<div class="i-dialog-backdrop" (click)="onBackdropClick()"></div>
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IDialogContainer, isStandalone: true, selector: "i-dialog-container", inputs: { instance: "instance", config: "config", ariaLabel: "ariaLabel", isTopMost: "isTopMost" }, outputs: { onClose: "onClose" }, host: { attributes: { "role": "dialog", "aria-modal": "true" }, listeners: { "document:keydown.escape": "onEscKey()" }, properties: { "attr.aria-label": "ariaLabel" } }, usesOnChanges: true, ngImport: i0, template: `<div class="i-dialog-backdrop" (click)="onBackdropClick()"></div>
     <div class="i-dialog-wrapper">
       <div class="i-dialog-panel" [ngStyle]="panelStyles">
-        <ng-container *ngComponentOutlet="instance.component; injector: dialogInjector" />
+        @if (instance) {
+          <ng-container *ngComponentOutlet="instance.component; injector: dialogInjector" />
+        } @else {
+          <ng-content />
+        }
       </div>
     </div> `, isInline: true, dependencies: [{ kind: "directive", type: NgComponentOutlet, selector: "[ngComponentOutlet]", inputs: ["ngComponentOutlet", "ngComponentOutletInputs", "ngComponentOutletInjector", "ngComponentOutletEnvironmentInjector", "ngComponentOutletContent", "ngComponentOutletNgModule", "ngComponentOutletNgModuleFactory"], exportAs: ["ngComponentOutlet"] }, { kind: "directive", type: NgStyle, selector: "[ngStyle]", inputs: ["ngStyle"] }] });
 }
@@ -5838,18 +5854,32 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                     selector: 'i-dialog-container',
                     standalone: true,
                     imports: [NgComponentOutlet, NgStyle],
+                    host: {
+                        role: 'dialog',
+                        'aria-modal': 'true',
+                        '[attr.aria-label]': 'ariaLabel',
+                    },
                     template: `<div class="i-dialog-backdrop" (click)="onBackdropClick()"></div>
     <div class="i-dialog-wrapper">
       <div class="i-dialog-panel" [ngStyle]="panelStyles">
-        <ng-container *ngComponentOutlet="instance.component; injector: dialogInjector" />
+        @if (instance) {
+          <ng-container *ngComponentOutlet="instance.component; injector: dialogInjector" />
+        } @else {
+          <ng-content />
+        }
       </div>
     </div> `,
                 }]
         }], propDecorators: { instance: [{
-                type: Input,
-                args: [{ required: true }]
+                type: Input
+            }], config: [{
+                type: Input
+            }], ariaLabel: [{
+                type: Input
             }], isTopMost: [{
                 type: Input
+            }], onClose: [{
+                type: Output
             }], onEscKey: [{
                 type: HostListener,
                 args: ['document:keydown.escape']
@@ -5865,7 +5895,7 @@ class IDialogOutlet {
     @for (dialog of (dialogs$ | async) ?? []; track dialog.id; let last = $last) {
       <i-dialog-container [instance]="dialog" [isTopMost]="last" />
     }
-  `, isInline: true, dependencies: [{ kind: "component", type: IDialogContainer, selector: "i-dialog-container", inputs: ["instance", "isTopMost"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
+  `, isInline: true, dependencies: [{ kind: "component", type: IDialogContainer, selector: "i-dialog-container", inputs: ["instance", "config", "ariaLabel", "isTopMost"], outputs: ["onClose"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogOutlet, decorators: [{
             type: Component,
@@ -6403,6 +6433,934 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                     exports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm],
                 }]
         }] });
+
+// section-tabs.ts
+/**
+ * ISectionTabs / ISectionTab
+ *
+ * <i-section-tabs>
+ *   <i-section-tab title="Title goes here"> content goes here 1</i-section-tab>
+ *   <i-section-tab>
+ *     <i-section-tab-header>Header HTML goes here</i-section-tab-header>
+ *     <i-section-tab-content> content goes here 2</i-section-tab-content>
+ *   </i-section-tab>
+ * </i-section-tabs>
+ *
+ * Badge rules:
+ * - badge / badge="true" / badge="" => red dot
+ * - badge="3" => red dot with number 3
+ *
+ * Lazy tab content:
+ * ISectionTab exposes `exportAs="iSectionTab"` + an `active` getter so heavy
+ * per-tab content can opt into Angular's native `@defer` lazy loading. Angular
+ * content projection is instantiated wherever it's declared (the consumer's own
+ * template), so the library cannot silently defer it — consumers opt in
+ * themselves:
+ *
+ *   <i-section-tab #t="iSectionTab" title="Heavy">
+ *     <i-section-tab-content>
+ *       @defer (when t.active) { <heavy-component /> }
+ *     </i-section-tab-content>
+ *   </i-section-tab>
+ */
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function isTruthyAttr(v) {
+    if (v === null || v === undefined)
+        return false;
+    const s = String(v).trim().toLowerCase();
+    if (s === 'false' || s === '0' || s === 'null' || s === 'undefined')
+        return false;
+    return true;
+}
+function parseBadge(v) {
+    if (!isTruthyAttr(v))
+        return { enabled: false, value: null };
+    const s = String(v).trim();
+    if (s === '' || s.toLowerCase() === 'true')
+        return { enabled: true, value: null };
+    const n = Number(s);
+    if (Number.isFinite(n) && Number.isInteger(n) && n >= 0) {
+        return { enabled: true, value: n };
+    }
+    return { enabled: true, value: null };
+}
+function parseTabsHeight(v) {
+    // null => wrap (default)
+    if (v === null || v === undefined)
+        return null;
+    const s = String(v).trim().toLowerCase();
+    if (s === '' || s === 'wrap' || s === 'auto')
+        return null;
+    // allow "300", "300px"
+    if (s.endsWith('px')) {
+        const n = Number(s.slice(0, -2).trim());
+        return Number.isFinite(n) && n > 0 ? n : null;
+    }
+    const n = Number(s);
+    return Number.isFinite(n) && n > 0 ? n : null;
+}
+/** Chevron icon size -> pixel width (used to size the scroll chevron buttons). */
+const CHEVRON_WIDTH_MAP = {
+    sm: 20,
+    md: 24,
+    lg: 28,
+    xl: 32,
+};
+// ─── ISectionTabHeader / ISectionTabContent ─────────────────────────────────
+class ISectionTabHeader {
+    tpl;
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionTabHeader, isStandalone: true, selector: "i-section-tab-header", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
+    <ng-template #tpl>
+      <ng-content />
+    </ng-template>
+  `, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabHeader, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-tab-header',
+                    standalone: true,
+                    template: `
+    <ng-template #tpl>
+      <ng-content />
+    </ng-template>
+  `,
+                }]
+        }], propDecorators: { tpl: [{
+                type: ViewChild,
+                args: ['tpl', { static: true }]
+            }] } });
+class ISectionTabContent {
+    tpl;
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionTabContent, isStandalone: true, selector: "i-section-tab-content", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
+    <ng-template #tpl>
+      <ng-content />
+    </ng-template>
+  `, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabContent, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-tab-content',
+                    standalone: true,
+                    template: `
+    <ng-template #tpl>
+      <ng-content />
+    </ng-template>
+  `,
+                }]
+        }], propDecorators: { tpl: [{
+                type: ViewChild,
+                args: ['tpl', { static: true }]
+            }] } });
+// ─── ISectionTab ─────────────────────────────────────────────────────────────
+class ISectionTab {
+    title = '';
+    opened = false;
+    set badge(v) {
+        const parsed = parseBadge(v);
+        this._badgeEnabled = parsed.enabled;
+        this._badgeValue = parsed.value;
+    }
+    get badge() {
+        return this._badgeEnabled ? (this._badgeValue ?? true) : null;
+    }
+    _badgeEnabled = false;
+    _badgeValue = null;
+    headerCmp;
+    contentCmp;
+    defaultHeaderTpl;
+    defaultContentTpl;
+    headerTpl;
+    contentTpl;
+    _active = false;
+    /**
+     * Whether this tab is currently the active/selected one. Exposed so consumers can
+     * lazily render heavy tab content via Angular's native deferred loading, e.g.:
+     * `<i-section-tab #t="iSectionTab">...@defer (when t.active) { <heavy/> }...</i-section-tab>`
+     */
+    get active() {
+        return this._active;
+    }
+    ngAfterContentInit() {
+        this.headerTpl = this.headerCmp?.tpl ?? this.defaultHeaderTpl;
+        this.contentTpl = this.contentCmp?.tpl ?? this.defaultContentTpl;
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTab, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: ISectionTab, isStandalone: true, selector: "i-section-tab", inputs: { title: "title", opened: ["opened", "opened", (v) => v !== null && `${v}` !== 'false'], badge: "badge" }, queries: [{ propertyName: "headerCmp", first: true, predicate: ISectionTabHeader, descendants: true }, { propertyName: "contentCmp", first: true, predicate: ISectionTabContent, descendants: true }], viewQueries: [{ propertyName: "defaultHeaderTpl", first: true, predicate: ["defaultHeaderTpl"], descendants: true, static: true }, { propertyName: "defaultContentTpl", first: true, predicate: ["defaultContentTpl"], descendants: true, static: true }], exportAs: ["iSectionTab"], ngImport: i0, template: `
+    <ng-template #defaultHeaderTpl>
+      <span class="i-section-tab-title">{{ title }}</span>
+
+      @if (_badgeEnabled) {
+        <span class="i-section-tab-badge" [class.has-number]="_badgeValue !== null">
+          @if (_badgeValue !== null) {
+            <span class="i-section-tab-badge-number">{{ _badgeValue }}</span>
+          }
+        </span>
+      }
+    </ng-template>
+
+    <ng-template #defaultContentTpl>
+      <ng-content />
+    </ng-template>
+  `, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTab, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-tab',
+                    standalone: true,
+                    exportAs: 'iSectionTab',
+                    template: `
+    <ng-template #defaultHeaderTpl>
+      <span class="i-section-tab-title">{{ title }}</span>
+
+      @if (_badgeEnabled) {
+        <span class="i-section-tab-badge" [class.has-number]="_badgeValue !== null">
+          @if (_badgeValue !== null) {
+            <span class="i-section-tab-badge-number">{{ _badgeValue }}</span>
+          }
+        </span>
+      }
+    </ng-template>
+
+    <ng-template #defaultContentTpl>
+      <ng-content />
+    </ng-template>
+  `,
+                }]
+        }], propDecorators: { title: [{
+                type: Input
+            }], opened: [{
+                type: Input,
+                args: [{ transform: (v) => v !== null && `${v}` !== 'false' }]
+            }], badge: [{
+                type: Input
+            }], headerCmp: [{
+                type: ContentChild,
+                args: [ISectionTabHeader]
+            }], contentCmp: [{
+                type: ContentChild,
+                args: [ISectionTabContent]
+            }], defaultHeaderTpl: [{
+                type: ViewChild,
+                args: ['defaultHeaderTpl', { static: true }]
+            }], defaultContentTpl: [{
+                type: ViewChild,
+                args: ['defaultContentTpl', { static: true }]
+            }] } });
+// ─── ISectionTabs ─────────────────────────────────────────────────────────────
+class ISectionTabs {
+    tabs;
+    /** optional controlled mode */
+    selectedIndex = null;
+    /** Enable sticky header via plain CSS `position: sticky`. Default off (opt-in). */
+    sticky = false;
+    /** CSS `top` offset used when `sticky` is enabled. Default `-16px` accounts for
+     *  section border-radius clearance (matches the previous i-section-tab-bar default). */
+    stickyTopOffset = '-16px';
+    /** Enable natural-width tabs + horizontal overflow scroll + chevrons. Default off
+     *  preserves today's equal-width layout exactly. */
+    scrollable = false;
+    /** Chevron icon size — only relevant when `scrollable` is enabled. */
+    chevronSize = 'lg';
+    /** Minimum tab button height (CSS value, e.g. `'48px'`). */
+    tabMinHeight = '';
+    /** Extra class(es) applied to the headers row wrapper. */
+    headerClass = '';
+    /** Extra class(es) applied to each tab button. */
+    tabClass = '';
+    /** Visual skin: `'default'` keeps today's equal-width/box-shadow look unchanged (default);
+     *  `'bar'` opts into the fully ported i-section-tab-bar visual style. */
+    styleVariant = 'default';
+    /** ✅ standardized output name (Angular + React parity) — kept for backward compatibility. */
+    onSelectedIndexChange = new EventEmitter();
+    /** Angular two-way-binding-convention-named alias, enabling `[(selectedIndex)]`.
+     *  Emitted alongside `onSelectedIndexChange` (both always fire together). */
+    selectedIndexChange = new EventEmitter();
+    /**
+     * height:
+     * - "wrap" (default) => content height depends on each tab
+     * - "300" / 300 / "300px" => fixed content height (px) + internal scroll
+     */
+    set height(v) {
+        this._contentHeightPx = parseTabsHeight(v);
+        this.cdr.markForCheck();
+    }
+    get height() {
+        return this._contentHeightPx ?? 'wrap';
+    }
+    _contentHeightPx = null;
+    get contentHeightPx() {
+        return this._contentHeightPx;
+    }
+    get isFixedHeight() {
+        return this._contentHeightPx !== null;
+    }
+    /** Computed chevron button width from `chevronSize`. */
+    get chevronWidthPx() {
+        return CHEVRON_WIDTH_MAP[this.chevronSize] ?? 28;
+    }
+    tabsArr = [];
+    activeIndex = 0;
+    showLeftChevron = false;
+    showRightChevron = false;
+    cdr = inject(ChangeDetectorRef);
+    resizeObserver = null;
+    _scrollContainer;
+    set scrollContainer(content) {
+        this.resizeObserver?.disconnect();
+        this.resizeObserver = null;
+        this._scrollContainer = content;
+        if (content?.nativeElement) {
+            const el = content.nativeElement;
+            this.checkOverflow();
+            if (typeof ResizeObserver !== 'undefined') {
+                this.resizeObserver = new ResizeObserver(() => this.checkOverflow());
+                this.resizeObserver.observe(el);
+            }
+        }
+    }
+    get scrollContainer() {
+        return this._scrollContainer;
+    }
+    get activeTab() {
+        return this.tabsArr[this.activeIndex] ?? null;
+    }
+    ngAfterContentInit() {
+        const sync = () => {
+            this.tabsArr = this.tabs?.toArray() ?? [];
+            let nextIndex = 0;
+            if (this.selectedIndex !== null && this.isValidIndex(this.selectedIndex)) {
+                nextIndex = this.selectedIndex;
+            }
+            else {
+                const openedIndex = this.tabsArr.findIndex((t) => t.opened);
+                nextIndex = openedIndex >= 0 ? openedIndex : 0;
+            }
+            this.setActive(nextIndex, false);
+            this.cdr.markForCheck();
+        };
+        sync();
+        this.tabs.changes.subscribe(() => sync());
+    }
+    ngAfterViewInit() {
+        this.checkOverflow();
+    }
+    ngOnDestroy() {
+        this.resizeObserver?.disconnect();
+    }
+    activate(index) {
+        this.setActive(index, true);
+        this.scrollToActive();
+        this.checkOverflow();
+        this.cdr.markForCheck();
+    }
+    activateByTab(tab) {
+        const index = this.tabsArr.indexOf(tab);
+        this.activate(index);
+    }
+    // ─── Scroll / overflow ──────────────────────────────────────────────────
+    onScroll() {
+        this.checkOverflow();
+    }
+    scrollLeft() {
+        const el = this.scrollContainer?.nativeElement;
+        if (el)
+            el.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+    scrollRight() {
+        const el = this.scrollContainer?.nativeElement;
+        if (el)
+            el.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+    checkOverflow() {
+        const el = this.scrollContainer?.nativeElement;
+        if (!el)
+            return;
+        this.showLeftChevron = el.scrollLeft > 2;
+        this.showRightChevron = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
+        this.cdr.markForCheck();
+    }
+    scrollToActive() {
+        const el = this.scrollContainer?.nativeElement;
+        if (!el)
+            return;
+        const buttons = el.querySelectorAll('.i-section-tabs-header');
+        const active = buttons[this.activeIndex];
+        if (active) {
+            active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+        }
+    }
+    setActive(index, emit) {
+        if (!this.isValidIndex(index))
+            return;
+        this.activeIndex = index;
+        this.tabsArr.forEach((t, i) => (t._active = i === index));
+        if (emit) {
+            this.onSelectedIndexChange.emit(index);
+            this.selectedIndexChange.emit(index);
+        }
+    }
+    isValidIndex(index) {
+        return Number.isInteger(index) && index >= 0 && index < this.tabsArr.length;
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabs, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: ISectionTabs, isStandalone: true, selector: "i-section-tabs", inputs: { selectedIndex: "selectedIndex", sticky: ["sticky", "sticky", booleanAttribute], stickyTopOffset: "stickyTopOffset", scrollable: ["scrollable", "scrollable", booleanAttribute], chevronSize: "chevronSize", tabMinHeight: "tabMinHeight", headerClass: "headerClass", tabClass: "tabClass", styleVariant: "styleVariant", height: "height" }, outputs: { onSelectedIndexChange: "onSelectedIndexChange", selectedIndexChange: "selectedIndexChange" }, host: { properties: { "class.i-section-tabs--bar": "styleVariant === 'bar'" } }, queries: [{ propertyName: "tabs", predicate: ISectionTab }], viewQueries: [{ propertyName: "scrollContainer", first: true, predicate: ["scrollContainer"], descendants: true }], ngImport: i0, template: `
+    <div
+      class="i-section-tabs-headers"
+      role="tablist"
+      [class.i-section-tabs-headers--sticky]="sticky"
+      [ngClass]="headerClass"
+      [style.--i-section-tabs-sticky-top]="stickyTopOffset"
+    >
+      @if (scrollable) {
+        <button
+          class="i-section-tabs-chevron i-section-tabs-chevron--left"
+          type="button"
+          [class.hidden]="!showLeftChevron"
+          [style.minWidth.px]="chevronWidthPx"
+          [style.width.px]="chevronWidthPx"
+          (click)="scrollLeft()"
+        >
+          <i-icon icon="prev" [size]="chevronSize" />
+        </button>
+      }
+
+      <div
+        #scrollContainer
+        class="i-section-tabs-scroll"
+        [class.i-section-tabs-scroll--scrollable]="scrollable"
+        (scroll)="onScroll()"
+      >
+        @for (tab of tabsArr; track tab) {
+          <button
+            class="i-section-tabs-header"
+            role="tab"
+            type="button"
+            [attr.aria-selected]="tab._active"
+            [attr.tabindex]="tab._active ? 0 : -1"
+            [class.active]="tab._active"
+            [ngClass]="tabClass"
+            [style.minHeight]="tabMinHeight || null"
+            (click)="activateByTab(tab)"
+          >
+            <ng-container [ngTemplateOutlet]="tab.headerTpl" />
+          </button>
+        }
+      </div>
+
+      @if (scrollable) {
+        <button
+          class="i-section-tabs-chevron i-section-tabs-chevron--right"
+          type="button"
+          [class.hidden]="!showRightChevron"
+          [style.minWidth.px]="chevronWidthPx"
+          [style.width.px]="chevronWidthPx"
+          (click)="scrollRight()"
+        >
+          <i-icon icon="next" [size]="chevronSize" />
+        </button>
+      }
+    </div>
+
+    <div
+      class="i-section-tabs-content"
+      [class.scroll]="isFixedHeight"
+      [class.scroll-y]="isFixedHeight"
+      [style.height.px]="contentHeightPx"
+    >
+      @if (activeTab; as tab) {
+        <ng-container [ngTemplateOutlet]="tab.contentTpl" />
+      }
+    </div>
+
+    <!-- Catch-all slot for static content that isn't owned by a specific tab (e.g. shared
+         widgets filtered externally via selectedIndex). Keeping it inside ISectionTabs' own
+         box (rather than as an external sibling) lets [sticky] stay pinned across the full
+         scroll height of that shared content, not just the (possibly empty) tab content area. -->
+    <ng-content select=":not(i-section-tab)" />
+  `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "directive", type: i1$1.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i1$1.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabs, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-tabs',
+                    standalone: true,
+                    imports: [CommonModule, IIcon],
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    host: {
+                        '[class.i-section-tabs--bar]': "styleVariant === 'bar'",
+                    },
+                    template: `
+    <div
+      class="i-section-tabs-headers"
+      role="tablist"
+      [class.i-section-tabs-headers--sticky]="sticky"
+      [ngClass]="headerClass"
+      [style.--i-section-tabs-sticky-top]="stickyTopOffset"
+    >
+      @if (scrollable) {
+        <button
+          class="i-section-tabs-chevron i-section-tabs-chevron--left"
+          type="button"
+          [class.hidden]="!showLeftChevron"
+          [style.minWidth.px]="chevronWidthPx"
+          [style.width.px]="chevronWidthPx"
+          (click)="scrollLeft()"
+        >
+          <i-icon icon="prev" [size]="chevronSize" />
+        </button>
+      }
+
+      <div
+        #scrollContainer
+        class="i-section-tabs-scroll"
+        [class.i-section-tabs-scroll--scrollable]="scrollable"
+        (scroll)="onScroll()"
+      >
+        @for (tab of tabsArr; track tab) {
+          <button
+            class="i-section-tabs-header"
+            role="tab"
+            type="button"
+            [attr.aria-selected]="tab._active"
+            [attr.tabindex]="tab._active ? 0 : -1"
+            [class.active]="tab._active"
+            [ngClass]="tabClass"
+            [style.minHeight]="tabMinHeight || null"
+            (click)="activateByTab(tab)"
+          >
+            <ng-container [ngTemplateOutlet]="tab.headerTpl" />
+          </button>
+        }
+      </div>
+
+      @if (scrollable) {
+        <button
+          class="i-section-tabs-chevron i-section-tabs-chevron--right"
+          type="button"
+          [class.hidden]="!showRightChevron"
+          [style.minWidth.px]="chevronWidthPx"
+          [style.width.px]="chevronWidthPx"
+          (click)="scrollRight()"
+        >
+          <i-icon icon="next" [size]="chevronSize" />
+        </button>
+      }
+    </div>
+
+    <div
+      class="i-section-tabs-content"
+      [class.scroll]="isFixedHeight"
+      [class.scroll-y]="isFixedHeight"
+      [style.height.px]="contentHeightPx"
+    >
+      @if (activeTab; as tab) {
+        <ng-container [ngTemplateOutlet]="tab.contentTpl" />
+      }
+    </div>
+
+    <!-- Catch-all slot for static content that isn't owned by a specific tab (e.g. shared
+         widgets filtered externally via selectedIndex). Keeping it inside ISectionTabs' own
+         box (rather than as an external sibling) lets [sticky] stay pinned across the full
+         scroll height of that shared content, not just the (possibly empty) tab content area. -->
+    <ng-content select=":not(i-section-tab)" />
+  `,
+                }]
+        }], propDecorators: { tabs: [{
+                type: ContentChildren,
+                args: [ISectionTab]
+            }], selectedIndex: [{
+                type: Input
+            }], sticky: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], stickyTopOffset: [{
+                type: Input
+            }], scrollable: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], chevronSize: [{
+                type: Input
+            }], tabMinHeight: [{
+                type: Input
+            }], headerClass: [{
+                type: Input
+            }], tabClass: [{
+                type: Input
+            }], styleVariant: [{
+                type: Input
+            }], onSelectedIndexChange: [{
+                type: Output
+            }], selectedIndexChange: [{
+                type: Output
+            }], height: [{
+                type: Input
+            }], scrollContainer: [{
+                type: ViewChild,
+                args: ['scrollContainer']
+            }] } });
+
+// section.ts
+/**
+ * ISection
+ * Version: 1.0.1
+ * <i-section>
+ *   <i-section-header></i-section-header>
+ *   <i-section-filter></i-section-filter>
+ *   <i-section-body></i-section-body>
+ *   <i-section-footer></i-section-footer>
+ *   <i-section-tabs></i-section-tabs>
+ * </i-section>
+ */
+class ISection {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISection, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISection, isStandalone: true, selector: "i-section", ngImport: i0, template: `<ng-content />`, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISection, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section',
+                    imports: [],
+                    template: `<ng-content />`,
+                }]
+        }] });
+class ISectionHeader {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionHeader, isStandalone: true, selector: "i-section-header", ngImport: i0, template: `<h4><ng-content /></h4>`, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionHeader, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-header',
+                    imports: [],
+                    template: `<h4><ng-content /></h4>`,
+                }]
+        }] });
+class ISectionSubHeader {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionSubHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionSubHeader, isStandalone: true, selector: "i-section-sub-header", ngImport: i0, template: `<h6><ng-content /></h6>`, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionSubHeader, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-sub-header',
+                    imports: [],
+                    template: `<h6><ng-content /></h6>`,
+                }]
+        }] });
+class ISectionFilter {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionFilter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionFilter, isStandalone: true, selector: "i-section-filter", ngImport: i0, template: `<ng-content />`, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionFilter, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-filter',
+                    imports: [],
+                    template: `<ng-content />`,
+                }]
+        }] });
+class ISectionBody {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionBody, isStandalone: true, selector: "i-section-body", ngImport: i0, template: `<ng-content />`, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionBody, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-body',
+                    imports: [],
+                    template: `<ng-content />`,
+                }]
+        }] });
+class ISectionFooter {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionFooter, isStandalone: true, selector: "i-section-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionFooter, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-section-footer',
+                    imports: [],
+                    template: `<ng-content />`,
+                }]
+        }] });
+class ISectionModule {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.31", ngImport: i0, type: ISectionModule, imports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
+            ISectionTab,
+            ISectionTabHeader,
+            ISectionTabContent], exports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
+            ISectionTab,
+            ISectionTabHeader,
+            ISectionTabContent] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionModule, imports: [ISectionTabs] });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionModule, decorators: [{
+            type: NgModule,
+            args: [{
+                    imports: [
+                        ISection,
+                        ISectionHeader,
+                        ISectionSubHeader,
+                        ISectionFilter,
+                        ISectionBody,
+                        ISectionFooter,
+                        ISectionTabs,
+                        ISectionTab,
+                        ISectionTabHeader,
+                        ISectionTabContent,
+                    ],
+                    exports: [
+                        ISection,
+                        ISectionHeader,
+                        ISectionSubHeader,
+                        ISectionFilter,
+                        ISectionBody,
+                        ISectionFooter,
+                        ISectionTabs,
+                        ISectionTab,
+                        ISectionTabHeader,
+                        ISectionTabContent,
+                    ],
+                }]
+        }] });
+
+const I_ERROR_PAGE_PRESETS = {
+    'not-found': {
+        title: 'Page Not Found',
+        description: 'Sorry, the page you are looking for does not exist.',
+        icon: 'fa-solid fa-bug',
+        code: '404',
+    },
+    unauthorized: {
+        title: 'Unauthorized Access',
+        description: 'Sorry, you do not have access to this page.',
+        icon: 'fa-solid fa-ban',
+        code: '401',
+    },
+    forbidden: {
+        title: 'Unauthorized Access',
+        description: 'You do not have access to this page. Please contact your administrator.',
+        icon: 'fa-solid fa-user-lock',
+        code: '403',
+    },
+    'server-error': {
+        title: 'Something Went Wrong',
+        description: 'We could not complete your request. Please try again.',
+        icon: 'fa-solid fa-triangle-exclamation',
+        code: '500',
+    },
+    'service-unavailable': {
+        title: 'Service Unavailable',
+        description: 'The service is temporarily unavailable. Please try again later.',
+        icon: 'fa-solid fa-server',
+        code: '503',
+    },
+    'application-access-denied': {
+        title: 'Unauthorized Access',
+        description: 'Sorry, your account does not have the required access or role assigned for this application.',
+        icon: 'fa-solid fa-user-lock',
+        code: '',
+    },
+    custom: {
+        title: 'Unable to Display This Page',
+        description: 'Please try again or contact your administrator.',
+        icon: 'fa-solid fa-circle-exclamation',
+        code: '',
+    },
+};
+const I_ERROR_PAGE_ACTIONS = {
+    home: { label: 'Back to Home', icon: 'fa-solid fa-house', variant: 'primary' },
+    logout: { label: 'Logout', icon: 'fa-solid fa-right-from-bracket', variant: 'danger' },
+    retry: { label: 'Retry', icon: 'sync', variant: 'primary' },
+};
+const I_ERROR_PAGE_SUPPORT_EMAIL = 'it.helpdesk@paramountenterprise.co.id';
+
+class IErrorPage {
+    kind = 'not-found';
+    mode = 'contained';
+    title;
+    description;
+    icon;
+    code;
+    supportEmail = I_ERROR_PAGE_SUPPORT_EMAIL;
+    actions = [];
+    onAction = new EventEmitter();
+    actionPresets = I_ERROR_PAGE_ACTIONS;
+    get supportLabel() {
+        return this.kind === 'application-access-denied'
+            ? 'Please contact the IT Administrator to register your access:'
+            : 'For assistance, please contact:';
+    }
+    get resolved() {
+        const preset = I_ERROR_PAGE_PRESETS[this.kind];
+        return {
+            title: this.title ?? preset.title,
+            description: this.description ?? preset.description,
+            icon: this.icon ?? preset.icon,
+            code: this.code ?? preset.code,
+        };
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IErrorPage, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IErrorPage, isStandalone: true, selector: "i-error-page", inputs: { kind: "kind", mode: "mode", title: "title", description: "description", icon: "icon", code: "code", supportEmail: "supportEmail", actions: "actions" }, outputs: { onAction: "onAction" }, host: { properties: { "class.i-error-page--not-found": "kind === \"not-found\"", "class.i-error-page--fullpage": "mode === \"fullpage\"" }, classAttribute: "i-error-page" }, ngImport: i0, template: `
+    @if (mode === 'contained') {
+      <i-section class="i-error-page__section">
+        <i-section-body class="i-error-page__body">
+          <ng-container [ngTemplateOutlet]="content" />
+        </i-section-body>
+      </i-section>
+    } @else {
+      <div class="i-error-page__body">
+        <ng-container [ngTemplateOutlet]="content" />
+      </div>
+    }
+
+    <ng-template #content>
+      <div class="i-error-page__content text-center">
+        @if (resolved.icon || resolved.code) {
+          <div class="i-error-page__visual">
+            @if (resolved.icon) {
+              <i-icon aria-hidden="true" size="4xl" [icon]="resolved.icon" />
+            }
+            @if (resolved.code) {
+              <span class="i-error-page__code font-bold leading-none">
+                {{ resolved.code }}
+              </span>
+            }
+          </div>
+        }
+        @if (resolved.title) {
+          <h1 class="m-0 text-3xl font-normal">{{ resolved.title }}</h1>
+        }
+        <div class="i-error-page__message text-md text-subtle leading-relaxed">
+          @if (resolved.description) {
+            <p class="m-0 text-subtle leading-relaxed">{{ resolved.description }}</p>
+          }
+          <div class="i-error-page__extra"><ng-content /></div>
+          @if (supportEmail) {
+            <p class="m-0 text-subtle leading-relaxed">
+              {{ supportLabel }}
+              <a
+                class="i-error-page__support text-primary font-medium underline"
+                [href]="'mailto:' + supportEmail"
+                >{{ supportEmail }}</a
+              >
+            </p>
+          }
+        </div>
+        <div class="i-error-page__actions">
+          @for (action of actions; track $index) {
+            <i-button
+              type="button"
+              [icon]="actionPresets[action].icon"
+              [variant]="actionPresets[action].variant"
+              (onClick)="onAction.emit(action)"
+              >{{ actionPresets[action].label }}</i-button
+            >
+          }
+          <ng-content select="[iErrorPageActions]" />
+        </div>
+      </div>
+    </ng-template>
+  `, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ISection, selector: "i-section" }, { kind: "component", type: ISectionBody, selector: "i-section-body" }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IErrorPage, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-error-page',
+                    standalone: true,
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    imports: [NgTemplateOutlet, IButton, IIcon, ISection, ISectionBody],
+                    host: {
+                        class: 'i-error-page',
+                        '[class.i-error-page--not-found]': 'kind === "not-found"',
+                        '[class.i-error-page--fullpage]': 'mode === "fullpage"',
+                    },
+                    template: `
+    @if (mode === 'contained') {
+      <i-section class="i-error-page__section">
+        <i-section-body class="i-error-page__body">
+          <ng-container [ngTemplateOutlet]="content" />
+        </i-section-body>
+      </i-section>
+    } @else {
+      <div class="i-error-page__body">
+        <ng-container [ngTemplateOutlet]="content" />
+      </div>
+    }
+
+    <ng-template #content>
+      <div class="i-error-page__content text-center">
+        @if (resolved.icon || resolved.code) {
+          <div class="i-error-page__visual">
+            @if (resolved.icon) {
+              <i-icon aria-hidden="true" size="4xl" [icon]="resolved.icon" />
+            }
+            @if (resolved.code) {
+              <span class="i-error-page__code font-bold leading-none">
+                {{ resolved.code }}
+              </span>
+            }
+          </div>
+        }
+        @if (resolved.title) {
+          <h1 class="m-0 text-3xl font-normal">{{ resolved.title }}</h1>
+        }
+        <div class="i-error-page__message text-md text-subtle leading-relaxed">
+          @if (resolved.description) {
+            <p class="m-0 text-subtle leading-relaxed">{{ resolved.description }}</p>
+          }
+          <div class="i-error-page__extra"><ng-content /></div>
+          @if (supportEmail) {
+            <p class="m-0 text-subtle leading-relaxed">
+              {{ supportLabel }}
+              <a
+                class="i-error-page__support text-primary font-medium underline"
+                [href]="'mailto:' + supportEmail"
+                >{{ supportEmail }}</a
+              >
+            </p>
+          }
+        </div>
+        <div class="i-error-page__actions">
+          @for (action of actions; track $index) {
+            <i-button
+              type="button"
+              [icon]="actionPresets[action].icon"
+              [variant]="actionPresets[action].variant"
+              (onClick)="onAction.emit(action)"
+              >{{ actionPresets[action].label }}</i-button
+            >
+          }
+          <ng-content select="[iErrorPageActions]" />
+        </div>
+      </div>
+    </ng-template>
+  `,
+                }]
+        }], propDecorators: { kind: [{
+                type: Input
+            }], mode: [{
+                type: Input
+            }], title: [{
+                type: Input
+            }], description: [{
+                type: Input
+            }], icon: [{
+                type: Input
+            }], code: [{
+                type: Input
+            }], supportEmail: [{
+                type: Input
+            }], actions: [{
+                type: Input
+            }], onAction: [{
+                type: Output
+            }] } });
 
 /* paginator.ts */
 /**
@@ -9927,7 +10885,7 @@ const normalizeApiError = (error) => {
         }
     }
     const status = readNumber(transport, 'status') ?? readNumber(body, 'status');
-    const bodyMessage = readString(body, 'message');
+    const bodyMessage = readString(body, 'message') ?? readString(body, 'Message');
     const retryAfter = readNumber(body, 'retryAfter') ?? readRetryAfterHeader(transport);
     if (status !== undefined)
         normalized.status = status;
@@ -9937,12 +10895,31 @@ const normalizeApiError = (error) => {
         normalized.retryAfter = retryAfter;
     return normalized;
 };
-/**
- * Resolves display text in the approved order: backend `message`, optional
- * catalog lookup, legacy `detail`/`title`, then the caller's local fallback.
- */
-const resolveApiErrorDisplayMessage = (error, localFallback, catalogResolver) => {
+/** Format common field-validation dictionaries without changing the error payload. */
+function formatApiFieldErrors(error) {
+    const fields = error['errors'] ?? error['ModelState'];
+    if (!isRecord(fields))
+        return undefined;
+    const parts = Object.entries(fields).flatMap(([field, value]) => {
+        const messages = (Array.isArray(value) ? value : [value]).filter((item) => typeof item === 'string' && item.trim().length > 0);
+        return messages.length ? [`${field.replace(/^model\./i, '')}: ${messages.join(', ')}`] : [];
+    });
+    return parts.length ? parts.join('; ') : undefined;
+}
+/** Resolve display text without changing the canonical backend error fields. */
+const resolveApiErrorDisplayMessage = (error, localFallback, catalogResolver, formatter) => {
     const normalized = normalizeApiError(error);
+    try {
+        const formatted = formatter?.(normalized);
+        if (formatted?.trim())
+            return formatted;
+    }
+    catch {
+        // Optional formatters fall back to the default display behavior.
+    }
+    const validation = formatApiFieldErrors(normalized);
+    if (validation)
+        return validation;
     const backendMessage = normalized.message;
     if (backendMessage) {
         return backendMessage;
@@ -10053,194 +11030,188 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
             args: [{ providedIn: 'root' }]
         }] });
 
-// Sentinel header set by `IApiService` when a call opts out of the Bearer
-// header (`IApiOptions.skipBearer`). Read and stripped by this interceptor so
-// it never reaches the server.
 const IH_SKIP_BEARER_HEADER = 'X-IH-Skip-Bearer';
-// Identity endpoints that must never receive a Bearer header (would be
-// circular / not yet authenticated) - CSRF bootstrap + silent refresh run before
-// a token exists. Paths come from the resolved config so a consumer backend
-// exposing different routes still works.
-const isAuthSkipUrl = (url, config) => {
-    const skipPaths = [getAuthEndpointPath(config, 'csrf'), getAuthEndpointPath(config, 'refresh')];
-    return skipPaths.some((path) => path && url.includes(path));
-};
+const isAuthSkipUrl = (url, config) => ['csrf', 'refresh', 'login', 'logout', 'exchange'].some((key) => url.split('?')[0] === getAuthEndpointUrl(config, key));
 const addAuthHeader = (req, token) => req.clone({ headers: req.headers.set('Authorization', `Bearer ${token}`) });
-/**
- * Auth HTTP interceptor for @insight/ui consumer apps.
- *
- * Attaches the in-memory access token as a Bearer header. On 401, attempts a
- * single silent refresh (via the HttpOnly session cookie) and retries once;
- * on refresh failure, clears the session and redirects to the configured
- * signinUrl (the app's own login). 429 (rate-limit) and 423 (lockout)
- * responses are passed through; `IApiService` normalizes their current or
- * legacy backend error fields.
- */
+/** Attach the application token and retry unauthorized requests once after shared refresh. */
 const authInterceptor = (req, next) => {
     const session = inject(ISessionService);
     const config = inject(I_AUTH_CONFIG);
     const sessionExpired = inject(ISessionExpiredService);
-    if (isAuthSkipUrl(req.url, config)) {
-        return next(req);
-    }
-    // Per-request opt-out (IApiService `skipBearer`): strip the sentinel header
-    // and forward the request without an Authorization header.
+    const csrf = inject(ICsrfService);
     if (req.headers.has(IH_SKIP_BEARER_HEADER)) {
         return next(req.clone({ headers: req.headers.delete(IH_SKIP_BEARER_HEADER) }));
     }
-    const token = session.getAccessToken();
-    const outgoing = token ? addAuthHeader(req, token) : req;
-    return next(outgoing).pipe(catchError((err) => {
-        if (!(err instanceof HttpErrorResponse) || err.status !== 401) {
-            return throwError(() => err);
+    if (isAuthSkipUrl(req.url, config))
+        return next(req);
+    const expire = (error) => {
+        const apiError = normalizeApiError(error);
+        if (apiError['name'] === 'AbortError' || apiError['name'] === 'TimeoutError') {
+            return throwError(() => error);
         }
-        return session.refreshToken().pipe(switchMap((newToken) => next(addAuthHeader(req, newToken))), catchError((refreshErr) => {
-            session.clearSession();
-            if (config.onUnauthorized) {
-                // Consumer-provided handler takes full control of the unauthorized flow.
-                config.onUnauthorized(refreshErr);
-            }
-            else if ((config.unauthorizedHandling ?? 'dialog') === 'dialog') {
-                // Default: surface the library session-expired overlay (rendered by
-                // the consumer app) instead of leaving the page.
-                const apiError = normalizeApiError(refreshErr);
-                const errorCode = extractProblemDetailsErrorCode(apiError);
-                const reason = toSessionExpiredReason(errorCode);
-                const targetPath = window.location.pathname + window.location.search;
-                sessionExpired.show(targetPath, reason, errorCode, apiError.detail, apiError.message, apiError);
-            }
-            else {
-                // Legacy: full-page redirect to the configured signinUrl. Use the
-                // current path (no hash/token) as the target, routed through the
-                // callback route, same as authGuard, to avoid a redirect loop.
-                const targetPath = window.location.pathname + window.location.search;
-                window.location.href = buildExternalSigninUrl(config, targetPath);
-            }
-            return throwError(() => refreshErr);
+        session.clearSession();
+        if (config.onUnauthorized)
+            config.onUnauthorized(error);
+        else if ((config.unauthorizedHandling ?? 'dialog') === 'dialog') {
+            const errorCode = extractProblemDetailsErrorCode(apiError);
+            sessionExpired.show(window.location.pathname + window.location.search, toSessionExpiredReason(errorCode), errorCode, apiError.detail, apiError.message, apiError);
+        }
+        else {
+            window.location.href = buildExternalSigninUrl(config, window.location.pathname + window.location.search);
+        }
+        return throwError(() => error);
+    };
+    const token = session.getAccessToken();
+    return next(token ? addAuthHeader(req, token) : req).pipe(catchError((error) => {
+        if (!(error instanceof HttpErrorResponse) || error.status !== 401)
+            return throwError(() => error);
+        return session.refreshToken().pipe(catchError(expire), switchMap((newToken) => {
+            let retry = addAuthHeader(req, newToken);
+            const csrfToken = csrf.getToken();
+            if (csrfToken)
+                retry = retry.clone({ setHeaders: { 'X-CSRF-Token': csrfToken } });
+            else
+                retry = retry.clone({ headers: retry.headers.delete('X-CSRF-Token') });
+            return next(retry).pipe(catchError((retryError) => retryError instanceof HttpErrorResponse && retryError.status === 401
+                ? expire(retryError)
+                : throwError(() => retryError)));
         }));
     }));
 };
 
-/**
- * Standardized HTTP client for @insight/ui consumer apps.
- * Mirrors iam-web's `IApiService`: `withCredentials: true` on every request
- * (required for the CSRF cookie and the HttpOnly refresh cookie to flow),
- * automatic `X-CSRF-Token` header injection, transparent response typing
- * (`T`, no wrapper), and normalized current/legacy backend errors. New
- * `errorCode`/`message`/`revision` responses and safe extensions are retained,
- * while legacy Problem Details `detail`/`title`/`code` remains compatible.
- */
 class IApiService {
     http = inject(HttpClient);
     csrf = inject(ICsrfService);
     config = inject(I_AUTH_CONFIG);
-    get headers() {
-        const base = {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-        };
+    mergeHeaders(body, options) {
+        const headers = { Accept: 'application/json', ...options.headers };
+        const findContentType = () => Object.keys(headers).find((key) => key.toLowerCase() === 'content-type');
+        if (body instanceof FormData) {
+            for (const key of Object.keys(headers)) {
+                if (key.toLowerCase() === 'content-type')
+                    delete headers[key];
+            }
+        }
+        else if (body !== undefined &&
+            body !== null &&
+            !(body instanceof Blob) &&
+            !(body instanceof ArrayBuffer) &&
+            !findContentType()) {
+            headers['Content-Type'] = 'application/json';
+        }
         const csrfToken = this.csrf.getToken();
-        if (csrfToken) {
-            base['X-CSRF-Token'] = csrfToken;
-        }
-        if (this.config.apiKey) {
-            base['Api-Key'] = this.config.apiKey;
-        }
-        return base;
+        if (csrfToken)
+            headers['X-CSRF-Token'] = csrfToken;
+        if (this.config.apiKey)
+            headers['Api-Key'] = this.config.apiKey;
+        if (options.skipBearer)
+            headers[IH_SKIP_BEARER_HEADER] = 'true';
+        return headers;
     }
-    /** Merge default headers with per-call overrides, adding the skip-bearer sentinel when requested. */
-    mergeHeaders(options) {
-        const merged = { ...this.headers, ...options?.headers };
-        if (options?.skipBearer) {
-            merged[IH_SKIP_BEARER_HEADER] = 'true';
-        }
-        return merged;
-    }
-    /**
-     * Base URL for a call: an explicit `apiUrl` override wins, otherwise the
-     * configured identity host. Throws a descriptive error when neither exists so
-     * a consumer that never provided `api.identity` fails fast instead of issuing
-     * a relative request against the app origin.
-     */
-    resolveBaseUrl(options) {
-        const baseUrl = options?.apiUrl ?? this.config.api.identity;
-        if (!baseUrl) {
-            throw new Error('[@insight/ui] No API base URL configured. Set api.identity via provideIAuth() ' +
-                'or pass IApiOptions.apiUrl before calling this service.');
-        }
-        return baseUrl;
-    }
-    /** Normalize current, legacy, and raw transport errors without losing safe extensions. */
     enrichError(err) {
-        return throwError(() => normalizeApiError(err));
+        const transport = err;
+        const decode = (body) => {
+            if (typeof body === 'string') {
+                try {
+                    return JSON.parse(body);
+                }
+                catch {
+                    return {};
+                }
+            }
+            return body;
+        };
+        if (transport?.error instanceof ArrayBuffer) {
+            const body = decode(new TextDecoder().decode(transport.error));
+            return throwError(() => normalizeApiError({
+                ...transport,
+                error: body,
+            }));
+        }
+        if (transport?.error instanceof Blob) {
+            return from(transport.error.text()).pipe(catchError(() => from(Promise.resolve(''))), switchMap((body) => throwError(() => normalizeApiError({ ...transport, error: decode(body) }))));
+        }
+        return throwError(() => normalizeApiError(typeof transport?.error === 'string'
+            ? { ...transport, error: decode(transport.error) }
+            : err));
+    }
+    /** Cancel the transport subscription, including its refresh waiter, on deadline or signal. */
+    request(method, path, body, options = {}, params) {
+        return defer(() => {
+            const baseUrl = options.apiUrl ?? this.config.api.identity;
+            if (!baseUrl)
+                throw new Error('No API base URL configured. Set api.identity or IApiOptions.apiUrl.');
+            const timeoutMs = options.timeoutMs ?? 60_000;
+            if (!Number.isFinite(timeoutMs) || timeoutMs <= 0)
+                throw new Error('timeoutMs must be a positive finite number.');
+            const common = {
+                body,
+                params: params ?? options.params,
+                withCredentials: true,
+                headers: this.mergeHeaders(body, options),
+                observe: 'response',
+            };
+            const source = options.responseType === 'blob'
+                ? this.http.request(method, `${baseUrl}${path}`, { ...common, responseType: 'blob' })
+                : options.responseType === 'arraybuffer'
+                    ? this.http.request(method, `${baseUrl}${path}`, {
+                        ...common,
+                        responseType: 'arraybuffer',
+                    })
+                    : options.responseType === 'text'
+                        ? this.http.request(method, `${baseUrl}${path}`, { ...common, responseType: 'text' })
+                        : this.http.request(method, `${baseUrl}${path}`, {
+                            ...common,
+                            responseType: 'json',
+                        });
+            return new Observable((subscriber) => {
+                const fail = (kind) => subscriber.error(normalizeApiError({
+                    status: 0,
+                    name: kind === 'timeout' ? 'TimeoutError' : 'AbortError',
+                    errorCode: kind === 'timeout' ? 'REQUEST_TIMEOUT' : 'REQUEST_ABORTED',
+                    message: kind === 'timeout' ? 'Request timed out' : 'Request aborted',
+                }));
+                if (options.signal?.aborted) {
+                    fail('abort');
+                    return;
+                }
+                const abort = () => fail('abort');
+                options.signal?.addEventListener('abort', abort, { once: true });
+                const timer = setTimeout(() => fail('timeout'), timeoutMs);
+                const subscription = source
+                    .pipe(catchError((err) => this.enrichError(err)), map$1((response) => (options.observe === 'response' ? response : response.body)))
+                    .subscribe(subscriber);
+                return () => {
+                    clearTimeout(timer);
+                    options.signal?.removeEventListener('abort', abort);
+                    subscription.unsubscribe();
+                };
+            });
+        });
     }
     get(path, params, options) {
-        const baseUrl = this.resolveBaseUrl(options);
-        const mergedHeaders = this.mergeHeaders(options);
-        return this.http
-            .get(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders })
-            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+        return this.request('GET', path, undefined, options, params);
     }
     post(path, body = {}, options) {
-        const baseUrl = this.resolveBaseUrl(options);
-        const mergedHeaders = this.mergeHeaders(options);
-        return this.http
-            .post(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
-            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+        return this.request('POST', path, body, options);
     }
     put(path, body = {}, options) {
-        const baseUrl = this.resolveBaseUrl(options);
-        const mergedHeaders = this.mergeHeaders(options);
-        return this.http
-            .put(`${baseUrl}${path}`, body, { withCredentials: true, headers: mergedHeaders })
-            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+        return this.request('PUT', path, body, options);
+    }
+    patch(path, body = {}, options) {
+        return this.request('PATCH', path, body, options);
     }
     delete(path, options) {
-        const baseUrl = this.resolveBaseUrl(options);
-        const mergedHeaders = this.mergeHeaders(options);
-        // Fastify rejects Content-Type: application/json with an empty body
-        if (!options?.body) {
-            delete mergedHeaders['Content-Type'];
-        }
-        return this.http
-            .delete(`${baseUrl}${path}`, {
-            withCredentials: true,
-            headers: mergedHeaders,
-            body: options?.body,
-        })
-            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
-    }
-    getBlob(path, params, options) {
-        const baseUrl = this.resolveBaseUrl(options);
-        const mergedHeaders = this.mergeHeaders(options);
-        return this.http
-            .get(`${baseUrl}${path}`, { params, withCredentials: true, headers: mergedHeaders, responseType: 'blob' })
-            .pipe(catchError((err) => this.enrichError(err)));
+        return this.request('DELETE', path, options?.body, options);
     }
     upload(path, file, options) {
-        const baseUrl = this.resolveBaseUrl(options);
-        const body = file instanceof FormData
-            ? file
-            : (() => {
-                const fd = new FormData();
-                fd.append('file', file);
-                return fd;
-            })();
-        // Content-Type intentionally omitted — the browser sets the multipart boundary automatically.
-        const headers = { ...options?.headers };
-        const csrfToken = this.csrf.getToken();
-        if (csrfToken) {
-            headers['X-CSRF-Token'] = csrfToken;
-        }
-        if (this.config.apiKey) {
-            headers['Api-Key'] = this.config.apiKey;
-        }
-        if (options?.skipBearer) {
-            headers[IH_SKIP_BEARER_HEADER] = 'true';
-        }
-        return this.http
-            .post(`${baseUrl}${path}`, body, { withCredentials: true, headers })
-            .pipe(map$1((res) => res), catchError((err) => this.enrichError(err)));
+        const body = file instanceof FormData ? file : new FormData();
+        if (!(file instanceof FormData))
+            body.append('file', file);
+        return this.request('POST', path, body, options);
+    }
+    getBlob(path, params, options) {
+        return this.request('GET', path, undefined, { ...options, responseType: 'blob', observe: 'body' }, params);
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IApiService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
     static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IApiService, providedIn: 'root' });
@@ -10567,6 +11538,29 @@ function findMenuNameById(menus, menuId) {
     }
     return null;
 }
+/** Derives company access from the effective authorization entries. */
+function collectAuthorizationScope(items) {
+    const seenCompanyIds = new Set();
+    const companyCodes = new Set();
+    const companies = [];
+    const menuCompanySets = new Map();
+    for (const item of items) {
+        const codes = menuCompanySets.get(item.menuCode) ?? new Set();
+        menuCompanySets.set(item.menuCode, codes);
+        for (const company of item.companies) {
+            codes.add(company.code);
+            companyCodes.add(company.code);
+            if (!seenCompanyIds.has(company.id)) {
+                seenCompanyIds.add(company.id);
+                companies.push({ ...company });
+            }
+        }
+    }
+    const menuCompanies = {};
+    for (const [code, codes] of menuCompanySets)
+        menuCompanies[code] = [...codes];
+    return { companies, companyCodes: [...companyCodes], menuCompanies };
+}
 
 /**
  * Current-user navigation & favorites service — calls iam-user-api's
@@ -10695,6 +11689,7 @@ class IUserMenuStore {
     currentUserService = inject(ICurrentUserService);
     menuService = inject(IUserMenuService);
     session = inject(ISessionService);
+    config = inject(I_AUTH_CONFIG);
     /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
     loadedUserSub = null;
     loadedApplicationId = null;
@@ -10708,28 +11703,17 @@ class IUserMenuStore {
     favorites = signal([], ...(ngDevMode ? [{ debugName: "favorites" }] : []));
     /** Roles decoded from the access token (for `source: 'role'` permission checks). */
     roles = signal([], ...(ngDevMode ? [{ debugName: "roles" }] : []));
-    /**
-     * Feature permissions granted by the backend (for `source: 'permission'`
-     * checks). Hydrated by `load()` from the effective authorizations endpoint
-     * (application-scoped authorizations endpoint) as the deduplicated set of
-     * `data[].menuCode`; `setPermissions()` remains available for a caller that
-     * wants to supply the list itself.
-     */
-    permissions = signal([], ...(ngDevMode ? [{ debugName: "permissions" }] : []));
     /** Raw effective authorization entries returned by iam-user-api. */
     authorizations = signal([], ...(ngDevMode ? [{ debugName: "authorizations" }] : []));
-    /** Deduplicated companies from the effective authorization entries. */
-    companies = signal([], ...(ngDevMode ? [{ debugName: "companies" }] : []));
-    /** Deduplicated company codes from the effective authorization entries. */
-    companyCodes = signal([], ...(ngDevMode ? [{ debugName: "companyCodes" }] : []));
-    /** Company codes grouped by menu code. */
-    menuCompanies = signal({}, ...(ngDevMode ? [{ debugName: "menuCompanies" }] : []));
-    /** Deduplicated navigable menu codes from the effective menu tree. */
-    menuCodes = computed(() => collectMenuCodes(this.menus()), ...(ngDevMode ? [{ debugName: "menuCodes" }] : []));
+    authorizationScope = computed(() => collectAuthorizationScope(this.authorizations()), ...(ngDevMode ? [{ debugName: "authorizationScope" }] : []));
+    companies = computed(() => this.authorizationScope().companies, ...(ngDevMode ? [{ debugName: "companies" }] : []));
+    companyCodes = computed(() => this.authorizationScope().companyCodes, ...(ngDevMode ? [{ debugName: "companyCodes" }] : []));
+    menuCompanies = computed(() => this.authorizationScope().menuCompanies, ...(ngDevMode ? [{ debugName: "menuCompanies" }] : []));
+    /** Deduplicated item/function codes from effective authorizations. */
+    menuCodes = computed(() => [...new Set(this.authorizations().map((item) => item.menuCode))], ...(ngDevMode ? [{ debugName: "menuCodes" }] : []));
     /** Immutable authorization snapshot used by permission predicates. */
     authorizationSource = computed(() => ({
-        menu: this.menuCodes(),
-        permission: this.permissions(),
+        menuCodes: this.menuCodes(),
         roles: this.roles(),
         companyCodes: this.companyCodes(),
         companies: this.companies(),
@@ -10746,7 +11730,7 @@ class IUserMenuStore {
         user: null,
         menus: null,
         favorites: null,
-        permissions: null,
+        authorizations: null,
     }, ...(ngDevMode ? [{ debugName: "loadErrors" }] : []));
     // Reactive observable projections (used by directives/components that prefer
     // observables over signals).
@@ -10754,7 +11738,6 @@ class IUserMenuStore {
     menus$ = toObservable(this.menus);
     favorites$ = toObservable(this.favorites);
     roles$ = toObservable(this.roles);
-    permissions$ = toObservable(this.permissions);
     authorizations$ = toObservable(this.authorizations);
     companies$ = toObservable(this.companies);
     companyCodes$ = toObservable(this.companyCodes);
@@ -10775,7 +11758,7 @@ class IUserMenuStore {
         return findMenuNameById(this.menus(), menuId);
     }
     /**
-     * Cold-start: fetch user + menus + favorites + permissions concurrently. A
+     * Cold-start: fetch user + menus + favorites + authorizations concurrently. A
      * failure in one branch does not block the others; `initializing` clears once
      * all settle.
      *
@@ -10803,14 +11786,14 @@ class IUserMenuStore {
         this.initializing.set(true);
         this.initialized.set(false);
         this.loadError.set(null);
-        this.loadErrors.set({ user: null, menus: null, favorites: null, permissions: null });
+        this.loadErrors.set({ user: null, menus: null, favorites: null, authorizations: null });
         this.roles.set(this.session.getRoles());
         this.clearAuthorizationData();
         const result$ = forkJoin({
             user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err))),
             menus: this.loadMenusInternal(applicationId).pipe(catchError((err) => this.recordError('menus', err))),
             favorites: this.loadFavoritesInternal(applicationId).pipe(catchError((err) => this.recordError('favorites', err))),
-            permissions: this.loadPermissionsInternal(applicationId).pipe(catchError((err) => this.recordError('permissions', err))),
+            authorizations: this.loadAuthorizationsInternal(applicationId).pipe(catchError((err) => this.recordError('authorizations', err))),
         }).pipe(map(() => undefined), catchError(() => of(undefined)), finalize(() => {
             this.initializing.set(false);
             this.initialized.set(true);
@@ -10833,18 +11816,18 @@ class IUserMenuStore {
     syncRoles() {
         this.roles.set(this.session.getRoles());
     }
-    /**
-     * Menu-mode permission check against the in-memory menu codes (ANY match).
-     * Returns `false` while menus are not yet loaded — gated UI renders only
-     * after the store has data (async-aware via the reactive directives).
-     */
-    hasMenu(code) {
+    /** Checks whether the navigation tree contains any matching leaf menu. */
+    hasNavigableMenu(code) {
         return hasAnyMenuCode(this.menus(), code);
+    }
+    /** Checks effective item/function authorization codes (ANY match). */
+    hasMenuCode(code) {
+        const granted = this.menuCodes();
+        return (Array.isArray(code) ? code : [code]).some((item) => granted.includes(item));
     }
     /**
      * Route-membership check: can the user open `path`? True when any granted
-     * leaf menu route equals it (slash-normalized). Used by route-level access
-     * guards (e.g. `requireRouteAccess`).
+     * leaf menu route equals it (slash-normalized).
      */
     hasRoute(path) {
         return hasAnyRoute(this.menus(), path);
@@ -10856,27 +11839,6 @@ class IUserMenuStore {
             return code.some((role) => roles.includes(role));
         }
         return roles.includes(code);
-    }
-    /**
-     * Replaces the granted permission list (feature/action codes). `load()`
-     * hydrates this automatically — call this only to override it explicitly.
-     * Codes are deduplicated so an accidental duplicate in the source list can
-     * never make `hasPermission()` behave differently.
-     */
-    setPermissions(permissions) {
-        this.permissions.set([...new Set(permissions)]);
-    }
-    /**
-     * Permission-mode check against the granted permissions (ANY match). Returns
-     * `false` while the list is empty/not loaded - gated UI renders only after
-     * the store has data (async-aware via the reactive directives).
-     */
-    hasPermission(code) {
-        const granted = this.permissions();
-        if (Array.isArray(code)) {
-            return code.some((permission) => granted.includes(permission));
-        }
-        return granted.includes(code);
     }
     /**
      * Pin (`isFavorite: true`) or unpin a menu item. Flips the star icon in the
@@ -10914,7 +11876,7 @@ class IUserMenuStore {
     }
     /**
      * Loads the effective navigation tree into `menus` — for one application
-     * (`applicationId`) or all active applications when omitted. Returns the
+     * (`applicationId`) or the configured application when omitted. Returns the
      * mapped `IMenu[]`.
      */
     loadMenus(applicationId) {
@@ -10924,13 +11886,10 @@ class IUserMenuStore {
     loadFavorites(applicationId) {
         return this.menuService.getFavorites(applicationId).pipe(tap((items) => this.favorites.set(items.map(toIMenuFavorite))), map((items) => items.map(toIMenuFavorite)));
     }
-    /**
-     * Loads the granted feature permissions into `permissions` — the deduplicated
-     * set of `data[].menuCode` from the effective authorizations endpoint.
-     * Returns the resulting permission list.
-     */
-    loadPermissions(applicationId) {
-        return this.menuService.getAuthorizations(applicationId).pipe(tap((items) => this.applyAuthorizations(items)), map(() => this.permissions()), catchError((error) => {
+    /** Loads effective item/function authorizations and their company scope. */
+    loadAuthorizations(applicationId) {
+        this.clearAuthorizationData();
+        return this.menuService.getAuthorizations(applicationId).pipe(tap((items) => this.applyAuthorizations(items)), map(() => this.authorizations()), catchError((error) => {
             this.clearAuthorizationData();
             return throwError(() => error);
         }));
@@ -10940,33 +11899,7 @@ class IUserMenuStore {
             ...item,
             companies: item.companies.map((company) => ({ ...company })),
         }));
-        const permissionCodes = new Set();
-        const seenCompanyIds = new Set();
-        const companyCodes = new Set();
-        const companies = [];
-        const menuCompanySets = new Map();
-        for (const authorization of authorizations) {
-            permissionCodes.add(authorization.menuCode);
-            const scopedCodes = menuCompanySets.get(authorization.menuCode) ?? new Set();
-            menuCompanySets.set(authorization.menuCode, scopedCodes);
-            for (const company of authorization.companies) {
-                scopedCodes.add(company.code);
-                companyCodes.add(company.code);
-                if (!seenCompanyIds.has(company.id)) {
-                    seenCompanyIds.add(company.id);
-                    companies.push(company);
-                }
-            }
-        }
-        const menuCompanies = {};
-        for (const [menuCode, codes] of menuCompanySets) {
-            menuCompanies[menuCode] = [...codes];
-        }
         this.authorizations.set(authorizations);
-        this.permissions.set([...permissionCodes]);
-        this.companies.set(companies);
-        this.companyCodes.set([...companyCodes]);
-        this.menuCompanies.set(menuCompanies);
     }
     /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
     applyMenuFavorite(menus, menuId, isFavorite) {
@@ -11013,8 +11946,8 @@ class IUserMenuStore {
     loadFavoritesInternal(applicationId) {
         return this.loadFavorites(applicationId).pipe(map(() => null));
     }
-    loadPermissionsInternal(applicationId) {
-        return this.loadPermissions(applicationId).pipe(map(() => null));
+    loadAuthorizationsInternal(applicationId) {
+        return this.loadAuthorizations(applicationId).pipe(map(() => null));
     }
     clearData() {
         this.currentUser.set(null);
@@ -11025,19 +11958,15 @@ class IUserMenuStore {
         this.clearAuthorizationData();
         this.initialized.set(false);
         this.loadError.set(null);
-        this.loadErrors.set({ user: null, menus: null, favorites: null, permissions: null });
+        this.loadErrors.set({ user: null, menus: null, favorites: null, authorizations: null });
     }
     clearAuthorizationData() {
-        this.permissions.set([]);
         this.authorizations.set([]);
-        this.companies.set([]);
-        this.companyCodes.set([]);
-        this.menuCompanies.set({});
     }
     recordError(source, err) {
         const normalized = normalizeApiError(err);
         this.loadErrors.update((errors) => ({ ...errors, [source]: normalized }));
-        this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(err, 'Failed to load')}`);
+        this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(err, 'Failed to load', this.config.errorCatalogResolver, this.config.errorDisplayFormatter)}`);
         // Never log sensitive data — only the load source and normalized error details.
         console.error(`[@insight/ui][STORE] load "${source}" failed`, err);
         return of(null);
@@ -13887,701 +14816,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 args: ['click', ['$event']]
             }] } });
 
-// section-tabs.ts
-/**
- * ISectionTabs / ISectionTab
- *
- * <i-section-tabs>
- *   <i-section-tab title="Title goes here"> content goes here 1</i-section-tab>
- *   <i-section-tab>
- *     <i-section-tab-header>Header HTML goes here</i-section-tab-header>
- *     <i-section-tab-content> content goes here 2</i-section-tab-content>
- *   </i-section-tab>
- * </i-section-tabs>
- *
- * Badge rules:
- * - badge / badge="true" / badge="" => red dot
- * - badge="3" => red dot with number 3
- *
- * Lazy tab content:
- * ISectionTab exposes `exportAs="iSectionTab"` + an `active` getter so heavy
- * per-tab content can opt into Angular's native `@defer` lazy loading. Angular
- * content projection is instantiated wherever it's declared (the consumer's own
- * template), so the library cannot silently defer it — consumers opt in
- * themselves:
- *
- *   <i-section-tab #t="iSectionTab" title="Heavy">
- *     <i-section-tab-content>
- *       @defer (when t.active) { <heavy-component /> }
- *     </i-section-tab-content>
- *   </i-section-tab>
- */
-// ─── Helpers ────────────────────────────────────────────────────────────────
-function isTruthyAttr(v) {
-    if (v === null || v === undefined)
-        return false;
-    const s = String(v).trim().toLowerCase();
-    if (s === 'false' || s === '0' || s === 'null' || s === 'undefined')
-        return false;
-    return true;
-}
-function parseBadge(v) {
-    if (!isTruthyAttr(v))
-        return { enabled: false, value: null };
-    const s = String(v).trim();
-    if (s === '' || s.toLowerCase() === 'true')
-        return { enabled: true, value: null };
-    const n = Number(s);
-    if (Number.isFinite(n) && Number.isInteger(n) && n >= 0) {
-        return { enabled: true, value: n };
-    }
-    return { enabled: true, value: null };
-}
-function parseTabsHeight(v) {
-    // null => wrap (default)
-    if (v === null || v === undefined)
-        return null;
-    const s = String(v).trim().toLowerCase();
-    if (s === '' || s === 'wrap' || s === 'auto')
-        return null;
-    // allow "300", "300px"
-    if (s.endsWith('px')) {
-        const n = Number(s.slice(0, -2).trim());
-        return Number.isFinite(n) && n > 0 ? n : null;
-    }
-    const n = Number(s);
-    return Number.isFinite(n) && n > 0 ? n : null;
-}
-/** Chevron icon size -> pixel width (used to size the scroll chevron buttons). */
-const CHEVRON_WIDTH_MAP = {
-    sm: 20,
-    md: 24,
-    lg: 28,
-    xl: 32,
-};
-// ─── ISectionTabHeader / ISectionTabContent ─────────────────────────────────
-class ISectionTabHeader {
-    tpl;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionTabHeader, isStandalone: true, selector: "i-section-tab-header", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
-    <ng-template #tpl>
-      <ng-content />
-    </ng-template>
-  `, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabHeader, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-tab-header',
-                    standalone: true,
-                    template: `
-    <ng-template #tpl>
-      <ng-content />
-    </ng-template>
-  `,
-                }]
-        }], propDecorators: { tpl: [{
-                type: ViewChild,
-                args: ['tpl', { static: true }]
-            }] } });
-class ISectionTabContent {
-    tpl;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionTabContent, isStandalone: true, selector: "i-section-tab-content", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
-    <ng-template #tpl>
-      <ng-content />
-    </ng-template>
-  `, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabContent, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-tab-content',
-                    standalone: true,
-                    template: `
-    <ng-template #tpl>
-      <ng-content />
-    </ng-template>
-  `,
-                }]
-        }], propDecorators: { tpl: [{
-                type: ViewChild,
-                args: ['tpl', { static: true }]
-            }] } });
-// ─── ISectionTab ─────────────────────────────────────────────────────────────
-class ISectionTab {
-    title = '';
-    opened = false;
-    set badge(v) {
-        const parsed = parseBadge(v);
-        this._badgeEnabled = parsed.enabled;
-        this._badgeValue = parsed.value;
-    }
-    get badge() {
-        return this._badgeEnabled ? (this._badgeValue ?? true) : null;
-    }
-    _badgeEnabled = false;
-    _badgeValue = null;
-    headerCmp;
-    contentCmp;
-    defaultHeaderTpl;
-    defaultContentTpl;
-    headerTpl;
-    contentTpl;
-    _active = false;
-    /**
-     * Whether this tab is currently the active/selected one. Exposed so consumers can
-     * lazily render heavy tab content via Angular's native deferred loading, e.g.:
-     * `<i-section-tab #t="iSectionTab">...@defer (when t.active) { <heavy/> }...</i-section-tab>`
-     */
-    get active() {
-        return this._active;
-    }
-    ngAfterContentInit() {
-        this.headerTpl = this.headerCmp?.tpl ?? this.defaultHeaderTpl;
-        this.contentTpl = this.contentCmp?.tpl ?? this.defaultContentTpl;
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTab, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: ISectionTab, isStandalone: true, selector: "i-section-tab", inputs: { title: "title", opened: ["opened", "opened", (v) => v !== null && `${v}` !== 'false'], badge: "badge" }, queries: [{ propertyName: "headerCmp", first: true, predicate: ISectionTabHeader, descendants: true }, { propertyName: "contentCmp", first: true, predicate: ISectionTabContent, descendants: true }], viewQueries: [{ propertyName: "defaultHeaderTpl", first: true, predicate: ["defaultHeaderTpl"], descendants: true, static: true }, { propertyName: "defaultContentTpl", first: true, predicate: ["defaultContentTpl"], descendants: true, static: true }], exportAs: ["iSectionTab"], ngImport: i0, template: `
-    <ng-template #defaultHeaderTpl>
-      <span class="i-section-tab-title">{{ title }}</span>
-
-      @if (_badgeEnabled) {
-        <span class="i-section-tab-badge" [class.has-number]="_badgeValue !== null">
-          @if (_badgeValue !== null) {
-            <span class="i-section-tab-badge-number">{{ _badgeValue }}</span>
-          }
-        </span>
-      }
-    </ng-template>
-
-    <ng-template #defaultContentTpl>
-      <ng-content />
-    </ng-template>
-  `, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTab, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-tab',
-                    standalone: true,
-                    exportAs: 'iSectionTab',
-                    template: `
-    <ng-template #defaultHeaderTpl>
-      <span class="i-section-tab-title">{{ title }}</span>
-
-      @if (_badgeEnabled) {
-        <span class="i-section-tab-badge" [class.has-number]="_badgeValue !== null">
-          @if (_badgeValue !== null) {
-            <span class="i-section-tab-badge-number">{{ _badgeValue }}</span>
-          }
-        </span>
-      }
-    </ng-template>
-
-    <ng-template #defaultContentTpl>
-      <ng-content />
-    </ng-template>
-  `,
-                }]
-        }], propDecorators: { title: [{
-                type: Input
-            }], opened: [{
-                type: Input,
-                args: [{ transform: (v) => v !== null && `${v}` !== 'false' }]
-            }], badge: [{
-                type: Input
-            }], headerCmp: [{
-                type: ContentChild,
-                args: [ISectionTabHeader]
-            }], contentCmp: [{
-                type: ContentChild,
-                args: [ISectionTabContent]
-            }], defaultHeaderTpl: [{
-                type: ViewChild,
-                args: ['defaultHeaderTpl', { static: true }]
-            }], defaultContentTpl: [{
-                type: ViewChild,
-                args: ['defaultContentTpl', { static: true }]
-            }] } });
-// ─── ISectionTabs ─────────────────────────────────────────────────────────────
-class ISectionTabs {
-    tabs;
-    /** optional controlled mode */
-    selectedIndex = null;
-    /** Enable sticky header via plain CSS `position: sticky`. Default off (opt-in). */
-    sticky = false;
-    /** CSS `top` offset used when `sticky` is enabled. Default `-16px` accounts for
-     *  section border-radius clearance (matches the previous i-section-tab-bar default). */
-    stickyTopOffset = '-16px';
-    /** Enable natural-width tabs + horizontal overflow scroll + chevrons. Default off
-     *  preserves today's equal-width layout exactly. */
-    scrollable = false;
-    /** Chevron icon size — only relevant when `scrollable` is enabled. */
-    chevronSize = 'lg';
-    /** Minimum tab button height (CSS value, e.g. `'48px'`). */
-    tabMinHeight = '';
-    /** Extra class(es) applied to the headers row wrapper. */
-    headerClass = '';
-    /** Extra class(es) applied to each tab button. */
-    tabClass = '';
-    /** Visual skin: `'default'` keeps today's equal-width/box-shadow look unchanged (default);
-     *  `'bar'` opts into the fully ported i-section-tab-bar visual style. */
-    styleVariant = 'default';
-    /** ✅ standardized output name (Angular + React parity) — kept for backward compatibility. */
-    onSelectedIndexChange = new EventEmitter();
-    /** Angular two-way-binding-convention-named alias, enabling `[(selectedIndex)]`.
-     *  Emitted alongside `onSelectedIndexChange` (both always fire together). */
-    selectedIndexChange = new EventEmitter();
-    /**
-     * height:
-     * - "wrap" (default) => content height depends on each tab
-     * - "300" / 300 / "300px" => fixed content height (px) + internal scroll
-     */
-    set height(v) {
-        this._contentHeightPx = parseTabsHeight(v);
-        this.cdr.markForCheck();
-    }
-    get height() {
-        return this._contentHeightPx ?? 'wrap';
-    }
-    _contentHeightPx = null;
-    get contentHeightPx() {
-        return this._contentHeightPx;
-    }
-    get isFixedHeight() {
-        return this._contentHeightPx !== null;
-    }
-    /** Computed chevron button width from `chevronSize`. */
-    get chevronWidthPx() {
-        return CHEVRON_WIDTH_MAP[this.chevronSize] ?? 28;
-    }
-    tabsArr = [];
-    activeIndex = 0;
-    showLeftChevron = false;
-    showRightChevron = false;
-    cdr = inject(ChangeDetectorRef);
-    resizeObserver = null;
-    _scrollContainer;
-    set scrollContainer(content) {
-        this.resizeObserver?.disconnect();
-        this.resizeObserver = null;
-        this._scrollContainer = content;
-        if (content?.nativeElement) {
-            const el = content.nativeElement;
-            this.checkOverflow();
-            if (typeof ResizeObserver !== 'undefined') {
-                this.resizeObserver = new ResizeObserver(() => this.checkOverflow());
-                this.resizeObserver.observe(el);
-            }
-        }
-    }
-    get scrollContainer() {
-        return this._scrollContainer;
-    }
-    get activeTab() {
-        return this.tabsArr[this.activeIndex] ?? null;
-    }
-    ngAfterContentInit() {
-        const sync = () => {
-            this.tabsArr = this.tabs?.toArray() ?? [];
-            let nextIndex = 0;
-            if (this.selectedIndex !== null && this.isValidIndex(this.selectedIndex)) {
-                nextIndex = this.selectedIndex;
-            }
-            else {
-                const openedIndex = this.tabsArr.findIndex((t) => t.opened);
-                nextIndex = openedIndex >= 0 ? openedIndex : 0;
-            }
-            this.setActive(nextIndex, false);
-            this.cdr.markForCheck();
-        };
-        sync();
-        this.tabs.changes.subscribe(() => sync());
-    }
-    ngAfterViewInit() {
-        this.checkOverflow();
-    }
-    ngOnDestroy() {
-        this.resizeObserver?.disconnect();
-    }
-    activate(index) {
-        this.setActive(index, true);
-        this.scrollToActive();
-        this.checkOverflow();
-        this.cdr.markForCheck();
-    }
-    activateByTab(tab) {
-        const index = this.tabsArr.indexOf(tab);
-        this.activate(index);
-    }
-    // ─── Scroll / overflow ──────────────────────────────────────────────────
-    onScroll() {
-        this.checkOverflow();
-    }
-    scrollLeft() {
-        const el = this.scrollContainer?.nativeElement;
-        if (el)
-            el.scrollBy({ left: -200, behavior: 'smooth' });
-    }
-    scrollRight() {
-        const el = this.scrollContainer?.nativeElement;
-        if (el)
-            el.scrollBy({ left: 200, behavior: 'smooth' });
-    }
-    checkOverflow() {
-        const el = this.scrollContainer?.nativeElement;
-        if (!el)
-            return;
-        this.showLeftChevron = el.scrollLeft > 2;
-        this.showRightChevron = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
-        this.cdr.markForCheck();
-    }
-    scrollToActive() {
-        const el = this.scrollContainer?.nativeElement;
-        if (!el)
-            return;
-        const buttons = el.querySelectorAll('.i-section-tabs-header');
-        const active = buttons[this.activeIndex];
-        if (active) {
-            active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-        }
-    }
-    setActive(index, emit) {
-        if (!this.isValidIndex(index))
-            return;
-        this.activeIndex = index;
-        this.tabsArr.forEach((t, i) => (t._active = i === index));
-        if (emit) {
-            this.onSelectedIndexChange.emit(index);
-            this.selectedIndexChange.emit(index);
-        }
-    }
-    isValidIndex(index) {
-        return Number.isInteger(index) && index >= 0 && index < this.tabsArr.length;
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabs, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: ISectionTabs, isStandalone: true, selector: "i-section-tabs", inputs: { selectedIndex: "selectedIndex", sticky: ["sticky", "sticky", booleanAttribute], stickyTopOffset: "stickyTopOffset", scrollable: ["scrollable", "scrollable", booleanAttribute], chevronSize: "chevronSize", tabMinHeight: "tabMinHeight", headerClass: "headerClass", tabClass: "tabClass", styleVariant: "styleVariant", height: "height" }, outputs: { onSelectedIndexChange: "onSelectedIndexChange", selectedIndexChange: "selectedIndexChange" }, host: { properties: { "class.i-section-tabs--bar": "styleVariant === 'bar'" } }, queries: [{ propertyName: "tabs", predicate: ISectionTab }], viewQueries: [{ propertyName: "scrollContainer", first: true, predicate: ["scrollContainer"], descendants: true }], ngImport: i0, template: `
-    <div
-      class="i-section-tabs-headers"
-      role="tablist"
-      [class.i-section-tabs-headers--sticky]="sticky"
-      [ngClass]="headerClass"
-      [style.--i-section-tabs-sticky-top]="stickyTopOffset"
-    >
-      @if (scrollable) {
-        <button
-          class="i-section-tabs-chevron i-section-tabs-chevron--left"
-          type="button"
-          [class.hidden]="!showLeftChevron"
-          [style.minWidth.px]="chevronWidthPx"
-          [style.width.px]="chevronWidthPx"
-          (click)="scrollLeft()"
-        >
-          <i-icon icon="prev" [size]="chevronSize" />
-        </button>
-      }
-
-      <div
-        #scrollContainer
-        class="i-section-tabs-scroll"
-        [class.i-section-tabs-scroll--scrollable]="scrollable"
-        (scroll)="onScroll()"
-      >
-        @for (tab of tabsArr; track tab) {
-          <button
-            class="i-section-tabs-header"
-            role="tab"
-            type="button"
-            [attr.aria-selected]="tab._active"
-            [attr.tabindex]="tab._active ? 0 : -1"
-            [class.active]="tab._active"
-            [ngClass]="tabClass"
-            [style.minHeight]="tabMinHeight || null"
-            (click)="activateByTab(tab)"
-          >
-            <ng-container [ngTemplateOutlet]="tab.headerTpl" />
-          </button>
-        }
-      </div>
-
-      @if (scrollable) {
-        <button
-          class="i-section-tabs-chevron i-section-tabs-chevron--right"
-          type="button"
-          [class.hidden]="!showRightChevron"
-          [style.minWidth.px]="chevronWidthPx"
-          [style.width.px]="chevronWidthPx"
-          (click)="scrollRight()"
-        >
-          <i-icon icon="next" [size]="chevronSize" />
-        </button>
-      }
-    </div>
-
-    <div
-      class="i-section-tabs-content"
-      [class.scroll]="isFixedHeight"
-      [class.scroll-y]="isFixedHeight"
-      [style.height.px]="contentHeightPx"
-    >
-      @if (activeTab; as tab) {
-        <ng-container [ngTemplateOutlet]="tab.contentTpl" />
-      }
-    </div>
-
-    <!-- Catch-all slot for static content that isn't owned by a specific tab (e.g. shared
-         widgets filtered externally via selectedIndex). Keeping it inside ISectionTabs' own
-         box (rather than as an external sibling) lets [sticky] stay pinned across the full
-         scroll height of that shared content, not just the (possibly empty) tab content area. -->
-    <ng-content select=":not(i-section-tab)" />
-  `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "directive", type: i1$1.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i1$1.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabs, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-tabs',
-                    standalone: true,
-                    imports: [CommonModule, IIcon],
-                    changeDetection: ChangeDetectionStrategy.OnPush,
-                    host: {
-                        '[class.i-section-tabs--bar]': "styleVariant === 'bar'",
-                    },
-                    template: `
-    <div
-      class="i-section-tabs-headers"
-      role="tablist"
-      [class.i-section-tabs-headers--sticky]="sticky"
-      [ngClass]="headerClass"
-      [style.--i-section-tabs-sticky-top]="stickyTopOffset"
-    >
-      @if (scrollable) {
-        <button
-          class="i-section-tabs-chevron i-section-tabs-chevron--left"
-          type="button"
-          [class.hidden]="!showLeftChevron"
-          [style.minWidth.px]="chevronWidthPx"
-          [style.width.px]="chevronWidthPx"
-          (click)="scrollLeft()"
-        >
-          <i-icon icon="prev" [size]="chevronSize" />
-        </button>
-      }
-
-      <div
-        #scrollContainer
-        class="i-section-tabs-scroll"
-        [class.i-section-tabs-scroll--scrollable]="scrollable"
-        (scroll)="onScroll()"
-      >
-        @for (tab of tabsArr; track tab) {
-          <button
-            class="i-section-tabs-header"
-            role="tab"
-            type="button"
-            [attr.aria-selected]="tab._active"
-            [attr.tabindex]="tab._active ? 0 : -1"
-            [class.active]="tab._active"
-            [ngClass]="tabClass"
-            [style.minHeight]="tabMinHeight || null"
-            (click)="activateByTab(tab)"
-          >
-            <ng-container [ngTemplateOutlet]="tab.headerTpl" />
-          </button>
-        }
-      </div>
-
-      @if (scrollable) {
-        <button
-          class="i-section-tabs-chevron i-section-tabs-chevron--right"
-          type="button"
-          [class.hidden]="!showRightChevron"
-          [style.minWidth.px]="chevronWidthPx"
-          [style.width.px]="chevronWidthPx"
-          (click)="scrollRight()"
-        >
-          <i-icon icon="next" [size]="chevronSize" />
-        </button>
-      }
-    </div>
-
-    <div
-      class="i-section-tabs-content"
-      [class.scroll]="isFixedHeight"
-      [class.scroll-y]="isFixedHeight"
-      [style.height.px]="contentHeightPx"
-    >
-      @if (activeTab; as tab) {
-        <ng-container [ngTemplateOutlet]="tab.contentTpl" />
-      }
-    </div>
-
-    <!-- Catch-all slot for static content that isn't owned by a specific tab (e.g. shared
-         widgets filtered externally via selectedIndex). Keeping it inside ISectionTabs' own
-         box (rather than as an external sibling) lets [sticky] stay pinned across the full
-         scroll height of that shared content, not just the (possibly empty) tab content area. -->
-    <ng-content select=":not(i-section-tab)" />
-  `,
-                }]
-        }], propDecorators: { tabs: [{
-                type: ContentChildren,
-                args: [ISectionTab]
-            }], selectedIndex: [{
-                type: Input
-            }], sticky: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], stickyTopOffset: [{
-                type: Input
-            }], scrollable: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], chevronSize: [{
-                type: Input
-            }], tabMinHeight: [{
-                type: Input
-            }], headerClass: [{
-                type: Input
-            }], tabClass: [{
-                type: Input
-            }], styleVariant: [{
-                type: Input
-            }], onSelectedIndexChange: [{
-                type: Output
-            }], selectedIndexChange: [{
-                type: Output
-            }], height: [{
-                type: Input
-            }], scrollContainer: [{
-                type: ViewChild,
-                args: ['scrollContainer']
-            }] } });
-
-// section.ts
-/**
- * ISection
- * Version: 1.0.1
- * <i-section>
- *   <i-section-header></i-section-header>
- *   <i-section-filter></i-section-filter>
- *   <i-section-body></i-section-body>
- *   <i-section-footer></i-section-footer>
- *   <i-section-tabs></i-section-tabs>
- * </i-section>
- */
-class ISection {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISection, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISection, isStandalone: true, selector: "i-section", ngImport: i0, template: `<ng-content />`, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISection, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section',
-                    imports: [],
-                    template: `<ng-content />`,
-                }]
-        }] });
-class ISectionHeader {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionHeader, isStandalone: true, selector: "i-section-header", ngImport: i0, template: `<h4><ng-content /></h4>`, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionHeader, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-header',
-                    imports: [],
-                    template: `<h4><ng-content /></h4>`,
-                }]
-        }] });
-class ISectionSubHeader {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionSubHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionSubHeader, isStandalone: true, selector: "i-section-sub-header", ngImport: i0, template: `<h6><ng-content /></h6>`, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionSubHeader, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-sub-header',
-                    imports: [],
-                    template: `<h6><ng-content /></h6>`,
-                }]
-        }] });
-class ISectionFilter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionFilter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionFilter, isStandalone: true, selector: "i-section-filter", ngImport: i0, template: `<ng-content />`, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionFilter, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-filter',
-                    imports: [],
-                    template: `<ng-content />`,
-                }]
-        }] });
-class ISectionBody {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionBody, isStandalone: true, selector: "i-section-body", ngImport: i0, template: `<ng-content />`, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionBody, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-body',
-                    imports: [],
-                    template: `<ng-content />`,
-                }]
-        }] });
-class ISectionFooter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionFooter, isStandalone: true, selector: "i-section-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionFooter, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-section-footer',
-                    imports: [],
-                    template: `<ng-content />`,
-                }]
-        }] });
-class ISectionModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.31", ngImport: i0, type: ISectionModule, imports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
-            ISectionTab,
-            ISectionTabHeader,
-            ISectionTabContent], exports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
-            ISectionTab,
-            ISectionTabHeader,
-            ISectionTabContent] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionModule, imports: [ISectionTabs] });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionModule, decorators: [{
-            type: NgModule,
-            args: [{
-                    imports: [
-                        ISection,
-                        ISectionHeader,
-                        ISectionSubHeader,
-                        ISectionFilter,
-                        ISectionBody,
-                        ISectionFooter,
-                        ISectionTabs,
-                        ISectionTab,
-                        ISectionTabHeader,
-                        ISectionTabContent,
-                    ],
-                    exports: [
-                        ISection,
-                        ISectionHeader,
-                        ISectionSubHeader,
-                        ISectionFilter,
-                        ISectionBody,
-                        ISectionFooter,
-                        ISectionTabs,
-                        ISectionTab,
-                        ISectionTabHeader,
-                        ISectionTabContent,
-                    ],
-                }]
-        }] });
-
 const INTERACTIVE_SELECTOR_PARTS = [
     'a',
     'button',
@@ -14804,6 +15038,7 @@ class IUI {
             IDatepicker,
             IFCDatepicker,
             IDialogModule,
+            IErrorPage,
             IGridModule,
             IHContent,
             IHSidebar,
@@ -14823,6 +15058,7 @@ class IUI {
             IDatepicker,
             IFCDatepicker,
             IDialogModule,
+            IErrorPage,
             IGridModule,
             IHContent,
             IHSidebar,
@@ -14860,6 +15096,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                         IDatepicker,
                         IFCDatepicker,
                         IDialogModule,
+                        IErrorPage,
                         IGridModule,
                         IHContent,
                         IHSidebar,
@@ -14882,6 +15119,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                         IDatepicker,
                         IFCDatepicker,
                         IDialogModule,
+                        IErrorPage,
                         IGridModule,
                         IHContent,
                         IHSidebar,
@@ -14942,12 +15180,9 @@ const authGuard = (_route, state) => {
 /** Route that renders the "account lacks the required access/role" (403) page. */
 const UNAUTHORIZED_ACCESS_PATH = '/unauthorized-access';
 /**
- * Waits until the store has settled its menu data, triggering the cold-start
- * load when it has not run yet. Menu checks cannot be judged against an empty
- * tree — a deep link into a guarded route may fire before the shell's boot
- * load has populated menus, and denying then would be a false negative.
+ * Waits for the authorization load before judging a cold-start navigation.
  */
-function ensureMenusLoaded$1(store) {
+function ensureAuthorizationsLoaded$1(store) {
     if (store.initializing()) {
         return store.initializing$.pipe(filter$1((initializing) => !initializing), take$1(1), map(() => undefined));
     }
@@ -14955,7 +15190,7 @@ function ensureMenusLoaded$1(store) {
 }
 /**
  * Route guard factory that denies navigation to users who lack a required
- * menu/role/permission, redirecting them to {@link UNAUTHORIZED_ACCESS_PATH}.
+ * menu code/role, redirecting them to {@link UNAUTHORIZED_ACCESS_PATH}.
  *
  * Compose AFTER `authGuard` in the `canActivate` array — this guard only
  * handles the authenticated-but-not-allowed branch and returns `true` while the
@@ -14965,7 +15200,7 @@ function ensureMenusLoaded$1(store) {
  * ```ts
  * const routes = [{
  *   path: 'admin',
- *   canActivate: [authGuard, requireAccess({ source: 'menu', value: 'admin-iam' })],
+ *   canActivate: [authGuard, requireAccess({ source: 'menuCode', value: 'admin-iam' })],
  *   ...
  * }];
  * ```
@@ -14984,14 +15219,9 @@ function requireAccess(check) {
             const granted = session.hasRole(check.value);
             return of(granted || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]));
         }
-        if (check.source === 'permission') {
-            // Permissions are granted out-of-band (setPermissions), never by load().
-            const granted = store.hasPermission(check.value);
-            return of(granted || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]));
-        }
-        // Menu source — wait for (or trigger) the menu load before judging.
-        return ensureMenusLoaded$1(store).pipe(map(() => {
-            const granted = store.hasMenu(check.value);
+        // Wait for effective authorizations before checking the requested code.
+        return ensureAuthorizationsLoaded$1(store).pipe(map(() => {
+            const granted = store.hasMenuCode(check.value);
             return granted || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
         }));
     };
@@ -15001,8 +15231,8 @@ function menuCodeFromRouteData(route) {
     const menuCode = route.data['menuCode'];
     return typeof menuCode === 'string' && menuCode.trim() ? menuCode.trim() : null;
 }
-/** Waits until the store has settled its menu data, triggering a cold-start load if needed. */
-function ensureMenusLoaded(store) {
+/** Waits until the store has settled its authorization data, triggering a cold-start load if needed. */
+function ensureAuthorizationsLoaded(store) {
     if (store.initializing()) {
         return store.initializing$.pipe(filter$1((initializing) => !initializing), take$1(1), map(() => undefined));
     }
@@ -15019,7 +15249,7 @@ function requireRouteAccess(options = {}) {
         if (session.initializing() || !session.isAuth()) {
             return of(true);
         }
-        return ensureMenusLoaded(store).pipe(map(() => {
+        return ensureAuthorizationsLoaded(store).pipe(map(() => {
             const menuCode = resolveMenuCode(route, state)?.trim();
             if (!menuCode) {
                 console.warn(`[@insight/ui] No menu code mapping found for route "${state.url}".`);
@@ -15027,7 +15257,7 @@ function requireRouteAccess(options = {}) {
                     ? true
                     : router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
             }
-            return store.hasMenu(menuCode) || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
+            return store.hasMenuCode(menuCode) || router.createUrlTree([UNAUTHORIZED_ACCESS_PATH]);
         }));
     };
 }
@@ -15046,7 +15276,7 @@ function evaluatePermission(value, source) {
         }
     }
     const codes = Array.isArray(value) ? value : [value];
-    return codes.some((code) => source.menu.includes(code));
+    return codes.some((code) => source.menuCodes.includes(code));
 }
 /** Shared reactive implementation for the positive and inverse permission directives. */
 class IMenuGateDirective {
@@ -15157,20 +15387,11 @@ class IHasMnRoute {
     @if (!ready()) {
       <i-loading aria-live="polite" label="Loading access..." />
     } @else if (!allowed()) {
-      <i-section role="alert">
-        <i-section-header>
-          <i-icon icon="fa-solid fa-user-lock" /> Unauthorized Access
-        </i-section-header>
-        <i-section-body>
-          <p class="text-subtle">
-            You do not have access to this page. Please contact your administrator.
-          </p>
-        </i-section-body>
-      </i-section>
+      <i-error-page kind="forbidden" role="alert" />
     } @else {
       <router-outlet />
     }
-  `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }, { kind: "component", type: ISection, selector: "i-section" }, { kind: "component", type: ISectionBody, selector: "i-section-body" }, { kind: "component", type: ISectionHeader, selector: "i-section-header" }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "component", type: IErrorPage, selector: "i-error-page", inputs: ["kind", "mode", "title", "description", "icon", "code", "supportEmail", "actions"], outputs: ["onAction"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnRoute, decorators: [{
             type: Component,
@@ -15178,21 +15399,12 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                     selector: 'i-has-mn-route',
                     standalone: true,
                     changeDetection: ChangeDetectionStrategy.OnPush,
-                    imports: [RouterOutlet, IIcon, ILoading, ISection, ISectionBody, ISectionHeader],
+                    imports: [RouterOutlet, IErrorPage, ILoading],
                     template: `
     @if (!ready()) {
       <i-loading aria-live="polite" label="Loading access..." />
     } @else if (!allowed()) {
-      <i-section role="alert">
-        <i-section-header>
-          <i-icon icon="fa-solid fa-user-lock" /> Unauthorized Access
-        </i-section-header>
-        <i-section-body>
-          <p class="text-subtle">
-            You do not have access to this page. Please contact your administrator.
-          </p>
-        </i-section-body>
-      </i-section>
+      <i-error-page kind="forbidden" role="alert" />
     } @else {
       <router-outlet />
     }
@@ -15268,25 +15480,19 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
             args: [{ providedIn: 'root' }]
         }] });
 
-/**
- * Library-provided session-expired overlay. Consumer apps render it once near
- * the app root (mirroring `<i-dialog-outlet />`):
- *
- * ```html
- * <i-session-expired-dialog />
- * ```
- *
- * It is self-gating (renders nothing while hidden), reads its state from the
- * shared `ISessionExpiredService` (shown by the auth interceptor when a token
- * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
- * again", performs a full-page redirect to the configured signinUrl via
- * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
- * clicking the backdrop.
- */
+/** Binds session-expiry state to a non-dismissible Insight dialog and SSO handoff. */
 class ISessionExpiredDialog {
     sessionExpired = inject(ISessionExpiredService);
     config = inject(I_AUTH_CONFIG);
     visible = this.sessionExpired.visible;
+    dialogConfig = {
+        width: '380px',
+        disableClose: true,
+        backdropClose: false,
+    };
+    actions = [
+        { type: 'custom', label: 'Log in again', className: 'w-full' },
+    ];
     iconClass() {
         return this.sessionExpired.reason() === 'SESSION_REPLACED'
             ? 'fa-solid fa-right-from-bracket'
@@ -15309,7 +15515,7 @@ class ISessionExpiredDialog {
             message: this.sessionExpired.message() ?? undefined,
             detail: this.sessionExpired.detail() ?? undefined,
         };
-        return resolveApiErrorDisplayMessage(error, localFallback, this.config.errorCatalogResolver);
+        return resolveApiErrorDisplayMessage(error, localFallback, this.config.errorCatalogResolver, this.config.errorDisplayFormatter);
     }
     localFallbackMessage() {
         switch (this.sessionExpired.reason()) {
@@ -15333,41 +15539,47 @@ class ISessionExpiredDialog {
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISessionExpiredDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
     static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: ISessionExpiredDialog, isStandalone: true, selector: "i-session-expired-dialog", ngImport: i0, template: `
     @if (visible()) {
-      <div class="session-expired-overlay flex align-center justify-center">
-        <div
-          class="session-expired-card bg-white radius-md p-3xl text-center"
-          (click)="$event.stopPropagation()"
-        >
-          <div class="text-warning mb-lg">
-            <i-icon size="4xl" [icon]="'fa-solid ' + iconClass()" />
+      <i-dialog-container
+        style="z-index: 9999"
+        [ariaLabel]="title()"
+        [config]="dialogConfig"
+        [isTopMost]="true"
+      >
+        <i-dialog [actions]="actions" [title]="title()" (onCustomAction)="onConfirm()">
+          <div class="flex flex-col align-center text-center gap-lg">
+            <i-icon class="text-warning" size="3xl" [icon]="iconClass()" />
+            <p class="m-0 text-md leading-normal text-subtle">{{ message() }}</p>
           </div>
-          <h1 class="m-0 mb-xs text-2xl font-semibold text-gray-800">{{ title() }}</h1>
-          <p class="m-0 mb-2xl text-md leading-normal text-subtle">{{ message() }}</p>
-          <i-button type="button" (onClick)="onConfirm()"> Log in again </i-button>
-        </div>
-      </div>
+        </i-dialog>
+      </i-dialog-container>
     }
-  `, isInline: true, styles: [".session-expired-overlay{position:fixed;inset:0;background-color:#00000080;z-index:9999}.session-expired-card{max-width:380px;width:calc(100% - 32px);box-shadow:0 8px 24px #0003}\n"], dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "component", type: IDialogContainer, selector: "i-dialog-container", inputs: ["instance", "config", "ariaLabel", "isTopMost"], outputs: ["onClose"] }, { kind: "component", type: IDialog, selector: "i-dialog", inputs: ["title", "actions"], outputs: ["onOk", "onConfirm", "onSave", "onCustomAction"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISessionExpiredDialog, decorators: [{
             type: Component,
-            args: [{ selector: 'i-session-expired-dialog', standalone: true, imports: [IButton, IIcon], changeDetection: ChangeDetectionStrategy.OnPush, template: `
+            args: [{
+                    selector: 'i-session-expired-dialog',
+                    standalone: true,
+                    imports: [IDialogContainer, IDialog, IIcon],
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    template: `
     @if (visible()) {
-      <div class="session-expired-overlay flex align-center justify-center">
-        <div
-          class="session-expired-card bg-white radius-md p-3xl text-center"
-          (click)="$event.stopPropagation()"
-        >
-          <div class="text-warning mb-lg">
-            <i-icon size="4xl" [icon]="'fa-solid ' + iconClass()" />
+      <i-dialog-container
+        style="z-index: 9999"
+        [ariaLabel]="title()"
+        [config]="dialogConfig"
+        [isTopMost]="true"
+      >
+        <i-dialog [actions]="actions" [title]="title()" (onCustomAction)="onConfirm()">
+          <div class="flex flex-col align-center text-center gap-lg">
+            <i-icon class="text-warning" size="3xl" [icon]="iconClass()" />
+            <p class="m-0 text-md leading-normal text-subtle">{{ message() }}</p>
           </div>
-          <h1 class="m-0 mb-xs text-2xl font-semibold text-gray-800">{{ title() }}</h1>
-          <p class="m-0 mb-2xl text-md leading-normal text-subtle">{{ message() }}</p>
-          <i-button type="button" (onClick)="onConfirm()"> Log in again </i-button>
-        </div>
-      </div>
+        </i-dialog>
+      </i-dialog-container>
     }
-  `, styles: [".session-expired-overlay{position:fixed;inset:0;background-color:#00000080;z-index:9999}.session-expired-card{max-width:380px;width:calc(100% - 32px);box-shadow:0 8px 24px #0003}\n"] }]
+  `,
+                }]
         }] });
 
 /** Renders the template when a menu shorthand or authorization predicate denies it. */
@@ -15394,5 +15606,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
+export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
 //# sourceMappingURL=insight-ui.mjs.map

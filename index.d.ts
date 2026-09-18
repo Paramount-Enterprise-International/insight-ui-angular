@@ -3,7 +3,7 @@ import { EventEmitter, OnInit, OnDestroy, ElementRef, OnChanges, SimpleChanges, 
 import { AbstractControl, NgControl, ControlValueAccessor, FormBuilder, FormControl, FormGroup, FormGroupDirective } from '@angular/forms';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { Route, CanActivateFn, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
-import { HttpParams, HttpInterceptorFn } from '@angular/common/http';
+import { HttpParams, HttpResponse, HttpInterceptorFn } from '@angular/common/http';
 import * as _insight_ui from '@insight/ui';
 
 declare const I_ICON_NAMES: {
@@ -810,7 +810,10 @@ declare class IDialogService {
  */
 declare class IDialogContainer implements OnChanges {
     instance: IDialogInstance;
+    config: IDialogConfig;
+    ariaLabel: string | undefined;
     isTopMost: boolean;
+    readonly onClose: EventEmitter<void>;
     private rootInjector;
     dialogInjector: Injector;
     ngOnChanges(changes: SimpleChanges): void;
@@ -819,8 +822,9 @@ declare class IDialogContainer implements OnChanges {
     };
     onEscKey(): void;
     onBackdropClick(): void;
+    private requestClose;
     static ɵfac: i0.ɵɵFactoryDeclaration<IDialogContainer, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IDialogContainer, "i-dialog-container", never, { "instance": { "alias": "instance"; "required": true; }; "isTopMost": { "alias": "isTopMost"; "required": false; }; }, {}, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IDialogContainer, "i-dialog-container", never, { "instance": { "alias": "instance"; "required": false; }; "config": { "alias": "config"; "required": false; }; "ariaLabel": { "alias": "ariaLabel"; "required": false; }; "isTopMost": { "alias": "isTopMost"; "required": false; }; }, { "onClose": "onClose"; }, never, ["*"], true, never>;
 }
 /**
  * OUTLET COMPONENT (ALL DIALOGS)
@@ -970,6 +974,72 @@ declare class IDialogModule {
     static ɵfac: i0.ɵɵFactoryDeclaration<IDialogModule, never>;
     static ɵmod: i0.ɵɵNgModuleDeclaration<IDialogModule, never, [typeof IDialogContainer, typeof IDialogOutlet, typeof IDialogCloseDirective, typeof IDialog, typeof IAlert, typeof IConfirm], [typeof IDialogContainer, typeof IDialogOutlet, typeof IDialogCloseDirective, typeof IDialog, typeof IAlert, typeof IConfirm]>;
     static ɵinj: i0.ɵɵInjectorDeclaration<IDialogModule>;
+}
+
+type IErrorPageKind = 'not-found' | 'unauthorized' | 'forbidden' | 'server-error' | 'service-unavailable' | 'application-access-denied' | 'custom';
+type IErrorPageMode = 'contained' | 'fullpage';
+type IErrorPageAction = 'home' | 'logout' | 'retry';
+declare const I_ERROR_PAGE_PRESETS: Record<IErrorPageKind, {
+    title: string;
+    description: string;
+    icon: string;
+    code: string;
+}>;
+declare const I_ERROR_PAGE_ACTIONS: {
+    readonly home: {
+        readonly label: "Back to Home";
+        readonly icon: "fa-solid fa-house";
+        readonly variant: "primary";
+    };
+    readonly logout: {
+        readonly label: "Logout";
+        readonly icon: "fa-solid fa-right-from-bracket";
+        readonly variant: "danger";
+    };
+    readonly retry: {
+        readonly label: "Retry";
+        readonly icon: "sync";
+        readonly variant: "primary";
+    };
+};
+declare const I_ERROR_PAGE_SUPPORT_EMAIL = "it.helpdesk@paramountenterprise.co.id";
+
+declare class IErrorPage {
+    kind: IErrorPageKind;
+    mode: IErrorPageMode;
+    title: string | undefined;
+    description: string | undefined;
+    icon: string | undefined;
+    code: string | undefined;
+    supportEmail: string;
+    actions: readonly IErrorPageAction[];
+    readonly onAction: EventEmitter<IErrorPageAction>;
+    protected readonly actionPresets: {
+        readonly home: {
+            readonly label: "Back to Home";
+            readonly icon: "fa-solid fa-house";
+            readonly variant: "primary";
+        };
+        readonly logout: {
+            readonly label: "Logout";
+            readonly icon: "fa-solid fa-right-from-bracket";
+            readonly variant: "danger";
+        };
+        readonly retry: {
+            readonly label: "Retry";
+            readonly icon: "sync";
+            readonly variant: "primary";
+        };
+    };
+    protected get supportLabel(): string;
+    protected get resolved(): {
+        title: string;
+        description: string;
+        icon: string;
+        code: string;
+    };
+    static ɵfac: i0.ɵɵFactoryDeclaration<IErrorPage, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IErrorPage, "i-error-page", never, { "kind": { "alias": "kind"; "required": false; }; "mode": { "alias": "mode"; "required": false; }; "title": { "alias": "title"; "required": false; }; "description": { "alias": "description"; "required": false; }; "icon": { "alias": "icon"; "required": false; }; "code": { "alias": "code"; "required": false; }; "supportEmail": { "alias": "supportEmail"; "required": false; }; "actions": { "alias": "actions"; "required": false; }; }, { "onAction": "onAction"; }, never, ["*", "[iErrorPageActions]"], true, never>;
 }
 
 /**
@@ -2248,7 +2318,7 @@ declare class IAvatar {
 
 declare class IUI {
     static ɵfac: i0.ɵɵFactoryDeclaration<IUI, never>;
-    static ɵmod: i0.ɵɵNgModuleDeclaration<IUI, never, [typeof IAvatar, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IFCDatepicker, typeof IDialogModule, typeof IGridModule, typeof IHContent, typeof IHSidebar, typeof IIcon, typeof IInputModule, typeof ILoading, typeof ISectionModule, typeof ISelect, typeof IFCSelect, typeof ITextArea, typeof IFCTextArea, typeof IToggle, typeof IPill], [typeof IAvatar, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IFCDatepicker, typeof IDialogModule, typeof IGridModule, typeof IHContent, typeof IHSidebar, typeof IIcon, typeof IInputModule, typeof ILoading, typeof ISectionModule, typeof ISelect, typeof IFCSelect, typeof ITextArea, typeof IFCTextArea, typeof IToggle, typeof IPill]>;
+    static ɵmod: i0.ɵɵNgModuleDeclaration<IUI, never, [typeof IAvatar, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IFCDatepicker, typeof IDialogModule, typeof IErrorPage, typeof IGridModule, typeof IHContent, typeof IHSidebar, typeof IIcon, typeof IInputModule, typeof ILoading, typeof ISectionModule, typeof ISelect, typeof IFCSelect, typeof ITextArea, typeof IFCTextArea, typeof IToggle, typeof IPill], [typeof IAvatar, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IFCDatepicker, typeof IDialogModule, typeof IErrorPage, typeof IGridModule, typeof IHContent, typeof IHSidebar, typeof IIcon, typeof IInputModule, typeof ILoading, typeof ISectionModule, typeof ISelect, typeof IFCSelect, typeof ITextArea, typeof IFCTextArea, typeof IToggle, typeof IPill]>;
     static ɵinj: i0.ɵɵInjectorDeclaration<IUI>;
 }
 
@@ -2282,11 +2352,12 @@ type IApiErrorCatalogResolver = (errorCode: string, revision: number | undefined
  * raw Angular `HttpErrorResponse`-like values into one strict shape.
  */
 declare const normalizeApiError: (error: unknown) => INormalizedApiError;
-/**
- * Resolves display text in the approved order: backend `message`, optional
- * catalog lookup, legacy `detail`/`title`, then the caller's local fallback.
- */
-declare const resolveApiErrorDisplayMessage: (error: unknown, localFallback: string, catalogResolver?: IApiErrorCatalogResolver) => string;
+/** Optional application-owned formatting of a normalized backend error. */
+type IApiErrorDisplayFormatter = (error: INormalizedApiError) => string | null | undefined;
+/** Format common field-validation dictionaries without changing the error payload. */
+declare function formatApiFieldErrors(error: INormalizedApiError): string | undefined;
+/** Resolve display text without changing the canonical backend error fields. */
+declare const resolveApiErrorDisplayMessage: (error: unknown, localFallback: string, catalogResolver?: IApiErrorCatalogResolver, formatter?: IApiErrorDisplayFormatter) => string;
 
 /**
  * Token lifespan configuration (seconds). Mirrors the platform-wide AC used by
@@ -2407,6 +2478,8 @@ type IAuthConfig = {
      * when the backend did not provide `message`, before legacy/local fallbacks.
      */
     errorCatalogResolver?: IApiErrorCatalogResolver;
+    /** Optional application-owned backend error display formatter. */
+    errorDisplayFormatter?: IApiErrorDisplayFormatter;
 };
 /**
  * Overrides accepted by `provideIAuth()`. Every field is optional and
@@ -2726,54 +2799,230 @@ declare class ICsrfService {
     static ɵprov: i0.ɵɵInjectableDeclaration<ICsrfService>;
 }
 
-/** Response type is transparent — no `{ meta, data }` wrapper. */
 type IApiResponse<T = any> = T;
-/** Options for individual HTTP calls. */
 type IApiOptions = {
-    /** Override the default API base URL (e.g. to call a different backend service). */
     apiUrl?: string;
-    /** Additional headers to merge with the defaults. */
     headers?: Record<string, string>;
-    /** Request body (only used by DELETE requests that send a payload). */
     body?: any;
-    /**
-     * Skip attaching the `Authorization: Bearer` header for this call. The flag
-     * is conveyed to the auth interceptor via a sentinel header that is stripped
-     * before the request leaves the browser.
-     */
+    params?: HttpParams | Record<string, string | number | boolean | readonly (string | number | boolean)[]>;
     skipBearer?: boolean;
+    observe?: 'body' | 'response';
+    responseType?: 'json' | 'blob' | 'arraybuffer' | 'text';
+    signal?: AbortSignal;
+    /** Total subscription deadline, including refresh and retry. Defaults to 60000 ms. */
+    timeoutMs?: number;
 };
-/**
- * Standardized HTTP client for @insight/ui consumer apps.
- * Mirrors iam-web's `IApiService`: `withCredentials: true` on every request
- * (required for the CSRF cookie and the HttpOnly refresh cookie to flow),
- * automatic `X-CSRF-Token` header injection, transparent response typing
- * (`T`, no wrapper), and normalized current/legacy backend errors. New
- * `errorCode`/`message`/`revision` responses and safe extensions are retained,
- * while legacy Problem Details `detail`/`title`/`code` remains compatible.
- */
 declare class IApiService {
     private readonly http;
     private readonly csrf;
     private readonly config;
-    private get headers();
-    /** Merge default headers with per-call overrides, adding the skip-bearer sentinel when requested. */
     private mergeHeaders;
-    /**
-     * Base URL for a call: an explicit `apiUrl` override wins, otherwise the
-     * configured identity host. Throws a descriptive error when neither exists so
-     * a consumer that never provided `api.identity` fails fast instead of issuing
-     * a relative request against the app origin.
-     */
-    private resolveBaseUrl;
-    /** Normalize current, legacy, and raw transport errors without losing safe extensions. */
     private enrichError;
+    /** Cancel the transport subscription, including its refresh waiter, on deadline or signal. */
+    private request;
+    get<T = any>(path: string, params: HttpParams | undefined, options?: IApiOptions & {
+        responseType?: 'json';
+        observe?: 'body';
+    }): Observable<T>;
+    get<T = any>(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType?: 'json';
+        observe: 'response';
+    }): Observable<HttpResponse<T>>;
+    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType: 'blob';
+        observe?: 'body';
+    }): Observable<Blob>;
+    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType: 'blob';
+        observe: 'response';
+    }): Observable<HttpResponse<Blob>>;
+    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe?: 'body';
+    }): Observable<ArrayBuffer>;
+    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe: 'response';
+    }): Observable<HttpResponse<ArrayBuffer>>;
+    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType: 'text';
+        observe?: 'body';
+    }): Observable<string>;
+    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType: 'text';
+        observe: 'response';
+    }): Observable<HttpResponse<string>>;
+    get<T = any>(path: string, params: HttpParams | undefined, options?: IApiOptions): Observable<T>;
     get<T = any>(path: string, params?: HttpParams, options?: IApiOptions): Observable<T>;
+    post<T = any>(path: string, body: any, options?: IApiOptions & {
+        responseType?: 'json';
+        observe?: 'body';
+    }): Observable<T>;
+    post<T = any>(path: string, body: any, options: IApiOptions & {
+        responseType?: 'json';
+        observe: 'response';
+    }): Observable<HttpResponse<T>>;
+    post(path: string, body: any, options: IApiOptions & {
+        responseType: 'blob';
+        observe?: 'body';
+    }): Observable<Blob>;
+    post(path: string, body: any, options: IApiOptions & {
+        responseType: 'blob';
+        observe: 'response';
+    }): Observable<HttpResponse<Blob>>;
+    post(path: string, body: any, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe?: 'body';
+    }): Observable<ArrayBuffer>;
+    post(path: string, body: any, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe: 'response';
+    }): Observable<HttpResponse<ArrayBuffer>>;
+    post(path: string, body: any, options: IApiOptions & {
+        responseType: 'text';
+        observe?: 'body';
+    }): Observable<string>;
+    post(path: string, body: any, options: IApiOptions & {
+        responseType: 'text';
+        observe: 'response';
+    }): Observable<HttpResponse<string>>;
+    post<T = any>(path: string, body: any, options?: IApiOptions): Observable<T>;
     post<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
+    put<T = any>(path: string, body: any, options?: IApiOptions & {
+        responseType?: 'json';
+        observe?: 'body';
+    }): Observable<T>;
+    put<T = any>(path: string, body: any, options: IApiOptions & {
+        responseType?: 'json';
+        observe: 'response';
+    }): Observable<HttpResponse<T>>;
+    put(path: string, body: any, options: IApiOptions & {
+        responseType: 'blob';
+        observe?: 'body';
+    }): Observable<Blob>;
+    put(path: string, body: any, options: IApiOptions & {
+        responseType: 'blob';
+        observe: 'response';
+    }): Observable<HttpResponse<Blob>>;
+    put(path: string, body: any, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe?: 'body';
+    }): Observable<ArrayBuffer>;
+    put(path: string, body: any, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe: 'response';
+    }): Observable<HttpResponse<ArrayBuffer>>;
+    put(path: string, body: any, options: IApiOptions & {
+        responseType: 'text';
+        observe?: 'body';
+    }): Observable<string>;
+    put(path: string, body: any, options: IApiOptions & {
+        responseType: 'text';
+        observe: 'response';
+    }): Observable<HttpResponse<string>>;
+    put<T = any>(path: string, body: any, options?: IApiOptions): Observable<T>;
     put<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
+    patch<T = any>(path: string, body: any, options?: IApiOptions & {
+        responseType?: 'json';
+        observe?: 'body';
+    }): Observable<T>;
+    patch<T = any>(path: string, body: any, options: IApiOptions & {
+        responseType?: 'json';
+        observe: 'response';
+    }): Observable<HttpResponse<T>>;
+    patch(path: string, body: any, options: IApiOptions & {
+        responseType: 'blob';
+        observe?: 'body';
+    }): Observable<Blob>;
+    patch(path: string, body: any, options: IApiOptions & {
+        responseType: 'blob';
+        observe: 'response';
+    }): Observable<HttpResponse<Blob>>;
+    patch(path: string, body: any, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe?: 'body';
+    }): Observable<ArrayBuffer>;
+    patch(path: string, body: any, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe: 'response';
+    }): Observable<HttpResponse<ArrayBuffer>>;
+    patch(path: string, body: any, options: IApiOptions & {
+        responseType: 'text';
+        observe?: 'body';
+    }): Observable<string>;
+    patch(path: string, body: any, options: IApiOptions & {
+        responseType: 'text';
+        observe: 'response';
+    }): Observable<HttpResponse<string>>;
+    patch<T = any>(path: string, body: any, options?: IApiOptions): Observable<T>;
+    patch<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
+    delete<T = any>(path: string, options?: IApiOptions & {
+        responseType?: 'json';
+        observe?: 'body';
+    }): Observable<T>;
+    delete<T = any>(path: string, options: IApiOptions & {
+        responseType?: 'json';
+        observe: 'response';
+    }): Observable<HttpResponse<T>>;
+    delete(path: string, options: IApiOptions & {
+        responseType: 'blob';
+        observe?: 'body';
+    }): Observable<Blob>;
+    delete(path: string, options: IApiOptions & {
+        responseType: 'blob';
+        observe: 'response';
+    }): Observable<HttpResponse<Blob>>;
+    delete(path: string, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe?: 'body';
+    }): Observable<ArrayBuffer>;
+    delete(path: string, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe: 'response';
+    }): Observable<HttpResponse<ArrayBuffer>>;
+    delete(path: string, options: IApiOptions & {
+        responseType: 'text';
+        observe?: 'body';
+    }): Observable<string>;
+    delete(path: string, options: IApiOptions & {
+        responseType: 'text';
+        observe: 'response';
+    }): Observable<HttpResponse<string>>;
     delete<T = any>(path: string, options?: IApiOptions): Observable<T>;
-    getBlob(path: string, params?: HttpParams, options?: IApiOptions): Observable<Blob>;
+    upload<T = any>(path: string, file: File | FormData, options?: IApiOptions & {
+        responseType?: 'json';
+        observe?: 'body';
+    }): Observable<T>;
+    upload<T = any>(path: string, file: File | FormData, options: IApiOptions & {
+        responseType?: 'json';
+        observe: 'response';
+    }): Observable<HttpResponse<T>>;
+    upload(path: string, file: File | FormData, options: IApiOptions & {
+        responseType: 'blob';
+        observe?: 'body';
+    }): Observable<Blob>;
+    upload(path: string, file: File | FormData, options: IApiOptions & {
+        responseType: 'blob';
+        observe: 'response';
+    }): Observable<HttpResponse<Blob>>;
+    upload(path: string, file: File | FormData, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe?: 'body';
+    }): Observable<ArrayBuffer>;
+    upload(path: string, file: File | FormData, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe: 'response';
+    }): Observable<HttpResponse<ArrayBuffer>>;
+    upload(path: string, file: File | FormData, options: IApiOptions & {
+        responseType: 'text';
+        observe?: 'body';
+    }): Observable<string>;
+    upload(path: string, file: File | FormData, options: IApiOptions & {
+        responseType: 'text';
+        observe: 'response';
+    }): Observable<HttpResponse<string>>;
     upload<T = any>(path: string, file: File | FormData, options?: IApiOptions): Observable<T>;
+    getBlob(path: string, params?: HttpParams, options?: IApiOptions): Observable<Blob>;
     static ɵfac: i0.ɵɵFactoryDeclaration<IApiService, never>;
     static ɵprov: i0.ɵɵInjectableDeclaration<IApiService>;
 }
@@ -2974,15 +3223,12 @@ declare const authGuard: CanActivateFn;
 /** Route that renders the "account lacks the required access/role" (403) page. */
 declare const UNAUTHORIZED_ACCESS_PATH = "/unauthorized-access";
 /** Sources a route access requirement can be checked against. */
-type IAccessCheckSource = 'menu' | 'role' | 'permission';
+type IAccessCheckSource = 'menuCode' | 'role';
 /**
  * Route access requirement — deny navigation unless the current user holds it.
  * `value` is a single code or a list of codes (ANY match).
- * - `menu` → the user's effective menu tree contains a matching leaf menu code
- *   (`IUserMenuStore.hasMenu`).
- * - `role` → the access token claims a matching role (`ISessionService.hasRole`).
- * - `permission` → the store has been granted a matching feature permission
- *   (`IUserMenuStore.hasPermission`; granted out-of-band via `setPermissions`).
+ * - `menuCode` checks effective item/function authorizations.
+ * - `role` checks access-token roles.
  */
 type IAccessCheck = {
     source: IAccessCheckSource;
@@ -2990,7 +3236,7 @@ type IAccessCheck = {
 };
 /**
  * Route guard factory that denies navigation to users who lack a required
- * menu/role/permission, redirecting them to {@link UNAUTHORIZED_ACCESS_PATH}.
+ * menu code/role, redirecting them to {@link UNAUTHORIZED_ACCESS_PATH}.
  *
  * Compose AFTER `authGuard` in the `canActivate` array — this guard only
  * handles the authenticated-but-not-allowed branch and returns `true` while the
@@ -3000,7 +3246,7 @@ type IAccessCheck = {
  * ```ts
  * const routes = [{
  *   path: 'admin',
- *   canActivate: [authGuard, requireAccess({ source: 'menu', value: 'admin-iam' })],
+ *   canActivate: [authGuard, requireAccess({ source: 'menuCode', value: 'admin-iam' })],
  *   ...
  * }];
  * ```
@@ -3123,8 +3369,7 @@ type IEffectiveAuthorizationDto = {
 };
 /** Authorization data exposed to permission predicates. */
 type IAuthorizationSource = {
-    readonly menu: readonly string[];
-    readonly permission: readonly string[];
+    readonly menuCodes: readonly string[];
     readonly roles: readonly string[];
     readonly companyCodes: readonly string[];
     readonly companies: readonly IMenuCompanyDto[];
@@ -3171,6 +3416,12 @@ declare function hasAnyMenuCode(menus: IMenu[], code: string | string[]): boolea
 declare function findFirstLeafRoute(menus: IMenu[]): string | null;
 /** Finds a menu node's display name by id (recursive), or null. */
 declare function findMenuNameById(menus: IMenu[], menuId: string | number): string | null;
+/** Derives company access from the effective authorization entries. */
+declare function collectAuthorizationScope(items: readonly IEffectiveAuthorizationDto[]): {
+    companies: IEffectiveAuthorizationDto['companies'];
+    companyCodes: string[];
+    menuCompanies: Record<string, string[]>;
+};
 
 /**
  * Current-user navigation & favorites service — calls iam-user-api's
@@ -3248,13 +3499,14 @@ declare class ICurrentUserService {
  * (async-aware).
  */
 /** Load branch keys for the cold-start sidebar data load. */
-type IUserMenuLoadSource = 'user' | 'menus' | 'favorites' | 'permissions';
+type IUserMenuLoadSource = 'user' | 'menus' | 'favorites' | 'authorizations';
 /** Per-branch normalized errors from the last `load()` — mirrors the service API error contract. */
 type IUserMenuLoadErrors = Record<IUserMenuLoadSource, INormalizedApiError | null>;
 declare class IUserMenuStore {
     private readonly currentUserService;
     private readonly menuService;
     private readonly session;
+    private readonly config;
     /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
     private loadedUserSub;
     private loadedApplicationId;
@@ -3268,23 +3520,13 @@ declare class IUserMenuStore {
     readonly favorites: i0.WritableSignal<IMenu[]>;
     /** Roles decoded from the access token (for `source: 'role'` permission checks). */
     readonly roles: i0.WritableSignal<string[]>;
-    /**
-     * Feature permissions granted by the backend (for `source: 'permission'`
-     * checks). Hydrated by `load()` from the effective authorizations endpoint
-     * (application-scoped authorizations endpoint) as the deduplicated set of
-     * `data[].menuCode`; `setPermissions()` remains available for a caller that
-     * wants to supply the list itself.
-     */
-    readonly permissions: i0.WritableSignal<string[]>;
     /** Raw effective authorization entries returned by iam-user-api. */
     readonly authorizations: i0.WritableSignal<IEffectiveAuthorizationDto[]>;
-    /** Deduplicated companies from the effective authorization entries. */
-    readonly companies: i0.WritableSignal<_insight_ui.IMenuCompanyDto[]>;
-    /** Deduplicated company codes from the effective authorization entries. */
-    readonly companyCodes: i0.WritableSignal<string[]>;
-    /** Company codes grouped by menu code. */
-    readonly menuCompanies: i0.WritableSignal<Record<string, string[]>>;
-    /** Deduplicated navigable menu codes from the effective menu tree. */
+    private readonly authorizationScope;
+    readonly companies: i0.Signal<_insight_ui.IMenuCompanyDto[]>;
+    readonly companyCodes: i0.Signal<string[]>;
+    readonly menuCompanies: i0.Signal<Record<string, string[]>>;
+    /** Deduplicated item/function codes from effective authorizations. */
     readonly menuCodes: i0.Signal<string[]>;
     /** Immutable authorization snapshot used by permission predicates. */
     readonly authorizationSource: i0.Signal<IAuthorizationSource>;
@@ -3300,7 +3542,6 @@ declare class IUserMenuStore {
     readonly menus$: Observable<IMenu[]>;
     readonly favorites$: Observable<IMenu[]>;
     readonly roles$: Observable<string[]>;
-    readonly permissions$: Observable<string[]>;
     readonly authorizations$: Observable<IEffectiveAuthorizationDto[]>;
     readonly companies$: Observable<_insight_ui.IMenuCompanyDto[]>;
     readonly companyCodes$: Observable<string[]>;
@@ -3317,7 +3558,7 @@ declare class IUserMenuStore {
     /** Finds a menu node's display name by id (recursive), or null. */
     findMenuName(menuId: string | number): string | null;
     /**
-     * Cold-start: fetch user + menus + favorites + permissions concurrently. A
+     * Cold-start: fetch user + menus + favorites + authorizations concurrently. A
      * failure in one branch does not block the others; `initializing` clears once
      * all settle.
      *
@@ -3335,33 +3576,17 @@ declare class IUserMenuStore {
     reset(): void;
     /** Refresh roles from the current access token (call after login / token change). */
     syncRoles(): void;
-    /**
-     * Menu-mode permission check against the in-memory menu codes (ANY match).
-     * Returns `false` while menus are not yet loaded — gated UI renders only
-     * after the store has data (async-aware via the reactive directives).
-     */
-    hasMenu(code: string | string[]): boolean;
+    /** Checks whether the navigation tree contains any matching leaf menu. */
+    hasNavigableMenu(code: string | string[]): boolean;
+    /** Checks effective item/function authorization codes (ANY match). */
+    hasMenuCode(code: string | string[]): boolean;
     /**
      * Route-membership check: can the user open `path`? True when any granted
-     * leaf menu route equals it (slash-normalized). Used by route-level access
-     * guards (e.g. `requireRouteAccess`).
+     * leaf menu route equals it (slash-normalized).
      */
     hasRoute(path: string): boolean;
     /** Role-mode permission check against the in-memory roles (from the access token's `realm_access.roles`). ANY match. */
     hasRole(code: string | string[]): boolean;
-    /**
-     * Replaces the granted permission list (feature/action codes). `load()`
-     * hydrates this automatically — call this only to override it explicitly.
-     * Codes are deduplicated so an accidental duplicate in the source list can
-     * never make `hasPermission()` behave differently.
-     */
-    setPermissions(permissions: string[]): void;
-    /**
-     * Permission-mode check against the granted permissions (ANY match). Returns
-     * `false` while the list is empty/not loaded - gated UI renders only after
-     * the store has data (async-aware via the reactive directives).
-     */
-    hasPermission(code: string | string[]): boolean;
     /**
      * Pin (`isFavorite: true`) or unpin a menu item. Flips the star icon in the
      * `menus` tree immediately (optimistic), calls the backend, then re-fetches
@@ -3379,18 +3604,14 @@ declare class IUserMenuStore {
     reloadFavorites(): Observable<void>;
     /**
      * Loads the effective navigation tree into `menus` — for one application
-     * (`applicationId`) or all active applications when omitted. Returns the
+     * (`applicationId`) or the configured application when omitted. Returns the
      * mapped `IMenu[]`.
      */
     loadMenus(applicationId?: string): Observable<IMenu[]>;
     /** Loads favorites into `favorites` — optionally for a single application. Returns the mapped `IMenu[]`. */
     loadFavorites(applicationId?: string): Observable<IMenu[]>;
-    /**
-     * Loads the granted feature permissions into `permissions` — the deduplicated
-     * set of `data[].menuCode` from the effective authorizations endpoint.
-     * Returns the resulting permission list.
-     */
-    loadPermissions(applicationId?: string): Observable<string[]>;
+    /** Loads effective item/function authorizations and their company scope. */
+    loadAuthorizations(applicationId?: string): Observable<IEffectiveAuthorizationDto[]>;
     private applyAuthorizations;
     /** Returns a new menu tree with the matching node's `isFavorite` flipped (star icon). */
     private applyMenuFavorite;
@@ -3398,7 +3619,7 @@ declare class IUserMenuStore {
     private loadUserInternal;
     private loadMenusInternal;
     private loadFavoritesInternal;
-    private loadPermissionsInternal;
+    private loadAuthorizationsInternal;
     private clearData;
     private clearAuthorizationData;
     private recordError;
@@ -3454,16 +3675,7 @@ declare function hasMn(value: IPermissionInput, route: IRoute): IRoute;
 declare function hasMn(value: IPermissionInput, route: Route): Route;
 
 declare const IH_SKIP_BEARER_HEADER = "X-IH-Skip-Bearer";
-/**
- * Auth HTTP interceptor for @insight/ui consumer apps.
- *
- * Attaches the in-memory access token as a Bearer header. On 401, attempts a
- * single silent refresh (via the HttpOnly session cookie) and retries once;
- * on refresh failure, clears the session and redirects to the configured
- * signinUrl (the app's own login). 429 (rate-limit) and 423 (lockout)
- * responses are passed through; `IApiService` normalizes their current or
- * legacy backend error fields.
- */
+/** Attach the application token and retry unauthorized requests once after shared refresh. */
 declare const authInterceptor: HttpInterceptorFn;
 
 /**
@@ -3488,25 +3700,13 @@ declare class IStorageService {
     static ɵprov: i0.ɵɵInjectableDeclaration<IStorageService>;
 }
 
-/**
- * Library-provided session-expired overlay. Consumer apps render it once near
- * the app root (mirroring `<i-dialog-outlet />`):
- *
- * ```html
- * <i-session-expired-dialog />
- * ```
- *
- * It is self-gating (renders nothing while hidden), reads its state from the
- * shared `ISessionExpiredService` (shown by the auth interceptor when a token
- * refresh fails and `unauthorizedHandling` is `'dialog'`) and, on "Log in
- * again", performs a full-page redirect to the configured signinUrl via
- * `buildExternalSigninUrl`, then hides itself. It cannot be dismissed by
- * clicking the backdrop.
- */
+/** Binds session-expiry state to a non-dismissible Insight dialog and SSO handoff. */
 declare class ISessionExpiredDialog {
     private readonly sessionExpired;
     private readonly config;
     protected readonly visible: i0.WritableSignal<boolean>;
+    protected readonly dialogConfig: IDialogConfig;
+    protected readonly actions: IDialogAction[];
     protected iconClass(): string;
     protected title(): string;
     protected message(): string;
@@ -3581,5 +3781,5 @@ type IEnvironment = {
  */
 declare const environment: IEnvironment;
 
-export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
-export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEnvironment, IErrorContext, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
+export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
+export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
