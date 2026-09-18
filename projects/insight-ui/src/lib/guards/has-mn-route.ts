@@ -11,33 +11,23 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, type Route, RouterOutlet } from '@angular/router';
 
 import { evaluatePermission, type IPermissionInput } from '../directives/has-mn';
+import { IErrorPage } from '../error-page/error-page';
 import { type IBreadcrumbItem, IHTitleBreadcrumbService, type IRoute } from '../host/host';
-import { IIcon } from '../icon/icon';
 import { ILoading } from '../loading/loading';
-import { ISection, ISectionBody, ISectionHeader } from '../section/section';
-import { ISessionService } from '../session/session.service';
-import { IUserMenuStore } from '../store/user-menu.store';
+import { ISessionService } from '../session/session';
+import { IUserMenuStore } from '../store/user-menu';
 
 /** Library-owned outlet boundary for declarative route permission checks. */
 @Component({
   selector: 'i-has-mn-route',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, IIcon, ILoading, ISection, ISectionBody, ISectionHeader],
+  imports: [RouterOutlet, IErrorPage, ILoading],
   template: `
     @if (!ready()) {
       <i-loading aria-live="polite" label="Loading access..." />
     } @else if (!allowed()) {
-      <i-section role="alert">
-        <i-section-header>
-          <i-icon icon="fa-solid fa-user-lock" /> Unauthorized Access
-        </i-section-header>
-        <i-section-body>
-          <p class="text-subtle">
-            You do not have access to this page. Please contact your administrator.
-          </p>
-        </i-section-body>
-      </i-section>
+      <i-error-page kind="forbidden" role="alert" />
     } @else {
       <router-outlet />
     }

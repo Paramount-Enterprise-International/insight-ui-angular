@@ -7,7 +7,7 @@ import {
   IAuthConfigOverrides,
   validateIAuthConfig,
 } from './auth-config';
-import { ISessionService } from '../session/session.service';
+import { ISessionService } from '../session/session';
 
 /**
  * Registers the @insight/ui shared auth package (`IApiService`,

@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
-import { IApiService } from '../api/api.service';
+import { IApiService } from '../api/api';
 import { getAuthEndpointPath, I_AUTH_CONFIG, requireIdentityHost } from './auth-config';
 
 /**

@@ -3,7 +3,7 @@ import { map, Observable, throwError } from 'rxjs';
 
 import { environment as defaultEnvironment } from '../../environments/environment';
 import { I_AUTH_CONFIG } from '../auth/auth-config';
-import { IApiService } from '../api/api.service';
+import { IApiService } from '../api/api';
 
 import type {
   IEffectiveAuthorizationDto,

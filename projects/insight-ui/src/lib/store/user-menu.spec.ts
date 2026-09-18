@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 
-import { ISessionService, type ISessionUser } from '../session/session.service';
+import { ISessionService, type ISessionUser } from '../session/session';
 import {
   ICurrentUserDto,
   ICurrentUserService,
@@ -10,7 +10,7 @@ import {
   IMenuNodeDto,
   IUserMenuService,
 } from '../user';
-import { IUserMenuStore } from './user-menu.store';
+import { IUserMenuStore } from './user-menu';
 
 const rawUser: ICurrentUserDto = {
   userId: 'u1',
@@ -129,7 +129,7 @@ describe('IUserMenuStore', () => {
     expect(store.favorites().length).toBe(1);
     expect(store.favorites()[0].isFavorite).toBeTrue();
     expect(store.roles()).toEqual(['iam-admin']);
-    expect(store.permissions()).toEqual(['dashboard', 'report.export']);
+    expect(store.menuCodes()).toEqual(['dashboard', 'report.export']);
     expect(store.initializing()).toBeFalse();
     expect(store.initialized()).toBeTrue();
     expect(store.loadError()).toBeNull();
@@ -162,16 +162,16 @@ describe('IUserMenuStore', () => {
     expect(store.defaultRoute).toBe('/dashboard');
   });
 
-  it('hasMenu checks menu codes (string and array, ANY match) and is async-aware', () => {
+  it('hasNavigableMenu checks menu codes (string and array, ANY match) and is async-aware', () => {
     // empty before load → false (gated UI stays hidden while loading)
-    expect(store.hasMenu('dashboard')).toBeFalse();
+    expect(store.hasNavigableMenu('dashboard')).toBeFalse();
 
     store.load();
-    expect(store.hasMenu('dashboard')).toBeTrue();
+    expect(store.hasNavigableMenu('dashboard')).toBeTrue();
     // structural group/container codes are never granted (leaf-only, blueprint-aligned)
-    expect(store.hasMenu('group')).toBeFalse();
-    expect(store.hasMenu('nope')).toBeFalse();
-    expect(store.hasMenu(['nope', 'dashboard'])).toBeTrue();
+    expect(store.hasNavigableMenu('group')).toBeFalse();
+    expect(store.hasNavigableMenu('nope')).toBeFalse();
+    expect(store.hasNavigableMenu(['nope', 'dashboard'])).toBeTrue();
   });
 
   it('hasRole checks the in-memory roles (ANY match)', () => {
@@ -352,7 +352,7 @@ describe('IUserMenuStore', () => {
 
   it('drops cached authorization data when load() switches application', () => {
     store.load('app-a');
-    expect(store.permissions()).toEqual(['dashboard', 'report.export']);
+    expect(store.menuCodes()).toEqual(['dashboard', 'report.export']);
 
     menuSpy.getEffectiveMenus.and.returnValue(
       throwError(() => ({ status: 404, message: 'application unavailable' })),
@@ -364,7 +364,7 @@ describe('IUserMenuStore', () => {
     expect(menuSpy.getFavorites).toHaveBeenCalledWith('app-b');
     expect(menuSpy.getAuthorizations).toHaveBeenCalledWith('app-b');
     expect(store.menus()).toEqual([]);
-    expect(store.permissions()).toEqual([]);
+    expect(store.menuCodes()).toEqual([]);
   });
 
   it('keeps cached menus across a same-user reload', () => {
@@ -380,10 +380,10 @@ describe('IUserMenuStore', () => {
     store.load();
 
     expect(menuSpy.getAuthorizations).toHaveBeenCalled();
-    expect(store.permissions()).toEqual(['dashboard', 'report.export']);
-    expect(store.hasPermission('report.export')).toBeTrue();
-    expect(store.hasPermission(['nope', 'dashboard'])).toBeTrue();
-    expect(store.hasPermission('nope')).toBeFalse();
+    expect(store.menuCodes()).toEqual(['dashboard', 'report.export']);
+    expect(store.hasMenuCode('report.export')).toBeTrue();
+    expect(store.hasMenuCode(['nope', 'dashboard'])).toBeTrue();
+    expect(store.hasMenuCode('nope')).toBeFalse();
   });
 
   it('load() deduplicates repeated menu codes', () => {
@@ -396,7 +396,34 @@ describe('IUserMenuStore', () => {
 
     store.load();
 
-    expect(store.permissions()).toEqual(['report.export']);
+    expect(store.menuCodes()).toEqual(['report.export']);
+  });
+
+  it('clears codes and company scope before a refetch and keeps them empty on failure', () => {
+    menuSpy.getAuthorizations.and.returnValue(of([{ menuCode: 'report.export', menuId: 'export', type: 'function', companies: [{ id: 'c1', code: 'JKT', name: 'Jakarta' }] }]));
+    store.load();
+    expect(store.hasMenuCode('report.export')).toBeTrue();
+    expect(store.companyCodes()).toEqual(['JKT']);
+    const pending = new Subject<IEffectiveAuthorizationDto[]>();
+    menuSpy.getAuthorizations.and.returnValue(pending);
+    store.load();
+    expect(store.menuCodes()).toEqual([]);
+    expect(store.companies()).toEqual([]);
+    expect(store.menuCompanies()).toEqual({});
+    expect(store.initializing()).toBeTrue();
+    pending.error({ status: 500, message: 'refetch failed' });
+    expect(store.hasMenuCode('dashboard')).toBeFalse();
+    expect(store.hasNavigableMenu('dashboard')).toBeTrue();
+    expect(store.loadErrors().authorizations?.status).toBe(500);
+  });
+
+  it('loadAuthorizations returns DTOs and never grants navigation-only codes', () => {
+    menuSpy.getAuthorizations.and.returnValue(of([{ menuCode: 'example', menuId: 'example', type: 'function', companies: [] }]));
+    store.load();
+    expect(store.hasNavigableMenu('dashboard')).toBeTrue();
+    expect(store.hasMenuCode('dashboard')).toBeFalse();
+    expect(store.hasMenuCode('example')).toBeTrue();
+    store.loadAuthorizations().subscribe((items) => expect(items[0].type).toBe('function'));
   });
 
   it('exposes deduplicated companies and menu-company mappings', () => {
@@ -432,8 +459,7 @@ describe('IUserMenuStore', () => {
       'report.export': ['ecomindo'],
       'report.read': [],
     });
-    expect(store.authorizationSource().menu).toEqual(['dashboard']);
-    expect(store.authorizationSource().permission).toEqual(['report.export', 'report.read']);
+    expect(store.authorizationSource().menuCodes).toEqual(['report.export', 'report.read']);
   });
 
   it('load() yields an empty permission list for an empty response (fail-closed)', () => {
@@ -441,13 +467,13 @@ describe('IUserMenuStore', () => {
 
     store.load();
 
-    expect(store.permissions()).toEqual([]);
+    expect(store.menuCodes()).toEqual([]);
     expect(store.authorizations()).toEqual([]);
     expect(store.companies()).toEqual([]);
     expect(store.companyCodes()).toEqual([]);
     expect(store.menuCompanies()).toEqual({});
-    expect(store.hasPermission('report.export')).toBeFalse();
-    expect(store.loadErrors().permissions).toBeNull();
+    expect(store.hasMenuCode('report.export')).toBeFalse();
+    expect(store.loadErrors().authorizations).toBeNull();
   });
 
   it('records an authorizations error without losing the other branches', () => {
@@ -457,45 +483,46 @@ describe('IUserMenuStore', () => {
 
     store.load();
 
-    expect(store.loadErrors().permissions?.status).toBe(500);
-    expect(store.loadErrors().permissions?.message).toBe('authorizations exploded');
+    expect(store.loadErrors().authorizations?.status).toBe(500);
+    expect(store.loadErrors().authorizations?.message).toBe('authorizations exploded');
     // The other branches still succeed.
     expect(store.menus().length).toBe(1);
     expect(store.favorites().length).toBe(1);
     expect(store.currentUser()).not.toBeNull();
     expect(store.loadErrors().menus).toBeNull();
     // Fail-closed: nothing is granted.
-    expect(store.permissions()).toEqual([]);
-    expect(store.hasPermission('report.export')).toBeFalse();
+    expect(store.menuCodes()).toEqual([]);
+    expect(store.hasMenuCode('report.export')).toBeFalse();
   });
 
   it('drops the previous user\'s permissions when load() runs for a different user', () => {
     store.load();
-    expect(store.permissions()).toEqual(['dashboard', 'report.export']);
+    expect(store.menuCodes()).toEqual(['dashboard', 'report.export']);
 
     sessionSpy.getUser.and.returnValue({ sub: 'sub-b' } as ISessionUser);
     menuSpy.getAuthorizations.and.returnValue(of([]));
 
     store.load();
 
-    expect(store.permissions()).toEqual([]);
-    expect(store.hasPermission('report.export')).toBeFalse();
+    expect(store.menuCodes()).toEqual([]);
+    expect(store.hasMenuCode('report.export')).toBeFalse();
   });
 
-  it('setPermissions deduplicates the supplied codes', () => {
-    store.setPermissions(['a', 'b', 'a']);
+  it('authorizations deduplicate the granted codes', () => {
+    menuSpy.getAuthorizations.and.returnValue(of(['a', 'b', 'a'].map((menuCode) => ({ menuCode, menuId: menuCode, type: 'function' as const, companies: [] }))));
+    store.load();
 
-    expect(store.permissions()).toEqual(['a', 'b']);
-    expect(store.hasPermission('a')).toBeTrue();
-    expect(store.hasPermission(['nope', 'b'])).toBeTrue();
-    expect(store.hasPermission(['nope', 'other'])).toBeFalse();
+    expect(store.menuCodes()).toEqual(['a', 'b']);
+    expect(store.hasMenuCode('a')).toBeTrue();
+    expect(store.hasMenuCode(['nope', 'b'])).toBeTrue();
+    expect(store.hasMenuCode(['nope', 'other'])).toBeFalse();
   });
 
   it('reset() clears all cached data and forgets the identity', () => {
     store.load();
     expect(store.menus().length).toBe(1);
     expect(store.favorites().length).toBe(1);
-    expect(store.permissions()).toEqual(['dashboard', 'report.export']);
+    expect(store.menuCodes()).toEqual(['dashboard', 'report.export']);
 
     store.reset();
 
@@ -504,13 +531,13 @@ describe('IUserMenuStore', () => {
     expect(store.currentUser()).toBeNull();
     expect(store.rawCurrentUser()).toBeNull();
     expect(store.roles()).toEqual([]);
-    expect(store.permissions()).toEqual([]);
+    expect(store.menuCodes()).toEqual([]);
     expect(store.initialized()).toBeFalse();
     expect(store.loadErrors()).toEqual({
       user: null,
       menus: null,
       favorites: null,
-      permissions: null,
+      authorizations: null,
     });
   });
 
@@ -519,11 +546,11 @@ describe('IUserMenuStore', () => {
       throwError(() => ({ status: 500, message: 'boom' })),
     );
     store.load();
-    expect(store.loadErrors().permissions).not.toBeNull();
+    expect(store.loadErrors().authorizations).not.toBeNull();
 
     store.reset();
 
-    expect(store.loadErrors().permissions).toBeNull();
-    expect(store.permissions()).toEqual([]);
+    expect(store.loadErrors().authorizations).toBeNull();
+    expect(store.menuCodes()).toEqual([]);
   });
 });

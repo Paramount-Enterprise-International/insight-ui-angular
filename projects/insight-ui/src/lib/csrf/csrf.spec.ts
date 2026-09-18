@@ -2,7 +2,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 
-import { ICsrfService } from './csrf.service';
+import { ICsrfService } from './csrf';
 import { I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
 
 const testConfig: IAuthConfig = {
