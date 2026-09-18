@@ -2,10 +2,10 @@ import { HttpErrorResponse, HttpEvent, HttpInterceptorFn, HttpRequest } from '@a
 import { inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
-
-import { getAuthEndpointPath, I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
+import { getAuthEndpointUrl, I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
 import { normalizeApiError } from '../api/api-error';
+import { ICsrfService } from '../csrf/csrf';
 import { ISessionService } from '../session/session';
 import {
   extractProblemDetailsErrorCode,
@@ -13,88 +13,71 @@ import {
   toSessionExpiredReason,
 } from '../session-expired/session-expired';
 
-// Sentinel header set by `IApiService` when a call opts out of the Bearer
-// header (`IApiOptions.skipBearer`). Read and stripped by this interceptor so
-// it never reaches the server.
 export const IH_SKIP_BEARER_HEADER = 'X-IH-Skip-Bearer';
 
-// Identity endpoints that must never receive a Bearer header (would be
-// circular / not yet authenticated) - CSRF bootstrap + silent refresh run before
-// a token exists. Paths come from the resolved config so a consumer backend
-// exposing different routes still works.
-const isAuthSkipUrl = (url: string, config: IAuthConfig): boolean => {
-  const skipPaths = [getAuthEndpointPath(config, 'csrf'), getAuthEndpointPath(config, 'refresh')];
-  return skipPaths.some((path) => path && url.includes(path));
-};
+const isAuthSkipUrl = (url: string, config: IAuthConfig): boolean =>
+  (['csrf', 'refresh', 'login', 'logout', 'exchange'] as const).some(
+    (key) => url.split('?')[0] === getAuthEndpointUrl(config, key),
+  );
 
 const addAuthHeader = (req: HttpRequest<unknown>, token: string): HttpRequest<unknown> =>
   req.clone({ headers: req.headers.set('Authorization', `Bearer ${token}`) });
 
-/**
- * Auth HTTP interceptor for @insight/ui consumer apps.
- *
- * Attaches the in-memory access token as a Bearer header. On 401, attempts a
- * single silent refresh (via the HttpOnly session cookie) and retries once;
- * on refresh failure, clears the session and redirects to the configured
- * signinUrl (the app's own login). 429 (rate-limit) and 423 (lockout)
- * responses are passed through; `IApiService` normalizes their current or
- * legacy backend error fields.
- */
+/** Attach the application token and retry unauthorized requests once after shared refresh. */
 export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEvent<unknown>> => {
   const session = inject(ISessionService);
   const config = inject(I_AUTH_CONFIG);
   const sessionExpired = inject(ISessionExpiredService);
-
-  if (isAuthSkipUrl(req.url, config)) {
-    return next(req);
-  }
-
-  // Per-request opt-out (IApiService `skipBearer`): strip the sentinel header
-  // and forward the request without an Authorization header.
+  const csrf = inject(ICsrfService);
   if (req.headers.has(IH_SKIP_BEARER_HEADER)) {
     return next(req.clone({ headers: req.headers.delete(IH_SKIP_BEARER_HEADER) }));
   }
+  if (isAuthSkipUrl(req.url, config)) return next(req);
 
+  const expire = (error: unknown): Observable<never> => {
+    const apiError = normalizeApiError(error);
+    if (apiError['name'] === 'AbortError' || apiError['name'] === 'TimeoutError') {
+      return throwError(() => error);
+    }
+    session.clearSession();
+    if (config.onUnauthorized) config.onUnauthorized(error);
+    else if ((config.unauthorizedHandling ?? 'dialog') === 'dialog') {
+      const errorCode = extractProblemDetailsErrorCode(apiError);
+      sessionExpired.show(
+        window.location.pathname + window.location.search,
+        toSessionExpiredReason(errorCode),
+        errorCode,
+        apiError.detail,
+        apiError.message,
+        apiError,
+      );
+    } else {
+      window.location.href = buildExternalSigninUrl(
+        config,
+        window.location.pathname + window.location.search,
+      );
+    }
+    return throwError(() => error);
+  };
   const token = session.getAccessToken();
-  const outgoing = token ? addAuthHeader(req, token) : req;
-
-  return next(outgoing).pipe(
-    catchError((err: unknown) => {
-      if (!(err instanceof HttpErrorResponse) || err.status !== 401) {
-        return throwError(() => err);
-      }
-
+  return next(token ? addAuthHeader(req, token) : req).pipe(
+    catchError((error: unknown) => {
+      if (!(error instanceof HttpErrorResponse) || error.status !== 401)
+        return throwError(() => error);
       return session.refreshToken().pipe(
-        switchMap((newToken) => next(addAuthHeader(req, newToken))),
-        catchError((refreshErr: unknown) => {
-          session.clearSession();
-
-          if (config.onUnauthorized) {
-            // Consumer-provided handler takes full control of the unauthorized flow.
-            config.onUnauthorized(refreshErr);
-          } else if ((config.unauthorizedHandling ?? 'dialog') === 'dialog') {
-            // Default: surface the library session-expired overlay (rendered by
-            // the consumer app) instead of leaving the page.
-            const apiError = normalizeApiError(refreshErr);
-            const errorCode = extractProblemDetailsErrorCode(apiError);
-            const reason = toSessionExpiredReason(errorCode);
-            const targetPath = window.location.pathname + window.location.search;
-            sessionExpired.show(
-              targetPath,
-              reason,
-              errorCode,
-              apiError.detail,
-              apiError.message,
-              apiError,
-            );
-          } else {
-            // Legacy: full-page redirect to the configured signinUrl. Use the
-            // current path (no hash/token) as the target, routed through the
-            // callback route, same as authGuard, to avoid a redirect loop.
-            const targetPath = window.location.pathname + window.location.search;
-            window.location.href = buildExternalSigninUrl(config, targetPath);
-          }
-          return throwError(() => refreshErr);
+        catchError(expire),
+        switchMap((newToken) => {
+          let retry = addAuthHeader(req, newToken);
+          const csrfToken = csrf.getToken();
+          if (csrfToken) retry = retry.clone({ setHeaders: { 'X-CSRF-Token': csrfToken } });
+          else retry = retry.clone({ headers: retry.headers.delete('X-CSRF-Token') });
+          return next(retry).pipe(
+            catchError((retryError: unknown) =>
+              retryError instanceof HttpErrorResponse && retryError.status === 401
+                ? expire(retryError)
+                : throwError(() => retryError),
+            ),
+          );
         }),
       );
     }),

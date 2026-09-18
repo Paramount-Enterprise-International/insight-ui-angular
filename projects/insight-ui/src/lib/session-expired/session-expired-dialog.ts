@@ -69,7 +69,12 @@ export class ISessionExpiredDialog {
       message: this.sessionExpired.message() ?? undefined,
       detail: this.sessionExpired.detail() ?? undefined,
     };
-    return resolveApiErrorDisplayMessage(error, localFallback, this.config.errorCatalogResolver);
+    return resolveApiErrorDisplayMessage(
+      error,
+      localFallback,
+      this.config.errorCatalogResolver,
+      this.config.errorDisplayFormatter,
+    );
   }
 
   private localFallbackMessage(): string {

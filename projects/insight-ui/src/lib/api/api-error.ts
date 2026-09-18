@@ -122,7 +122,7 @@ export const normalizeApiError = (error: unknown): INormalizedApiError => {
   }
 
   const status = readNumber(transport, 'status') ?? readNumber(body, 'status');
-  const bodyMessage = readString(body, 'message');
+  const bodyMessage = readString(body, 'message') ?? readString(body, 'Message');
   const retryAfter = readNumber(body, 'retryAfter') ?? readRetryAfterHeader(transport);
 
   if (status !== undefined) normalized.status = status;
@@ -132,16 +132,38 @@ export const normalizeApiError = (error: unknown): INormalizedApiError => {
   return normalized;
 };
 
-/**
- * Resolves display text in the approved order: backend `message`, optional
- * catalog lookup, legacy `detail`/`title`, then the caller's local fallback.
- */
+/** Optional application-owned formatting of a normalized backend error. */
+export type IApiErrorDisplayFormatter = (error: INormalizedApiError) => string | null | undefined;
+
+/** Format common field-validation dictionaries without changing the error payload. */
+export function formatApiFieldErrors(error: INormalizedApiError): string | undefined {
+  const fields = error['errors'] ?? error['ModelState'];
+  if (!isRecord(fields)) return undefined;
+  const parts = Object.entries(fields).flatMap(([field, value]) => {
+    const messages = (Array.isArray(value) ? value : [value]).filter(
+      (item): item is string => typeof item === 'string' && item.trim().length > 0,
+    );
+    return messages.length ? [`${field.replace(/^model\./i, '')}: ${messages.join(', ')}`] : [];
+  });
+  return parts.length ? parts.join('; ') : undefined;
+}
+
+/** Resolve display text without changing the canonical backend error fields. */
 export const resolveApiErrorDisplayMessage = (
   error: unknown,
   localFallback: string,
   catalogResolver?: IApiErrorCatalogResolver,
+  formatter?: IApiErrorDisplayFormatter,
 ): string => {
   const normalized = normalizeApiError(error);
+  try {
+    const formatted = formatter?.(normalized);
+    if (formatted?.trim()) return formatted;
+  } catch {
+    // Optional formatters fall back to the default display behavior.
+  }
+  const validation = formatApiFieldErrors(normalized);
+  if (validation) return validation;
   const backendMessage = normalized.message;
   if (backendMessage) {
     return backendMessage;

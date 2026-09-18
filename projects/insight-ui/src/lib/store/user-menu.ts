@@ -5,6 +5,7 @@ import { catchError, filter, finalize, shareReplay, switchMap, take, tap } from 
 
 import { type INormalizedApiError, normalizeApiError, resolveApiErrorDisplayMessage } from '../api';
 import { getMenuKey, IMenu, IUser } from '../host';
+import { I_AUTH_CONFIG } from '../auth/auth-config';
 import { ISessionService } from '../session/session';
 import {
   IAuthorizationSource,
@@ -47,6 +48,7 @@ export class IUserMenuStore {
   private readonly currentUserService = inject(ICurrentUserService);
   private readonly menuService = inject(IUserMenuService);
   private readonly session = inject(ISessionService);
+  private readonly config = inject(I_AUTH_CONFIG);
 
   /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
   private loadedUserSub: string | null = null;
@@ -389,7 +391,9 @@ export class IUserMenuStore {
   private recordError(source: IUserMenuLoadSource, err: unknown): Observable<null> {
     const normalized = normalizeApiError(err);
     this.loadErrors.update((errors) => ({ ...errors, [source]: normalized }));
-    this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(err, 'Failed to load')}`);
+    this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(
+      err, 'Failed to load', this.config.errorCatalogResolver, this.config.errorDisplayFormatter,
+    )}`);
     // Never log sensitive data — only the load source and normalized error details.
     console.error(`[@insight/ui][STORE] load "${source}" failed`, err);
     return of(null);
