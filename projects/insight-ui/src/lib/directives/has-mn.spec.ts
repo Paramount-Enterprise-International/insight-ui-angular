@@ -21,6 +21,7 @@ import { INotHasMnDirective } from './not-has-mn';
     <button
       *iHasMn="'atlas.sales-administration.menu.451.hasmn-button-example'"
       class="function-example"
+      type="button"
     >
       Example
     </button>
