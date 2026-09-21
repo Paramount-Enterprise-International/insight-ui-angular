@@ -96,7 +96,11 @@ describe('IUserMenuStore', () => {
       'removeFavorite',
       'reorderFavorites',
     ]);
-    sessionSpy = jasmine.createSpyObj<ISessionService>('ISessionService', ['getRoles', 'hasRole', 'getUser']);
+    sessionSpy = jasmine.createSpyObj<ISessionService>('ISessionService', [
+      'getRoles',
+      'hasRole',
+      'getUser',
+    ]);
 
     userSpy.getCurrentUser.and.returnValue(of(rawUser));
     menuSpy.getEffectiveMenus.and.returnValue(of(nodes));
@@ -327,7 +331,7 @@ describe('IUserMenuStore', () => {
     expect(store.loadError()).toBeNull();
   });
 
-  it('drops the previous user\'s menus when load() runs for a different user and menus fail', () => {
+  it("drops the previous user's menus when load() runs for a different user and menus fail", () => {
     // User A loads menus fine.
     store.load();
     expect(store.menus().length).toBe(1);
@@ -400,7 +404,16 @@ describe('IUserMenuStore', () => {
   });
 
   it('clears codes and company scope before a refetch and keeps them empty on failure', () => {
-    menuSpy.getAuthorizations.and.returnValue(of([{ menuCode: 'report.export', menuId: 'export', type: 'function', companies: [{ id: 'c1', code: 'JKT', name: 'Jakarta' }] }]));
+    menuSpy.getAuthorizations.and.returnValue(
+      of([
+        {
+          menuCode: 'report.export',
+          menuId: 'export',
+          type: 'function',
+          companies: [{ id: 'c1', code: 'JKT', name: 'Jakarta' }],
+        },
+      ]),
+    );
     store.load();
     expect(store.hasMenuCode('report.export')).toBeTrue();
     expect(store.companyCodes()).toEqual(['JKT']);
@@ -418,7 +431,9 @@ describe('IUserMenuStore', () => {
   });
 
   it('loadAuthorizations returns DTOs and never grants navigation-only codes', () => {
-    menuSpy.getAuthorizations.and.returnValue(of([{ menuCode: 'example', menuId: 'example', type: 'function', companies: [] }]));
+    menuSpy.getAuthorizations.and.returnValue(
+      of([{ menuCode: 'example', menuId: 'example', type: 'function', companies: [] }]),
+    );
     store.load();
     expect(store.hasNavigableMenu('dashboard')).toBeTrue();
     expect(store.hasMenuCode('dashboard')).toBeFalse();
@@ -495,7 +510,7 @@ describe('IUserMenuStore', () => {
     expect(store.hasMenuCode('report.export')).toBeFalse();
   });
 
-  it('drops the previous user\'s permissions when load() runs for a different user', () => {
+  it("drops the previous user's permissions when load() runs for a different user", () => {
     store.load();
     expect(store.menuCodes()).toEqual(['dashboard', 'report.export']);
 
@@ -509,7 +524,16 @@ describe('IUserMenuStore', () => {
   });
 
   it('authorizations deduplicate the granted codes', () => {
-    menuSpy.getAuthorizations.and.returnValue(of(['a', 'b', 'a'].map((menuCode) => ({ menuCode, menuId: menuCode, type: 'function' as const, companies: [] }))));
+    menuSpy.getAuthorizations.and.returnValue(
+      of(
+        ['a', 'b', 'a'].map((menuCode) => ({
+          menuCode,
+          menuId: menuCode,
+          type: 'function' as const,
+          companies: [],
+        })),
+      ),
+    );
     store.load();
 
     expect(store.menuCodes()).toEqual(['a', 'b']);
@@ -542,9 +566,7 @@ describe('IUserMenuStore', () => {
   });
 
   it('reset() clears a recorded permissions error too', () => {
-    menuSpy.getAuthorizations.and.returnValue(
-      throwError(() => ({ status: 500, message: 'boom' })),
-    );
+    menuSpy.getAuthorizations.and.returnValue(throwError(() => ({ status: 500, message: 'boom' })));
     store.load();
     expect(store.loadErrors().authorizations).not.toBeNull();
 

@@ -13,6 +13,7 @@ import {
   type IErrorPageMode,
 } from './error-page.types';
 
+/** Renders a preset or consumer-defined error state with optional recovery actions. */
 @Component({
   selector: 'i-error-page',
   standalone: true,
@@ -86,24 +87,35 @@ import {
   `,
 })
 export class IErrorPage {
+  /** Selects the default title, description, icon, and status code. */
   @Input() kind: IErrorPageKind = 'not-found';
+  /** Selects a section-contained or viewport-filling presentation. */
   @Input() mode: IErrorPageMode = 'contained';
+  /** Overrides the preset title. */
   @Input() title: string | undefined;
+  /** Overrides the preset description. */
   @Input() description: string | undefined;
+  /** Overrides the preset icon class. */
   @Input() icon: string | undefined;
+  /** Overrides the preset status code. */
   @Input() code: string | undefined;
+  /** Support address to display, or an empty string to hide support contact. */
   @Input() supportEmail = I_ERROR_PAGE_SUPPORT_EMAIL;
+  /** Built-in recovery buttons to render in the supplied order. */
   @Input() actions: readonly IErrorPageAction[] = [];
+  /** Emits the selected built-in recovery action without performing navigation. */
   @Output() readonly onAction = new EventEmitter<IErrorPageAction>();
 
   protected readonly actionPresets = I_ERROR_PAGE_ACTIONS;
 
+  /** Resolves the support prompt for the selected error kind. */
   protected get supportLabel(): string {
     return this.kind === 'application-access-denied'
       ? 'Please contact the IT Administrator to register your access:'
       : 'For assistance, please contact:';
   }
 
+  /** Combines explicit content overrides with the selected preset. */
   protected get resolved(): { title: string; description: string; icon: string; code: string } {
     const preset = I_ERROR_PAGE_PRESETS[this.kind];
     return {
