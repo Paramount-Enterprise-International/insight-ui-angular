@@ -18,6 +18,7 @@ export type IRouteMenuCodeResolver = (
   state: RouterStateSnapshot,
 ) => string | null | undefined;
 
+/** Controls access when a route has no resolved menu code. */
 export type IMissingMenuCodePolicy = 'allow' | 'deny';
 
 /** Options for menu-code route authorization. */

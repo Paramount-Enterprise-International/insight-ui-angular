@@ -1,3 +1,4 @@
+/** Built-in error presentations available to consumers. */
 export type IErrorPageKind =
   | 'not-found'
   | 'unauthorized'
@@ -8,9 +9,13 @@ export type IErrorPageKind =
   | 'timeout'
   | 'custom';
 
+/** Controls whether the error is contained by a section or fills the viewport. */
 export type IErrorPageMode = 'contained' | 'fullpage';
+
+/** Built-in recovery actions emitted by the error page. */
 export type IErrorPageAction = 'home' | 'logout' | 'retry';
 
+/** Default content and visual treatment for each error kind. */
 export const I_ERROR_PAGE_PRESETS: Record<
   IErrorPageKind,
   { title: string; description: string; icon: string; code: string }
@@ -66,10 +71,12 @@ export const I_ERROR_PAGE_PRESETS: Record<
   },
 };
 
+/** Labels, icons, and button variants for built-in recovery actions. */
 export const I_ERROR_PAGE_ACTIONS = {
   home: { label: 'Back to Home', icon: 'fa-solid fa-house', variant: 'primary' },
   logout: { label: 'Logout', icon: 'fa-solid fa-right-from-bracket', variant: 'danger' },
   retry: { label: 'Retry', icon: 'sync', variant: 'primary' },
 } as const;
 
+/** Default support address displayed when a consumer does not provide one. */
 export const I_ERROR_PAGE_SUPPORT_EMAIL = 'it.helpdesk@paramountenterprise.co.id';

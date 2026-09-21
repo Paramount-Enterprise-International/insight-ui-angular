@@ -7,7 +7,10 @@ import { ICsrfService } from '../csrf/csrf';
 import { IH_SKIP_BEARER_HEADER } from '../interceptors/auth';
 import { normalizeApiError } from './api-error';
 
+/** Response body returned by JSON API calls. */
 export type IApiResponse<T = any> = T;
+
+/** Shared transport options accepted by every API method. */
 export type IApiOptions = {
   apiUrl?: string;
   headers?: Record<string, string>;
@@ -23,6 +26,7 @@ export type IApiOptions = {
   timeoutMs?: number;
 };
 
+/** Sends authenticated application requests through the shared SSO transport. */
 @Injectable({ providedIn: 'root' })
 export class IApiService {
   private readonly http = inject(HttpClient);
@@ -159,6 +163,7 @@ export class IApiService {
     });
   }
 
+  /** Sends a GET request and returns either the response body or full response. */
   get<T = any>(
     path: string,
     params: HttpParams | undefined,
@@ -205,6 +210,7 @@ export class IApiService {
     return this.request('GET', path, undefined, options, params);
   }
 
+  /** Sends a POST request and returns either the response body or full response. */
   post<T = any>(
     path: string,
     body: any,
@@ -251,6 +257,7 @@ export class IApiService {
     return this.request('POST', path, body, options);
   }
 
+  /** Sends a PUT request and returns either the response body or full response. */
   put<T = any>(
     path: string,
     body: any,
@@ -297,6 +304,7 @@ export class IApiService {
     return this.request('PUT', path, body, options);
   }
 
+  /** Sends a PATCH request and returns either the response body or full response. */
   patch<T = any>(
     path: string,
     body: any,
@@ -343,6 +351,7 @@ export class IApiService {
     return this.request('PATCH', path, body, options);
   }
 
+  /** Sends a DELETE request and returns either the response body or full response. */
   delete<T = any>(
     path: string,
     options?: IApiOptions & { responseType?: 'json'; observe?: 'body' },
@@ -380,6 +389,7 @@ export class IApiService {
     return this.request('DELETE', path, options?.body, options);
   }
 
+  /** Uploads a file or existing form payload as multipart form data. */
   upload<T = any>(
     path: string,
     file: File | FormData,
@@ -427,6 +437,7 @@ export class IApiService {
     return this.request('POST', path, body, options);
   }
 
+  /** Downloads a binary response body. */
   getBlob(path: string, params?: HttpParams, options?: IApiOptions): Observable<Blob> {
     return this.request(
       'GET',
