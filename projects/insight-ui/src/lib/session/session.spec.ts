@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { fakeAsync, flushMicrotasks, TestBed, tick } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 
 import { ISessionService } from './session';
@@ -142,6 +142,63 @@ describe('ISessionService', () => {
     });
   });
 
+  it('shares one refresh between cold restore and another refresh caller', async () => {
+    const refresh$ = new Subject<IRefreshResponse>();
+    authSpy.refresh.and.returnValue(refresh$);
+
+    const restore = service.tryRestoreSession();
+    const token = new Promise<string>((resolve, reject) =>
+      service.refreshToken().subscribe({ next: resolve, error: reject }),
+    );
+
+    expect(authSpy.refresh).toHaveBeenCalledTimes(1);
+    refresh$.next({ accessToken: 'shared-token', expiresIn: 3600 });
+    refresh$.complete();
+
+    expect(await token).toBe('shared-token');
+    await restore;
+    expect(service.getAccessToken()).toBe('shared-token');
+  });
+
+  it('keeps initialization pending until the 30-second refresh deadline', fakeAsync(() => {
+    authSpy.refresh.and.returnValue(new Subject<IRefreshResponse>());
+    let settled = false;
+    void service.tryRestoreSession().then(() => { settled = true; });
+
+    tick(10_000);
+    flushMicrotasks();
+    expect(service.initializing()).toBeTrue();
+    expect(settled).toBeFalse();
+
+    tick(20_000);
+    flushMicrotasks();
+    expect(service.initializing()).toBeFalse();
+    expect(settled).toBeTrue();
+    expect(service.getAccessToken()).toBeNull();
+  }));
+
+  it('ignores a refresh response after the session is cleared', () => {
+    const refresh$ = new Subject<IRefreshResponse>();
+    authSpy.refresh.and.returnValue(refresh$);
+    service.refreshToken().subscribe({ error: () => undefined });
+
+    service.clearSession();
+    refresh$.next({ accessToken: 'late-token', expiresIn: 3600 });
+    refresh$.complete();
+
+    expect(service.getAccessToken()).toBeNull();
+  });
+
+  it('resets sidebar data when a different user establishes a session', () => {
+    const store = TestBed.inject(IUserMenuStore);
+    spyOn(store, 'reset');
+    const user = { sub: 'user-a', email: '', name: '', roles: [], userType: 'internal' as const };
+    service.setSession('token-a', 3600, user);
+    service.setSession('token-b', 3600, { ...user, sub: 'user-b' });
+
+    expect(store.reset).toHaveBeenCalledTimes(1);
+  });
+
   it('tryRestoreSession() propagates the normalized backend message to session-expired state', async () => {
     sessionStorage.setItem('iam.session.active', 'true');
     authSpy.refresh.and.returnValue(
@@ -171,6 +228,7 @@ describe('ISessionService', () => {
     expect(call[4]).toBe('Your session was revoked by an administrator.');
     expect(call[5]?.revision).toBe(6);
     expect(call[5]?.['traceId'] as unknown).toBe('trace-restore');
+    expect(authSpy.logout).not.toHaveBeenCalled();
   });
 
   it('logout() resets the cached user menu store', (done) => {

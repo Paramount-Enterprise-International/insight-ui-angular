@@ -575,4 +575,32 @@ describe('IUserMenuStore', () => {
     expect(store.loadErrors().authorizations).toBeNull();
     expect(store.menuCodes()).toEqual([]);
   });
+
+  it('ignores late sidebar responses after reset', () => {
+    const user$ = new Subject<ICurrentUserDto>();
+    const menus$ = new Subject<IMenuNodeDto[]>();
+    const favorites$ = new Subject<IFavoriteMenuItemDto[]>();
+    const authorizations$ = new Subject<IEffectiveAuthorizationDto[]>();
+    userSpy.getCurrentUser.and.returnValue(user$);
+    menuSpy.getEffectiveMenus.and.returnValue(menus$);
+    menuSpy.getFavorites.and.returnValue(favorites$);
+    menuSpy.getAuthorizations.and.returnValue(authorizations$);
+
+    store.load();
+    store.reset();
+    user$.next(rawUser);
+    menus$.next(nodes);
+    favorites$.next(favorites);
+    authorizations$.next(authorizations);
+    user$.complete();
+    menus$.complete();
+    favorites$.complete();
+    authorizations$.complete();
+
+    expect(store.rawCurrentUser()).toBeNull();
+    expect(store.menus()).toEqual([]);
+    expect(store.favorites()).toEqual([]);
+    expect(store.authorizations()).toEqual([]);
+    expect(store.initialized()).toBeFalse();
+  });
 });

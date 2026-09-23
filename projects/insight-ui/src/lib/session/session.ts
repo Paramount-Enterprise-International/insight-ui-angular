@@ -102,6 +102,7 @@ export class ISessionService {
   private passwordExpired = false;
   private changePasswordTokenValue: string | null = null;
   private lastVerifiedAt = 0;
+  private sessionGeneration = 0;
 
   /**
    * True while the app is restoring/validating the session on load (starts
@@ -228,6 +229,7 @@ export class ISessionService {
    * own `exp` claim, then falls back to the configured `accessTokenSeconds`.
    */
   setAccessToken(accessToken: string, expiresIn?: number): void {
+    this.sessionGeneration++;
     this.accessToken = accessToken;
     const effectiveExpiresIn =
       expiresIn ?? this.readExpiresInFromToken(accessToken) ?? this.config.tokenLifespan.accessTokenSeconds;
@@ -246,6 +248,10 @@ export class ISessionService {
    * start from a refresh-after-revocation.
    */
   setSession(accessToken: string, expiresIn: number, user: IAuthUser, refreshToken?: string): void {
+    if (this.currentUser?.sub && this.currentUser.sub !== user.sub) {
+      this.injector.get(IUserMenuStore, null, { optional: true })?.reset();
+    }
+    this.sessionGeneration++;
     this.accessToken = accessToken;
     if (refreshToken) {
       this._refreshToken = refreshToken;
@@ -263,6 +269,7 @@ export class ISessionService {
   }
 
   clearSession(): void {
+    this.sessionGeneration++;
     this.accessToken = null;
     this._refreshToken = null;
     this.expiresAt = null;
@@ -271,6 +278,7 @@ export class ISessionService {
     this.sessionStartedAt = null;
     this.changePasswordTokenValue = null;
     sessionStorage.removeItem('iam.changePasswordToken');
+    this.injector.get(IUserMenuStore, null, { optional: true })?.reset();
     // NOTE: `iam.session.active` is intentionally NOT cleared here — it must
     // survive mid-session revocation so `tryRestoreSession()` can detect
     // "refresh after revocation" on the next load; explicit logout clears it.
@@ -315,12 +323,16 @@ export class ISessionService {
   refreshToken(): Observable<string> {
     let inFlight = this.refreshInFlight;
     if (!inFlight) {
+      const generation = this.sessionGeneration;
       const source = this.authService.refresh().pipe(
         timeout({
           each: REFRESH_TIMEOUT_MS,
           with: () => throwError(() => new Error(`Refresh request timed out after ${REFRESH_TIMEOUT_MS}ms`)),
         }),
         tap((res) => {
+          if (generation !== this.sessionGeneration) {
+            throw new Error('Session changed while refresh was in progress.');
+          }
           this.setSession(
             res.accessToken,
             res.expiresIn,
@@ -402,12 +414,7 @@ export class ISessionService {
     }
 
     const restorePromise = lastValueFrom(
-      this.authService.refresh().pipe(
-        tap((res) => {
-          this.setSession(res.accessToken, res.expiresIn, decodeUser(res.accessToken), res.refreshToken);
-        }),
-        map((): { reason?: ISessionExpiredReason } => ({})),
-      ),
+      this.refreshToken().pipe(map((): { reason?: ISessionExpiredReason } => ({}))),
       { defaultValue: {} as { reason?: ISessionExpiredReason } },
     ).catch((err): { reason?: ISessionExpiredReason } => {
       console.debug('[@insight/ui][SESSION] tryRestoreSession: FAILED', {
@@ -437,14 +444,10 @@ export class ISessionService {
           apiError,
         );
       }
-      if (isSessionExpiredError(err)) {
-        this.authService.logout().subscribe({ error: () => void 0 });
-      }
       return { reason: code };
     });
 
-    const safetyTimer = new Promise<{ reason?: ISessionExpiredReason }>((r) => setTimeout(() => r({}), 10_000));
-    this.restoreInFlight = Promise.race([restorePromise, safetyTimer]).finally(() => {
+    this.restoreInFlight = restorePromise.finally(() => {
       this.initializing.set(false);
     });
     return this.restoreInFlight;
