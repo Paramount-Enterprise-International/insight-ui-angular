@@ -1332,16 +1332,17 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     if (!header?.contains(event.target as Node | null)) return;
 
-    const items = Array.from(
-      header.querySelectorAll<HTMLElement>('.ih-user-dropdown-item'),
-    );
+    const items = Array.from(header.querySelectorAll<HTMLElement>('.ih-user-dropdown-item'));
     if (!items.length) return;
 
     event.preventDefault();
     const current = items.indexOf(document.activeElement as HTMLElement);
-    const next = current < 0
-      ? event.key === 'ArrowDown' ? 0 : items.length - 1
-      : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+    const next =
+      current < 0
+        ? event.key === 'ArrowDown'
+          ? 0
+          : items.length - 1
+        : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
     items[next].focus();
   };
 
