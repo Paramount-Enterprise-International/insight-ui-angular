@@ -333,16 +333,7 @@ declare class IInputMaskDirective implements OnInit, OnChanges {
     private getDateSegments;
     /** Format day/month/year back to string according to format tokens. */
     private formatDateFromParts;
-    /** Normalize full date string (used on blur / Enter). */
-    private normalizeDateValue;
-    /**
-     * Digits-only behavior for date mask (no separators typed yet).
-     *
-     * For dd/MM/yyyy:
-     * - "12"       → "12/"
-     * - "1210"     → "12/10/"
-     * - "12101980" → "12/10/1980"
-     */
+    /** Places digits in date segments and inserts completed separators. */
     private applyDateMaskDigitsOnly;
     private applyDateMask;
     private adjustDateSegmentByArrow;
@@ -359,16 +350,10 @@ declare class IInputMaskDirective implements OnInit, OnChanges {
     /** caret index in formatted string after `digitCount` digits */
     private caretPosAfterDigits;
     private clamp;
-    private clampMonth2;
-    private clampDay2;
-    /**
-     * Smart digit typing for DATE:
-     * - never allows 3-digit day/month or 5-digit year
-     * - when caret is at end of a full segment, typing "rolls" that segment:
-     *   month "01" + '2' => "12" (shift + append)
-     *   year "2026" + '1' => "0261" (keeps last 4)
-     */
+    /** Inserts a digit into the date segment at the caret. */
     private handleDateDigitKey;
+    /** Pads the active segment and moves the caret past its separator. */
+    private handleDateSeparatorKey;
     /**
      * Smart digit typing for TIME (similar behavior, keeps segments fixed-length).
      * - HH:mm       => keeps hour/min 2 digits
@@ -627,7 +612,11 @@ declare class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     placeholder: string;
     disabled: boolean;
     invalid: boolean;
-    format: string;
+    private _format;
+    private writtenString;
+    get format(): string;
+    set format(value: string);
+    displayFormat?: string;
     panelPosition: IDatepickerPanelPosition;
     private _minYear;
     private _maxYear;
@@ -652,6 +641,8 @@ declare class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     private portalHomeRef?;
     private _modelValue;
     private _displayText;
+    private isEditing;
+    private pendingExternalValue;
     get displayText(): string;
     private onChange;
     private onTouched;
@@ -709,21 +700,21 @@ declare class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     private isSameDate;
     private parseInputDate;
     private formatDate;
+    onHostFocusIn(event: FocusEvent): void;
     onHostInput(event: Event): void;
-    onHostFocusOut(): void;
+    onHostFocusOut(event: FocusEvent): void;
     onDocumentClick(event: MouseEvent): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IDatepicker, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IDatepicker, "i-datepicker", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "format": { "alias": "format"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "minYear": { "alias": "minYear"; "required": false; }; "maxYear": { "alias": "maxYear"; "required": false; }; "minYearRange": { "alias": "minYearRange"; "required": false; }; "maxYearRange": { "alias": "maxYearRange"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IDatepicker, "i-datepicker", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "format": { "alias": "format"; "required": false; }; "displayFormat": { "alias": "displayFormat"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "minYear": { "alias": "minYear"; "required": false; }; "maxYear": { "alias": "maxYear"; "required": false; }; "minYearRange": { "alias": "minYearRange"; "required": false; }; "maxYearRange": { "alias": "maxYearRange"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; }, never, never, true, never>;
 }
-/**
- * IFCDatepicker
- * Version: 1.5.4 (smart wrapper)
- */
+/** Form control wrapper for the datepicker. */
 declare class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDestroy {
     innerDatepicker: IDatepicker;
     label: string;
     placeholder: string;
-    format: string;
+    get format(): string;
+    set format(value: string);
+    displayFormat?: string;
     panelPosition: IDatepickerPanelPosition;
     minYear: number | string | null;
     maxYear: number | string | null;
@@ -731,8 +722,10 @@ declare class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDe
     maxYearRange: number | string | null;
     errorMessage?: IFormControlErrorMessage;
     get value(): Date | null;
-    set value(v: Date | null);
+    set value(v: Date | string | null);
+    private _format;
     private _value;
+    private externalStringValue;
     forwardedValue: Date | null;
     isDisabled: boolean;
     private onChange;
@@ -747,7 +740,8 @@ declare class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDe
     constructor();
     ngAfterViewInit(): void;
     ngOnDestroy(): void;
-    writeValue(v: any): void;
+    writeValue(v: Date | string | null): void;
+    private coerceValue;
     registerOnChange(fn: any): void;
     registerOnTouched(fn: any): void;
     setDisabledState(isDisabled: boolean): void;
@@ -763,7 +757,7 @@ declare class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDe
     get required(): boolean;
     get resolvedErrorText(): string | null;
     static ɵfac: i0.ɵɵFactoryDeclaration<IFCDatepicker, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IFCDatepicker, "i-fc-datepicker", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "format": { "alias": "format"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "minYear": { "alias": "minYear"; "required": false; }; "maxYear": { "alias": "maxYear"; "required": false; }; "minYearRange": { "alias": "minYearRange"; "required": false; }; "maxYearRange": { "alias": "maxYearRange"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; "_smartFocusHook": { "alias": "_smartFocusHook"; "required": false; }; }, {}, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IFCDatepicker, "i-fc-datepicker", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "format": { "alias": "format"; "required": false; }; "displayFormat": { "alias": "displayFormat"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "minYear": { "alias": "minYear"; "required": false; }; "maxYear": { "alias": "maxYear"; "required": false; }; "minYearRange": { "alias": "minYearRange"; "required": false; }; "maxYearRange": { "alias": "maxYearRange"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; "_smartFocusHook": { "alias": "_smartFocusHook"; "required": false; }; }, {}, never, never, true, never>;
 }
 
 /**
@@ -976,15 +970,20 @@ declare class IDialogModule {
     static ɵinj: i0.ɵɵInjectorDeclaration<IDialogModule>;
 }
 
-type IErrorPageKind = 'not-found' | 'unauthorized' | 'forbidden' | 'server-error' | 'service-unavailable' | 'application-access-denied' | 'custom';
+/** Built-in error presentations available to consumers. */
+type IErrorPageKind = 'not-found' | 'unauthorized' | 'forbidden' | 'server-error' | 'service-unavailable' | 'application-access-denied' | 'timeout' | 'custom';
+/** Controls whether the error is contained by a section or fills the viewport. */
 type IErrorPageMode = 'contained' | 'fullpage';
+/** Built-in recovery actions emitted by the error page. */
 type IErrorPageAction = 'home' | 'logout' | 'retry';
+/** Default content and visual treatment for each error kind. */
 declare const I_ERROR_PAGE_PRESETS: Record<IErrorPageKind, {
     title: string;
     description: string;
     icon: string;
     code: string;
 }>;
+/** Labels, icons, and button variants for built-in recovery actions. */
 declare const I_ERROR_PAGE_ACTIONS: {
     readonly home: {
         readonly label: "Back to Home";
@@ -1002,17 +1001,28 @@ declare const I_ERROR_PAGE_ACTIONS: {
         readonly variant: "primary";
     };
 };
+/** Default support address displayed when a consumer does not provide one. */
 declare const I_ERROR_PAGE_SUPPORT_EMAIL = "it.helpdesk@paramountenterprise.co.id";
 
+/** Renders a preset or consumer-defined error state with optional recovery actions. */
 declare class IErrorPage {
+    /** Selects the default title, description, icon, and status code. */
     kind: IErrorPageKind;
+    /** Selects a section-contained or viewport-filling presentation. */
     mode: IErrorPageMode;
+    /** Overrides the preset title. */
     title: string | undefined;
+    /** Overrides the preset description. */
     description: string | undefined;
+    /** Overrides the preset icon class. */
     icon: string | undefined;
+    /** Overrides the preset status code. */
     code: string | undefined;
+    /** Support address to display, or an empty string to hide support contact. */
     supportEmail: string;
+    /** Built-in recovery buttons to render in the supplied order. */
     actions: readonly IErrorPageAction[];
+    /** Emits the selected built-in recovery action without performing navigation. */
     readonly onAction: EventEmitter<IErrorPageAction>;
     protected readonly actionPresets: {
         readonly home: {
@@ -1031,7 +1041,9 @@ declare class IErrorPage {
             readonly variant: "primary";
         };
     };
+    /** Resolves the support prompt for the selected error kind. */
     protected get supportLabel(): string;
+    /** Combines explicit content overrides with the selected preset. */
     protected get resolved(): {
         title: string;
         description: string;
@@ -2799,7 +2811,9 @@ declare class ICsrfService {
     static ɵprov: i0.ɵɵInjectableDeclaration<ICsrfService>;
 }
 
+/** Response body returned by JSON API calls. */
 type IApiResponse<T = any> = T;
+/** Shared transport options accepted by every API method. */
 type IApiOptions = {
     apiUrl?: string;
     headers?: Record<string, string>;
@@ -2812,6 +2826,7 @@ type IApiOptions = {
     /** Total subscription deadline, including refresh and retry. Defaults to 60000 ms. */
     timeoutMs?: number;
 };
+/** Sends authenticated application requests through the shared SSO transport. */
 declare class IApiService {
     private readonly http;
     private readonly csrf;
@@ -2820,6 +2835,7 @@ declare class IApiService {
     private enrichError;
     /** Cancel the transport subscription, including its refresh waiter, on deadline or signal. */
     private request;
+    /** Sends a GET request and returns either the response body or full response. */
     get<T = any>(path: string, params: HttpParams | undefined, options?: IApiOptions & {
         responseType?: 'json';
         observe?: 'body';
@@ -2854,6 +2870,7 @@ declare class IApiService {
     }): Observable<HttpResponse<string>>;
     get<T = any>(path: string, params: HttpParams | undefined, options?: IApiOptions): Observable<T>;
     get<T = any>(path: string, params?: HttpParams, options?: IApiOptions): Observable<T>;
+    /** Sends a POST request and returns either the response body or full response. */
     post<T = any>(path: string, body: any, options?: IApiOptions & {
         responseType?: 'json';
         observe?: 'body';
@@ -2888,6 +2905,7 @@ declare class IApiService {
     }): Observable<HttpResponse<string>>;
     post<T = any>(path: string, body: any, options?: IApiOptions): Observable<T>;
     post<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
+    /** Sends a PUT request and returns either the response body or full response. */
     put<T = any>(path: string, body: any, options?: IApiOptions & {
         responseType?: 'json';
         observe?: 'body';
@@ -2922,6 +2940,7 @@ declare class IApiService {
     }): Observable<HttpResponse<string>>;
     put<T = any>(path: string, body: any, options?: IApiOptions): Observable<T>;
     put<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
+    /** Sends a PATCH request and returns either the response body or full response. */
     patch<T = any>(path: string, body: any, options?: IApiOptions & {
         responseType?: 'json';
         observe?: 'body';
@@ -2956,6 +2975,7 @@ declare class IApiService {
     }): Observable<HttpResponse<string>>;
     patch<T = any>(path: string, body: any, options?: IApiOptions): Observable<T>;
     patch<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
+    /** Sends a DELETE request and returns either the response body or full response. */
     delete<T = any>(path: string, options?: IApiOptions & {
         responseType?: 'json';
         observe?: 'body';
@@ -2989,6 +3009,7 @@ declare class IApiService {
         observe: 'response';
     }): Observable<HttpResponse<string>>;
     delete<T = any>(path: string, options?: IApiOptions): Observable<T>;
+    /** Uploads a file or existing form payload as multipart form data. */
     upload<T = any>(path: string, file: File | FormData, options?: IApiOptions & {
         responseType?: 'json';
         observe?: 'body';
@@ -3022,6 +3043,7 @@ declare class IApiService {
         observe: 'response';
     }): Observable<HttpResponse<string>>;
     upload<T = any>(path: string, file: File | FormData, options?: IApiOptions): Observable<T>;
+    /** Downloads a binary response body. */
     getBlob(path: string, params?: HttpParams, options?: IApiOptions): Observable<Blob>;
     static ɵfac: i0.ɵɵFactoryDeclaration<IApiService, never>;
     static ɵprov: i0.ɵɵInjectableDeclaration<IApiService>;
@@ -3113,6 +3135,7 @@ declare class ISessionService {
     private passwordExpired;
     private changePasswordTokenValue;
     private lastVerifiedAt;
+    private sessionGeneration;
     /**
      * True while the app is restoring/validating the session on load (starts
      * `true` on cold start so guards can allow navigation during the restore and
@@ -3255,6 +3278,7 @@ declare function requireAccess(check: IAccessCheck): CanActivateFn;
 
 /** Resolves the menu code that protects a router navigation. */
 type IRouteMenuCodeResolver = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => string | null | undefined;
+/** Controls access when a route has no resolved menu code. */
 type IMissingMenuCodePolicy = 'allow' | 'deny';
 /** Options for menu-code route authorization. */
 type IRouteAccessOptions = {
@@ -3510,6 +3534,7 @@ declare class IUserMenuStore {
     /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
     private loadedUserSub;
     private loadedApplicationId;
+    private generation;
     /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
     readonly currentUser: i0.WritableSignal<IUser | null>;
     /** Raw current-user DTO as returned by the backend — `null` until loaded. */

@@ -80,10 +80,10 @@ class IIcon {
     get iconClass() {
         return `${I_ICON_NAMES[this.icon] || this.icon} ${this.iconSize}`;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IIcon, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: IIcon, isStandalone: true, selector: "i-icon", inputs: { icon: "icon", size: "size" }, ngImport: i0, template: `<i [ngClass]="iconClass"></i>`, isInline: true, dependencies: [{ kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }] });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IIcon, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: IIcon, isStandalone: true, selector: "i-icon", inputs: { icon: "icon", size: "size" }, ngImport: i0, template: `<i [ngClass]="iconClass"></i>`, isInline: true, dependencies: [{ kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IIcon, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IIcon, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-icon',
@@ -107,15 +107,15 @@ class ILoading {
     get isLight() {
         return this.light;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ILoading, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ILoading, isStandalone: true, selector: "i-loading", inputs: { label: "label", light: "light" }, host: { properties: { "attr.light": "this.isLight" } }, ngImport: i0, template: `<div
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ILoading, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ILoading, isStandalone: true, selector: "i-loading", inputs: { label: "label", light: "light" }, host: { properties: { "attr.light": "this.isLight" } }, ngImport: i0, template: `<div
       class="spinner-border spinner-border-sm"
       role="status"
       [class.light]="light"
     ></div>
     {{ label }}`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ILoading, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ILoading, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-loading',
@@ -196,8 +196,8 @@ class IButton {
         }
         this.onClick.emit(event);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IButton, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IButton, isStandalone: true, selector: "i-button", inputs: { disabled: ["disabled", "disabled", booleanAttribute], loading: ["loading", "loading", booleanAttribute], type: "type", ariaLabel: "ariaLabel", loadingText: "loadingText", variant: "variant", size: "size", icon: "icon", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", state: "state", href: "href", target: "target", rel: "rel" }, outputs: { onClick: "onClick" }, host: { properties: { "attr.variant": "this.hostVariant", "attr.size": "this.hostSize", "attr.aria-disabled": "this.ariaDisabled", "attr.aria-busy": "this.ariaBusy", "attr.data-mode": "this.mode" } }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IButton, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IButton, isStandalone: true, selector: "i-button", inputs: { disabled: ["disabled", "disabled", booleanAttribute], loading: ["loading", "loading", booleanAttribute], type: "type", ariaLabel: "ariaLabel", loadingText: "loadingText", variant: "variant", size: "size", icon: "icon", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", state: "state", href: "href", target: "target", rel: "rel" }, outputs: { onClick: "onClick" }, host: { properties: { "attr.variant": "this.hostVariant", "attr.size": "this.hostSize", "attr.aria-disabled": "this.ariaDisabled", "attr.aria-busy": "this.ariaBusy", "attr.data-mode": "this.mode" } }, ngImport: i0, template: `
     <!-- ROUTER LINK -->
     @if (routerLink) {
       <a
@@ -257,7 +257,7 @@ class IButton {
     </ng-template>
   `, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IButton, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IButton, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-button',
@@ -471,8 +471,8 @@ class ICard {
             ev.preventDefault();
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICard, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: ICard, isStandalone: true, selector: "i-card", inputs: { href: "href", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", replaceUrl: "replaceUrl", skipLocationChange: "skipLocationChange", state: "state", target: "target", rel: "rel", disabled: "disabled" }, outputs: { onClick: "onClick" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICard, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: ICard, isStandalone: true, selector: "i-card", inputs: { href: "href", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", replaceUrl: "replaceUrl", skipLocationChange: "skipLocationChange", state: "state", target: "target", rel: "rel", disabled: "disabled" }, outputs: { onClick: "onClick" }, ngImport: i0, template: `
     <ng-template #content>
       <ng-content />
     </ng-template>
@@ -509,7 +509,7 @@ class ICard {
     }
   `, isInline: true, dependencies: [{ kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICard, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICard, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-card',
@@ -578,10 +578,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
             }] } });
 class ICardImage {
     src;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICardImage, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ICardImage, isStandalone: true, selector: "i-card-image", inputs: { src: "src" }, ngImport: i0, template: `<img alt="card-image" [src]="src" />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICardImage, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ICardImage, isStandalone: true, selector: "i-card-image", inputs: { src: "src" }, ngImport: i0, template: `<img alt="card-image" [src]="src" />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICardImage, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICardImage, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-card-image',
@@ -592,10 +592,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 type: Input
             }] } });
 class ICardBody {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICardBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ICardBody, isStandalone: true, selector: "i-card-body", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICardBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ICardBody, isStandalone: true, selector: "i-card-body", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICardBody, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICardBody, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-card-body',
@@ -604,10 +604,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 }]
         }] });
 class ICardFooter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICardFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ICardFooter, isStandalone: true, selector: "i-card-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICardFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ICardFooter, isStandalone: true, selector: "i-card-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICardFooter, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICardFooter, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-card-footer',
@@ -616,11 +616,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 }]
         }] });
 class ICardModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICardModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.31", ngImport: i0, type: ICardModule, imports: [ICard, ICardBody, ICardFooter, ICardImage], exports: [ICard, ICardBody, ICardFooter, ICardImage] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICardModule });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICardModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.32", ngImport: i0, type: ICardModule, imports: [ICard, ICardBody, ICardFooter, ICardImage], exports: [ICard, ICardBody, ICardFooter, ICardImage] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICardModule });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICardModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICardModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [ICard, ICardBody, ICardFooter, ICardImage],
@@ -982,8 +982,8 @@ class ICodeViewer {
             // ignore
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICodeViewer, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: ICodeViewer, isStandalone: true, selector: "i-code-viewer", inputs: { language: "language", file: "file", code: "code", wrap: ["wrap", "wrap", coerceBool], compact: ["compact", "compact", coerceBool], lineNumbers: ["lineNumbers", "lineNumbers", coerceBool], overlay: ["overlay", "overlay", coerceBool], showFileType: ["showFileType", "showFileType", coerceBool], copy: ["copy", "copy", coerceBool], scroll: ["scroll", "scroll", coerceBool], height: "height", highlighter: "highlighter" }, outputs: { onFileLoaded: "onFileLoaded" }, viewQueries: [{ propertyName: "projectedTpl", first: true, predicate: ["projected"], descendants: true, static: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICodeViewer, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: ICodeViewer, isStandalone: true, selector: "i-code-viewer", inputs: { language: "language", file: "file", code: "code", wrap: ["wrap", "wrap", coerceBool], compact: ["compact", "compact", coerceBool], lineNumbers: ["lineNumbers", "lineNumbers", coerceBool], overlay: ["overlay", "overlay", coerceBool], showFileType: ["showFileType", "showFileType", coerceBool], copy: ["copy", "copy", coerceBool], scroll: ["scroll", "scroll", coerceBool], height: "height", highlighter: "highlighter" }, outputs: { onFileLoaded: "onFileLoaded" }, viewQueries: [{ propertyName: "projectedTpl", first: true, predicate: ["projected"], descendants: true, static: true }], ngImport: i0, template: `
     <ng-template #projected>
       <ng-content />
     </ng-template>
@@ -1044,7 +1044,7 @@ class ICodeViewer {
     </div>
   `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICodeViewer, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICodeViewer, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-code-viewer',
@@ -1150,11 +1150,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 type: Output
             }] } });
 class ICodeViewerModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICodeViewerModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.31", ngImport: i0, type: ICodeViewerModule, imports: [ICodeViewer], exports: [ICodeViewer] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICodeViewerModule, imports: [ICodeViewer] });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICodeViewerModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.32", ngImport: i0, type: ICodeViewerModule, imports: [ICodeViewer], exports: [ICodeViewer] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICodeViewerModule, imports: [ICodeViewer] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICodeViewerModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICodeViewerModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [ICodeViewer],
@@ -1246,8 +1246,8 @@ class IInputAddon {
     get addonKind() {
         return this.addon?.type + '';
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IInputAddon, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IInputAddon, isStandalone: true, selector: "i-input-addon", inputs: { addon: "addon" }, host: { properties: { "attr.kind": "this.addonKind" } }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IInputAddon, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IInputAddon, isStandalone: true, selector: "i-input-addon", inputs: { addon: "addon" }, host: { properties: { "attr.kind": "this.addonKind" } }, ngImport: i0, template: `
     @if (!addon || addon.visible === false) {
       <!-- render nothing -->
     } @else if (addon.type === 'button') {
@@ -1277,7 +1277,7 @@ class IInputAddon {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IInputAddon, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IInputAddon, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-input-addon',
@@ -1534,86 +1534,24 @@ class IInputMaskDirective {
         }
         return result;
     }
-    /** Normalize full date string (used on blur / Enter). */
-    normalizeDateValue(value, format) {
-        if (!value)
-            return value;
-        const segments = this.getDateSegments(value, format);
-        if (!segments.length)
-            return value;
-        let day = 1;
-        let month = 1;
-        let year = 2000;
-        for (const seg of segments) {
-            const n = seg.raw ? Number(seg.raw) : NaN;
-            if (Number.isNaN(n))
-                continue;
-            if (seg.kind === 'day')
-                day = n;
-            else if (seg.kind === 'month')
-                month = n;
-            else
-                year = n;
-        }
-        if (month < 1)
-            month = 1;
-        if (month > 12)
-            month = 12;
-        const maxDay = this.daysInMonth(year > 0 ? year : 2000, month);
-        if (day < 1)
-            day = 1;
-        if (day > maxDay)
-            day = maxDay;
-        return this.formatDateFromParts(day, month, year, format);
-    }
-    /**
-     * Digits-only behavior for date mask (no separators typed yet).
-     *
-     * For dd/MM/yyyy:
-     * - "12"       → "12/"
-     * - "1210"     → "12/10/"
-     * - "12101980" → "12/10/1980"
-     */
+    /** Places digits in date segments and inserts completed separators. */
     applyDateMaskDigitsOnly(digits, format) {
         const { tokens, seps } = this.splitDateFormat(format);
         if (!tokens.length)
             return digits;
-        const firstSep = seps[1] ?? '';
-        const secondSep = seps[2] ?? '';
-        if (digits.length <= 2) {
-            if (digits.length === 2 && firstSep)
-                return digits + firstSep;
-            return digits;
-        }
-        if (digits.length <= 4) {
-            const dRaw = digits.slice(0, 2);
-            const mRaw = digits.slice(2);
-            let res = dRaw;
-            if (firstSep)
-                res += firstSep;
-            if (mRaw.length) {
-                res += mRaw;
-                if (mRaw.length === 2 && secondSep)
-                    res += secondSep;
+        let result = seps[0] ?? '';
+        let offset = 0;
+        for (let i = 0; i < tokens.length; i++) {
+            const part = digits.slice(offset, offset + tokens[i].length);
+            if (!part)
+                break;
+            result += part;
+            offset += part.length;
+            if (part.length === tokens[i].length && i < tokens.length - 1) {
+                result += seps[i + 1] ?? '';
             }
-            return res;
         }
-        const dStr = digits.slice(0, 2);
-        const mStr = digits.slice(2, 4);
-        const yStr = digits.slice(4, 8);
-        let day = Number(dStr || '1');
-        let month = Number(mStr || '1');
-        const year = Number(yStr || '2000');
-        if (month < 1)
-            month = 1;
-        if (month > 12)
-            month = 12;
-        const maxDay = this.daysInMonth(year > 0 ? year : 2000, month);
-        if (day < 1)
-            day = 1;
-        if (day > maxDay)
-            day = maxDay;
-        return this.formatDateFromParts(day, month, year, format);
+        return result;
     }
     applyDateMask(raw, format) {
         if (!raw)
@@ -1640,55 +1578,8 @@ class IInputMaskDirective {
             const closed = rawSeg.length >= len;
             parts.push({ kind, raw: rawSeg.slice(0, len), len, closed, out: '' });
         }
-        const dayPart = parts.find((p) => p.kind === 'day');
-        const monthPart = parts.find((p) => p.kind === 'month');
-        const yearPart = parts.find((p) => p.kind === 'year');
-        let monthNumForClamp = null;
-        if (monthPart && monthPart.closed && monthPart.raw) {
-            let m = Number(monthPart.raw);
-            if (m < 1)
-                m = 1;
-            if (m > 12)
-                m = 12;
-            monthNumForClamp = m;
-        }
-        let yearForCalc = 2000;
-        if (yearPart && yearPart.closed && yearPart.raw) {
-            const y = Number(yearPart.raw);
-            yearForCalc = y > 0 ? y : 2000;
-        }
-        if (monthPart) {
-            if (monthPart.closed && monthPart.raw) {
-                let m = monthNumForClamp ?? Number(monthPart.raw);
-                if (m < 1)
-                    m = 1;
-                if (m > 12)
-                    m = 12;
-                monthPart.out = String(m).padStart(monthPart.len, '0');
-                monthNumForClamp = m;
-            }
-            else {
-                monthPart.out = monthPart.raw;
-            }
-        }
-        if (dayPart) {
-            if (dayPart.closed && dayPart.raw) {
-                let d = Number(dayPart.raw);
-                const monthForDay = monthNumForClamp !== null ? monthNumForClamp : 1;
-                const maxDay = this.daysInMonth(yearForCalc, monthForDay);
-                if (d < 1)
-                    d = 1;
-                if (d > maxDay)
-                    d = maxDay;
-                dayPart.out = String(d).padStart(dayPart.len, '0');
-            }
-            else {
-                dayPart.out = dayPart.raw;
-            }
-        }
-        if (yearPart) {
-            yearPart.out = yearPart.raw;
-        }
+        for (const part of parts)
+            part.out = part.raw;
         const outSegs = parts.map((p) => p.out);
         const hasDigits = parts.map((p) => p.raw.length > 0);
         let result = seps[0] ?? '';
@@ -2211,51 +2102,21 @@ class IInputMaskDirective {
             return max;
         return n;
     }
-    clampMonth2(raw2) {
-        // raw2 must be 2 digits
-        let m = Number(raw2);
-        if (Number.isNaN(m))
-            m = 1;
-        m = this.clamp(m, 1, 12);
-        return String(m).padStart(2, '0');
-    }
-    clampDay2(raw2, month2, year4) {
-        let d = Number(raw2);
-        if (Number.isNaN(d))
-            d = 1;
-        let m = month2 ? Number(month2) : 1;
-        if (Number.isNaN(m))
-            m = 1;
-        m = this.clamp(m, 1, 12);
-        let y = year4 ? Number(year4) : 2000;
-        if (Number.isNaN(y) || y <= 0)
-            y = 2000;
-        const maxDay = this.daysInMonth(y, m);
-        d = this.clamp(d, 1, maxDay);
-        return String(d).padStart(2, '0');
-    }
-    /**
-     * Smart digit typing for DATE:
-     * - never allows 3-digit day/month or 5-digit year
-     * - when caret is at end of a full segment, typing "rolls" that segment:
-     *   month "01" + '2' => "12" (shift + append)
-     *   year "2026" + '1' => "0261" (keeps last 4)
-     */
+    /** Inserts a digit into the date segment at the caret. */
     handleDateDigitKey(el, digit) {
         const format = this.mask?.format || 'dd/MM/yyyy';
-        // Ensure we work from a masked baseline (important for stable caret mapping)
+        // Normalize separators before locating the caret.
         const baseline = this.applyDateMask(el.value ?? '', format);
         if (baseline !== el.value) {
             el.value = baseline;
         }
         const tokens = this.splitDateFormat(format).tokens;
-        const lens = tokens.map((t) => t.length); // usually [2,2,4]
+        const lens = tokens.map((t) => t.length);
         const totalLen = lens.reduce((a, b) => a + b, 0);
-        // digits-only
         const digitsOnly = (el.value ?? '').replace(/\D/g, '').slice(0, totalLen);
         const caret = el.selectionStart ?? (el.value ?? '').length;
         const digitCursor = this.countDigitsBeforePos(el.value ?? '', caret);
-        // Build ranges for each token in digitsOnly
+        // Locate each segment in the digit sequence.
         const ranges = [];
         let acc = 0;
         for (const tok of tokens) {
@@ -2264,36 +2125,26 @@ class IInputMaskDirective {
             ranges.push({ start: acc, end: acc + len, kind });
             acc += len;
         }
-        // Find active token index.
-        // If caret is exactly at a token boundary, prefer the previous token (so month-end rolling works).
+        // A completed segment advances to the next segment.
         let idx = ranges.findIndex((r) => digitCursor < r.end);
         if (idx === -1)
             idx = ranges.length - 1;
-        // boundary case: digitCursor equals start of this token -> maybe user is at previous token end
-        if (idx > 0 && digitCursor === ranges[idx].start) {
-            idx = idx - 1;
-        }
         const r = ranges[idx];
         const tokenLen = r.end - r.start;
-        const tokenDigits = digitsOnly.slice(r.start, r.end); // may be shorter than tokenLen
+        const tokenDigits = digitsOnly.slice(r.start, r.end);
         const isFull = tokenDigits.length >= tokenLen;
-        // Position inside token (0..tokenLen)
         let rel = digitCursor - r.start;
         rel = this.clamp(rel, 0, tokenLen);
         let newToken = tokenDigits;
         if (!isFull) {
-            // insert into token until full
-            // (but still cap at tokenLen)
             newToken = (tokenDigits.slice(0, rel) + digit + tokenDigits.slice(rel)).slice(0, tokenLen);
         }
         else {
-            // token is full
             if (digitCursor >= r.end) {
-                // caret at token end -> rolling shift (fixes your "01" => "12" behavior)
+                // Shift a full segment when typing at its end.
                 newToken = tokenDigits.slice(1) + digit;
             }
             else {
-                // overwrite at position
                 newToken =
                     tokenDigits.slice(0, rel) +
                         digit +
@@ -2301,44 +2152,43 @@ class IInputMaskDirective {
                 newToken = newToken.slice(0, tokenLen);
             }
         }
-        // Apply clamp rules when token becomes complete
-        // We need current month/year to clamp day correctly
-        const monthRange = ranges.find((x) => x.kind === 'month');
-        const yearRange = ranges.find((x) => x.kind === 'year');
-        // Prepare a working digits string with replaced token first (before clamp)
         const before = digitsOnly.slice(0, r.start);
         const after = digitsOnly.slice(r.end);
-        let nextDigits = (before + newToken + after).slice(0, totalLen);
-        const month2 = monthRange
-            ? nextDigits.slice(monthRange.start, monthRange.end).padEnd(2, '')
-            : '';
-        const year4 = yearRange ? nextDigits.slice(yearRange.start, yearRange.end).padEnd(4, '') : '';
-        if (r.kind === 'month' && newToken.length === 2) {
-            const clamped = this.clampMonth2(newToken);
-            nextDigits = (before + clamped + after).slice(0, totalLen);
-        }
-        if (r.kind === 'day' && newToken.length === 2) {
-            const clamped = this.clampDay2(newToken, month2.length === 2 ? month2 : undefined, year4.length === 4 ? year4 : undefined);
-            nextDigits = (before + clamped + after).slice(0, totalLen);
-        }
-        // Year: never exceed 4 digits; rolling already enforces.
-        if (r.kind === 'year') {
-            // Ensure year segment is max 4
-            if (yearRange) {
-                const y = nextDigits.slice(yearRange.start, yearRange.end);
-                const yFixed = y.slice(0, 4);
-                nextDigits =
-                    nextDigits.slice(0, yearRange.start) + yFixed + nextDigits.slice(yearRange.end);
-                nextDigits = nextDigits.slice(0, totalLen);
-            }
-        }
+        const nextDigits = (before + newToken + after).slice(0, totalLen);
         const masked = this.applyDateMaskDigitsOnly(nextDigits, format);
-        // compute caret: if we rolled at token end, keep caret at token end (don’t jump into next token)
+        // Keep the caret in the edited segment when its digits are shifted.
         const didRollAtEnd = isFull && digitCursor >= r.end;
         const nextDigitCursor = didRollAtEnd ? r.end : Math.min(totalLen, digitCursor + 1);
         el.value = masked;
         this.dispatchInputEvent();
-        const nextCaret = this.caretPosAfterDigits(masked, nextDigitCursor);
+        let nextCaret = this.caretPosAfterDigits(masked, nextDigitCursor);
+        while (nextCaret < masked.length && /\D/.test(masked[nextCaret]))
+            nextCaret++;
+        this.safeSetSelectionRange(el, nextCaret, nextCaret);
+    }
+    /** Pads the active segment and moves the caret past its separator. */
+    handleDateSeparatorKey(el, key) {
+        const format = this.mask?.format || 'dd/MM/yyyy';
+        const { tokens, seps } = this.splitDateFormat(format);
+        const value = el.value;
+        const caret = el.selectionStart ?? value.length;
+        const segments = this.getDateSegments(value, format);
+        const index = segments.findIndex((segment, i) => i < tokens.length - 1 && caret >= segment.start && caret <= segment.end);
+        if (index < 0 || !seps[index + 1]?.includes(key))
+            return;
+        const segment = segments[index];
+        if (!segment.raw)
+            return;
+        const padded = segment.raw.padStart(tokens[index].length, '0');
+        let next = value.slice(0, segment.start) + padded + value.slice(segment.end);
+        let nextCaret = segment.start + padded.length;
+        const separator = seps[index + 1];
+        if (!next.startsWith(separator, nextCaret)) {
+            next = next.slice(0, nextCaret) + separator + next.slice(nextCaret);
+        }
+        nextCaret += separator.length;
+        el.value = next;
+        this.dispatchInputEvent();
         this.safeSetSelectionRange(el, nextCaret, nextCaret);
     }
     /**
@@ -2418,84 +2268,7 @@ class IInputMaskDirective {
         this.safeSetSelectionRange(el, nextCaret, nextCaret);
     }
     normalizePastedDate(raw, format) {
-        if (!raw)
-            return '';
-        const nums = raw.match(/\d+/g) ?? [];
-        if (!nums.length)
-            return '';
-        const { tokens } = this.splitDateFormat(format);
-        let day = 1;
-        let month = 1;
-        let year = 2000;
-        if (nums.length >= 3) {
-            // ✅ make TS happy
-            const a = nums[0] ?? '';
-            const b = nums[1] ?? '';
-            const c = nums[2] ?? '';
-            const aNum = Number(a);
-            const bNum = Number(b);
-            const cNum = Number(c);
-            if (a.length === 4) {
-                // yyyy MM dd
-                year = aNum;
-                month = bNum;
-                day = cNum;
-            }
-            else if (c.length === 4) {
-                // dd MM yyyy
-                day = aNum;
-                month = bNum;
-                year = cNum;
-            }
-            else {
-                // fallback: map by format order
-                const parts = [a, b, c];
-                const map = {
-                    d: undefined,
-                    M: undefined,
-                    y: undefined,
-                };
-                tokens.forEach((t, i) => {
-                    const v = Number(parts[i] ?? '');
-                    if (!Number.isNaN(v))
-                        map[t[0]] = v;
-                });
-                if (map.d !== undefined)
-                    day = map.d;
-                if (map.M !== undefined)
-                    month = map.M;
-                if (map.y !== undefined)
-                    year = map.y;
-            }
-        }
-        else {
-            // digits-only fallback: 31122026, 20260131, etc.
-            const digits = nums.join('').slice(0, 8);
-            if (digits.length >= 8) {
-                if (format.trim().startsWith('yyyy')) {
-                    year = Number(digits.slice(0, 4));
-                    month = Number(digits.slice(4, 6));
-                    day = Number(digits.slice(6, 8));
-                }
-                else {
-                    day = Number(digits.slice(0, 2));
-                    month = Number(digits.slice(2, 4));
-                    year = Number(digits.slice(4, 8));
-                }
-            }
-            else {
-                // if user pastes something too short, just let the normal mask handle it
-                return this.applyDateMask(nums.join(''), format);
-            }
-        }
-        // Clamp + sanitize
-        if (!Number.isFinite(year) || year <= 0)
-            year = 2000;
-        year = Math.min(year, 9999); // ✅ never 5 digits
-        month = this.clamp(month, 1, 12);
-        const maxDay = this.daysInMonth(year, month);
-        day = this.clamp(day, 1, maxDay);
-        return this.formatDateFromParts(day, month, year, format);
+        return this.applyDateMask(raw, format);
     }
     normalizePastedTime(raw, format) {
         if (!raw)
@@ -2562,15 +2335,6 @@ class IInputMaskDirective {
         const el = this.nativeInput;
         if (!el)
             return;
-        if (this.mask.type === 'date' && this.mask.format) {
-            if (!el.value)
-                return;
-            const normalized = this.normalizeDateValue(el.value, this.mask.format);
-            if (normalized !== el.value) {
-                el.value = normalized;
-                this.dispatchInputEvent();
-            }
-        }
         if (this.mask.type === 'time' && this.mask.format) {
             if (!el.value)
                 return;
@@ -2611,16 +2375,8 @@ class IInputMaskDirective {
             this.adjustTimeSegmentByArrow(key);
             return;
         }
-        // Date normalize on Enter
         if (type === 'date' && this.mask.format && key === 'Enter') {
             event.preventDefault();
-            if (el.value) {
-                const normalized = this.normalizeDateValue(el.value, this.mask.format);
-                if (normalized !== el.value) {
-                    el.value = normalized;
-                    this.dispatchInputEvent();
-                }
-            }
             return;
         }
         // Time normalize on Enter
@@ -2658,7 +2414,11 @@ class IInputMaskDirective {
                     this.handleTimeDigitKey(el, key);
                 return;
             }
-            // allow separators as typed (optional; mask will normalize anyway)
+            if (type === 'date' && allowedSeps.has(key)) {
+                event.preventDefault();
+                this.handleDateSeparatorKey(el, key);
+                return;
+            }
             if (allowedSeps.has(key))
                 return;
             event.preventDefault();
@@ -2717,10 +2477,10 @@ class IInputMaskDirective {
             this.safeSetSelectionRange(el, next.length, next.length);
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IInputMaskDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IInputMaskDirective, isStandalone: true, selector: "[iInputMask]", inputs: { mask: ["iInputMask", "mask"], autoDefault: "autoDefault" }, host: { listeners: { "input": "onInput()", "blur": "onBlur()", "focus": "onFocus()", "keydown": "onKeydown($event)", "paste": "onPaste($event)" } }, usesOnChanges: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IInputMaskDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.32", type: IInputMaskDirective, isStandalone: true, selector: "[iInputMask]", inputs: { mask: ["iInputMask", "mask"], autoDefault: "autoDefault" }, host: { listeners: { "input": "onInput()", "blur": "onBlur()", "focus": "onFocus()", "keydown": "onKeydown($event)", "paste": "onPaste($event)" } }, usesOnChanges: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IInputMaskDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IInputMaskDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iInputMask]',
@@ -2831,8 +2591,8 @@ class IInput {
         }
         return Array.isArray(this.append) ? this.append : [this.append];
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IInput, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IInput, isStandalone: true, selector: "i-input", inputs: { type: "type", placeholder: "placeholder", autocomplete: "autocomplete", readonly: "readonly", invalid: "invalid", mask: "mask", value: "value", prepend: "prepend", append: "append", disabled: "disabled" }, host: { listeners: { "click": "handleHostClick($event)" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IInput, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IInput, isStandalone: true, selector: "i-input", inputs: { type: "type", placeholder: "placeholder", autocomplete: "autocomplete", readonly: "readonly", invalid: "invalid", mask: "mask", value: "value", prepend: "prepend", append: "append", disabled: "disabled" }, host: { listeners: { "click": "handleHostClick($event)" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => IInput),
@@ -2858,7 +2618,7 @@ class IInput {
       <i-input-addon [addon]="i" />
     }`, isInline: true, dependencies: [{ kind: "component", type: IInputAddon, selector: "i-input-addon", inputs: ["addon"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask", "autoDefault"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IInput, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IInput, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-input',
@@ -3021,8 +2781,8 @@ class IFCInput {
     get resolvedErrorText() {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IFCInput, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IFCInput, isStandalone: true, selector: "i-fc-input", inputs: { label: "label", placeholder: "placeholder", autocomplete: "autocomplete", readonly: "readonly", type: "type", mask: "mask", prepend: "prepend", append: "append", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerInput", first: true, predicate: IInput, descendants: true }], ngImport: i0, template: `@if (label) {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IFCInput, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IFCInput, isStandalone: true, selector: "i-fc-input", inputs: { label: "label", placeholder: "placeholder", autocomplete: "autocomplete", readonly: "readonly", type: "type", mask: "mask", prepend: "prepend", append: "append", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerInput", first: true, predicate: IInput, descendants: true }], ngImport: i0, template: `@if (label) {
       <label class="i-fc-input__label" (click)="focusInnerInput()">
         {{ label }} :
         @if (required) {
@@ -3052,7 +2812,7 @@ class IFCInput {
       </div>
     }`, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IFCInput, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IFCInput, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-fc-input',
@@ -3115,11 +2875,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 type: Input
             }] } });
 class IInputModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IInputModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.31", ngImport: i0, type: IInputModule, imports: [IInput, IFCInput, IInputAddon, IInputMaskDirective], exports: [IInput, IFCInput, IInputAddon, IInputMaskDirective] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IInputModule });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IInputModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.32", ngImport: i0, type: IInputModule, imports: [IInput, IFCInput, IInputAddon, IInputMaskDirective], exports: [IInput, IFCInput, IInputAddon, IInputMaskDirective] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IInputModule });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IInputModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IInputModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [IInput, IFCInput, IInputAddon, IInputMaskDirective],
@@ -3139,10 +2899,10 @@ class IHighlightSearchPipe {
             return `<span class="highlight-search">${match}</span>`;
         });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHighlightSearchPipe, deps: [], target: i0.ɵɵFactoryTarget.Pipe });
-    static ɵpipe = i0.ɵɵngDeclarePipe({ minVersion: "14.0.0", version: "20.3.31", ngImport: i0, type: IHighlightSearchPipe, isStandalone: true, name: "highlightSearch" });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHighlightSearchPipe, deps: [], target: i0.ɵɵFactoryTarget.Pipe });
+    static ɵpipe = i0.ɵɵngDeclarePipe({ minVersion: "14.0.0", version: "20.3.32", ngImport: i0, type: IHighlightSearchPipe, isStandalone: true, name: "highlightSearch" });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHighlightSearchPipe, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHighlightSearchPipe, decorators: [{
             type: Pipe,
             args: [{
                     name: 'highlightSearch',
@@ -3171,10 +2931,10 @@ class ISelectOptionDefDirective {
     set iSelectOption(_value) {
         // not used, needed for structural directive syntax
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISelectOptionDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: ISelectOptionDefDirective, isStandalone: true, selector: "[iSelectOption]", inputs: { iSelectOption: "iSelectOption" }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISelectOptionDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.32", type: ISelectOptionDefDirective, isStandalone: true, selector: "[iSelectOption]", inputs: { iSelectOption: "iSelectOption" }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISelectOptionDefDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISelectOptionDefDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iSelectOption]',
@@ -3904,8 +3664,8 @@ class ISelect {
             this.repositionRaf = 0;
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: ISelect, isStandalone: true, selector: "i-select", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", options: "options", options$: "options$", displayWith: "displayWith", filterPredicate: "filterPredicate", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, host: { listeners: { "keydown": "handleKeydown($event)", "input": "onHostInput($event)", "document:click": "onDocumentClick($event)" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: ISelect, isStandalone: true, selector: "i-select", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", options: "options", options$: "options$", displayWith: "displayWith", filterPredicate: "filterPredicate", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, host: { listeners: { "keydown": "handleKeydown($event)", "input": "onHostInput($event)", "document:click": "onDocumentClick($event)" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => ISelect),
@@ -3954,7 +3714,7 @@ class ISelect {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISelect, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISelect, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-select',
@@ -4170,8 +3930,8 @@ class IFCSelect {
     get resolvedErrorText() {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IFCSelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IFCSelect, isStandalone: true, selector: "i-fc-select", inputs: { label: "label", placeholder: "placeholder", options: "options", options$: "options$", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", panelOffset: "panelOffset", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", errorMessage: "errorMessage", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IFCSelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IFCSelect, isStandalone: true, selector: "i-fc-select", inputs: { label: "label", placeholder: "placeholder", options: "options", options$: "options$", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", panelOffset: "panelOffset", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", errorMessage: "errorMessage", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `
     @if (label) {
       <label class="i-fc-select__label" (click)="focusInnerSelect()">
         {{ label }} :
@@ -4206,7 +3966,7 @@ class IFCSelect {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IFCSelect, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IFCSelect, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-fc-select',
@@ -4283,21 +4043,39 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 type: Output
             }] } });
 
-/**
- * IDatepicker
- * Version: 1.5.4
- *
- * Fixes:
- * - ✅ IMPORTANT: prevent value from being wiped due to bubbled "input" events
- *   from inner month/year i-select inputs.
- *   -> Only handle input when event.target is the date input itself.
- * - Keep portal + positioning + flicker guard for portaled i-options.
- * - IFCDatepicker included in same file
- * - Add absolute minYear/maxYear and relative minYearRange/maxYearRange
- */
+/** Date input with a calendar panel and form control wrapper. */
 const noop = () => {
     /**/
 };
+function parseDateByFormat(value, format) {
+    if (!value)
+        return null;
+    const chunks = format.match(/yyyy|MM|dd|./g) ?? [];
+    const fields = chunks.filter((chunk) => /^(yyyy|MM|dd)$/.test(chunk));
+    if (fields.length !== 3 || new Set(fields).size !== 3)
+        return null;
+    const pattern = chunks
+        .map((chunk) => /^(yyyy|MM|dd)$/.test(chunk)
+        ? `(\\d{${chunk.length}})`
+        : chunk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .join('');
+    const match = new RegExp(`^${pattern}$`).exec(value);
+    if (!match)
+        return null;
+    const parts = Object.fromEntries(fields.map((field, index) => [field, Number(match[index + 1])]));
+    const year = parts['yyyy'];
+    const month = parts['MM'];
+    const day = parts['dd'];
+    if (!year || !month || !day || month > 12)
+        return null;
+    const date = new Date(0);
+    date.setFullYear(year, month - 1, day);
+    date.setHours(0, 0, 0, 0);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+        return null;
+    }
+    return date;
+}
 class IDatepicker {
     hostEl = inject((ElementRef));
     cdr = inject(ChangeDetectorRef);
@@ -4306,7 +4084,25 @@ class IDatepicker {
     placeholder = '';
     disabled = false;
     invalid = false;
-    format = 'dd/MM/yyyy';
+    _format = 'dd/MM/yyyy';
+    writtenString = null;
+    get format() {
+        return this._format;
+    }
+    set format(value) {
+        const next = value || 'dd/MM/yyyy';
+        if (next === this._format)
+            return;
+        this._format = next;
+        if (this.writtenString !== null) {
+            this.writeValue(this.writtenString);
+        }
+        else if (this._modelValue && !this.isEditing) {
+            this._displayText = this.formatDate(this._modelValue);
+            this.cdr.markForCheck();
+        }
+    }
+    displayFormat;
     panelPosition = 'bottom left';
     _minYear = null;
     _maxYear = null;
@@ -4357,7 +4153,13 @@ class IDatepicker {
     portalHomeRef;
     _modelValue = null;
     _displayText = '';
+    isEditing = false;
+    pendingExternalValue;
     get displayText() {
+        // Valid dates use the display pattern outside the input.
+        if (this._modelValue && (!this.isEditing || this.disabled)) {
+            return this.formatDate(this._modelValue, this.displayFormat || this.format);
+        }
         return this._displayText;
     }
     onChange = noop;
@@ -4399,9 +4201,7 @@ class IDatepicker {
     repositionRaf = 0;
     listeningGlobal = false;
     ngOnInit() {
-        // Initialize calendar view to today WITHOUT setting a model value.
-        // The input stays empty until a date is picked or written via form control.
-        // Fixes: optional/null date fields no longer auto-fill with today.
+        // Initialize the calendar view while leaving the input empty.
         if (!this._modelValue && !this._displayText) {
             this.updateView(this.startOfDay(new Date()));
         }
@@ -4410,6 +4210,7 @@ class IDatepicker {
         this.closePanel(true);
     }
     writeValue(value) {
+        this.writtenString = typeof value === 'string' && value.trim() ? value.trim() : null;
         let date = null;
         if (value instanceof Date) {
             date = this.startOfDay(value);
@@ -4419,6 +4220,14 @@ class IDatepicker {
         }
         else {
             date = null;
+        }
+        if (this.isEditing) {
+            const same = (!date && !this._modelValue) ||
+                (!!date && !!this._modelValue && this.isSameDate(date, this._modelValue));
+            if (same)
+                return;
+            this.pendingExternalValue = date;
+            return;
         }
         this._modelValue = date;
         this._displayText = date ? this.formatDate(date) : '';
@@ -4472,6 +4281,7 @@ class IDatepicker {
         this._displayText = this.formatDate(parsed);
     }
     handleInput(raw) {
+        this.writtenString = null;
         this._displayText = raw;
         const parsed = this.parseInputDate(raw);
         this._modelValue = parsed;
@@ -4484,7 +4294,14 @@ class IDatepicker {
         this.cdr.markForCheck();
     }
     handleBlur() {
+        this.isEditing = false;
+        if (this.pendingExternalValue !== undefined) {
+            const next = this.pendingExternalValue;
+            this.pendingExternalValue = undefined;
+            this.writeValue(next);
+        }
         this.onTouched();
+        this.cdr.markForCheck();
     }
     toggleOpen() {
         if (this.disabled)
@@ -4777,13 +4594,17 @@ class IDatepicker {
         if (this.disabled)
             return;
         const selected = this.startOfDay(day.date);
+        this.writtenString = null;
         this._modelValue = selected;
         this._displayText = this.formatDate(selected);
+        this.pendingExternalValue = undefined;
+        this.isEditing = false;
         this.onChange(selected);
         this.onTouched();
         this.onChanged.emit(selected);
         this.updateView(selected);
         this.closePanel();
+        this.getInnerInput()?.blur();
         this.cdr.markForCheck();
     }
     initViewFromModel() {
@@ -4892,7 +4713,9 @@ class IDatepicker {
         this.weeks = weeks;
     }
     startOfDay(date) {
-        return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const result = new Date(date);
+        result.setHours(0, 0, 0, 0);
+        return result;
     }
     isSameDate(a, b) {
         return (a.getFullYear() === b.getFullYear() &&
@@ -4900,39 +4723,19 @@ class IDatepicker {
             a.getDate() === b.getDate());
     }
     parseInputDate(value) {
-        if (!value)
-            return null;
-        const fmt = this.format || 'yyyy-MM-dd';
-        const parts = value.match(/\d+/g);
-        if (!parts || parts.length < 3)
-            return null;
-        const tokens = fmt.match(/(yyyy|MM|dd)/g) || ['yyyy', 'MM', 'dd'];
-        let year;
-        let month;
-        let day;
-        tokens.forEach((t, idx) => {
-            const p = parts[idx];
-            if (!p)
-                return;
-            const n = Number(p);
-            if (t === 'yyyy')
-                year = n;
-            else if (t === 'MM')
-                month = n;
-            else if (t === 'dd')
-                day = n;
-        });
-        if (!year || !month || !day)
-            return null;
-        const date = new Date(year, month - 1, day);
-        if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
-            return null;
-        }
-        return this.startOfDay(date);
+        return parseDateByFormat(value, this.format);
     }
-    formatDate(date) {
-        const fmt = this.format || 'yyyy-MM-dd';
+    formatDate(date, format = this.format) {
+        const fmt = format || 'dd/MM/yyyy';
         return formatDate(date, fmt, 'en');
+    }
+    onHostFocusIn(event) {
+        if (event.target !== this.getInnerInput() || this.disabled)
+            return;
+        this.isEditing = true;
+        if (this._modelValue)
+            this._displayText = this.formatDate(this._modelValue);
+        this.cdr.markForCheck();
     }
     onHostInput(event) {
         const target = event.target;
@@ -4943,7 +4746,9 @@ class IDatepicker {
             return;
         this.handleInput(dateInput.value);
     }
-    onHostFocusOut() {
+    onHostFocusOut(event) {
+        if (event.target !== this.getInnerInput())
+            return;
         this.handleBlur();
     }
     onDocumentClick(event) {
@@ -4966,8 +4771,8 @@ class IDatepicker {
         this.closePanel();
         this.cdr.markForCheck();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IDatepicker, isStandalone: true, selector: "i-datepicker", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", format: "format", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", panelOffset: "panelOffset", value: "value" }, outputs: { onChanged: "onChanged" }, host: { listeners: { "input": "onHostInput($event)", "focusout": "onHostFocusOut()", "document:click": "onDocumentClick($event)" }, properties: { "class.i-datepicker--disabled": "this.disabledHostClass" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IDatepicker, isStandalone: true, selector: "i-datepicker", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", format: "format", displayFormat: "displayFormat", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", panelOffset: "panelOffset", value: "value" }, outputs: { onChanged: "onChanged" }, host: { listeners: { "focusin": "onHostFocusIn($event)", "input": "onHostInput($event)", "focusout": "onHostFocusOut($event)", "document:click": "onDocumentClick($event)" }, properties: { "class.i-datepicker--disabled": "this.disabledHostClass" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => IDatepicker),
@@ -5038,7 +4843,7 @@ class IDatepicker {
     </i-datepicker-panel>
   `, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask", "autoDefault"] }, { kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDatepicker, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDatepicker, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-datepicker',
@@ -5125,6 +4930,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 type: Input
             }], format: [{
                 type: Input
+            }], displayFormat: [{
+                type: Input
             }], panelPosition: [{
                 type: Input
             }], minYear: [{
@@ -5154,25 +4961,34 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
             }], portalHomeRef: [{
                 type: ViewChild,
                 args: ['portalHome', { read: ElementRef }]
+            }], onHostFocusIn: [{
+                type: HostListener,
+                args: ['focusin', ['$event']]
             }], onHostInput: [{
                 type: HostListener,
                 args: ['input', ['$event']]
             }], onHostFocusOut: [{
                 type: HostListener,
-                args: ['focusout']
+                args: ['focusout', ['$event']]
             }], onDocumentClick: [{
                 type: HostListener,
                 args: ['document:click', ['$event']]
             }] } });
-/**
- * IFCDatepicker
- * Version: 1.5.4 (smart wrapper)
- */
+/** Form control wrapper for the datepicker. */
 class IFCDatepicker {
     innerDatepicker;
     label = '';
     placeholder = '';
-    format = 'dd/MM/yyyy';
+    get format() {
+        return this._format;
+    }
+    set format(value) {
+        this._format = value || 'dd/MM/yyyy';
+        if (this.externalStringValue !== null) {
+            this.applyExternalValue(parseDateByFormat(this.externalStringValue, this._format));
+        }
+    }
+    displayFormat;
     panelPosition = 'bottom left';
     minYear = null;
     maxYear = null;
@@ -5183,9 +4999,12 @@ class IFCDatepicker {
         return this._value;
     }
     set value(v) {
-        this.applyExternalValue(v ?? null);
+        this.externalStringValue = typeof v === 'string' ? v : null;
+        this.applyExternalValue(this.coerceValue(v));
     }
+    _format = 'dd/MM/yyyy';
     _value = null;
+    externalStringValue = null;
     forwardedValue = null;
     isDisabled = false;
     onChange = noop;
@@ -5213,16 +5032,15 @@ class IFCDatepicker {
         this.submitSub?.unsubscribe?.();
     }
     writeValue(v) {
-        let next = null;
-        if (v instanceof Date)
-            next = v;
-        else if (typeof v === 'string' && v.trim()) {
-            const parsed = new Date(v);
-            next = isNaN(parsed.getTime()) ? null : parsed;
+        this.value = v;
+    }
+    coerceValue(value) {
+        if (value instanceof Date) {
+            return Number.isNaN(value.getTime()) ? null : value;
         }
-        else
-            next = null;
-        this.applyExternalValue(next);
+        return typeof value === 'string'
+            ? parseDateByFormat(value.trim(), this.format)
+            : null;
     }
     registerOnChange(fn) {
         this.onChange = fn;
@@ -5238,7 +5056,8 @@ class IFCDatepicker {
         this._value = date ?? null;
         this.lastEmittedKey = this.dateKey(this._value);
         this.onChange(this._value);
-        this.onTouched();
+        if (date)
+            this.onTouched();
     }
     applyExternalValue(next) {
         const nextKey = this.dateKey(next);
@@ -5297,21 +5116,20 @@ class IFCDatepicker {
     }
     onInnerFocusOut() {
         queueMicrotask(() => {
-            if (!this.isInnerInputFocused())
+            if (!this.isInnerInputFocused()) {
+                this.onTouched();
                 this.tryFlushPendingExternal();
+            }
         });
     }
     get controlInvalid() {
         const c = this.ngControl?.control;
         if (!c)
             return false;
-        // Show error when: submitted, OR user has interacted (touched/dirty).
-        // Previously only checked submitted when formDir is present, so
-        // markAllAsTouched() had no effect on error visibility.
         if (this.formDir) {
-            return c.invalid && (this.formDir.submitted || c.touched || c.dirty);
+            return c.invalid && (this.formDir.submitted || c.touched);
         }
-        return c.invalid && (c.dirty || c.touched);
+        return c.invalid && c.touched;
     }
     get required() {
         return isControlRequired(this.ngControl, this.errorMessage);
@@ -5319,8 +5137,8 @@ class IFCDatepicker {
     get resolvedErrorText() {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IFCDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IFCDatepicker, isStandalone: true, selector: "i-fc-datepicker", inputs: { label: "label", placeholder: "placeholder", format: "format", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", errorMessage: "errorMessage", value: "value", _smartFocusHook: "_smartFocusHook" }, viewQueries: [{ propertyName: "innerDatepicker", first: true, predicate: ["inner"], descendants: true, static: true }], ngImport: i0, template: `@if (label) {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IFCDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IFCDatepicker, isStandalone: true, selector: "i-fc-datepicker", inputs: { label: "label", placeholder: "placeholder", format: "format", displayFormat: "displayFormat", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", errorMessage: "errorMessage", value: "value", _smartFocusHook: "_smartFocusHook" }, viewQueries: [{ propertyName: "innerDatepicker", first: true, predicate: ["inner"], descendants: true, static: true }], ngImport: i0, template: `@if (label) {
       <label class="i-fc-datepicker__label" (click)="focusInnerDatepicker()">
         {{ label }} :
         @if (required) {
@@ -5332,6 +5150,7 @@ class IFCDatepicker {
     <i-datepicker
       #inner
       [disabled]="isDisabled"
+      [displayFormat]="displayFormat"
       [format]="format"
       [invalid]="controlInvalid"
       [maxYear]="maxYear"
@@ -5349,9 +5168,9 @@ class IFCDatepicker {
       <div class="i-fc-datepicker__error">
         {{ resolvedErrorText }}
       </div>
-    }`, isInline: true, dependencies: [{ kind: "component", type: IDatepicker, selector: "i-datepicker", inputs: ["placeholder", "disabled", "invalid", "format", "panelPosition", "minYear", "maxYear", "minYearRange", "maxYearRange", "portalToBody", "matchTriggerWidth", "panelOffset", "value"], outputs: ["onChanged"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+    }`, isInline: true, dependencies: [{ kind: "component", type: IDatepicker, selector: "i-datepicker", inputs: ["placeholder", "disabled", "invalid", "format", "displayFormat", "panelPosition", "minYear", "maxYear", "minYearRange", "maxYearRange", "portalToBody", "matchTriggerWidth", "panelOffset", "value"], outputs: ["onChanged"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IFCDatepicker, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IFCDatepicker, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-fc-datepicker',
@@ -5369,6 +5188,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
     <i-datepicker
       #inner
       [disabled]="isDisabled"
+      [displayFormat]="displayFormat"
       [format]="format"
       [invalid]="controlInvalid"
       [maxYear]="maxYear"
@@ -5397,6 +5217,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
             }], placeholder: [{
                 type: Input
             }], format: [{
+                type: Input
+            }], displayFormat: [{
                 type: Input
             }], panelPosition: [{
                 type: Input
@@ -5488,8 +5310,8 @@ class ITextArea {
             this.textareaRef.nativeElement.focus();
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ITextArea, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ITextArea, isStandalone: true, selector: "i-textarea", inputs: { placeholder: "placeholder", readonly: "readonly", rows: "rows", invalid: "invalid", value: "value", disabled: "disabled" }, host: { listeners: { "click": "handleHostClick()" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ITextArea, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ITextArea, isStandalone: true, selector: "i-textarea", inputs: { placeholder: "placeholder", readonly: "readonly", rows: "rows", invalid: "invalid", value: "value", disabled: "disabled" }, host: { listeners: { "click": "handleHostClick()" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => ITextArea),
@@ -5507,7 +5329,7 @@ class ITextArea {
     (input)="handleInput($event)"
   ></textarea>`, isInline: true, changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ITextArea, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ITextArea, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-textarea',
@@ -5643,8 +5465,8 @@ class IFCTextArea {
     get resolvedErrorText() {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IFCTextArea, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IFCTextArea, isStandalone: true, selector: "i-fc-textarea", inputs: { label: "label", placeholder: "placeholder", readonly: "readonly", rows: "rows", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerTextarea", first: true, predicate: ITextArea, descendants: true }], ngImport: i0, template: `@if (label) {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IFCTextArea, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IFCTextArea, isStandalone: true, selector: "i-fc-textarea", inputs: { label: "label", placeholder: "placeholder", readonly: "readonly", rows: "rows", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerTextarea", first: true, predicate: ITextArea, descendants: true }], ngImport: i0, template: `@if (label) {
       <label class="i-fc-textarea__label" (click)="focusInnerTextarea()">
         {{ label }} :
         @if (required) {
@@ -5670,7 +5492,7 @@ class IFCTextArea {
       </div>
     }`, isInline: true, dependencies: [{ kind: "component", type: ITextArea, selector: "i-textarea", inputs: ["placeholder", "readonly", "rows", "invalid", "value", "disabled"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IFCTextArea, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IFCTextArea, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-fc-textarea',
@@ -5777,10 +5599,10 @@ class IDialogService {
     closeAll() {
         this._dialogs$.value.forEach((d) => d.ref.close());
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialogService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialogService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialogService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -5836,8 +5658,8 @@ class IDialogContainer {
             this.onClose.emit();
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogContainer, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IDialogContainer, isStandalone: true, selector: "i-dialog-container", inputs: { instance: "instance", config: "config", ariaLabel: "ariaLabel", isTopMost: "isTopMost" }, outputs: { onClose: "onClose" }, host: { attributes: { "role": "dialog", "aria-modal": "true" }, listeners: { "document:keydown.escape": "onEscKey()" }, properties: { "attr.aria-label": "ariaLabel" } }, usesOnChanges: true, ngImport: i0, template: `<div class="i-dialog-backdrop" (click)="onBackdropClick()"></div>
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialogContainer, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IDialogContainer, isStandalone: true, selector: "i-dialog-container", inputs: { instance: "instance", config: "config", ariaLabel: "ariaLabel", isTopMost: "isTopMost" }, outputs: { onClose: "onClose" }, host: { attributes: { "role": "dialog", "aria-modal": "true" }, listeners: { "document:keydown.escape": "onEscKey()" }, properties: { "attr.aria-label": "ariaLabel" } }, usesOnChanges: true, ngImport: i0, template: `<div class="i-dialog-backdrop" (click)="onBackdropClick()"></div>
     <div class="i-dialog-wrapper">
       <div class="i-dialog-panel" [ngStyle]="panelStyles">
         @if (instance) {
@@ -5848,7 +5670,7 @@ class IDialogContainer {
       </div>
     </div> `, isInline: true, dependencies: [{ kind: "directive", type: NgComponentOutlet, selector: "[ngComponentOutlet]", inputs: ["ngComponentOutlet", "ngComponentOutletInputs", "ngComponentOutletInjector", "ngComponentOutletEnvironmentInjector", "ngComponentOutletContent", "ngComponentOutletNgModule", "ngComponentOutletNgModuleFactory"], exportAs: ["ngComponentOutlet"] }, { kind: "directive", type: NgStyle, selector: "[ngStyle]", inputs: ["ngStyle"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogContainer, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialogContainer, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-dialog-container',
@@ -5890,14 +5712,14 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
 class IDialogOutlet {
     dialogService = inject(IDialogService);
     dialogs$ = this.dialogService.dialogs$;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogOutlet, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IDialogOutlet, isStandalone: true, selector: "i-dialog-outlet", ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialogOutlet, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IDialogOutlet, isStandalone: true, selector: "i-dialog-outlet", ngImport: i0, template: `
     @for (dialog of (dialogs$ | async) ?? []; track dialog.id; let last = $last) {
       <i-dialog-container [instance]="dialog" [isTopMost]="last" />
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IDialogContainer, selector: "i-dialog-container", inputs: ["instance", "config", "ariaLabel", "isTopMost"], outputs: ["onClose"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogOutlet, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialogOutlet, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-dialog-outlet',
@@ -5926,10 +5748,10 @@ class IDialogCloseDirective {
         event.preventDefault();
         this.dialogRef.close(this.result);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogCloseDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IDialogCloseDirective, isStandalone: true, selector: "[i-dialog-close], [iDialogClose]", inputs: { result: ["iDialogClose", "result"] }, host: { listeners: { "click": "onClick($event)" } }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialogCloseDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.32", type: IDialogCloseDirective, isStandalone: true, selector: "[i-dialog-close], [iDialogClose]", inputs: { result: ["iDialogClose", "result"] }, host: { listeners: { "click": "onClick($event)" } }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogCloseDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialogCloseDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[i-dialog-close], [iDialogClose]',
@@ -5979,8 +5801,8 @@ class IDialog {
     onCustomActionClick(a) {
         this.onCustomAction.emit(a);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IDialog, isStandalone: true, selector: "i-dialog", inputs: { title: "title", actions: "actions" }, outputs: { onOk: "onOk", onConfirm: "onConfirm", onSave: "onSave", onCustomAction: "onCustomAction" }, ngImport: i0, template: `@if (title) {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IDialog, isStandalone: true, selector: "i-dialog", inputs: { title: "title", actions: "actions" }, outputs: { onOk: "onOk", onConfirm: "onConfirm", onSave: "onSave", onCustomAction: "onCustomAction" }, ngImport: i0, template: `@if (title) {
       <h4 class="i-dialog-title">{{ title }}</h4>
     }
     <div class="i-dialog-content">
@@ -6058,7 +5880,7 @@ class IDialog {
       </div>
     } `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: IDialogCloseDirective, selector: "[i-dialog-close], [iDialogClose]", inputs: ["iDialogClose"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialog, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialog, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-dialog',
@@ -6164,8 +5986,8 @@ class IAlert {
     submit() {
         this.dialog.close();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IAlert, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IAlert, isStandalone: true, selector: "i-alert", ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IAlert, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IAlert, isStandalone: true, selector: "i-alert", ngImport: i0, template: `
     <i-dialog
       [actions]="[
         {
@@ -6193,7 +6015,7 @@ class IAlert {
     </i-dialog>
   `, isInline: true, dependencies: [{ kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: IDialog, selector: "i-dialog", inputs: ["title", "actions"], outputs: ["onOk", "onConfirm", "onSave", "onCustomAction"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IAlert, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IAlert, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-alert',
@@ -6255,10 +6077,10 @@ class IAlertService {
     danger(title, description) {
         return this.show({ title, description, type: 'danger' });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IAlertService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IAlertService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IAlertService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IAlertService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IAlertService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IAlertService, decorators: [{
             type: Injectable,
             args: [{
                     providedIn: 'root',
@@ -6289,8 +6111,8 @@ class IConfirm {
         }
         this.dialog.close(this.reason.value);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IConfirm, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IConfirm, isStandalone: true, selector: "i-confirm", viewQueries: [{ propertyName: "formGroupDir", first: true, predicate: FormGroupDirective, descendants: true }], ngImport: i0, template: `<i-dialog
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IConfirm, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IConfirm, isStandalone: true, selector: "i-confirm", viewQueries: [{ propertyName: "formGroupDir", first: true, predicate: FormGroupDirective, descendants: true }], ngImport: i0, template: `<i-dialog
     [actions]="[
       {
         type: 'confirm',
@@ -6333,7 +6155,7 @@ class IConfirm {
     }
   </i-dialog>`, isInline: true, dependencies: [{ kind: "component", type: IDialog, selector: "i-dialog", inputs: ["title", "actions"], outputs: ["onOk", "onConfirm", "onSave", "onCustomAction"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: IFCTextArea, selector: "i-fc-textarea", inputs: ["label", "placeholder", "readonly", "rows", "errorMessage", "value"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.ɵNgNoValidate, selector: "form:not([ngNoForm]):not([ngNativeValidate])" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.NgControlStatusGroup, selector: "[formGroupName],[formArrayName],[ngModelGroup],[formGroup],form:not([ngNoForm]),[ngForm]" }, { kind: "directive", type: i1.FormGroupDirective, selector: "[formGroup]", inputs: ["formGroup"], outputs: ["ngSubmit"], exportAs: ["ngForm"] }, { kind: "directive", type: i1.FormControlName, selector: "[formControlName]", inputs: ["formControlName", "disabled", "ngModel"], outputs: ["ngModelChange"] }, { kind: "ngmodule", type: FormsModule }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IConfirm, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IConfirm, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-confirm',
@@ -6412,21 +6234,21 @@ class IConfirmService {
     danger(title, description, reason) {
         return this.show({ title, description, type: 'danger', reason });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IConfirmService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IConfirmService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IConfirmService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IConfirmService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IConfirmService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IConfirmService, decorators: [{
             type: Injectable,
             args: [{
                     providedIn: 'root',
                 }]
         }] });
 class IDialogModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.31", ngImport: i0, type: IDialogModule, imports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm], exports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogModule, imports: [IConfirm] });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialogModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.32", ngImport: i0, type: IDialogModule, imports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm], exports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialogModule, imports: [IConfirm] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IDialogModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IDialogModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm],
@@ -6509,14 +6331,14 @@ const CHEVRON_WIDTH_MAP = {
 // ─── ISectionTabHeader / ISectionTabContent ─────────────────────────────────
 class ISectionTabHeader {
     tpl;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionTabHeader, isStandalone: true, selector: "i-section-tab-header", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionTabHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ISectionTabHeader, isStandalone: true, selector: "i-section-tab-header", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
     <ng-template #tpl>
       <ng-content />
     </ng-template>
   `, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabHeader, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionTabHeader, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-tab-header',
@@ -6533,14 +6355,14 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
             }] } });
 class ISectionTabContent {
     tpl;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionTabContent, isStandalone: true, selector: "i-section-tab-content", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionTabContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ISectionTabContent, isStandalone: true, selector: "i-section-tab-content", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
     <ng-template #tpl>
       <ng-content />
     </ng-template>
   `, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabContent, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionTabContent, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-tab-content',
@@ -6588,8 +6410,8 @@ class ISectionTab {
         this.headerTpl = this.headerCmp?.tpl ?? this.defaultHeaderTpl;
         this.contentTpl = this.contentCmp?.tpl ?? this.defaultContentTpl;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTab, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: ISectionTab, isStandalone: true, selector: "i-section-tab", inputs: { title: "title", opened: ["opened", "opened", (v) => v !== null && `${v}` !== 'false'], badge: "badge" }, queries: [{ propertyName: "headerCmp", first: true, predicate: ISectionTabHeader, descendants: true }, { propertyName: "contentCmp", first: true, predicate: ISectionTabContent, descendants: true }], viewQueries: [{ propertyName: "defaultHeaderTpl", first: true, predicate: ["defaultHeaderTpl"], descendants: true, static: true }, { propertyName: "defaultContentTpl", first: true, predicate: ["defaultContentTpl"], descendants: true, static: true }], exportAs: ["iSectionTab"], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionTab, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: ISectionTab, isStandalone: true, selector: "i-section-tab", inputs: { title: "title", opened: ["opened", "opened", (v) => v !== null && `${v}` !== 'false'], badge: "badge" }, queries: [{ propertyName: "headerCmp", first: true, predicate: ISectionTabHeader, descendants: true }, { propertyName: "contentCmp", first: true, predicate: ISectionTabContent, descendants: true }], viewQueries: [{ propertyName: "defaultHeaderTpl", first: true, predicate: ["defaultHeaderTpl"], descendants: true, static: true }, { propertyName: "defaultContentTpl", first: true, predicate: ["defaultContentTpl"], descendants: true, static: true }], exportAs: ["iSectionTab"], ngImport: i0, template: `
     <ng-template #defaultHeaderTpl>
       <span class="i-section-tab-title">{{ title }}</span>
 
@@ -6607,7 +6429,7 @@ class ISectionTab {
     </ng-template>
   `, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTab, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionTab, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-tab',
@@ -6807,8 +6629,8 @@ class ISectionTabs {
     isValidIndex(index) {
         return Number.isInteger(index) && index >= 0 && index < this.tabsArr.length;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabs, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: ISectionTabs, isStandalone: true, selector: "i-section-tabs", inputs: { selectedIndex: "selectedIndex", sticky: ["sticky", "sticky", booleanAttribute], stickyTopOffset: "stickyTopOffset", scrollable: ["scrollable", "scrollable", booleanAttribute], chevronSize: "chevronSize", tabMinHeight: "tabMinHeight", headerClass: "headerClass", tabClass: "tabClass", styleVariant: "styleVariant", height: "height" }, outputs: { onSelectedIndexChange: "onSelectedIndexChange", selectedIndexChange: "selectedIndexChange" }, host: { properties: { "class.i-section-tabs--bar": "styleVariant === 'bar'" } }, queries: [{ propertyName: "tabs", predicate: ISectionTab }], viewQueries: [{ propertyName: "scrollContainer", first: true, predicate: ["scrollContainer"], descendants: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionTabs, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: ISectionTabs, isStandalone: true, selector: "i-section-tabs", inputs: { selectedIndex: "selectedIndex", sticky: ["sticky", "sticky", booleanAttribute], stickyTopOffset: "stickyTopOffset", scrollable: ["scrollable", "scrollable", booleanAttribute], chevronSize: "chevronSize", tabMinHeight: "tabMinHeight", headerClass: "headerClass", tabClass: "tabClass", styleVariant: "styleVariant", height: "height" }, outputs: { onSelectedIndexChange: "onSelectedIndexChange", selectedIndexChange: "selectedIndexChange" }, host: { properties: { "class.i-section-tabs--bar": "styleVariant === 'bar'" } }, queries: [{ propertyName: "tabs", predicate: ISectionTab }], viewQueries: [{ propertyName: "scrollContainer", first: true, predicate: ["scrollContainer"], descendants: true }], ngImport: i0, template: `
     <div
       class="i-section-tabs-headers"
       role="tablist"
@@ -6884,7 +6706,7 @@ class ISectionTabs {
     <ng-content select=":not(i-section-tab)" />
   `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "directive", type: i1$1.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i1$1.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionTabs, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionTabs, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-tabs',
@@ -7017,10 +6839,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
  * </i-section>
  */
 class ISection {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISection, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISection, isStandalone: true, selector: "i-section", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISection, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ISection, isStandalone: true, selector: "i-section", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISection, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISection, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section',
@@ -7029,10 +6851,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 }]
         }] });
 class ISectionHeader {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionHeader, isStandalone: true, selector: "i-section-header", ngImport: i0, template: `<h4><ng-content /></h4>`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ISectionHeader, isStandalone: true, selector: "i-section-header", ngImport: i0, template: `<h4><ng-content /></h4>`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionHeader, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionHeader, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-header',
@@ -7041,10 +6863,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 }]
         }] });
 class ISectionSubHeader {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionSubHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionSubHeader, isStandalone: true, selector: "i-section-sub-header", ngImport: i0, template: `<h6><ng-content /></h6>`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionSubHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ISectionSubHeader, isStandalone: true, selector: "i-section-sub-header", ngImport: i0, template: `<h6><ng-content /></h6>`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionSubHeader, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionSubHeader, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-sub-header',
@@ -7053,10 +6875,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 }]
         }] });
 class ISectionFilter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionFilter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionFilter, isStandalone: true, selector: "i-section-filter", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionFilter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ISectionFilter, isStandalone: true, selector: "i-section-filter", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionFilter, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionFilter, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-filter',
@@ -7065,10 +6887,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 }]
         }] });
 class ISectionBody {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionBody, isStandalone: true, selector: "i-section-body", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ISectionBody, isStandalone: true, selector: "i-section-body", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionBody, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionBody, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-body',
@@ -7077,10 +6899,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 }]
         }] });
 class ISectionFooter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: ISectionFooter, isStandalone: true, selector: "i-section-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: ISectionFooter, isStandalone: true, selector: "i-section-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionFooter, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionFooter, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-footer',
@@ -7089,17 +6911,17 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 }]
         }] });
 class ISectionModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.31", ngImport: i0, type: ISectionModule, imports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.32", ngImport: i0, type: ISectionModule, imports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
             ISectionTab,
             ISectionTabHeader,
             ISectionTabContent], exports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
             ISectionTab,
             ISectionTabHeader,
             ISectionTabContent] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionModule, imports: [ISectionTabs] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionModule, imports: [ISectionTabs] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISectionModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISectionModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [
@@ -7129,6 +6951,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 }]
         }] });
 
+/** Default content and visual treatment for each error kind. */
 const I_ERROR_PAGE_PRESETS = {
     'not-found': {
         title: 'Page Not Found',
@@ -7160,6 +6983,12 @@ const I_ERROR_PAGE_PRESETS = {
         icon: 'fa-solid fa-server',
         code: '503',
     },
+    timeout: {
+        title: 'Request Timed Out',
+        description: 'The request took too long to complete. Please try again.',
+        icon: 'fa-solid fa-clock',
+        code: '',
+    },
     'application-access-denied': {
         title: 'Unauthorized Access',
         description: 'Sorry, your account does not have the required access or role assigned for this application.',
@@ -7173,29 +7002,43 @@ const I_ERROR_PAGE_PRESETS = {
         code: '',
     },
 };
+/** Labels, icons, and button variants for built-in recovery actions. */
 const I_ERROR_PAGE_ACTIONS = {
     home: { label: 'Back to Home', icon: 'fa-solid fa-house', variant: 'primary' },
     logout: { label: 'Logout', icon: 'fa-solid fa-right-from-bracket', variant: 'danger' },
     retry: { label: 'Retry', icon: 'sync', variant: 'primary' },
 };
+/** Default support address displayed when a consumer does not provide one. */
 const I_ERROR_PAGE_SUPPORT_EMAIL = 'it.helpdesk@paramountenterprise.co.id';
 
+/** Renders a preset or consumer-defined error state with optional recovery actions. */
 class IErrorPage {
+    /** Selects the default title, description, icon, and status code. */
     kind = 'not-found';
+    /** Selects a section-contained or viewport-filling presentation. */
     mode = 'contained';
+    /** Overrides the preset title. */
     title;
+    /** Overrides the preset description. */
     description;
+    /** Overrides the preset icon class. */
     icon;
+    /** Overrides the preset status code. */
     code;
+    /** Support address to display, or an empty string to hide support contact. */
     supportEmail = I_ERROR_PAGE_SUPPORT_EMAIL;
+    /** Built-in recovery buttons to render in the supplied order. */
     actions = [];
+    /** Emits the selected built-in recovery action without performing navigation. */
     onAction = new EventEmitter();
     actionPresets = I_ERROR_PAGE_ACTIONS;
+    /** Resolves the support prompt for the selected error kind. */
     get supportLabel() {
         return this.kind === 'application-access-denied'
             ? 'Please contact the IT Administrator to register your access:'
             : 'For assistance, please contact:';
     }
+    /** Combines explicit content overrides with the selected preset. */
     get resolved() {
         const preset = I_ERROR_PAGE_PRESETS[this.kind];
         return {
@@ -7205,8 +7048,8 @@ class IErrorPage {
             code: this.code ?? preset.code,
         };
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IErrorPage, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IErrorPage, isStandalone: true, selector: "i-error-page", inputs: { kind: "kind", mode: "mode", title: "title", description: "description", icon: "icon", code: "code", supportEmail: "supportEmail", actions: "actions" }, outputs: { onAction: "onAction" }, host: { properties: { "class.i-error-page--not-found": "kind === \"not-found\"", "class.i-error-page--fullpage": "mode === \"fullpage\"" }, classAttribute: "i-error-page" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IErrorPage, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IErrorPage, isStandalone: true, selector: "i-error-page", inputs: { kind: "kind", mode: "mode", title: "title", description: "description", icon: "icon", code: "code", supportEmail: "supportEmail", actions: "actions" }, outputs: { onAction: "onAction" }, host: { properties: { "class.i-error-page--not-found": "kind === \"not-found\"", "class.i-error-page--fullpage": "mode === \"fullpage\"" }, classAttribute: "i-error-page" }, ngImport: i0, template: `
     @if (mode === 'contained') {
       <i-section class="i-error-page__section">
         <i-section-body class="i-error-page__body">
@@ -7268,7 +7111,7 @@ class IErrorPage {
     </ng-template>
   `, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ISection, selector: "i-section" }, { kind: "component", type: ISectionBody, selector: "i-section-body" }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IErrorPage, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IErrorPage, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-error-page',
@@ -7477,8 +7320,8 @@ class IPaginator {
         this.pageIndex = Math.floor(firstItemIndex / newSize);
         this.emit();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IPaginator, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IPaginator, isStandalone: true, selector: "i-paginator", inputs: { length: "length", pageIndex: "pageIndex", pageSize: "pageSize", pageSizeOptions: "pageSizeOptions" }, outputs: { onPageChange: "onPageChange" }, host: { classAttribute: "i-paginator" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IPaginator, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IPaginator, isStandalone: true, selector: "i-paginator", inputs: { length: "length", pageIndex: "pageIndex", pageSize: "pageSize", pageSizeOptions: "pageSizeOptions" }, outputs: { onPageChange: "onPageChange" }, host: { classAttribute: "i-paginator" }, ngImport: i0, template: `
     <div class="i-paginator flex align-center gap-md flex-fill">
       <!-- Page size -->
       @for (size of pageSizeOptions; track size) {
@@ -7509,7 +7352,7 @@ class IPaginator {
     </div>
   `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IPaginator, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IPaginator, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-paginator',
@@ -7585,10 +7428,10 @@ class ITruncatedTooltipDirective {
     ngOnDestroy() {
         this.observer?.disconnect();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ITruncatedTooltipDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "16.1.0", version: "20.3.31", type: ITruncatedTooltipDirective, isStandalone: true, selector: "[truncatedTooltip]", inputs: { enabled: ["truncatedTooltip", "enabled", booleanAttribute] }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ITruncatedTooltipDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "16.1.0", version: "20.3.32", type: ITruncatedTooltipDirective, isStandalone: true, selector: "[truncatedTooltip]", inputs: { enabled: ["truncatedTooltip", "enabled", booleanAttribute] }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ITruncatedTooltipDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ITruncatedTooltipDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[truncatedTooltip]',
@@ -7988,10 +7831,10 @@ class IGridDataSource {
  * ---------------------------------------------------- */
 class IGridHeaderCellDefDirective {
     template = inject((TemplateRef));
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridHeaderCellDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IGridHeaderCellDefDirective, isStandalone: true, selector: "[iHeaderCellDef]", ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridHeaderCellDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.32", type: IGridHeaderCellDefDirective, isStandalone: true, selector: "[iHeaderCellDef]", ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridHeaderCellDefDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridHeaderCellDefDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iHeaderCellDef]',
@@ -8000,10 +7843,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
         }] });
 class IGridCellDefDirective {
     template = inject((TemplateRef));
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridCellDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IGridCellDefDirective, isStandalone: true, selector: "[iCellDef]", ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridCellDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.32", type: IGridCellDefDirective, isStandalone: true, selector: "[iCellDef]", ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridCellDefDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridCellDefDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iCellDef]',
@@ -8024,10 +7867,10 @@ class IGridRowDefDirective {
     static ngTemplateContextGuard(_dir, _ctx) {
         return true;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridRowDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IGridRowDefDirective, isStandalone: true, selector: "[iRowDef]", inputs: { iRowDefExpandSingle: "iRowDefExpandSingle" }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridRowDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.32", type: IGridRowDefDirective, isStandalone: true, selector: "[iRowDef]", inputs: { iRowDefExpandSingle: "iRowDefExpandSingle" }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridRowDefDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridRowDefDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iRowDef]',
@@ -8037,10 +7880,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 type: Input
             }] } });
 class IGridExpandableRow {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridExpandableRow, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: IGridExpandableRow, isStandalone: true, selector: "i-grid-expandable-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-expandable-row flex" }, ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridExpandableRow, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: IGridExpandableRow, isStandalone: true, selector: "i-grid-expandable-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-expandable-row flex" }, ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridExpandableRow, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridExpandableRow, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-expandable-row',
@@ -8056,10 +7899,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
  * ROW DIRECTIVES
  * ---------------------------------------------------- */
 class IGridHeaderRowDirective {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridHeaderRowDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IGridHeaderRowDirective, isStandalone: true, selector: "i-grid-header-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-header-row" }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridHeaderRowDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.32", type: IGridHeaderRowDirective, isStandalone: true, selector: "i-grid-header-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-header-row" }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridHeaderRowDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridHeaderRowDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: 'i-grid-header-row',
@@ -8071,10 +7914,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 }]
         }] });
 class IGridRowDirective {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridRowDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IGridRowDirective, isStandalone: true, selector: "i-grid-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-row" }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridRowDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.32", type: IGridRowDirective, isStandalone: true, selector: "i-grid-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-row" }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridRowDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridRowDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: 'i-grid-row',
@@ -8089,10 +7932,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
  * HEADER GROUP TAGS (internal render tags)
  * ---------------------------------------------------- */
 class IGridHeaderCellGroup {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridHeaderCellGroup, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: IGridHeaderCellGroup, isStandalone: true, selector: "i-grid-header-cell-group", host: { attributes: { "role": "presentation" }, classAttribute: "i-grid-header-cell-group" }, ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridHeaderCellGroup, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: IGridHeaderCellGroup, isStandalone: true, selector: "i-grid-header-cell-group", host: { attributes: { "role": "presentation" }, classAttribute: "i-grid-header-cell-group" }, ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridHeaderCellGroup, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridHeaderCellGroup, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-header-cell-group',
@@ -8105,10 +7948,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 }]
         }] });
 class IGridHeaderCellGroupColumns {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridHeaderCellGroupColumns, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: IGridHeaderCellGroupColumns, isStandalone: true, selector: "i-grid-header-cell-group-columns", host: { attributes: { "role": "presentation" }, classAttribute: "i-grid-header-cell-group-columns" }, ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridHeaderCellGroupColumns, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: IGridHeaderCellGroupColumns, isStandalone: true, selector: "i-grid-header-cell-group-columns", host: { attributes: { "role": "presentation" }, classAttribute: "i-grid-header-cell-group-columns" }, ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridHeaderCellGroupColumns, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridHeaderCellGroupColumns, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-header-cell-group-columns',
@@ -8133,10 +7976,10 @@ class IGridColumn {
     headerDef;
     cellDef;
     isAuto;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.31", type: IGridColumn, isStandalone: true, selector: "i-grid-column", inputs: { fieldName: "fieldName", title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.32", type: IGridColumn, isStandalone: true, selector: "i-grid-column", inputs: { fieldName: "fieldName", title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridColumn, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridColumn, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-column',
@@ -8177,10 +8020,10 @@ class IGridCustomColumn {
     headerDef;
     cellDef;
     isAuto;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridCustomColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.31", type: IGridCustomColumn, isStandalone: true, selector: "i-grid-custom-column", inputs: { title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridCustomColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.32", type: IGridCustomColumn, isStandalone: true, selector: "i-grid-custom-column", inputs: { title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridCustomColumn, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridCustomColumn, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-custom-column',
@@ -8213,10 +8056,10 @@ class IGridColumnGroup {
     title = '';
     columns;
     customColumns;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridColumnGroup, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: IGridColumnGroup, isStandalone: true, selector: "i-grid-column-group", inputs: { title: "title" }, queries: [{ propertyName: "columns", predicate: IGridColumn }, { propertyName: "customColumns", predicate: IGridCustomColumn }], ngImport: i0, template: '', isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridColumnGroup, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: IGridColumnGroup, isStandalone: true, selector: "i-grid-column-group", inputs: { title: "title" }, queries: [{ propertyName: "columns", predicate: IGridColumn }, { propertyName: "customColumns", predicate: IGridCustomColumn }], ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridColumnGroup, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridColumnGroup, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-column-group',
@@ -8277,10 +8120,10 @@ class IGridCell {
     get stickyZ() {
         return this._isFrozen ? 2 : null;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: IGridCell, isStandalone: true, selector: "i-grid-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "cell" }, properties: { "style.flex": "this.flex", "class.i-grid-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-cell" }, ngImport: i0, template: ` <ng-content /> `, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: IGridCell, isStandalone: true, selector: "i-grid-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "cell" }, properties: { "style.flex": "this.flex", "class.i-grid-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-cell" }, ngImport: i0, template: ` <ng-content /> `, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridCell, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridCell, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-cell',
@@ -8451,8 +8294,8 @@ class IGridHeaderCell {
             this._isResizing = false;
         }, 0);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridHeaderCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IGridHeaderCell, isStandalone: true, selector: "i-grid-header-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "columnheader" }, listeners: { "click": "onClick()", "document:mousemove": "onDocumentMouseMove($event)", "document:mouseup": "onDocumentMouseUp()" }, properties: { "style.flex": "this.flex", "class.i-grid-header-cell--sortable": "this.sortable", "class.i-grid-header-cell--sorted": "this.isSorted", "class.i-grid-header-cell--sorted-asc": "this.isSortedAsc", "class.i-grid-header-cell--sorted-desc": "this.isSortedDesc", "class.i-grid-header-cell--resizable": "this.isResizableClass", "class.i-grid-header-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-header-cell" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridHeaderCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IGridHeaderCell, isStandalone: true, selector: "i-grid-header-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "columnheader" }, listeners: { "click": "onClick()", "document:mousemove": "onDocumentMouseMove($event)", "document:mouseup": "onDocumentMouseUp()" }, properties: { "style.flex": "this.flex", "class.i-grid-header-cell--sortable": "this.sortable", "class.i-grid-header-cell--sorted": "this.isSorted", "class.i-grid-header-cell--sorted-asc": "this.isSortedAsc", "class.i-grid-header-cell--sorted-desc": "this.isSortedDesc", "class.i-grid-header-cell--resizable": "this.isResizableClass", "class.i-grid-header-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-header-cell" }, ngImport: i0, template: `
     <span class="i-grid-header-cell__content" truncatedTooltip>
       <ng-content />
     </span>
@@ -8466,7 +8309,7 @@ class IGridHeaderCell {
     <span class="i-grid-header-cell__resize-handle" (mousedown)="onResizeMouseDown($event)"> </span>
   `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridHeaderCell, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridHeaderCell, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-header-cell',
@@ -8535,10 +8378,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
                 args: ['document:mouseup']
             }] } });
 class IGridViewport {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridViewport, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: IGridViewport, isStandalone: true, selector: "i-grid-viewport", host: { classAttribute: "i-grid-viewport" }, ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridViewport, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: IGridViewport, isStandalone: true, selector: "i-grid-viewport", host: { classAttribute: "i-grid-viewport" }, ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridViewport, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridViewport, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-viewport',
@@ -9766,8 +9609,8 @@ class IGrid {
         const groups = this.columnGroupDefs?.toArray?.() ?? [];
         return groups.length > 0 || directCols.length > 0 || directCustom.length > 0;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGrid, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IGrid, isStandalone: true, selector: "i-grid", inputs: { dataSource: "dataSource", selectionMode: "selectionMode", selectionRowHidden: "selectionRowHidden", selectionRowDisabled: "selectionRowDisabled", tree: "tree", treeIndent: "treeIndent", trackBy: "trackBy", treeColumn: "treeColumn", treeInitialExpandLevel: "treeInitialExpandLevel", showNumberColumn: ["showNumberColumn", "showNumberColumn", booleanAttribute], sortMode: "sortMode" }, outputs: { onSelectionChange: "onSelectionChange", onRowClick: "onRowClick", onRowExpandChange: "onRowExpandChange", onExpandedRowsChange: "onExpandedRowsChange", onServerSortChange: "onServerSortChange", onServerPageChange: "onServerPageChange", onServerFilterChange: "onServerFilterChange" }, host: { attributes: { "role": "table" }, classAttribute: "i-grid" }, queries: [{ propertyName: "expandableRowDef", first: true, predicate: IGridRowDefDirective, descendants: true }, { propertyName: "columnDefs", predicate: IGridColumn }, { propertyName: "customColumnDefs", predicate: IGridCustomColumn }, { propertyName: "columnGroupDefs", predicate: IGridColumnGroup }], exportAs: ["iGrid"], usesOnChanges: true, ngImport: i0, template: `<i-grid-viewport>
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGrid, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IGrid, isStandalone: true, selector: "i-grid", inputs: { dataSource: "dataSource", selectionMode: "selectionMode", selectionRowHidden: "selectionRowHidden", selectionRowDisabled: "selectionRowDisabled", tree: "tree", treeIndent: "treeIndent", trackBy: "trackBy", treeColumn: "treeColumn", treeInitialExpandLevel: "treeInitialExpandLevel", showNumberColumn: ["showNumberColumn", "showNumberColumn", booleanAttribute], sortMode: "sortMode" }, outputs: { onSelectionChange: "onSelectionChange", onRowClick: "onRowClick", onRowExpandChange: "onRowExpandChange", onExpandedRowsChange: "onExpandedRowsChange", onServerSortChange: "onServerSortChange", onServerPageChange: "onServerPageChange", onServerFilterChange: "onServerFilterChange" }, host: { attributes: { "role": "table" }, classAttribute: "i-grid" }, queries: [{ propertyName: "expandableRowDef", first: true, predicate: IGridRowDefDirective, descendants: true }, { propertyName: "columnDefs", predicate: IGridColumn }, { propertyName: "customColumnDefs", predicate: IGridCustomColumn }, { propertyName: "columnGroupDefs", predicate: IGridColumnGroup }], exportAs: ["iGrid"], usesOnChanges: true, ngImport: i0, template: `<i-grid-viewport>
       <!-- HEADER -->
       @if (headerItems.length) {
         <i-grid-header-row>
@@ -10096,7 +9939,7 @@ class IGrid {
       </div>
     }`, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: IGridHeaderRowDirective, selector: "i-grid-header-row" }, { kind: "directive", type: IGridRowDirective, selector: "i-grid-row" }, { kind: "component", type: IGridHeaderCell, selector: "i-grid-header-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IGridCell, selector: "i-grid-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IPaginator, selector: "i-paginator", inputs: ["length", "pageIndex", "pageSize", "pageSizeOptions"], outputs: ["onPageChange"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: ITruncatedTooltipDirective, selector: "[truncatedTooltip]", inputs: ["truncatedTooltip"] }, { kind: "component", type: IGridHeaderCellGroup, selector: "i-grid-header-cell-group" }, { kind: "component", type: IGridHeaderCellGroupColumns, selector: "i-grid-header-cell-group-columns" }, { kind: "component", type: IGridViewport, selector: "i-grid-viewport" }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGrid, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGrid, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid',
@@ -10520,11 +10363,11 @@ const I_GRID_DECLARATIONS = [
     IGridHeaderCellGroupColumns,
 ];
 class IGridModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.31", ngImport: i0, type: IGridModule, imports: [IGrid, IGridViewport, IGridColumn, IGridCustomColumn, IGridColumnGroup, IGridHeaderCellDefDirective, IGridCellDefDirective, IGridRowDefDirective, IGridExpandableRow, IGridHeaderCell, IGridCell, IGridHeaderRowDirective, IGridRowDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IPaginator], exports: [IGrid, IGridViewport, IGridColumn, IGridCustomColumn, IGridColumnGroup, IGridHeaderCellDefDirective, IGridCellDefDirective, IGridRowDefDirective, IGridExpandableRow, IGridHeaderCell, IGridCell, IGridHeaderRowDirective, IGridRowDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IPaginator] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridModule });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.32", ngImport: i0, type: IGridModule, imports: [IGrid, IGridViewport, IGridColumn, IGridCustomColumn, IGridColumnGroup, IGridHeaderCellDefDirective, IGridCellDefDirective, IGridRowDefDirective, IGridExpandableRow, IGridHeaderCell, IGridCell, IGridHeaderRowDirective, IGridRowDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IPaginator], exports: [IGrid, IGridViewport, IGridColumn, IGridCustomColumn, IGridColumnGroup, IGridHeaderCellDefDirective, IGridCellDefDirective, IGridRowDefDirective, IGridExpandableRow, IGridHeaderCell, IGridCell, IGridHeaderRowDirective, IGridRowDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IPaginator] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridModule });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IGridModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IGridModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [...I_GRID_DECLARATIONS, IPaginator],
@@ -10803,10 +10646,10 @@ class ICsrfService {
             return throwError(() => err);
         }));
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICsrfService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICsrfService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICsrfService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICsrfService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICsrfService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICsrfService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -11022,10 +10865,10 @@ class ISessionExpiredService {
     hide() {
         this.visible.set(false);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISessionExpiredService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISessionExpiredService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISessionExpiredService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISessionExpiredService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISessionExpiredService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISessionExpiredService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -11079,6 +10922,7 @@ const authInterceptor = (req, next) => {
     }));
 };
 
+/** Sends authenticated application requests through the shared SSO transport. */
 class IApiService {
     http = inject(HttpClient);
     csrf = inject(ICsrfService);
@@ -11210,13 +11054,14 @@ class IApiService {
             body.append('file', file);
         return this.request('POST', path, body, options);
     }
+    /** Downloads a binary response body. */
     getBlob(path, params, options) {
         return this.request('GET', path, undefined, { ...options, responseType: 'blob', observe: 'body' }, params);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IApiService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IApiService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IApiService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IApiService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IApiService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IApiService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -11374,10 +11219,10 @@ class IAuthService {
     resetLockout(username) {
         sessionStorage.removeItem(`${LOCK_STORAGE_KEY}_${username}`);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IAuthService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IAuthService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IAuthService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IAuthService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IAuthService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IAuthService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -11650,10 +11495,10 @@ class IUserMenuService {
         }));
         return this.api.put('/me/menus/favorites', { items }, { apiUrl: this.baseUrl });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IUserMenuService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IUserMenuService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IUserMenuService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IUserMenuService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IUserMenuService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IUserMenuService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -11677,10 +11522,10 @@ class ICurrentUserService {
     getCurrentUser() {
         return this.api.get('/users/user', undefined, { apiUrl: this.baseUrl });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICurrentUserService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICurrentUserService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICurrentUserService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICurrentUserService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ICurrentUserService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ICurrentUserService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -11693,6 +11538,7 @@ class IUserMenuStore {
     /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
     loadedUserSub = null;
     loadedApplicationId = null;
+    generation = 0;
     /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
     currentUser = signal(null, ...(ngDevMode ? [{ debugName: "currentUser" }] : []));
     /** Raw current-user DTO as returned by the backend — `null` until loaded. */
@@ -11789,14 +11635,17 @@ class IUserMenuStore {
         this.loadErrors.set({ user: null, menus: null, favorites: null, authorizations: null });
         this.roles.set(this.session.getRoles());
         this.clearAuthorizationData();
+        const generation = this.generation;
         const result$ = forkJoin({
-            user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err))),
-            menus: this.loadMenusInternal(applicationId).pipe(catchError((err) => this.recordError('menus', err))),
-            favorites: this.loadFavoritesInternal(applicationId).pipe(catchError((err) => this.recordError('favorites', err))),
-            authorizations: this.loadAuthorizationsInternal(applicationId).pipe(catchError((err) => this.recordError('authorizations', err))),
+            user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err, generation))),
+            menus: this.loadMenusInternal(applicationId).pipe(catchError((err) => this.recordError('menus', err, generation))),
+            favorites: this.loadFavoritesInternal(applicationId).pipe(catchError((err) => this.recordError('favorites', err, generation))),
+            authorizations: this.loadAuthorizationsInternal(applicationId).pipe(catchError((err) => this.recordError('authorizations', err, generation))),
         }).pipe(map(() => undefined), catchError(() => of(undefined)), finalize(() => {
-            this.initializing.set(false);
-            this.initialized.set(true);
+            if (generation === this.generation) {
+                this.initializing.set(false);
+                this.initialized.set(true);
+            }
         }), shareReplay({ bufferSize: 1, refCount: false }));
         // Fire-and-forget: always start the load even if the caller ignores the result.
         result$.subscribe();
@@ -11880,17 +11729,30 @@ class IUserMenuStore {
      * mapped `IMenu[]`.
      */
     loadMenus(applicationId) {
-        return this.menuService.getEffectiveMenus(applicationId).pipe(tap((nodes) => this.menus.set(toIMenus(nodes))), map((nodes) => toIMenus(nodes)));
+        const generation = this.generation;
+        return this.menuService.getEffectiveMenus(applicationId).pipe(tap((nodes) => {
+            if (generation === this.generation)
+                this.menus.set(toIMenus(nodes));
+        }), map((nodes) => toIMenus(nodes)));
     }
     /** Loads favorites into `favorites` — optionally for a single application. Returns the mapped `IMenu[]`. */
     loadFavorites(applicationId) {
-        return this.menuService.getFavorites(applicationId).pipe(tap((items) => this.favorites.set(items.map(toIMenuFavorite))), map((items) => items.map(toIMenuFavorite)));
+        const generation = this.generation;
+        return this.menuService.getFavorites(applicationId).pipe(tap((items) => {
+            if (generation === this.generation)
+                this.favorites.set(items.map(toIMenuFavorite));
+        }), map((items) => items.map(toIMenuFavorite)));
     }
     /** Loads effective item/function authorizations and their company scope. */
     loadAuthorizations(applicationId) {
+        const generation = this.generation;
         this.clearAuthorizationData();
-        return this.menuService.getAuthorizations(applicationId).pipe(tap((items) => this.applyAuthorizations(items)), map(() => this.authorizations()), catchError((error) => {
-            this.clearAuthorizationData();
+        return this.menuService.getAuthorizations(applicationId).pipe(tap((items) => {
+            if (generation === this.generation)
+                this.applyAuthorizations(items);
+        }), map(() => this.authorizations()), catchError((error) => {
+            if (generation === this.generation)
+                this.clearAuthorizationData();
             return throwError(() => error);
         }));
     }
@@ -11935,9 +11797,12 @@ class IUserMenuStore {
         return ordered;
     }
     loadUserInternal() {
+        const generation = this.generation;
         return this.currentUserService.getCurrentUser().pipe(tap((raw) => {
-            this.rawCurrentUser.set(raw);
-            this.currentUser.set(mapToSidebarUser(raw));
+            if (generation === this.generation) {
+                this.rawCurrentUser.set(raw);
+                this.currentUser.set(mapToSidebarUser(raw));
+            }
         }), map(() => null));
     }
     loadMenusInternal(applicationId) {
@@ -11950,6 +11815,7 @@ class IUserMenuStore {
         return this.loadAuthorizations(applicationId).pipe(map(() => null));
     }
     clearData() {
+        this.generation++;
         this.currentUser.set(null);
         this.rawCurrentUser.set(null);
         this.menus.set([]);
@@ -11963,7 +11829,9 @@ class IUserMenuStore {
     clearAuthorizationData() {
         this.authorizations.set([]);
     }
-    recordError(source, err) {
+    recordError(source, err, generation) {
+        if (generation !== this.generation)
+            return of(null);
         const normalized = normalizeApiError(err);
         this.loadErrors.update((errors) => ({ ...errors, [source]: normalized }));
         this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(err, 'Failed to load', this.config.errorCatalogResolver, this.config.errorDisplayFormatter)}`);
@@ -11971,10 +11839,10 @@ class IUserMenuStore {
         console.error(`[@insight/ui][STORE] load "${source}" failed`, err);
         return of(null);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IUserMenuStore, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IUserMenuStore, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IUserMenuStore, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IUserMenuStore, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IUserMenuStore, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IUserMenuStore, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -12050,6 +11918,7 @@ class ISessionService {
     passwordExpired = false;
     changePasswordTokenValue = null;
     lastVerifiedAt = 0;
+    sessionGeneration = 0;
     /**
      * True while the app is restoring/validating the session on load (starts
      * `true` on cold start so guards can allow navigation during the restore and
@@ -12157,6 +12026,7 @@ class ISessionService {
      * own `exp` claim, then falls back to the configured `accessTokenSeconds`.
      */
     setAccessToken(accessToken, expiresIn) {
+        this.sessionGeneration++;
         this.accessToken = accessToken;
         const effectiveExpiresIn = expiresIn ?? this.readExpiresInFromToken(accessToken) ?? this.config.tokenLifespan.accessTokenSeconds;
         // 30-second buffer to avoid edge cases, matches iam-web's convention.
@@ -12173,6 +12043,10 @@ class ISessionService {
      * start from a refresh-after-revocation.
      */
     setSession(accessToken, expiresIn, user, refreshToken) {
+        if (this.currentUser?.sub && this.currentUser.sub !== user.sub) {
+            this.injector.get(IUserMenuStore, null, { optional: true })?.reset();
+        }
+        this.sessionGeneration++;
         this.accessToken = accessToken;
         if (refreshToken) {
             this._refreshToken = refreshToken;
@@ -12189,6 +12063,7 @@ class ISessionService {
         this.initializing.set(false);
     }
     clearSession() {
+        this.sessionGeneration++;
         this.accessToken = null;
         this._refreshToken = null;
         this.expiresAt = null;
@@ -12197,6 +12072,7 @@ class ISessionService {
         this.sessionStartedAt = null;
         this.changePasswordTokenValue = null;
         sessionStorage.removeItem('iam.changePasswordToken');
+        this.injector.get(IUserMenuStore, null, { optional: true })?.reset();
         // NOTE: `iam.session.active` is intentionally NOT cleared here — it must
         // survive mid-session revocation so `tryRestoreSession()` can detect
         // "refresh after revocation" on the next load; explicit logout clears it.
@@ -12235,10 +12111,14 @@ class ISessionService {
     refreshToken() {
         let inFlight = this.refreshInFlight;
         if (!inFlight) {
+            const generation = this.sessionGeneration;
             const source = this.authService.refresh().pipe(timeout({
                 each: REFRESH_TIMEOUT_MS,
                 with: () => throwError(() => new Error(`Refresh request timed out after ${REFRESH_TIMEOUT_MS}ms`)),
             }), tap((res) => {
+                if (generation !== this.sessionGeneration) {
+                    throw new Error('Session changed while refresh was in progress.');
+                }
                 this.setSession(res.accessToken, res.expiresIn, this.currentUser ?? decodeUser(res.accessToken), res.refreshToken);
             }), map$1((res) => res.accessToken), catchError((err) => {
                 console.warn('[@insight/ui][SESSION] silent refresh failed', {
@@ -12302,9 +12182,7 @@ class ISessionService {
             this.initializing.set(false);
             return Promise.resolve({});
         }
-        const restorePromise = lastValueFrom(this.authService.refresh().pipe(tap((res) => {
-            this.setSession(res.accessToken, res.expiresIn, decodeUser(res.accessToken), res.refreshToken);
-        }), map$1(() => ({}))), { defaultValue: {} }).catch((err) => {
+        const restorePromise = lastValueFrom(this.refreshToken().pipe(map$1(() => ({}))), { defaultValue: {} }).catch((err) => {
             console.debug('[@insight/ui][SESSION] tryRestoreSession: FAILED', {
                 status: err?.status,
             });
@@ -12325,13 +12203,9 @@ class ISessionService {
                 const apiError = normalizeApiError(err);
                 this.sessionExpiredService.show(pathname, code ?? 'TOKEN_EXPIRED', rawErrorCode, apiError.detail, apiError.message, apiError);
             }
-            if (isSessionExpiredError(err)) {
-                this.authService.logout().subscribe({ error: () => void 0 });
-            }
             return { reason: code };
         });
-        const safetyTimer = new Promise((r) => setTimeout(() => r({}), 10_000));
-        this.restoreInFlight = Promise.race([restorePromise, safetyTimer]).finally(() => {
+        this.restoreInFlight = restorePromise.finally(() => {
             this.initializing.set(false);
         });
         return this.restoreInFlight;
@@ -12343,10 +12217,10 @@ class ISessionService {
         }
         return Math.max(0, decoded['exp'] - Math.floor(Date.now() / 1000));
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISessionService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISessionService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISessionService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISessionService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISessionService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISessionService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -12461,10 +12335,10 @@ class IAuthCallback {
             this.router.navigateByUrl(safeReturnUrl);
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IAuthCallback, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: IAuthCallback, isStandalone: true, selector: "i-auth-callback", ngImport: i0, template: '', isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IAuthCallback, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: IAuthCallback, isStandalone: true, selector: "i-auth-callback", ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IAuthCallback, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IAuthCallback, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-auth-callback',
@@ -12568,8 +12442,8 @@ class IAvatar {
     onFallbackError() {
         this.hasFallbackError = true;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IAvatar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IAvatar, isStandalone: true, selector: "i-avatar", inputs: { src: "src", alt: "alt", size: "size", shape: "shape", fallbackSrc: "fallbackSrc", className: "className" }, host: { properties: { "class.i-avatar": "this.baseClass", "attr.data-shape": "this.attrShape", "style.width.px": "this.resolvedSizePx", "style.height.px": "this.resolvedSizePx", "class": "this.hostClass" } }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IAvatar, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IAvatar, isStandalone: true, selector: "i-avatar", inputs: { src: "src", alt: "alt", size: "size", shape: "shape", fallbackSrc: "fallbackSrc", className: "className" }, host: { properties: { "class.i-avatar": "this.baseClass", "attr.data-shape": "this.attrShape", "style.width.px": "this.resolvedSizePx", "style.height.px": "this.resolvedSizePx", "class": "this.hostClass" } }, ngImport: i0, template: `
     <!-- Primary image -->
     @if (!hasError && src) {
       <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
@@ -12584,7 +12458,7 @@ class IAvatar {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IAvatar, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IAvatar, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-avatar',
@@ -12839,10 +12713,10 @@ class IHTitleBreadcrumbService {
         this.titleOverride.set(null);
         this.breadcrumbsOverride.set(null);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHTitleBreadcrumbService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHTitleBreadcrumbService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHTitleBreadcrumbService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHTitleBreadcrumbService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHTitleBreadcrumbService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHTitleBreadcrumbService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -13005,8 +12879,8 @@ class IHContent {
         // join
         return `${base}${abs.slice(1)}`.replace(/\/{2,}/g, '/');
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IHContent, isStandalone: true, selector: "ih-content", outputs: { onSidebarToggled: "onSidebarToggled", loading: "loading" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IHContent, isStandalone: true, selector: "ih-content", outputs: { onSidebarToggled: "onSidebarToggled", loading: "loading" }, ngImport: i0, template: `
     <div class="ih-content-header">
       <a class="i-clickable" (click)="toggleSidebar()">
         @if (sidebarVisibility) {
@@ -13097,7 +12971,7 @@ class IHContent {
     </div>
   `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHContent, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHContent, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-content',
@@ -13404,8 +13278,8 @@ class IHMenu {
             return `${u.pathname}${u.search}${u.hash}`;
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHMenu, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter", favoriteMode: "favoriteMode", collapsible: "collapsible", depth: "depth", dragEnabled: "dragEnabled", showApplication: "showApplication", pathByKey: "pathByKey" }, outputs: { clicked: "clicked", favoriteToggle: "favoriteToggle" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHMenu, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter", favoriteMode: "favoriteMode", collapsible: "collapsible", depth: "depth", dragEnabled: "dragEnabled", showApplication: "showApplication", pathByKey: "pathByKey" }, outputs: { clicked: "clicked", favoriteToggle: "favoriteToggle" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
     @if (menu) {
       @let hasChild = menuHasChildren;
       @let route = menuRoute;
@@ -13617,7 +13491,7 @@ class IHMenu {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHMenu, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHMenu, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-menu',
@@ -13896,7 +13770,9 @@ class IHSidebar {
         event.preventDefault();
         const current = items.indexOf(document.activeElement);
         const next = current < 0
-            ? event.key === 'ArrowDown' ? 0 : items.length - 1
+            ? event.key === 'ArrowDown'
+                ? 0
+                : items.length - 1
             : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
         items[next].focus();
     };
@@ -14401,8 +14277,8 @@ class IHSidebar {
         });
         this.queryParams = queryParams;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHSidebar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible", personalProfileUrl: "personalProfileUrl" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder" }, host: { properties: { "class.hidden": "this.sidebarVisibility" } }, usesOnChanges: true, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHSidebar, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible", personalProfileUrl: "personalProfileUrl" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder" }, host: { properties: { "class.hidden": "this.sidebarVisibility" } }, usesOnChanges: true, ngImport: i0, template: `
     @let user = user$ | async;
     <div class="ih-sidebar-header">
       @if (user) {
@@ -14522,7 +14398,7 @@ class IHSidebar {
     </div>
   `, isInline: true, dependencies: [{ kind: "component", type: IAvatar, selector: "i-avatar", inputs: ["src", "alt", "size", "shape", "fallbackSrc", "className"] }, { kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.DefaultValueAccessor, selector: "input:not([type=checkbox])[formControlName],textarea[formControlName],input:not([type=checkbox])[formControl],textarea[formControl],input:not([type=checkbox])[ngModel],textarea[ngModel],[ngDefaultControl]" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.FormControlDirective, selector: "[formControl]", inputs: ["formControl", "disabled", "ngModel"], outputs: ["ngModelChange"], exportAs: ["ngForm"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHSidebar, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHSidebar, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-sidebar',
@@ -14731,8 +14607,8 @@ class IPill {
         if (this.hasOnCloseHandler)
             this.onClose.emit(e);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IPill, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IPill, isStandalone: true, selector: "i-pill", inputs: { icon: "icon", size: "size", variant: "variant", disabled: ["disabled", "disabled", booleanAttribute], closable: ["closable", "closable", booleanAttribute] }, outputs: { onClose: "onClose", onClick: "onClick" }, host: { listeners: { "click": "handleHostClick($event)" }, properties: { "class.i-pill": "this.baseClass", "attr.size": "this.attrSize", "attr.variant": "this.attrVariant", "attr.aria-disabled": "this.ariaDisabled" } }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IPill, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IPill, isStandalone: true, selector: "i-pill", inputs: { icon: "icon", size: "size", variant: "variant", disabled: ["disabled", "disabled", booleanAttribute], closable: ["closable", "closable", booleanAttribute] }, outputs: { onClose: "onClose", onClick: "onClick" }, host: { listeners: { "click": "handleHostClick($event)" }, properties: { "class.i-pill": "this.baseClass", "attr.size": "this.attrSize", "attr.variant": "this.attrVariant", "attr.aria-disabled": "this.ariaDisabled" } }, ngImport: i0, template: `
     @if (icon) {
       <i-icon [icon]="icon" [size]="size" />
     }
@@ -14754,7 +14630,7 @@ class IPill {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IPill, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IPill, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-pill',
@@ -14934,8 +14810,8 @@ class IToggle {
         // click anywhere else (thumb/label/host) toggles input
         this.inputRef.nativeElement.click();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IToggle, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.31", type: IToggle, isStandalone: true, selector: "i-toggle", inputs: { disabled: "disabled", labelPosition: "labelPosition", size: "size" }, outputs: { onChange: "onChange", onTouched: "onTouched" }, host: { listeners: { "click": "onHostClick($event)" }, properties: { "class.i-toggle": "this.baseClass", "class.i-toggle__active": "this.activeClass", "class.i-toggle__disabled": "this.disabledClass", "class.i-toggle__label-left": "this.labelLeftClass", "style.--i-toggle-height": "this.toggleHeight", "style.--i-toggle-width": "this.toggleWidth", "style.--i-toggle-handle-size": "this.toggleHandleSize" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IToggle, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.32", type: IToggle, isStandalone: true, selector: "i-toggle", inputs: { disabled: "disabled", labelPosition: "labelPosition", size: "size" }, outputs: { onChange: "onChange", onTouched: "onTouched" }, host: { listeners: { "click": "onHostClick($event)" }, properties: { "class.i-toggle": "this.baseClass", "class.i-toggle__active": "this.activeClass", "class.i-toggle__disabled": "this.disabledClass", "class.i-toggle__label-left": "this.labelLeftClass", "style.--i-toggle-height": "this.toggleHeight", "style.--i-toggle-width": "this.toggleWidth", "style.--i-toggle-handle-size": "this.toggleHandleSize" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => IToggle),
@@ -14959,7 +14835,7 @@ class IToggle {
     </span>
   `, isInline: true, changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IToggle, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IToggle, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-toggle',
@@ -15030,8 +14906,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImpo
             }] } });
 
 class IUI {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IUI, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.31", ngImport: i0, type: IUI, imports: [IAvatar,
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IUI, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.32", ngImport: i0, type: IUI, imports: [IAvatar,
             IButton,
             ICardModule,
             ICodeViewerModule,
@@ -15072,7 +14948,7 @@ class IUI {
             IFCTextArea,
             IToggle,
             IPill] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IUI, imports: [ICardModule,
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IUI, imports: [ICardModule,
             ICodeViewerModule,
             IDialogModule,
             IGridModule,
@@ -15085,7 +14961,7 @@ class IUI {
             IInputModule,
             ISectionModule] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IUI, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IUI, decorators: [{
             type: NgModule,
             args: [{
                     imports: [
@@ -15319,10 +15195,10 @@ class IMenuGateDirective {
             this.viewCreated = false;
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IMenuGateDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IMenuGateDirective, isStandalone: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IMenuGateDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.32", type: IMenuGateDirective, isStandalone: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IMenuGateDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IMenuGateDirective, decorators: [{
             type: Directive,
             args: [{ standalone: true }]
         }] });
@@ -15332,10 +15208,10 @@ class IHasMnDirective extends IMenuGateDirective {
     set iHasMn(value) {
         this.value$.next(value);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: IHasMnDirective, isStandalone: true, selector: "[iHasMn]", inputs: { iHasMn: "iHasMn" }, usesInheritance: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.32", type: IHasMnDirective, isStandalone: true, selector: "[iHasMn]", inputs: { iHasMn: "iHasMn" }, usesInheritance: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHasMnDirective, decorators: [{
             type: Directive,
             args: [{ selector: '[iHasMn]', standalone: true }]
         }], propDecorators: { iHasMn: [{
@@ -15382,8 +15258,8 @@ class IHasMnRoute {
             });
         });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnRoute, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: IHasMnRoute, isStandalone: true, selector: "i-has-mn-route", ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHasMnRoute, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: IHasMnRoute, isStandalone: true, selector: "i-has-mn-route", ngImport: i0, template: `
     @if (!ready()) {
       <i-loading aria-live="polite" label="Loading access..." />
     } @else if (!allowed()) {
@@ -15393,7 +15269,7 @@ class IHasMnRoute {
     }
   `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "component", type: IErrorPage, selector: "i-error-page", inputs: ["kind", "mode", "title", "description", "icon", "code", "supportEmail", "actions"], outputs: ["onAction"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IHasMnRoute, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IHasMnRoute, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-has-mn-route',
@@ -15472,10 +15348,10 @@ class IStorageService {
         this.delete('ru');
         return url || '/';
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IStorageService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IStorageService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IStorageService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IStorageService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: IStorageService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: IStorageService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -15536,8 +15412,8 @@ class ISessionExpiredDialog {
         this.sessionExpired.hide();
         window.location.href = buildExternalSigninUrl(this.config, returnUrl);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISessionExpiredDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.31", type: ISessionExpiredDialog, isStandalone: true, selector: "i-session-expired-dialog", ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISessionExpiredDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.32", type: ISessionExpiredDialog, isStandalone: true, selector: "i-session-expired-dialog", ngImport: i0, template: `
     @if (visible()) {
       <i-dialog-container
         style="z-index: 9999"
@@ -15555,7 +15431,7 @@ class ISessionExpiredDialog {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IDialogContainer, selector: "i-dialog-container", inputs: ["instance", "config", "ariaLabel", "isTopMost"], outputs: ["onClose"] }, { kind: "component", type: IDialog, selector: "i-dialog", inputs: ["title", "actions"], outputs: ["onOk", "onConfirm", "onSave", "onCustomAction"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: ISessionExpiredDialog, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: ISessionExpiredDialog, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-session-expired-dialog',
@@ -15588,10 +15464,10 @@ class INotHasMnDirective extends IMenuGateDirective {
     set iNotHasMn(value) {
         this.value$.next(value);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: INotHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.31", type: INotHasMnDirective, isStandalone: true, selector: "[iNotHasMn]", inputs: { iNotHasMn: "iNotHasMn" }, usesInheritance: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: INotHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.32", type: INotHasMnDirective, isStandalone: true, selector: "[iNotHasMn]", inputs: { iNotHasMn: "iNotHasMn" }, usesInheritance: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.31", ngImport: i0, type: INotHasMnDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImport: i0, type: INotHasMnDirective, decorators: [{
             type: Directive,
             args: [{ selector: '[iNotHasMn]', standalone: true }]
         }], propDecorators: { iNotHasMn: [{
