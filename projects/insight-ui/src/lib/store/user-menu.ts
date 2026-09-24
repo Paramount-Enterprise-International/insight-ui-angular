@@ -53,6 +53,7 @@ export class IUserMenuStore {
   /** Identity (`sub`) whose data is currently cached — invalidated on user switch. */
   private loadedUserSub: string | null = null;
   private loadedApplicationId: string | null = null;
+  private generation = 0;
 
   /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
   readonly currentUser = signal<IUser | null>(null);
@@ -160,24 +161,27 @@ export class IUserMenuStore {
     this.loadErrors.set({ user: null, menus: null, favorites: null, authorizations: null });
     this.roles.set(this.session.getRoles());
     this.clearAuthorizationData();
+    const generation = this.generation;
 
     const result$ = forkJoin({
-      user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err))),
+      user: this.loadUserInternal().pipe(catchError((err) => this.recordError('user', err, generation))),
       menus: this.loadMenusInternal(applicationId).pipe(
-        catchError((err) => this.recordError('menus', err)),
+        catchError((err) => this.recordError('menus', err, generation)),
       ),
       favorites: this.loadFavoritesInternal(applicationId).pipe(
-        catchError((err) => this.recordError('favorites', err)),
+        catchError((err) => this.recordError('favorites', err, generation)),
       ),
       authorizations: this.loadAuthorizationsInternal(applicationId).pipe(
-        catchError((err) => this.recordError('authorizations', err)),
+        catchError((err) => this.recordError('authorizations', err, generation)),
       ),
     }).pipe(
       map(() => undefined),
       catchError(() => of(undefined)),
       finalize(() => {
-        this.initializing.set(false);
-        this.initialized.set(true);
+        if (generation === this.generation) {
+          this.initializing.set(false);
+          this.initialized.set(true);
+        }
       }),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
@@ -280,28 +284,37 @@ export class IUserMenuStore {
    * mapped `IMenu[]`.
    */
   loadMenus(applicationId?: string): Observable<IMenu[]> {
+    const generation = this.generation;
     return this.menuService.getEffectiveMenus<IMenuNodeDto[]>(applicationId).pipe(
-      tap((nodes) => this.menus.set(toIMenus(nodes))),
+      tap((nodes) => {
+        if (generation === this.generation) this.menus.set(toIMenus(nodes));
+      }),
       map((nodes) => toIMenus(nodes)),
     );
   }
 
   /** Loads favorites into `favorites` — optionally for a single application. Returns the mapped `IMenu[]`. */
   loadFavorites(applicationId?: string): Observable<IMenu[]> {
+    const generation = this.generation;
     return this.menuService.getFavorites<IFavoriteMenuItemDto[]>(applicationId).pipe(
-      tap((items) => this.favorites.set(items.map(toIMenuFavorite))),
+      tap((items) => {
+        if (generation === this.generation) this.favorites.set(items.map(toIMenuFavorite));
+      }),
       map((items) => items.map(toIMenuFavorite)),
     );
   }
 
   /** Loads effective item/function authorizations and their company scope. */
   loadAuthorizations(applicationId?: string): Observable<IEffectiveAuthorizationDto[]> {
+    const generation = this.generation;
     this.clearAuthorizationData();
     return this.menuService.getAuthorizations<IEffectiveAuthorizationDto[]>(applicationId).pipe(
-      tap((items) => this.applyAuthorizations(items)),
+      tap((items) => {
+        if (generation === this.generation) this.applyAuthorizations(items);
+      }),
       map(() => this.authorizations()),
       catchError((error) => {
-        this.clearAuthorizationData();
+        if (generation === this.generation) this.clearAuthorizationData();
         return throwError(() => error);
       }),
     );
@@ -351,10 +364,13 @@ export class IUserMenuStore {
   }
 
   private loadUserInternal(): Observable<null> {
+    const generation = this.generation;
     return this.currentUserService.getCurrentUser<ICurrentUserDto>().pipe(
       tap((raw) => {
-        this.rawCurrentUser.set(raw);
-        this.currentUser.set(mapToSidebarUser(raw));
+        if (generation === this.generation) {
+          this.rawCurrentUser.set(raw);
+          this.currentUser.set(mapToSidebarUser(raw));
+        }
       }),
       map(() => null),
     );
@@ -373,6 +389,7 @@ export class IUserMenuStore {
   }
 
   private clearData(): void {
+    this.generation++;
     this.currentUser.set(null);
     this.rawCurrentUser.set(null);
     this.menus.set([]);
@@ -388,7 +405,8 @@ export class IUserMenuStore {
     this.authorizations.set([]);
   }
 
-  private recordError(source: IUserMenuLoadSource, err: unknown): Observable<null> {
+  private recordError(source: IUserMenuLoadSource, err: unknown, generation: number): Observable<null> {
+    if (generation !== this.generation) return of(null);
     const normalized = normalizeApiError(err);
     this.loadErrors.update((errors) => ({ ...errors, [source]: normalized }));
     this.loadError.set(`${source}: ${resolveApiErrorDisplayMessage(

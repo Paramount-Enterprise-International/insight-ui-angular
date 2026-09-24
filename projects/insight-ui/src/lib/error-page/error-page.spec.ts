@@ -57,6 +57,18 @@ describe('IErrorPage', () => {
     });
   }
 
+  it('renders timeout with a clock icon and no error code', () => {
+    fixture.componentRef.setInput('kind', 'timeout');
+    fixture.detectChanges();
+    expect(element.querySelector('h1')?.textContent).toBe('Request Timed Out');
+    expect(element.textContent).toContain(
+      'The request took too long to complete. Please try again.',
+    );
+    expect(element.querySelector('i-icon i')?.classList.contains('fa-clock')).toBeTrue();
+    expect(element.querySelector('.i-error-page__code')).toBeNull();
+    expect(element.classList.contains('i-error-page--not-found')).toBeFalse();
+  });
+
   it('switches to fullpage without rendering a section and switches back', () => {
     fixture.componentRef.setInput('mode', 'fullpage');
     fixture.detectChanges();
