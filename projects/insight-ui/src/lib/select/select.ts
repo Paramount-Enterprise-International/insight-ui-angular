@@ -19,7 +19,6 @@ import { NgClass, NgTemplateOutlet } from '@angular/common';
 import {
   AfterContentInit,
   AfterViewChecked,
-  AfterViewInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
@@ -32,9 +31,11 @@ import {
   inject,
   Input,
   NgZone,
+  OnChanges,
   OnDestroy,
   OnInit,
   Output,
+  SimpleChanges,
   TemplateRef,
   ViewChild,
 } from '@angular/core';
@@ -143,7 +144,7 @@ export type ISelectPanelPosition =
   ],
 })
 export class ISelect<T = any>
-  implements ControlValueAccessor, OnInit, AfterContentInit, AfterViewChecked, OnDestroy
+  implements ControlValueAccessor, OnInit, OnChanges, AfterContentInit, AfterViewChecked, OnDestroy
 {
   @Input() placeholder = '';
   @Input() disabled = false;
@@ -185,7 +186,16 @@ export class ISelect<T = any>
             this.cdr.markForCheck();
           });
         },
+        complete: () => {
+          this.zone.run(() => {
+            this.isLoading = false;
+            this.cdr.markForCheck();
+          });
+        },
       });
+    } else {
+      this.isLoading = false;
+      this.cdr.markForCheck();
     }
   }
 
@@ -254,8 +264,11 @@ export class ISelect<T = any>
   isLoading = false;
 
   private optionsSub?: Subscription;
-  private filterInput$ = new Subject<string>();
+  private filterInput$ = new Subject<{ text: string; revision: number }>();
   private filterInputSub?: Subscription;
+  private filterRevision = 0;
+  private editing = false;
+  private pendingFilter?: { text: string; revision: number };
 
   onChange = (value: any): void => {
     void value;
@@ -283,15 +296,34 @@ export class ISelect<T = any>
   private listeningGlobal = false;
 
   ngOnInit(): void {
+    this.subscribeFilterInput();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['disabled'] && this.disabled) this.cancelPendingFilter();
+    if (changes['filterDelay'] && this.filterInputSub) this.subscribeFilterInput();
+    if (changes['filterPredicate']) this.applyFilter(this.isOpen);
+  }
+
+  private subscribeFilterInput(): void {
+    this.filterInputSub?.unsubscribe();
     this.filterInputSub = this.filterInput$
       .pipe(debounceTime(this.filterDelay))
-      .subscribe((val) => {
+      .subscribe(({ text, revision }) => {
+        if (revision !== this.filterRevision || this.disabled) return;
+        this.pendingFilter = undefined;
         this.zone.run(() => {
-          this.handleInputText(val);
-          this.isLoading = false;
+          this.handleInputText(text);
           this.cdr.markForCheck();
         });
       });
+    if (this.pendingFilter) this.filterInput$.next(this.pendingFilter);
+  }
+
+  private cancelPendingFilter(): void {
+    this.filterRevision += 1;
+    this.pendingFilter = undefined;
+    this.editing = false;
   }
 
   ngAfterContentInit(): void {
@@ -320,7 +352,11 @@ export class ISelect<T = any>
   }
 
   writeValue(value: T | null): void {
+    this.cancelPendingFilter();
+    this._filterText = '';
     this._modelValue = value;
+    this.pendingModelValue = value;
+    this.cdr.markForCheck();
 
     if (!this._rawOptions.length) {
       this.pendingModelValue = value;
@@ -340,10 +376,16 @@ export class ISelect<T = any>
   }
 
   setDisabledState(isDisabled: boolean): void {
+    if (isDisabled) this.cancelPendingFilter();
     this.disabled = isDisabled;
+    this.cdr.markForCheck();
   }
 
   private syncModelToView(): void {
+    if (this.editing) {
+      this.applyFilter(this.isOpen);
+      return;
+    }
     const options = this._rawOptions;
 
     if (!options.length) {
@@ -466,11 +508,10 @@ export class ISelect<T = any>
   }
 
   private handleInputText(val: string): void {
-    this._displayText = val;
     this._filterText = val;
 
     if (!this.isOpen) {
-      this.openDropdown();
+      this.openDropdown(val);
     } else {
       this.applyFilter(true);
       this.scheduleReposition();
@@ -508,11 +549,13 @@ export class ISelect<T = any>
     if (!this.isOpen) {
       this.openDropdown();
     } else if (this.hasNoResults) {
+      this.cancelPendingFilter();
       this._displayText = '';
       this._filterText = '';
       this.applyFilter(true);
       this.scheduleReposition();
     } else {
+      this.cancelPendingFilter();
       this.syncModelToView();
       this.closeDropdown();
     }
@@ -520,13 +563,13 @@ export class ISelect<T = any>
     setTimeout(() => this.focus());
   }
 
-  private openDropdown(): void {
+  private openDropdown(initialFilter = ''): void {
     if (this.disabled) return;
     if (this.isOpen) return;
 
     this.isOpen = true;
-    this._filterText = '';
-    this.filteredOptions = [...this._rawOptions];
+    this._filterText = initialFilter;
+    this.applyFilter(true);
 
     this.cdr.detectChanges();
 
@@ -574,6 +617,7 @@ export class ISelect<T = any>
   }
 
   private closeDropdown(): void {
+    this.cancelPendingFilter();
     if (!this.isOpen) return;
 
     this.isOpen = false;
@@ -588,6 +632,9 @@ export class ISelect<T = any>
   selectRow(row: T, event?: MouseEvent): void {
     event?.preventDefault();
     event?.stopPropagation();
+
+    if (this.disabled) return;
+    this.cancelPendingFilter();
 
     this._modelValue = row;
     this._displayText = this.resolveDisplayText(row);
@@ -641,6 +688,7 @@ export class ISelect<T = any>
 
   @HostListener('keydown', ['$event'])
   handleKeydown(event: KeyboardEvent): void {
+    if (this.disabled) return;
     const options = this.filteredOptions;
 
     switch (event.key) {
@@ -678,6 +726,7 @@ export class ISelect<T = any>
         break;
 
       case 'Escape':
+        this.cancelPendingFilter();
         if (this.isOpen) {
           event.preventDefault();
           this.closeDropdown();
@@ -689,16 +738,20 @@ export class ISelect<T = any>
 
   @HostListener('input', ['$event'])
   onHostInput(event: Event): void {
+    if (this.disabled) return;
     const target = event.target as HTMLInputElement | null;
     if (!target) return;
 
-    this.isLoading = true;
-    this.filterInput$.next(target.value);
+    this.editing = true;
+    this._displayText = target.value;
+    this.pendingFilter = { text: target.value, revision: ++this.filterRevision };
+    this.filterInput$.next(this.pendingFilter);
+    this.cdr.markForCheck();
   }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!this.isOpen) return;
+    if (!this.isOpen && !this.editing) return;
 
     const target = event.target as Node | null;
     if (!target) return;
@@ -1076,6 +1129,7 @@ export class ISelect<T = any>
       [panelPosition]="panelPosition"
       [placeholder]="placeholder"
       [portalToBody]="portalToBody"
+      [value]="value"
       (onChanged)="handleSelectChange($event)"
     >
       <ng-content />
@@ -1089,7 +1143,7 @@ export class ISelect<T = any>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, AfterViewInit {
+export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   @ViewChild(ISelect) innerSelect!: ISelect<T>;
 
   @Input() label = '';
@@ -1168,15 +1222,6 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
 
   ngOnDestroy(): void {
     this.submitSub?.unsubscribe();
-  }
-
-  ngAfterViewInit(): void {
-    if (this.innerSelect) {
-      this.innerSelect.writeValue(this._value);
-      this.innerSelect.setDisabledState(this.isDisabled);
-    }
-
-    this.cdr.markForCheck();
   }
 
   writeValue(v: T | null): void {
