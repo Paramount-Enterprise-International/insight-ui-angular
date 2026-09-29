@@ -19,7 +19,6 @@ import { NgClass, NgTemplateOutlet } from '@angular/common';
 import {
   AfterContentInit,
   AfterViewChecked,
-  AfterViewInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
@@ -354,7 +353,10 @@ export class ISelect<T = any>
 
   writeValue(value: T | null): void {
     this.cancelPendingFilter();
+    this._filterText = '';
     this._modelValue = value;
+    this.pendingModelValue = value;
+    this.cdr.markForCheck();
 
     if (!this._rawOptions.length) {
       this.pendingModelValue = value;
@@ -376,6 +378,7 @@ export class ISelect<T = any>
   setDisabledState(isDisabled: boolean): void {
     if (isDisabled) this.cancelPendingFilter();
     this.disabled = isDisabled;
+    this.cdr.markForCheck();
   }
 
   private syncModelToView(): void {
@@ -1126,6 +1129,7 @@ export class ISelect<T = any>
       [panelPosition]="panelPosition"
       [placeholder]="placeholder"
       [portalToBody]="portalToBody"
+      [value]="value"
       (onChanged)="handleSelectChange($event)"
     >
       <ng-content />
@@ -1139,7 +1143,7 @@ export class ISelect<T = any>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, AfterViewInit {
+export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   @ViewChild(ISelect) innerSelect!: ISelect<T>;
 
   @Input() label = '';
@@ -1218,15 +1222,6 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Afte
 
   ngOnDestroy(): void {
     this.submitSub?.unsubscribe();
-  }
-
-  ngAfterViewInit(): void {
-    if (this.innerSelect) {
-      this.innerSelect.writeValue(this._value);
-      this.innerSelect.setDisabledState(this.isDisabled);
-    }
-
-    this.cdr.markForCheck();
   }
 
   writeValue(v: T | null): void {

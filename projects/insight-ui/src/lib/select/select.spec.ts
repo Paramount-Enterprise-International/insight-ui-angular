@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { IFCSelect, ISelect, ISelectChange } from './select';
 
@@ -62,6 +62,41 @@ class SearchSelectHost {
   delay = 200;
   predicate = (row: string, term: string): boolean => row.includes(term);
   changes: ISelectChange<string>[] = [];
+}
+
+type InitialOption = string | { id: number; label: string };
+
+@Component({
+  standalone: true,
+  imports: [IFCSelect, ReactiveFormsModule],
+  template: `
+    @switch (binding) {
+      @case ('value') {
+        <i-fc-select [displayWith]="display" [options]="options" [options$]="source"
+          [portalToBody]="false" [value]="value" (onChanged)="changes.push($event)" />
+      }
+      @case ('control') {
+        <i-fc-select [displayWith]="display" [formControl]="control" [options]="options"
+          [options$]="source" [portalToBody]="false" (onChanged)="changes.push($event)" />
+      }
+      @default {
+        <form [formGroup]="form">
+          <i-fc-select formControlName="choice" [displayWith]="display" [options]="options"
+            [options$]="source" [portalToBody]="false" (onChanged)="changes.push($event)" />
+        </form>
+      }
+    }
+  `,
+})
+class InitialSelectHost {
+  binding = 'name';
+  options: InitialOption[] = [{ id: 1, label: 'KTP' }, { id: 2, label: 'Passport' }];
+  value: InitialOption | null = this.options[0];
+  control = new FormControl<InitialOption | null>(this.value);
+  form = new FormGroup({ choice: this.control });
+  display: string | ((row: InitialOption | null) => string) = 'label';
+  source: Subject<InitialOption[]> | null = null;
+  changes: ISelectChange<InitialOption>[] = [];
 }
 
 describe('IFCSelect', () => {
@@ -430,5 +465,124 @@ for (const wrapped of [false, true]) {
       tick(500);
       expect(document.querySelector('i-options')).toBeNull();
     }));
+  });
+}
+
+for (const binding of ['name', 'control', 'value']) {
+  describe(`IFCSelect initial ${binding} value`, () => {
+    let fixture: ComponentFixture<InitialSelectHost>;
+    let host: InitialSelectHost;
+    const input = (): HTMLInputElement => fixture.nativeElement.querySelector('input');
+    const write = (value: InitialOption | null): void => {
+      if (binding === 'value') host.value = value;
+      else host.control.setValue(value);
+      fixture.detectChanges();
+    };
+
+    beforeEach(() => {
+      TestBed.configureTestingModule({ imports: [InitialSelectHost] });
+      fixture = TestBed.createComponent(InitialSelectHost);
+      host = fixture.componentInstance;
+      host.binding = binding;
+    });
+
+    afterEach(() => fixture.destroy());
+
+    it('renders the initial object label without interaction or selection events', () => {
+      fixture.detectChanges();
+      expect(input().value).toBe('KTP');
+      expect(host.changes).toEqual([]);
+      expect(host.control.pristine).toBeTrue();
+      expect(host.control.untouched).toBeTrue();
+      input().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.i-option.selected')?.textContent).toContain('KTP');
+    });
+
+    it('renders primitive initial values and programmatic changes with stable options', () => {
+      host.options = ['KTP', 'Passport'];
+      host.display = (row): string => String(row ?? '');
+      host.value = 'KTP';
+      host.control.setValue('KTP');
+      fixture.detectChanges();
+      expect(input().value).toBe('KTP');
+      const options = host.options;
+      write('Passport');
+      expect(input().value).toBe('Passport');
+      write(null);
+      expect(input().value).toBe('');
+      expect(host.options).toBe(options);
+      expect(host.changes).toEqual([]);
+    });
+
+    it('resolves the initial label when options arrive later', () => {
+      const rows = host.options;
+      host.options = [];
+      fixture.detectChanges();
+      host.options = rows;
+      fixture.detectChanges();
+      expect(input().value).toBe('KTP');
+      write(rows[1]);
+      expect(input().value).toBe('Passport');
+      expect(host.changes).toEqual([]);
+    });
+
+    it('preserves the initial object through asynchronous options', () => {
+      const rows = host.options;
+      host.options = [];
+      host.source = new Subject<InitialOption[]>();
+      fixture.detectChanges();
+      host.source.next(rows);
+      fixture.detectChanges();
+      expect(input().value).toBe('KTP');
+      expect(host.control.pristine).toBeTrue();
+      expect(host.control.untouched).toBeTrue();
+      expect(host.changes).toEqual([]);
+    });
+
+    it('keeps a cleared initial value cleared when asynchronous options arrive', () => {
+      const rows = host.options;
+      host.options = [];
+      host.source = new Subject<InitialOption[]>();
+      fixture.detectChanges();
+      write(null);
+      host.source.next(rows);
+      fixture.detectChanges();
+      expect(input().value).toBe('');
+    });
+
+    if (binding !== 'value') {
+      it('resets the same object reference and cancels the pending search', fakeAsync(() => {
+        fixture.detectChanges();
+        const initial = host.control.value;
+        input().value = 'Pass';
+        input().dispatchEvent(new Event('input', { bubbles: true }));
+        fixture.detectChanges();
+        host.control.reset(initial);
+        fixture.detectChanges();
+        expect(input().value).toBe('KTP');
+        tick(500);
+        fixture.detectChanges();
+        expect(input().value).toBe('KTP');
+        expect(fixture.nativeElement.querySelector('i-options')).toBeNull();
+        expect(host.changes).toEqual([]);
+        expect(host.control.pristine).toBeTrue();
+        expect(host.control.untouched).toBeTrue();
+        fixture.destroy();
+      }));
+
+      it('updates patchValue and disabled state without interaction', () => {
+        host.control.disable();
+        fixture.detectChanges();
+        expect(input().value).toBe('KTP');
+        expect(input().readOnly).toBeTrue();
+        host.control.enable();
+        host.form.patchValue({ choice: host.options[1] });
+        fixture.detectChanges();
+        expect(input().readOnly).toBeFalse();
+        expect(input().value).toBe('Passport');
+        expect(host.changes).toEqual([]);
+      });
+    }
   });
 }
