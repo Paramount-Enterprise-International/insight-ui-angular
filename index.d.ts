@@ -1,5 +1,5 @@
 import * as i0 from '@angular/core';
-import { EventEmitter, OnInit, OnDestroy, ElementRef, OnChanges, SimpleChanges, AfterViewInit, AfterContentInit, AfterViewChecked, TemplateRef, Type, Injector, InjectionToken, QueryList, PipeTransform, EnvironmentProviders } from '@angular/core';
+import { EventEmitter, OnInit, OnDestroy, ElementRef, OnChanges, SimpleChanges, AfterContentInit, AfterViewChecked, TemplateRef, AfterViewInit, Type, Injector, InjectionToken, QueryList, PipeTransform, EnvironmentProviders } from '@angular/core';
 import { AbstractControl, NgControl, ControlValueAccessor, FormBuilder, FormControl, FormGroup, FormGroupDirective } from '@angular/forms';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { Route, CanActivateFn, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
@@ -462,7 +462,7 @@ type ISelectChange<T = any> = {
     label: string;
 };
 type ISelectPanelPosition = 'top' | 'bottom' | 'left' | 'right' | 'top left' | 'top right' | 'bottom left' | 'bottom right';
-declare class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterContentInit, AfterViewChecked, OnDestroy {
+declare class ISelect<T = any> implements ControlValueAccessor, OnInit, OnChanges, AfterContentInit, AfterViewChecked, OnDestroy {
     placeholder: string;
     disabled: boolean;
     invalid: boolean;
@@ -498,6 +498,9 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCon
     private optionsSub?;
     private filterInput$;
     private filterInputSub?;
+    private filterRevision;
+    private editing;
+    private pendingFilter?;
     onChange: (value: any) => void;
     onTouched: () => void;
     get panelPositionClass(): string;
@@ -510,6 +513,9 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCon
     private repositionRaf;
     private listeningGlobal;
     ngOnInit(): void;
+    ngOnChanges(changes: SimpleChanges): void;
+    private subscribeFilterInput;
+    private cancelPendingFilter;
     ngAfterContentInit(): void;
     ngAfterViewChecked(): void;
     ngOnDestroy(): void;
@@ -551,7 +557,7 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, AfterCon
     static ɵfac: i0.ɵɵFactoryDeclaration<ISelect<any>, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<ISelect<any>, "i-select", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
 }
-declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, AfterViewInit {
+declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     innerSelect: ISelect<T>;
     label: string;
     placeholder: string;
@@ -579,7 +585,6 @@ declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy, Aft
     private submitSub?;
     constructor();
     ngOnDestroy(): void;
-    ngAfterViewInit(): void;
     writeValue(v: T | null): void;
     registerOnChange(fn: any): void;
     registerOnTouched(fn: any): void;

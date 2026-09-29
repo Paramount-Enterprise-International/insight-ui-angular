@@ -2978,7 +2978,17 @@ class ISelect {
                         this.cdr.markForCheck();
                     });
                 },
+                complete: () => {
+                    this.zone.run(() => {
+                        this.isLoading = false;
+                        this.cdr.markForCheck();
+                    });
+                },
             });
+        }
+        else {
+            this.isLoading = false;
+            this.cdr.markForCheck();
         }
     }
     _displayWith = (row) => row === null ? '' : String(row);
@@ -3028,6 +3038,9 @@ class ISelect {
     optionsSub;
     filterInput$ = new Subject();
     filterInputSub;
+    filterRevision = 0;
+    editing = false;
+    pendingFilter;
     onChange = (value) => {
         void value;
     };
@@ -3048,15 +3061,36 @@ class ISelect {
     repositionRaf = 0;
     listeningGlobal = false;
     ngOnInit() {
+        this.subscribeFilterInput();
+    }
+    ngOnChanges(changes) {
+        if (changes['disabled'] && this.disabled)
+            this.cancelPendingFilter();
+        if (changes['filterDelay'] && this.filterInputSub)
+            this.subscribeFilterInput();
+        if (changes['filterPredicate'])
+            this.applyFilter(this.isOpen);
+    }
+    subscribeFilterInput() {
+        this.filterInputSub?.unsubscribe();
         this.filterInputSub = this.filterInput$
             .pipe(debounceTime(this.filterDelay))
-            .subscribe((val) => {
+            .subscribe(({ text, revision }) => {
+            if (revision !== this.filterRevision || this.disabled)
+                return;
+            this.pendingFilter = undefined;
             this.zone.run(() => {
-                this.handleInputText(val);
-                this.isLoading = false;
+                this.handleInputText(text);
                 this.cdr.markForCheck();
             });
         });
+        if (this.pendingFilter)
+            this.filterInput$.next(this.pendingFilter);
+    }
+    cancelPendingFilter() {
+        this.filterRevision += 1;
+        this.pendingFilter = undefined;
+        this.editing = false;
     }
     ngAfterContentInit() {
         this.syncModelToView();
@@ -3080,7 +3114,11 @@ class ISelect {
         }
     }
     writeValue(value) {
+        this.cancelPendingFilter();
+        this._filterText = '';
         this._modelValue = value;
+        this.pendingModelValue = value;
+        this.cdr.markForCheck();
         if (!this._rawOptions.length) {
             this.pendingModelValue = value;
             this._displayText = this.resolveDisplayText(value);
@@ -3095,9 +3133,16 @@ class ISelect {
         this.onTouched = fn;
     }
     setDisabledState(isDisabled) {
+        if (isDisabled)
+            this.cancelPendingFilter();
         this.disabled = isDisabled;
+        this.cdr.markForCheck();
     }
     syncModelToView() {
+        if (this.editing) {
+            this.applyFilter(this.isOpen);
+            return;
+        }
         const options = this._rawOptions;
         if (!options.length) {
             this._displayText = this.resolveDisplayText(this._modelValue);
@@ -3197,10 +3242,9 @@ class ISelect {
         return '';
     }
     handleInputText(val) {
-        this._displayText = val;
         this._filterText = val;
         if (!this.isOpen) {
-            this.openDropdown();
+            this.openDropdown(val);
         }
         else {
             this.applyFilter(true);
@@ -3234,25 +3278,27 @@ class ISelect {
             this.openDropdown();
         }
         else if (this.hasNoResults) {
+            this.cancelPendingFilter();
             this._displayText = '';
             this._filterText = '';
             this.applyFilter(true);
             this.scheduleReposition();
         }
         else {
+            this.cancelPendingFilter();
             this.syncModelToView();
             this.closeDropdown();
         }
         setTimeout(() => this.focus());
     }
-    openDropdown() {
+    openDropdown(initialFilter = '') {
         if (this.disabled)
             return;
         if (this.isOpen)
             return;
         this.isOpen = true;
-        this._filterText = '';
-        this.filteredOptions = [...this._rawOptions];
+        this._filterText = initialFilter;
+        this.applyFilter(true);
         this.cdr.detectChanges();
         if (this.portalToBody) {
             this.ensurePanelPortaled();
@@ -3287,6 +3333,7 @@ class ISelect {
         this.scrollHighlightedIntoView();
     }
     closeDropdown() {
+        this.cancelPendingFilter();
         if (!this.isOpen)
             return;
         this.isOpen = false;
@@ -3298,6 +3345,9 @@ class ISelect {
     selectRow(row, event) {
         event?.preventDefault();
         event?.stopPropagation();
+        if (this.disabled)
+            return;
+        this.cancelPendingFilter();
         this._modelValue = row;
         this._displayText = this.resolveDisplayText(row);
         this._filterText = '';
@@ -3335,6 +3385,8 @@ class ISelect {
         input?.focus();
     }
     handleKeydown(event) {
+        if (this.disabled)
+            return;
         const options = this.filteredOptions;
         switch (event.key) {
             case 'ArrowDown':
@@ -3365,6 +3417,7 @@ class ISelect {
                 }
                 break;
             case 'Escape':
+                this.cancelPendingFilter();
                 if (this.isOpen) {
                     event.preventDefault();
                     this.closeDropdown();
@@ -3373,14 +3426,19 @@ class ISelect {
         }
     }
     onHostInput(event) {
+        if (this.disabled)
+            return;
         const target = event.target;
         if (!target)
             return;
-        this.isLoading = true;
-        this.filterInput$.next(target.value);
+        this.editing = true;
+        this._displayText = target.value;
+        this.pendingFilter = { text: target.value, revision: ++this.filterRevision };
+        this.filterInput$.next(this.pendingFilter);
+        this.cdr.markForCheck();
     }
     onDocumentClick(event) {
-        if (!this.isOpen)
+        if (!this.isOpen && !this.editing)
             return;
         const target = event.target;
         if (!target)
@@ -3671,7 +3729,7 @@ class ISelect {
                 useExisting: forwardRef(() => ISelect),
                 multi: true,
             },
-        ], queries: [{ propertyName: "optionDef", first: true, predicate: ISelectOptionDefDirective, descendants: true }], viewQueries: [{ propertyName: "panelRef", first: true, predicate: ["panel"], descendants: true }], ngImport: i0, template: `
+        ], queries: [{ propertyName: "optionDef", first: true, predicate: ISelectOptionDefDirective, descendants: true }], viewQueries: [{ propertyName: "panelRef", first: true, predicate: ["panel"], descendants: true }], usesOnChanges: true, ngImport: i0, template: `
     <i-input
       [append]="appendAddon"
       [invalid]="invalid || hasNoResults"
@@ -3876,13 +3934,6 @@ class IFCSelect {
     ngOnDestroy() {
         this.submitSub?.unsubscribe();
     }
-    ngAfterViewInit() {
-        if (this.innerSelect) {
-            this.innerSelect.writeValue(this._value);
-            this.innerSelect.setDisabledState(this.isDisabled);
-        }
-        this.cdr.markForCheck();
-    }
     writeValue(v) {
         this._value = v ?? null;
         if (this.innerSelect) {
@@ -3954,6 +4005,7 @@ class IFCSelect {
       [panelPosition]="panelPosition"
       [placeholder]="placeholder"
       [portalToBody]="portalToBody"
+      [value]="value"
       (onChanged)="handleSelectChange($event)"
     >
       <ng-content />
@@ -3995,6 +4047,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.32", ngImpo
       [panelPosition]="panelPosition"
       [placeholder]="placeholder"
       [portalToBody]="portalToBody"
+      [value]="value"
       (onChanged)="handleSelectChange($event)"
     >
       <ng-content />
