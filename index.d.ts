@@ -3777,21 +3777,13 @@ type IEnvironment = {
     };
     /** Full URL of this app's sign-in page. Left empty by default - set by the consumer app. */
     signinUrl: string;
-    /** Full URL of this app's own auth callback (informational, unused by the library). */
-    authCallbackUrl: string;
-    securityMode: boolean;
     tokenLifespan: {
         accessTokenSeconds: number;
         refreshTokenSeconds: number;
         ssoSessionMaxSeconds: number;
     };
-    cookieSecure: boolean;
     /** CSRF token max age in seconds (backend cookie maxAge minus a safety buffer). */
     csrfTokenMaxAgeSeconds: number;
-    /** MFA challenge session timeout (seconds). */
-    mfaChallengeSessionTimeoutSeconds?: number;
-    /** Origins this app's sign-in page trusts for post-login redirects (informational). */
-    allowedReturnOrigins: string[];
     /** This app's registered application API key (attached as `Api-Key` header). */
     apiKey?: string;
     /** This app's application id (used as the default filter when loading effective menus). */
@@ -3803,7 +3795,7 @@ type IEnvironment = {
 /**
  * Default environment for `@insight/ui`'s shared data layer.
  *
- * `api.identity`, `signinUrl` and `authCallbackUrl` are intentionally EMPTY -
+ * `api.identity` and `signinUrl` are intentionally EMPTY -
  * the library does not default to any shared identity provider. Each consumer
  * app supplies its own values (its own BFF/identity host) via
  * `provideIAuth()`. The `user`/`configuration`/`application` keys keep
