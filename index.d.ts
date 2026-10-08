@@ -1757,7 +1757,8 @@ declare function isSpaMenu(menu: IMenu | null | undefined): boolean;
  * Converts modern (contract-aligned) menu nodes into the legacy `IMenu` shape
  * that `IHMenu` renders. Modern extras (`id`, `isFavorite`, `application`,
  * `companies`, `openIn`, `route`, `icon`) are preserved for pin / favorites /
- * application-grouping rendering. Legacy nodes pass through untouched.
+ * application-grouping rendering. Explicit group types are retained even when
+ * children are empty. Legacy nodes pass through untouched.
  */
 declare function normalizeMenuTree(menus: IMenu[] | null | undefined): IMenu[];
 /**
