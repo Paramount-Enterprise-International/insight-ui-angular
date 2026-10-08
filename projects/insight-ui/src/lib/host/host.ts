@@ -354,7 +354,7 @@ function normalizeMenu(menu: IMenu, level: number): IMenu {
     child: children.map((child) => normalizeMenu(child, level + 1)),
     children: undefined,
     name: undefined,
-    type: undefined,
+    type: menu.type === 'group' ? 'group' : undefined,
   };
 
   return normalized;
@@ -364,7 +364,8 @@ function normalizeMenu(menu: IMenu, level: number): IMenu {
  * Converts modern (contract-aligned) menu nodes into the legacy `IMenu` shape
  * that `IHMenu` renders. Modern extras (`id`, `isFavorite`, `application`,
  * `companies`, `openIn`, `route`, `icon`) are preserved for pin / favorites /
- * application-grouping rendering. Legacy nodes pass through untouched.
+ * application-grouping rendering. Explicit group types are retained even when
+ * children are empty. Legacy nodes pass through untouched.
  */
 export function normalizeMenuTree(menus: IMenu[] | null | undefined): IMenu[] {
   return (menus ?? []).map((menu) => normalizeMenu(menu, 0));
@@ -1099,7 +1100,10 @@ export class IHMenu implements OnChanges {
     const hasChildren = this.menuHasChildren;
 
     // keep selection only on "leaf" items (same rule as flattenNavigableMenus)
-    const isLeaf = this.menuTypeId === 3 && (!hasChildren || this.menu.visibility === 'no-child');
+    const isLeaf =
+      this.menu.type !== 'group' &&
+      this.menuTypeId === 3 &&
+      (!hasChildren || this.menu.visibility === 'no-child');
 
     return isLeaf;
   }
@@ -1207,7 +1211,7 @@ export class IHMenu implements OnChanges {
 
           <span class="user-info">
             <small class="text-subtle">{{ user.employeeCode }}</small>
-            <h6>{{ user.fullName }}</h6>
+            <h6>asd{{ user.fullName }}</h6>
           </span>
 
           <i
@@ -1782,7 +1786,9 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
       const hasChildren = children.length > 0;
 
       const isLeafMenu =
-        Number(menu.menuTypeId) === 3 && (!hasChildren || menu.visibility === 'no-child');
+        menu.type !== 'group' &&
+        Number(menu.menuTypeId) === 3 &&
+        (!hasChildren || menu.visibility === 'no-child');
 
       if (isLeafMenu) {
         result.push(menu);
