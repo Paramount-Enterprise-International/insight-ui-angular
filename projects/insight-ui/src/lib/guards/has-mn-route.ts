@@ -12,7 +12,8 @@ import { ActivatedRoute, type Route, RouterOutlet } from '@angular/router';
 
 import { evaluatePermission, type IPermissionInput } from '../directives/has-mn';
 import { IErrorPage } from '../error-page/error-page';
-import { type IBreadcrumbItem, IHTitleBreadcrumbService, type IRoute } from '../host/host';
+import type { IBreadcrumbItem, IRoute } from '../host/host.types';
+import { IHTitleBreadcrumbService } from '../host/shell/title-breadcrumb.service';
 import { ILoading } from '../loading/loading';
 import { ISessionService } from '../session/session';
 import { IUserMenuStore } from '../store/user-menu';
