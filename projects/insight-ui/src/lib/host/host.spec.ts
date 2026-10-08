@@ -19,6 +19,7 @@ import {
   IUser,
   normalizeMenuTree,
 } from './host';
+import { IHTitleBreadcrumbService as DirectTitleBreadcrumbService } from './shell/title-breadcrumb.service';
 
 describe('IHContent', () => {
   let fixture: ComponentFixture<IHContent>;
@@ -42,6 +43,21 @@ describe('IHContent', () => {
     const title = host.querySelector('.ih-content-header h1');
 
     expect(title?.textContent).toContain('Dashboard');
+  });
+
+  it('shares the breadcrumb service between the facade and content', () => {
+    const shell = TestBed.inject(IHTitleBreadcrumbService);
+
+    expect(TestBed.inject(DirectTitleBreadcrumbService)).toBe(shell);
+    expect(fixture.componentInstance.shell).toBe(shell);
+
+    shell.setBreadcrumbs([{ label: 'Remote Page' }]);
+    fixture.detectChanges();
+
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('.ih-content-breadcrumb__current')?.textContent).toContain(
+      'Remote Page',
+    );
   });
 });
 
