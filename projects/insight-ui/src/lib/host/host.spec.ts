@@ -163,6 +163,7 @@ describe('normalizeMenuTree', () => {
     const group = tree[0];
     expect(group.menuName).toBe('Administration');
     expect(group.menuTypeId).toBe(3);
+    expect(group.type).toBe('group');
     expect(group.id).toBe(MODERN_MENU.id);
     expect(group.level).toBe(0);
     expect(group.application?.code).toBe('IAMCN');
@@ -284,6 +285,41 @@ describe('IHSidebar (modern menus + favorites)', () => {
     expect(el.textContent).toContain('Administration');
     expect(el.textContent).toContain('Users');
   });
+
+  for (const collapsible of [false, true]) {
+    for (const route of [null, '/empty']) {
+      it(`renders empty groups as headers with route=${route} and collapsible=${collapsible}`, () => {
+        host.collapsible.set(collapsible);
+        host.menus$ = of([
+          { id: 'empty-root', name: 'Docs Empty', type: 'group', route, children: [] },
+          {
+            id: 'docs', name: 'Docs', type: 'group', children: [
+              { id: 'empty-nested', name: 'Docs Section', type: 'group', route, children: [] },
+              { id: 'page', name: 'Docs Page', type: 'item', route: '/page', children: [] },
+            ],
+          },
+        ]);
+        fixture.detectChanges();
+
+        const el = fixture.nativeElement as HTMLElement;
+        const headers = el.querySelectorAll('.ih-menu-group');
+        expect(headers.length).toBe(3);
+        expect(headers[0].textContent).toContain('Docs Empty');
+        expect(headers[2].textContent).toContain('Docs Section');
+        expect(el.querySelectorAll('a.is-spa').length).toBe(1);
+        expect(el.querySelectorAll('.ih-menu-favorite').length).toBe(1);
+        expect(headers[0].querySelector('.ih-menu-chevron') !== null).toBe(collapsible);
+
+        const sidebar = fixture.debugElement.query(By.directive(IHSidebar))
+          .componentInstance as IHSidebar;
+        sidebar.menuSearch.setValue('Docs');
+        fixture.detectChanges();
+        sidebar.onSearchKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+        fixture.detectChanges();
+        expect(sidebar.selectedMenuId()).toBe('page');
+      });
+    }
+  }
 
   it('shows a chevron and collapses the group in collapsible mode', () => {
     host.collapsible.set(true);
