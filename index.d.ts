@@ -1670,12 +1670,12 @@ type IMenuGroup = {
  *
  * Supports two shapes:
  * - Legacy: numeric `menuId`, `menuName`, `menuTypeId` (2 = module, 3 = group /
- *   item), `child`, `level`, `visibility`, `openInNewTab` / `reload`.
+ * item), `child`, `level`, `visibility`, `openInNewTab` / `reload`.
  * - Modern (contract-aligned, optional): UUID `id`, `name`, `type`
- *   ('group' | 'item' | 'function'), `children`, `openIn`, `application`,
- *   `companies`, `isFavorite`. `IHSidebar` normalizes modern nodes into the
- *   legacy shape on ingestion; the modern extras are preserved for pin /
- *   favorites / application-grouping rendering.
+ * ('group' | 'item' | 'function'), `children`, `openIn`, `application`,
+ * `companies`, `isFavorite`. `IHSidebar` normalizes modern nodes into the
+ * legacy shape on ingestion; the modern extras are preserved for pin /
+ * favorites / application-grouping rendering.
  */
 type IMenu = {
     id?: string;
@@ -1713,6 +1713,79 @@ type IUser = {
     fullName: string;
     userImagePath: string;
 };
+type IHNavigationSnapshot = {
+    fullUrl: string;
+    basePath: string;
+    params: Record<string, any>;
+    query: Record<string, any>;
+};
+
+declare class IHTitleBreadcrumbService {
+    /**
+     * null = use normal (route-based) title/breadcrumbs
+     * non-null = override (e.g. React remote controls shell display)
+     */
+    readonly titleOverride: i0.WritableSignal<string | null>;
+    readonly breadcrumbsOverride: i0.WritableSignal<IBreadcrumbItem[] | null>;
+    setTitle(title: string | null): void;
+    setBreadcrumbs(items: IBreadcrumbItem[] | null): void;
+    clear(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHTitleBreadcrumbService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IHTitleBreadcrumbService>;
+}
+
+declare class IHContent {
+    private readonly router;
+    private readonly activatedRoute;
+    private readonly baseHref;
+    readonly shell: IHTitleBreadcrumbService;
+    sidebarVisibility: boolean;
+    readonly onSidebarToggled: EventEmitter<boolean>;
+    private readonly session;
+    private readonly userMenuStore;
+    /** Aggregated boot loading state - true while session restore or sidebar menu data is loading. */
+    readonly initializing: i0.WritableSignal<boolean>;
+    /** Emits the aggregated loading state so consumer apps can render their own loader. */
+    readonly loading: EventEmitter<boolean>;
+    private readonly loadingEffect;
+    /** route-based breadcrumbs */
+    readonly breadcrumb$: Observable<IBreadcrumbItem[]>;
+    /** last breadcrumb label = route-based page title */
+    readonly pageTitle$: Observable<string | null>;
+    private buildBreadcrumb;
+    toggleSidebar(): void;
+    onOverrideBreadcrumbClick(e: MouseEvent): void;
+    private normalizeBaseHref;
+    private normalizePath;
+    /**
+     * RouterLink will prefix baseHref automatically.
+     * So we must NOT include baseHref in the value passed to [routerLink].
+     *
+     * baseHref "/-/" examples:
+     * - "/-/dashboard" -> "/dashboard"
+     * - "/dashboard" -> "/dashboard"
+     * - "/" -> "/"
+     */
+    overrideRouterLink(url: string): string;
+    /**
+     * Browser href must include baseHref so "open in new tab" goes to the correct URL.
+     *
+     * baseHref "/-/" examples:
+     * - "/dashboard" -> "/-/dashboard"
+     * - "/-/dashboard" -> "/-/dashboard"
+     * - "/" -> "/-/"
+     */
+    overrideHref(url: string): string;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHContent, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHContent, "ih-content", never, {}, { "onSidebarToggled": "onSidebarToggled"; "loading": "loading"; }, never, never, true, never>;
+}
+
+/**
+ * Default Personal Profile URL opened from the sidebar user dropdown. Consumer
+ * apps override it via the `personalProfileUrl` input (per environment).
+ */
+declare const DEFAULT_PERSONAL_PROFILE_URL = "https://account-dev.paramountenterprise.co.id/personal-profile";
+
 declare function getMenuRoute(menu: IMenu | null | undefined): string | null;
 /**
  * Very intentionally simple:
@@ -1720,13 +1793,13 @@ declare function getMenuRoute(menu: IMenu | null | undefined): string | null;
  */
 declare function isHttpRoute(route: string | null | undefined): boolean;
 /**
- * Node key used for tracking and selection — prefers the modern UUID `id`,
+ * Node key used for tracking and selection - prefers the modern UUID `id`,
  * falls back to the legacy numeric `menuId`.
  */
 declare function getMenuKey(menu: IMenu | null | undefined): string | number | null;
-/** Display label — prefers the modern `name`, falls back to legacy `menuName`. */
+/** Display label - prefers the modern `name`, falls back to legacy `menuName`. */
 declare function getMenuLabel(menu: IMenu | null | undefined): string;
-/** Children — prefers the modern `children`, falls back to legacy `child`. */
+/** Children - prefers the modern `children`, falls back to legacy `child`. */
 declare function getMenuChildren(menu: IMenu | null | undefined): IMenu[];
 declare function hasMenuChildren(menu: IMenu | null | undefined): boolean;
 /**
@@ -1761,75 +1834,7 @@ declare function isSpaMenu(menu: IMenu | null | undefined): boolean;
  * children are empty. Legacy nodes pass through untouched.
  */
 declare function normalizeMenuTree(menus: IMenu[] | null | undefined): IMenu[];
-/**
- * Default Personal Profile URL opened from the sidebar user dropdown. Consumer
- * apps override it via the `personalProfileUrl` input (per environment).
- */
-declare const DEFAULT_PERSONAL_PROFILE_URL = "https://account-dev.paramountenterprise.co.id/personal-profile";
-type IHNavigationSnapshot = {
-    fullUrl: string;
-    basePath: string;
-    params: Record<string, any>;
-    query: Record<string, any>;
-};
-declare class IHTitleBreadcrumbService {
-    /**
-     * null = use normal (route-based) title/breadcrumbs
-     * non-null = override (e.g. React remote controls shell display)
-     */
-    readonly titleOverride: i0.WritableSignal<string | null>;
-    readonly breadcrumbsOverride: i0.WritableSignal<IBreadcrumbItem[] | null>;
-    setTitle(title: string | null): void;
-    setBreadcrumbs(items: IBreadcrumbItem[] | null): void;
-    clear(): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IHTitleBreadcrumbService, never>;
-    static ɵprov: i0.ɵɵInjectableDeclaration<IHTitleBreadcrumbService>;
-}
-declare class IHContent {
-    private readonly router;
-    private readonly activatedRoute;
-    private readonly baseHref;
-    readonly shell: IHTitleBreadcrumbService;
-    sidebarVisibility: boolean;
-    readonly onSidebarToggled: EventEmitter<boolean>;
-    private readonly session;
-    private readonly userMenuStore;
-    /** Aggregated boot loading state — true while session restore or sidebar menu data is loading. */
-    readonly initializing: i0.WritableSignal<boolean>;
-    /** Emits the aggregated loading state so consumer apps can render their own loader. */
-    readonly loading: EventEmitter<boolean>;
-    private readonly loadingEffect;
-    /** route-based breadcrumbs */
-    readonly breadcrumb$: Observable<IBreadcrumbItem[]>;
-    /** last breadcrumb label = route-based page title */
-    readonly pageTitle$: Observable<string | null>;
-    private buildBreadcrumb;
-    toggleSidebar(): void;
-    onOverrideBreadcrumbClick(e: MouseEvent): void;
-    private normalizeBaseHref;
-    private normalizePath;
-    /**
-     * RouterLink will prefix baseHref automatically.
-     * So we must NOT include baseHref in the value passed to [routerLink].
-     *
-     * baseHref "/-/" examples:
-     * - "/-/dashboard" -> "/dashboard"
-     * - "/dashboard"   -> "/dashboard"
-     * - "/"            -> "/"
-     */
-    overrideRouterLink(url: string): string;
-    /**
-     * Browser href must include baseHref so "open in new tab" goes to the correct URL.
-     *
-     * baseHref "/-/" examples:
-     * - "/dashboard"   -> "/-/dashboard"
-     * - "/-/dashboard" -> "/-/dashboard"
-     * - "/"            -> "/-/"
-     */
-    overrideHref(url: string): string;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IHContent, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHContent, "ih-content", never, {}, { "onSidebarToggled": "onSidebarToggled"; "loading": "loading"; }, never, never, true, never>;
-}
+
 declare class IHMenu implements OnChanges {
     private readonly confirmService;
     menu: IMenu | undefined;
@@ -1840,7 +1845,7 @@ declare class IHMenu implements OnChanges {
     /** When true, groups collapse/expand via a chevron (flat is the default). */
     collapsible: boolean;
     /** Nesting depth from the sidebar root (0 = top level). Drives indentation and
-        the top-level "no group icon" rule — independent of the data's `level`. */
+   the top-level "no group icon" rule - independent of the data's `level`. */
     depth: number;
     /** When true, leaf items render with `cdkDrag` so the parent `cdkDropList` can reorder them (used for the Favorites section). */
     dragEnabled: boolean;
@@ -1874,7 +1879,7 @@ declare class IHMenu implements OnChanges {
     get isGroupNode(): boolean;
     /** Group is expanded unless explicitly marked collapsed (manual toggle wins). */
     get isGroupExpanded(): boolean;
-    /** The synthetic Favorites group — keeps its icon at the top level. */
+    /** The synthetic Favorites group - keeps its icon at the top level. */
     get isFavoritesGroup(): boolean;
     get menuVisibility(): string;
     /**
@@ -1909,6 +1914,7 @@ declare class IHMenu implements OnChanges {
     static ɵfac: i0.ɵɵFactoryDeclaration<IHMenu, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "depth": { "alias": "depth"; "required": false; }; "dragEnabled": { "alias": "dragEnabled"; "required": false; }; "showApplication": { "alias": "showApplication"; "required": false; }; "pathByKey": { "alias": "pathByKey"; "required": false; }; }, { "clicked": "clicked"; "favoriteToggle": "favoriteToggle"; }, never, never, true, never>;
 }
+
 declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private router;
     private hostElement;
@@ -1936,9 +1942,9 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
      * dropdown. Falls back to DEFAULT_PERSONAL_PROFILE_URL when empty.
      */
     personalProfileUrl: string;
-    /** Bubbled up from leaf pin toggles — the host app persists via the favorites API. */
+    /** Bubbled up from leaf pin toggles - the host app persists via the favorites API. */
     readonly onFavoriteToggle: EventEmitter<IMenuFavoriteToggleEvent>;
-    /** Emitted after a favorites drag-drop with the ordered favorite menu ids — the host app persists via the reorder API. */
+    /** Emitted after a favorites drag-drop with the ordered favorite menu ids - the host app persists via the reorder API. */
     readonly onFavoriteReorder: EventEmitter<IMenuFavoriteReorderEvent>;
     menus$: Observable<IMenu[]>;
     queryParams: any;
@@ -1947,12 +1953,12 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     keyboardNavActive: i0.WritableSignal<boolean>;
     selectedIndex: i0.WritableSignal<number | null>;
     selectedMenuId: i0.WritableSignal<string | number | null>;
-    /** Index the dragged favorite would land at — drives the drop placeholder + cursor. */
+    /** Index the dragged favorite would land at - drives the drop placeholder + cursor. */
     readonly dragOverIndex: i0.WritableSignal<number | null>;
     /** Template-bound helper for stable `@for` tracking. */
     readonly getMenuKey: typeof getMenuKey;
     private favoritesGroupCache;
-    /** Latest favorites array mirrored from `favorites$` — source of truth for drag reorder. */
+    /** Latest favorites array mirrored from `favorites$` - source of truth for drag reorder. */
     readonly favoriteItems: i0.WritableSignal<IMenu[]>;
     /** Full (unfiltered) normalized menu tree - source for favorite ancestor paths. */
     private readonly fullMenus;
@@ -1979,7 +1985,7 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private dragState;
     /** Document mousemove during an active favorites drag (live reorder preview). */
     private onDocumentMouseMove;
-    /** Document mouseup — finalize (emit) or cancel the favorites drag. */
+    /** Document mouseup - finalize (emit) or cancel the favorites drag. */
     private onDocumentMouseUp;
     /** Begins a favorites drag from a leaf inside the favorites list. */
     onFavoritesMouseDown(event: MouseEvent): void;

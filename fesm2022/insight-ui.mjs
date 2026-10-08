@@ -1,7 +1,7 @@
 import * as i1$1 from '@angular/common';
 import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
 import * as i0 from '@angular/core';
-import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ContentChildren, ViewContainerRef, signal, computed, makeEnvironmentProviders, APP_INITIALIZER, effect, ViewChildren, DestroyRef, untracked } from '@angular/core';
+import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ContentChildren, ViewContainerRef, signal, computed, effect, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER, DestroyRef, untracked } from '@angular/core';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { firstValueFrom, Subject, BehaviorSubject, map, throwError, from, defer, Observable, forkJoin, of, timeout, lastValueFrom, filter as filter$1, startWith, shareReplay as shareReplay$1, tap as tap$1, combineLatest, take as take$1, distinctUntilChanged } from 'rxjs';
@@ -10549,94 +10549,6 @@ function validateIAuthConfig(config) {
 }
 
 /**
- * Validate and sanitize a `returnUrl` for post-login / post-callback redirect.
- * Ported from iam-web's `signin.ts::sanitizeReturnUrl()` — behavior is kept
- * identical so consumer apps and iam-web enforce the exact same open-redirect
- * protection:
- *
- * - Relative paths (starting with `/`) are always allowed.
- * - Protocol-relative URLs (`//`) are rejected — always fall back to `/`.
- * - Absolute URLs are checked against `allowedReturnOrigins` (wildcard
- *   supported, e.g. `https://*.paramount-land.com`).
- * - Anything else (invalid URL, untrusted origin, unknown scheme) falls back to `/`.
- *
- * `isExternal: true` means the caller must do a full `window.location.href`
- * navigation, not an in-app router navigation.
- */
-function sanitizeReturnUrl(url, allowedReturnOrigins) {
-    if (!url) {
-        return { returnUrl: '/', isExternal: false };
-    }
-    // Block protocol-relative URLs (//evil.com)
-    if (url.startsWith('//')) {
-        return { returnUrl: '/', isExternal: false };
-    }
-    // Relative path — always safe
-    if (url.startsWith('/')) {
-        return { returnUrl: url, isExternal: false };
-    }
-    // Absolute URL — validate against trusted origins
-    if (/^https?:\/\//i.test(url)) {
-        try {
-            const parsed = new URL(url);
-            if (isAllowedOrigin(parsed.origin, allowedReturnOrigins)) {
-                return { returnUrl: url, isExternal: true };
-            }
-        }
-        catch {
-            // Invalid URL — reject
-        }
-    }
-    // Unknown scheme or untrusted origin — fall back to home
-    return { returnUrl: '/', isExternal: false };
-}
-/** Check whether an origin matches the `allowedReturnOrigins` whitelist (wildcard supported). */
-function isAllowedOrigin(origin, allowedReturnOrigins) {
-    const allowed = allowedReturnOrigins ?? [];
-    return allowed.some((pattern) => {
-        // Convert wildcard pattern to regex: https://*.example.com → ^https:\/\/[^.]+\.example\.com$
-        // Escape each literal segment separately so `*` itself is never escaped away.
-        const regexStr = pattern
-            .split('*')
-            .map((segment) => segment.replace(/[.+^${}()|[\]\\]/g, '\\$&')) // escape regex specials
-            .join('[^.]+'); // * matches a single subdomain label
-        try {
-            return new RegExp(`^${regexStr}$`, 'i').test(origin);
-        }
-        catch {
-            return origin === pattern; // fallback: exact match
-        }
-    });
-}
-
-/**
- * Build the full external URL to the app's configured sign-in page
- * (`config.signinUrl` - its own BFF login or iam-web signin) for a cross-domain
- * SSO redirect, routing the eventual handoff through THIS APP'S OWN callback
- * route (`config.callbackPath`, default `/auth/callback`) — never through the
- * page the user originally tried to visit.
- *
- * This is deliberate and fixes a real redirect loop: if the guard/interceptor
- * used `window.location.href` (the current page) as the returnUrl directly,
- * the sign-in page's handoff would append `#at=<token>` to THAT SAME page. Since that
- * page still doesn't have a stored session yet at the moment it re-renders,
- * the guard would fire again, capture `window.location.href` again — which
- * NOW ALREADY CONTAINS the previous `#at=` fragment — and redirect back to
- * back to the sign-in page with an ever-growing `returnUrl`, eventually overflowing header
- * size limits (HTTP 431).
- *
- * Routing through a dedicated callback route breaks the loop: the callback
- * page (`IAuthCallback`) consumes and strips the token BEFORE navigating
- * (via the in-app router, not a full reload) to `targetPath` — so the guard
- * only ever sees a clean, token-free URL on its next check.
- */
-function buildExternalSigninUrl(config, targetPath) {
-    const callbackPath = config.callbackPath ?? '/auth/callback';
-    const callbackUrl = `${window.location.origin}${callbackPath}?returnUrl=${encodeURIComponent(targetPath)}`;
-    return `${config.signinUrl}?returnUrl=${encodeURIComponent(callbackUrl)}`;
-}
-
-/**
  * CSRF token management - cookie-to-header pattern for @insight/ui consumer apps.
  *
  *   1. FE calls GET {api.identity}{csrf endpoint} (default `/auth/csrf`).
@@ -10698,6 +10610,33 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
+
+/**
+ * Build the full external URL to the app's configured sign-in page
+ * (`config.signinUrl` - its own BFF login or iam-web signin) for a cross-domain
+ * SSO redirect, routing the eventual handoff through THIS APP'S OWN callback
+ * route (`config.callbackPath`, default `/auth/callback`) — never through the
+ * page the user originally tried to visit.
+ *
+ * This is deliberate and fixes a real redirect loop: if the guard/interceptor
+ * used `window.location.href` (the current page) as the returnUrl directly,
+ * the sign-in page's handoff would append `#at=<token>` to THAT SAME page. Since that
+ * page still doesn't have a stored session yet at the moment it re-renders,
+ * the guard would fire again, capture `window.location.href` again — which
+ * NOW ALREADY CONTAINS the previous `#at=` fragment — and redirect back to
+ * back to the sign-in page with an ever-growing `returnUrl`, eventually overflowing header
+ * size limits (HTTP 431).
+ *
+ * Routing through a dedicated callback route breaks the loop: the callback
+ * page (`IAuthCallback`) consumes and strips the token BEFORE navigating
+ * (via the in-app router, not a full reload) to `targetPath` — so the guard
+ * only ever sees a clean, token-free URL on its next check.
+ */
+function buildExternalSigninUrl(config, targetPath) {
+    const callbackPath = config.callbackPath ?? '/auth/callback';
+    const callbackUrl = `${window.location.origin}${callbackPath}?returnUrl=${encodeURIComponent(targetPath)}`;
+    return `${config.signinUrl}?returnUrl=${encodeURIComponent(callbackUrl)}`;
+}
 
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -11280,6 +11219,167 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
  * page when the current user has no application mapping).
  */
 const USER_APPLICATION_MAPPING_NOT_FOUND = 'USER_APPLICATION_MAPPING_NOT_FOUND';
+
+function getMenuRoute(menu) {
+    return menu?.route?.trim() || null;
+}
+/**
+ * Very intentionally simple:
+ * If route starts with "http", never use routerLink.
+ */
+function isHttpRoute(route) {
+    return !!route?.trim().toLowerCase().startsWith('http');
+}
+/**
+ * Node key used for tracking and selection - prefers the modern UUID `id`,
+ * falls back to the legacy numeric `menuId`.
+ */
+function getMenuKey(menu) {
+    return menu?.id ?? menu?.menuId ?? null;
+}
+/** Display label - prefers the modern `name`, falls back to legacy `menuName`. */
+function getMenuLabel(menu) {
+    return menu?.name?.trim() || menu?.menuName || '';
+}
+/** Children - prefers the modern `children`, falls back to legacy `child`. */
+function getMenuChildren(menu) {
+    return menu?.children ?? menu?.child ?? [];
+}
+function hasMenuChildren(menu) {
+    return getMenuChildren(menu).length > 0;
+}
+/**
+ * Walks a menu tree (roots -> children) looking for the node whose key matches
+ * `targetKey`, returning the chain from the matching root down to that node.
+ * Used to resolve a favorite leaf's ancestor path from the sidebar menu tree.
+ */
+function collectMenuChain(menus, targetKey) {
+    for (const menu of menus ?? []) {
+        if (String(getMenuKey(menu)) === targetKey) {
+            return [menu];
+        }
+        const childChain = collectMenuChain(getMenuChildren(menu), targetKey);
+        if (childChain) {
+            return [menu, ...childChain];
+        }
+    }
+    return null;
+}
+/**
+ * Builds a per-menu-key ancestor path label map for the sidebar Favorites
+ * section. The label is the chain of ancestor NAMES (excluding the leaf itself)
+ * joined by "> ", resolved from the full menu tree - never from the item's
+ * route, since route and tree position can differ. A favorite that is not
+ * found in the tree maps to `undefined` (callers fall back to the app label);
+ * a root-level favorite (no ancestors) maps to an empty string.
+ */
+function buildFavoritePathMap(menus, favorites) {
+    const pathByKey = {};
+    for (const favorite of favorites ?? []) {
+        const key = getMenuKey(favorite);
+        if (key === null)
+            continue;
+        const keyString = String(key);
+        const chain = collectMenuChain(menus, keyString);
+        if (!chain) {
+            pathByKey[keyString] = undefined;
+            continue;
+        }
+        const ancestorLabels = chain
+            .slice(0, -1)
+            .map((node) => getMenuLabel(node))
+            .filter((label) => label.length > 0);
+        pathByKey[keyString] = ancestorLabels.join(' > ');
+    }
+    return pathByKey;
+}
+/** True for a legacy top-level module header (menuTypeId === 2). */
+function isModuleMenu(menu) {
+    if (!menu)
+        return false;
+    if (menu.type)
+        return false;
+    return Number(menu.menuTypeId) === 2;
+}
+/** True for a structural group/module node (non-navigable container). */
+function isGroupNode(menu) {
+    if (!menu)
+        return false;
+    if (menu.type)
+        return menu.type === 'group';
+    const typeId = Number(menu.menuTypeId);
+    return typeId === 2 || (typeId === 3 && hasMenuChildren(menu));
+}
+/** True for a navigable leaf node (item / function / legacy leaf menu). */
+function isLeafItem(menu) {
+    if (!menu)
+        return false;
+    if (menu.type)
+        return menu.type === 'item' || menu.type === 'function';
+    return Number(menu.menuTypeId) === 3 && !hasMenuChildren(menu);
+}
+function isNewTabMenu(menu) {
+    const route = getMenuRoute(menu);
+    if (!route)
+        return false;
+    if (menu?.openIn)
+        return menu.openIn === 'NEW_TAB' || menu.openIn === 'NEW_WINDOW';
+    return !!menu?.openInNewTab;
+}
+function isReloadMenu(menu) {
+    const route = getMenuRoute(menu);
+    if (!route)
+        return false;
+    if (menu?.openIn) {
+        return menu.openIn === 'CURRENT_TAB' && isHttpRoute(route);
+    }
+    if (menu?.openInNewTab)
+        return false;
+    return !!menu?.reload || isHttpRoute(route);
+}
+function isSpaMenu(menu) {
+    const route = getMenuRoute(menu);
+    if (!route)
+        return false;
+    if (menu?.openIn)
+        return menu.openIn === 'CURRENT_TAB' && !isHttpRoute(route);
+    if (menu?.openInNewTab)
+        return false;
+    if (menu?.reload)
+        return false;
+    if (isHttpRoute(route))
+        return false;
+    return true;
+}
+const isModernMenu = (menu) => !!menu.type;
+function normalizeMenu(menu, level) {
+    if (!isModernMenu(menu))
+        return menu;
+    const children = getMenuChildren(menu);
+    const normalized = {
+        ...menu,
+        menuName: getMenuLabel(menu),
+        menuTypeId: 3,
+        parentId: 0,
+        sequence: Number(menu.sequence) || 0,
+        level,
+        child: children.map((child) => normalizeMenu(child, level + 1)),
+        children: undefined,
+        name: undefined,
+        type: menu.type === 'group' ? 'group' : undefined,
+    };
+    return normalized;
+}
+/**
+ * Converts modern (contract-aligned) menu nodes into the legacy `IMenu` shape
+ * that `IHMenu` renders. Modern extras (`id`, `isFavorite`, `application`,
+ * `companies`, `openIn`, `route`, `icon`) are preserved for pin / favorites /
+ * application-grouping rendering. Explicit group types are retained even when
+ * children are empty. Legacy nodes pass through untouched.
+ */
+function normalizeMenuTree(menus) {
+    return (menus ?? []).map((menu) => normalizeMenu(menu, 0));
+}
 
 /**
  * Types for the current-user navigation, favorites and effective-authorization
@@ -12270,6 +12370,1108 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
             args: [{ providedIn: 'root' }]
         }] });
 
+class IHTitleBreadcrumbService {
+    /**
+     * null = use normal (route-based) title/breadcrumbs
+     * non-null = override (e.g. React remote controls shell display)
+     */
+    titleOverride = signal(null, ...(ngDevMode ? [{ debugName: "titleOverride" }] : []));
+    breadcrumbsOverride = signal(null, ...(ngDevMode ? [{ debugName: "breadcrumbsOverride" }] : []));
+    setTitle(title) {
+        this.titleOverride.set(title ?? null);
+    }
+    setBreadcrumbs(items) {
+        this.breadcrumbsOverride.set(items ?? null);
+    }
+    clear() {
+        this.titleOverride.set(null);
+        this.breadcrumbsOverride.set(null);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHTitleBreadcrumbService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHTitleBreadcrumbService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHTitleBreadcrumbService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+class IHContent {
+    router = inject(Router);
+    activatedRoute = inject(ActivatedRoute);
+    // IMPORTANT: your app base href is intentionally "/-/"
+    baseHref = inject(APP_BASE_HREF);
+    // bridge (set by host / React remotes)
+    shell = inject(IHTitleBreadcrumbService);
+    sidebarVisibility = true;
+    onSidebarToggled = new EventEmitter();
+    session = inject(ISessionService);
+    userMenuStore = inject(IUserMenuStore);
+    /** Aggregated boot loading state - true while session restore or sidebar menu data is loading. */
+    initializing = signal(true, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
+    /** Emits the aggregated loading state so consumer apps can render their own loader. */
+    loading = new EventEmitter();
+    // Push session + menu-store initializing changes through the `loading` output.
+    loadingEffect = effect(() => {
+        const value = this.session.initializing() || this.userMenuStore.initializing();
+        if (value !== this.initializing()) {
+            this.initializing.set(value);
+            this.loading.emit(value);
+        }
+    }, ...(ngDevMode ? [{ debugName: "loadingEffect" }] : []));
+    /** route-based breadcrumbs */
+    breadcrumb$ = this.router.events.pipe(filter$1((e) => e instanceof NavigationEnd), startWith(null), map(() => this.buildBreadcrumb(this.activatedRoute.root)), shareReplay$1(1));
+    /** last breadcrumb label = route-based page title */
+    pageTitle$ = this.breadcrumb$.pipe(map((breadcrumbs) => breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null), shareReplay$1(1));
+    buildBreadcrumb(route, url = '', breadcrumbs = []) {
+        const routeConfig = route.routeConfig;
+        if (routeConfig) {
+            const path = routeConfig.path ?? '';
+            // Resolve path segments, including route params
+            const segments = path
+                .split('/')
+                .filter(Boolean)
+                .map((segment) => {
+                if (segment.startsWith(':')) {
+                    const paramName = segment.substring(1);
+                    return route.snapshot.params[paramName] ?? segment;
+                }
+                return segment;
+            });
+            const nextUrlPart = segments.join('/');
+            // Always advance the URL, even if we don't render a breadcrumb for this level
+            const nextUrl = nextUrlPart.length > 0 ? `${url}/${nextUrlPart}` : url || '/';
+            // Use route config data, not snapshot data, to avoid inherited data
+            const data = routeConfig.data;
+            const label = data?.title;
+            if (label) {
+                breadcrumbs.push({
+                    label,
+                    url: nextUrl,
+                });
+            }
+            url = nextUrl;
+        }
+        if (route.firstChild) {
+            return this.buildBreadcrumb(route.firstChild, url, breadcrumbs);
+        }
+        return breadcrumbs;
+    }
+    toggleSidebar() {
+        this.sidebarVisibility = !this.sidebarVisibility;
+        this.onSidebarToggled.emit(this.sidebarVisibility);
+    }
+    onOverrideBreadcrumbClick(e) {
+        // Only for normal left-click navigation.
+        // Let browser handle right-click, ctrl/cmd-click, middle click, etc.
+        if (e.button !== 0)
+            return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+            return;
+        // Angular routerLink will update the URL via pushState.
+        // React Router BrowserRouter will not notice unless popstate is fired.
+        queueMicrotask(() => {
+            window.dispatchEvent(new PopStateEvent('popstate'));
+        });
+    }
+    normalizeBaseHref() {
+        let b = (this.baseHref ?? '/').trim();
+        // ensure leading slash
+        if (!b.startsWith('/'))
+            b = `/${b}`;
+        // ensure trailing slash
+        if (!b.endsWith('/'))
+            b = `${b}/`;
+        // collapse repeated slashes
+        b = b.replace(/\/{2,}/g, '/');
+        return b;
+    }
+    normalizePath(url) {
+        let u = (url ?? '').trim();
+        if (!u)
+            return '/';
+        // support only path-like urls here; if ever full origin is passed, keep it
+        if (/^https?:\/\//i.test(u))
+            return u;
+        if (!u.startsWith('/'))
+            u = `/${u}`;
+        u = u.replace(/\/{2,}/g, '/');
+        // fix common mistake: "/-/-/dashboard" -> "/-/dashboard"
+        u = u.replace(/^\/-\/-\/+/, '/-/');
+        return u;
+    }
+    /**
+     * RouterLink will prefix baseHref automatically.
+     * So we must NOT include baseHref in the value passed to [routerLink].
+     *
+     * baseHref "/-/" examples:
+     * - "/-/dashboard" -> "/dashboard"
+     * - "/dashboard" -> "/dashboard"
+     * - "/" -> "/"
+     */
+    overrideRouterLink(url) {
+        const base = this.normalizeBaseHref();
+        const abs = this.normalizePath(url);
+        // if already includes baseHref, strip it
+        if (abs.startsWith(base)) {
+            // base ends with "/" so slice base.length - 1 keeps leading "/"
+            const stripped = abs.slice(base.length - 1);
+            return stripped.length ? stripped : '/';
+        }
+        return abs;
+    }
+    /**
+     * Browser href must include baseHref so "open in new tab" goes to the correct URL.
+     *
+     * baseHref "/-/" examples:
+     * - "/dashboard" -> "/-/dashboard"
+     * - "/-/dashboard" -> "/-/dashboard"
+     * - "/" -> "/-/"
+     */
+    overrideHref(url) {
+        const base = this.normalizeBaseHref();
+        const abs = this.normalizePath(url);
+        // already includes baseHref
+        if (abs.startsWith(base))
+            return abs;
+        // home
+        if (abs === '/')
+            return base;
+        // join
+        return `${base}${abs.slice(1)}`.replace(/\/{2,}/g, '/');
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IHContent, isStandalone: true, selector: "ih-content", outputs: { onSidebarToggled: "onSidebarToggled", loading: "loading" }, ngImport: i0, template: `
+    <div class="ih-content-header">
+      <a class="i-clickable" (click)="toggleSidebar()">
+        @if (sidebarVisibility) {
+          <img alt="sidebar-left" src="svgs/sidebar-left.svg" />
+        } @else {
+          <img alt="sidebar-right" src="svgs/sidebar-right.svg" />
+        }
+      </a>
+
+      <!-- title override reacts immediately -->
+      <h1>{{ shell.titleOverride() || (pageTitle$ | async) || 'Insight' }}</h1>
+    </div>
+
+    <div class="ih-content-breadcrumbs">
+      @let override = shell.breadcrumbsOverride();
+
+      @if (override && override.length > 0) {
+        @for (b of override; track $index; let first = $first; let last = $last) {
+          @if (!last) {
+            @if (!first) {
+              @if (b.url) {
+                <a
+                  class="ih-content-breadcrumb ih-content-breadcrumb__link"
+                  [attr.href]="overrideHref(b.url)"
+                  [routerLink]="overrideRouterLink(b.url)"
+                  (click)="onOverrideBreadcrumbClick($event)"
+                >
+                  {{ b.label }}
+                </a>
+              } @else {
+                <span class="ih-content-breadcrumb ih-content-breadcrumb__link">
+                  {{ b.label }}
+                </span>
+              }
+            } @else {
+              <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
+                {{ b.label }}
+              </span>
+            }
+            <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
+          } @else {
+            <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
+              {{ b.label }}
+            </span>
+          }
+        }
+      } @else {
+        <!-- Fallback to route-based breadcrumbs (Angular routes) -->
+        @if (breadcrumb$ | async; as breadcrumbs) {
+          @if (breadcrumbs.length > 0) {
+            @for (
+              breadcrumb of breadcrumbs;
+              track breadcrumb.url;
+              let first = $first;
+              let last = $last
+            ) {
+              @if (!last) {
+                @if (!first) {
+                  <a
+                    class="ih-content-breadcrumb ih-content-breadcrumb__link"
+                    [routerLink]="breadcrumb.url"
+                  >
+                    {{ breadcrumb.label }}
+                  </a>
+                } @else {
+                  <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
+                    {{ breadcrumb.label }}
+                  </span>
+                }
+                <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
+              } @else {
+                <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
+                  {{ breadcrumb.label }}
+                </span>
+              }
+            }
+          } @else {
+            <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
+          }
+        } @else {
+          <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
+        }
+      }
+    </div>
+
+    <div class="ih-content-body scroll scroll-y">
+      <router-outlet />
+    </div>
+  `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHContent, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'ih-content',
+                    imports: [RouterOutlet, AsyncPipe, RouterLink],
+                    template: `
+    <div class="ih-content-header">
+      <a class="i-clickable" (click)="toggleSidebar()">
+        @if (sidebarVisibility) {
+          <img alt="sidebar-left" src="svgs/sidebar-left.svg" />
+        } @else {
+          <img alt="sidebar-right" src="svgs/sidebar-right.svg" />
+        }
+      </a>
+
+      <!-- title override reacts immediately -->
+      <h1>{{ shell.titleOverride() || (pageTitle$ | async) || 'Insight' }}</h1>
+    </div>
+
+    <div class="ih-content-breadcrumbs">
+      @let override = shell.breadcrumbsOverride();
+
+      @if (override && override.length > 0) {
+        @for (b of override; track $index; let first = $first; let last = $last) {
+          @if (!last) {
+            @if (!first) {
+              @if (b.url) {
+                <a
+                  class="ih-content-breadcrumb ih-content-breadcrumb__link"
+                  [attr.href]="overrideHref(b.url)"
+                  [routerLink]="overrideRouterLink(b.url)"
+                  (click)="onOverrideBreadcrumbClick($event)"
+                >
+                  {{ b.label }}
+                </a>
+              } @else {
+                <span class="ih-content-breadcrumb ih-content-breadcrumb__link">
+                  {{ b.label }}
+                </span>
+              }
+            } @else {
+              <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
+                {{ b.label }}
+              </span>
+            }
+            <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
+          } @else {
+            <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
+              {{ b.label }}
+            </span>
+          }
+        }
+      } @else {
+        <!-- Fallback to route-based breadcrumbs (Angular routes) -->
+        @if (breadcrumb$ | async; as breadcrumbs) {
+          @if (breadcrumbs.length > 0) {
+            @for (
+              breadcrumb of breadcrumbs;
+              track breadcrumb.url;
+              let first = $first;
+              let last = $last
+            ) {
+              @if (!last) {
+                @if (!first) {
+                  <a
+                    class="ih-content-breadcrumb ih-content-breadcrumb__link"
+                    [routerLink]="breadcrumb.url"
+                  >
+                    {{ breadcrumb.label }}
+                  </a>
+                } @else {
+                  <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
+                    {{ breadcrumb.label }}
+                  </span>
+                }
+                <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
+              } @else {
+                <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
+                  {{ breadcrumb.label }}
+                </span>
+              }
+            }
+          } @else {
+            <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
+          }
+        } @else {
+          <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
+        }
+      }
+    </div>
+
+    <div class="ih-content-body scroll scroll-y">
+      <router-outlet />
+    </div>
+  `,
+                }]
+        }], propDecorators: { onSidebarToggled: [{
+                type: Output
+            }], loading: [{
+                type: Output
+            }] } });
+
+/** Synthetic group id used by the sidebar's Favorites section - keeps its icon. */
+const SIDEBAR_FAVORITES_GROUP_ID = 'favorites';
+/**
+ * Fallback FontAwesome classes used by the sidebar row icon when a menu has no
+ * icon or the icon is not a valid FontAwesome class
+ */
+const MENU_ICON_FALLBACK = 'fa-brands fa-microsoft';
+/**
+ * Default Personal Profile URL opened from the sidebar user dropdown. Consumer
+ * apps override it via the `personalProfileUrl` input (per environment).
+ */
+const DEFAULT_PERSONAL_PROFILE_URL = 'https://account-dev.paramountenterprise.co.id/personal-profile';
+
+class IHMenu {
+    confirmService = inject(IConfirmService);
+    menu;
+    selectedMenuId = null;
+    filter = '';
+    /** When true, renders a pin/star toggle on leaf items (emits `favoriteToggle`). */
+    favoriteMode = false;
+    /** When true, groups collapse/expand via a chevron (flat is the default). */
+    collapsible = false;
+    /** Nesting depth from the sidebar root (0 = top level). Drives indentation and
+   the top-level "no group icon" rule - independent of the data's `level`. */
+    depth = 0;
+    /** When true, leaf items render with `cdkDrag` so the parent `cdkDropList` can reorder them (used for the Favorites section). */
+    dragEnabled = false;
+    /** When true, leaf items render their owning application name next to the label (used for the Favorites section). */
+    showApplication = false;
+    /** Per-menu-key ancestor path labels (sidebar Favorites section) - rendered instead of the application name when present. */
+    pathByKey;
+    clicked = new EventEmitter();
+    favoriteToggle = new EventEmitter();
+    menus;
+    /** Template-bound helper for stable `@for` tracking (UUID-first). */
+    getMenuKey = getMenuKey;
+    // the actual clickable DOM element (only on leaf items)
+    menuItemRef;
+    isHidden = false;
+    get menuRoute() {
+        return getMenuRoute(this.menu);
+    }
+    get isSpa() {
+        return isSpaMenu(this.menu);
+    }
+    get isReload() {
+        return isReloadMenu(this.menu);
+    }
+    get isNewTab() {
+        return isNewTabMenu(this.menu);
+    }
+    get menuLabel() {
+        return getMenuLabel(this.menu);
+    }
+    /**
+     * Subtitle shown on favorite leaves: the ancestor path resolved from the
+     * sidebar menu tree when available, falling back to the owning application
+     * name when the leaf is not present in the tree.
+     */
+    get applicationLabel() {
+        if (!this.showApplication || !this.menu)
+            return null;
+        const key = getMenuKey(this.menu);
+        if (key !== null && this.pathByKey) {
+            const path = this.pathByKey[String(key)];
+            if (path !== undefined)
+                return path;
+        }
+        return this.menu.application?.name ?? null;
+    }
+    get menuChildrenList() {
+        return getMenuChildren(this.menu);
+    }
+    get menuHasChildren() {
+        return hasMenuChildren(this.menu);
+    }
+    /** Legacy top-level module header (menuTypeId === 2). */
+    get isModuleNode() {
+        return isModuleMenu(this.menu);
+    }
+    /** Structural group header (non-leaf container). Modules are handled by `isModuleNode`. */
+    get isGroupNode() {
+        if (!this.menu)
+            return false;
+        if (this.isModuleNode)
+            return false;
+        if (this.menu.type)
+            return this.menu.type === 'group';
+        return Number(this.menu.menuTypeId) === 3 && hasMenuChildren(this.menu);
+    }
+    /** Group is expanded unless explicitly marked collapsed (manual toggle wins). */
+    get isGroupExpanded() {
+        return this.menu?.visibility !== 'collapsed';
+    }
+    /** The synthetic Favorites group - keeps its icon at the top level. */
+    get isFavoritesGroup() {
+        return getMenuKey(this.menu) === SIDEBAR_FAVORITES_GROUP_ID;
+    }
+    get menuVisibility() {
+        return this.menu?.visibility ?? '';
+    }
+    /**
+     * Icon classes for the row icon. Appends FontAwesome's `fa-fw` (fixed-width)
+     * so icons with different glyph widths (e.g. fa-users vs fa-bars) still keep
+     * the menu title aligned.
+     *
+     * Falls back to `MENU_ICON_FALLBACK` (`fa-brands fa-microsoft`) when the menu
+     * has no icon or the icon is not a valid FontAwesome class (e.g. legacy named
+     * icons like `home`, `dashboard` that contain no `fa-*` token and would render
+     * as an empty glyph).
+     */
+    get menuIcon() {
+        const icon = this.menu?.icon?.trim();
+        const isValidFa = !!icon && /(?:^|\s)fa-[a-z0-9-]+(?:\s|$)/i.test(icon);
+        return `${isValidFa ? icon : MENU_ICON_FALLBACK} fa-fw`;
+    }
+    /** 0-based nesting level; top-level groups are always 0 (never negative). */
+    get menuLevel() {
+        return Math.max(0, Number(this.menu?.level) || 0);
+    }
+    /**
+     * Indent level used for rendering: first-level children of a group render
+     * flush-left (0) so the first level looks flat; deeper levels indent from
+     * there (depth - 1, never negative).
+     */
+    get indentLevel() {
+        return Math.max(0, this.depth - 1);
+    }
+    get menuTypeId() {
+        return Number(this.menu?.menuTypeId) || 0;
+    }
+    get menuIsFavorite() {
+        return !!this.menu?.isFavorite;
+    }
+    /** only true for the *leaf* menu that matches selectedMenuId */
+    get isSelected() {
+        if (!this.menu)
+            return false;
+        const matchesId = getMenuKey(this.menu) === this.selectedMenuId;
+        if (!matchesId)
+            return false;
+        const hasChildren = this.menuHasChildren;
+        // keep selection only on "leaf" items (same rule as flattenNavigableMenus)
+        const isLeaf = this.menu.type !== 'group' &&
+            this.menuTypeId === 3 &&
+            (!hasChildren || this.menu.visibility === 'no-child');
+        return isLeaf;
+    }
+    ngOnChanges(changes) {
+        // whenever selectedMenuId changes, scroll the selected item into view
+        if (changes['selectedMenuId'] && this.isSelected && this.menuItemRef) {
+            this.menuItemRef.nativeElement.scrollIntoView({
+                block: 'nearest',
+                behavior: 'smooth',
+            });
+        }
+    }
+    indent(level) {
+        const n = Math.max(0, Number(level) || 0);
+        // return [0,1,2,...] so each item is stable and unique
+        return Array.from({ length: n }, (_, i) => i);
+    }
+    click() {
+        if (!this.menu)
+            return;
+        if (this.menu.visibility !== 'no-child') {
+            // Treat an unset visibility as expanded so a default (flat) group
+            // collapses on the first click (modern nodes have no visibility).
+            this.menu.visibility = this.isGroupExpanded ? 'collapsed' : 'expanded';
+        }
+        else {
+            this.clicked.emit(this.menu);
+        }
+    }
+    onFavoriteClick(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = getMenuKey(this.menu);
+        if (id === null)
+            return;
+        const isUnfavorite = this.menuIsFavorite;
+        // Unfavorite is destructive - confirm before removing the pin.
+        if (isUnfavorite) {
+            const menuName = getMenuLabel(this.menu) || 'this menu';
+            this.confirmService
+                .warning('Remove from Favorites', `Remove <strong>${menuName}</strong> from your favorites?`)
+                .subscribe((confirmed) => {
+                if (!confirmed)
+                    return;
+                this.favoriteToggle.emit({ id, isFavorite: false });
+            });
+            return;
+        }
+        this.favoriteToggle.emit({ id, isFavorite: true });
+    }
+    onChildFavoriteToggle(event) {
+        this.favoriteToggle.emit(event);
+    }
+    hrefWithMenuFilter(raw) {
+        const term = (this.filter ?? '').trim();
+        if (!term)
+            return raw;
+        try {
+            const u = new URL(raw);
+            u.searchParams.set('menu-filter', term);
+            return u.toString();
+        }
+        catch {
+            const origin = window.location.origin;
+            const u = new URL(raw, origin);
+            u.searchParams.set('menu-filter', term);
+            return `${u.pathname}${u.search}${u.hash}`;
+        }
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHMenu, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter", favoriteMode: "favoriteMode", collapsible: "collapsible", depth: "depth", dragEnabled: "dragEnabled", showApplication: "showApplication", pathByKey: "pathByKey" }, outputs: { clicked: "clicked", favoriteToggle: "favoriteToggle" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
+    @if (menu) {
+      @let hasChild = menuHasChildren;
+      @let route = menuRoute;
+
+      <li [class.is-module]="isModuleNode" [ngClass]="isModuleNode ? menuVisibility : ''">
+        @if (isModuleNode) {
+          <!-- old-style module header; chevron + collapse in collapsible mode -->
+          <small
+            class="ih-menu-module"
+            [class.ih-menu-module--collapsible]="collapsible && menuHasChildren"
+            (click)="collapsible && menuHasChildren ? click() : null"
+          >
+            <span [innerHTML]="menuLabel | highlightSearch: filter"></span>
+
+            @if (collapsible && menuHasChildren) {
+              <i
+                class="ih-menu-chevron"
+                [ngClass]="isGroupExpanded ? 'fas fa-angle-up' : 'fas fa-angle-down'"
+              ></i>
+            }
+          </small>
+        } @else if (isGroupNode) {
+          <!-- unified old-style group row; chevron + collapse only in collapsible mode -->
+          <div
+            class="ih-menu-group"
+            [class.ih-menu-group--collapsible]="collapsible"
+            [class.ih-menu-group--top]="depth === 0"
+            (click)="collapsible ? click() : null"
+          >
+            @if (indentLevel > 0) {
+              @for (i of indent(indentLevel); track i) {
+                <span class="indent-{{ depth }}"></span>
+              }
+            }
+
+            <!-- Top-level groups carry no icon (except the Favorites group) so
+ group titles align with module headers. -->
+            @if (depth > 0 || isFavoritesGroup) {
+              <i [class]="menuIcon"></i>
+            }
+            <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+
+            @if (collapsible) {
+              <i
+                class="ih-menu-chevron"
+                [ngClass]="isGroupExpanded ? 'fas fa-angle-up' : 'fas fa-angle-down'"
+              ></i>
+            }
+          </div>
+        } @else {
+          <!-- IMPORTANT:
+ Order matters.
+ Route starting with "http" must hit href branch before SPA/routerLink branch.
+ -->
+
+          <!-- leaf item: open in new tab -->
+          @if (isNewTab && route) {
+            <a
+              #menuItem
+              class="is-new-tab"
+              rel="noopener noreferrer"
+              target="_blank"
+              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [class.is-selected]="isSelected"
+              [href]="hrefWithMenuFilter(route)"
+            >
+              @if (indentLevel > 0) {
+                @for (i of indent(indentLevel); track i) {
+                  <span class="indent-{{ depth }}"></span>
+                }
+              }
+
+              <i [class]="menuIcon"></i>
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
+                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
+                }
+              </span>
+
+              @if (favoriteMode) {
+                <i
+                  class="ih-menu-favorite {{
+                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
+                  }}"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
+                  (click)="onFavoriteClick($event)"
+                  (keydown.enter)="onFavoriteClick($event)"
+                ></i>
+              }
+            </a>
+          }
+
+          <!-- leaf item: full reload, same tab -->
+          @else if (isReload && route) {
+            <a
+              #menuItem
+              class="is-reload"
+              target="_self"
+              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [class.is-selected]="isSelected"
+              [href]="hrefWithMenuFilter(route)"
+            >
+              @if (indentLevel > 0) {
+                @for (i of indent(indentLevel); track i) {
+                  <span class="indent-{{ depth }}"></span>
+                }
+              }
+
+              <i [class]="menuIcon"></i>
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
+                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
+                }
+              </span>
+
+              @if (favoriteMode) {
+                <i
+                  class="ih-menu-favorite {{
+                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
+                  }}"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
+                  (click)="onFavoriteClick($event)"
+                  (keydown.enter)="onFavoriteClick($event)"
+                ></i>
+              }
+            </a>
+          }
+
+          <!-- leaf item: SPA navigation -->
+          @else if (isSpa && route) {
+            <a
+              #menuItem
+              class="is-spa"
+              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [class.is-selected]="isSelected"
+              [queryParamsHandling]="'merge'"
+              [routerLink]="route"
+            >
+              @if (indentLevel > 0) {
+                @for (i of indent(indentLevel); track i) {
+                  <span class="indent-{{ depth }}"></span>
+                }
+              }
+
+              <i [class]="menuIcon"></i>
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
+                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
+                }
+              </span>
+
+              @if (favoriteMode) {
+                <i
+                  class="ih-menu-favorite {{
+                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
+                  }}"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
+                  (click)="onFavoriteClick($event)"
+                  (keydown.enter)="onFavoriteClick($event)"
+                ></i>
+              }
+            </a>
+          }
+        }
+
+        @if (hasChild) {
+          <ul
+            [class.collapsed]="(isGroupNode || isModuleNode) && collapsible && !isGroupExpanded"
+            [class.expanded]="(isGroupNode || isModuleNode) && collapsible && isGroupExpanded"
+          >
+            @for (m of menuChildrenList; track getMenuKey(m)) {
+              <ih-menu
+                [collapsible]="collapsible"
+                [depth]="depth + 1"
+                [dragEnabled]="dragEnabled"
+                [favoriteMode]="favoriteMode"
+                [filter]="filter"
+                [menu]="m"
+                [pathByKey]="pathByKey"
+                [selectedMenuId]="selectedMenuId"
+                [showApplication]="showApplication"
+                (favoriteToggle)="onChildFavoriteToggle($event)"
+              />
+            }
+          </ul>
+        }
+      </li>
+    }
+  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHMenu, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'ih-menu',
+                    imports: [NgClass, RouterLink, IHighlightSearchPipe],
+                    host: { 'data-ih-menu': '' },
+                    template: `
+    @if (menu) {
+      @let hasChild = menuHasChildren;
+      @let route = menuRoute;
+
+      <li [class.is-module]="isModuleNode" [ngClass]="isModuleNode ? menuVisibility : ''">
+        @if (isModuleNode) {
+          <!-- old-style module header; chevron + collapse in collapsible mode -->
+          <small
+            class="ih-menu-module"
+            [class.ih-menu-module--collapsible]="collapsible && menuHasChildren"
+            (click)="collapsible && menuHasChildren ? click() : null"
+          >
+            <span [innerHTML]="menuLabel | highlightSearch: filter"></span>
+
+            @if (collapsible && menuHasChildren) {
+              <i
+                class="ih-menu-chevron"
+                [ngClass]="isGroupExpanded ? 'fas fa-angle-up' : 'fas fa-angle-down'"
+              ></i>
+            }
+          </small>
+        } @else if (isGroupNode) {
+          <!-- unified old-style group row; chevron + collapse only in collapsible mode -->
+          <div
+            class="ih-menu-group"
+            [class.ih-menu-group--collapsible]="collapsible"
+            [class.ih-menu-group--top]="depth === 0"
+            (click)="collapsible ? click() : null"
+          >
+            @if (indentLevel > 0) {
+              @for (i of indent(indentLevel); track i) {
+                <span class="indent-{{ depth }}"></span>
+              }
+            }
+
+            <!-- Top-level groups carry no icon (except the Favorites group) so
+ group titles align with module headers. -->
+            @if (depth > 0 || isFavoritesGroup) {
+              <i [class]="menuIcon"></i>
+            }
+            <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+
+            @if (collapsible) {
+              <i
+                class="ih-menu-chevron"
+                [ngClass]="isGroupExpanded ? 'fas fa-angle-up' : 'fas fa-angle-down'"
+              ></i>
+            }
+          </div>
+        } @else {
+          <!-- IMPORTANT:
+ Order matters.
+ Route starting with "http" must hit href branch before SPA/routerLink branch.
+ -->
+
+          <!-- leaf item: open in new tab -->
+          @if (isNewTab && route) {
+            <a
+              #menuItem
+              class="is-new-tab"
+              rel="noopener noreferrer"
+              target="_blank"
+              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [class.is-selected]="isSelected"
+              [href]="hrefWithMenuFilter(route)"
+            >
+              @if (indentLevel > 0) {
+                @for (i of indent(indentLevel); track i) {
+                  <span class="indent-{{ depth }}"></span>
+                }
+              }
+
+              <i [class]="menuIcon"></i>
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
+                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
+                }
+              </span>
+
+              @if (favoriteMode) {
+                <i
+                  class="ih-menu-favorite {{
+                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
+                  }}"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
+                  (click)="onFavoriteClick($event)"
+                  (keydown.enter)="onFavoriteClick($event)"
+                ></i>
+              }
+            </a>
+          }
+
+          <!-- leaf item: full reload, same tab -->
+          @else if (isReload && route) {
+            <a
+              #menuItem
+              class="is-reload"
+              target="_self"
+              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [class.is-selected]="isSelected"
+              [href]="hrefWithMenuFilter(route)"
+            >
+              @if (indentLevel > 0) {
+                @for (i of indent(indentLevel); track i) {
+                  <span class="indent-{{ depth }}"></span>
+                }
+              }
+
+              <i [class]="menuIcon"></i>
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
+                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
+                }
+              </span>
+
+              @if (favoriteMode) {
+                <i
+                  class="ih-menu-favorite {{
+                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
+                  }}"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
+                  (click)="onFavoriteClick($event)"
+                  (keydown.enter)="onFavoriteClick($event)"
+                ></i>
+              }
+            </a>
+          }
+
+          <!-- leaf item: SPA navigation -->
+          @else if (isSpa && route) {
+            <a
+              #menuItem
+              class="is-spa"
+              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [class.is-selected]="isSelected"
+              [queryParamsHandling]="'merge'"
+              [routerLink]="route"
+            >
+              @if (indentLevel > 0) {
+                @for (i of indent(indentLevel); track i) {
+                  <span class="indent-{{ depth }}"></span>
+                }
+              }
+
+              <i [class]="menuIcon"></i>
+              <span
+                class="ih-menu-label"
+                [class.ih-menu-label--compact]="showApplication"
+                [title]="menuLabel"
+              >
+                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
+                @if (applicationLabel) {
+                  <small class="ih-menu-application">{{ applicationLabel }}</small>
+                }
+              </span>
+
+              @if (favoriteMode) {
+                <i
+                  class="ih-menu-favorite {{
+                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
+                  }}"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
+                  (click)="onFavoriteClick($event)"
+                  (keydown.enter)="onFavoriteClick($event)"
+                ></i>
+              }
+            </a>
+          }
+        }
+
+        @if (hasChild) {
+          <ul
+            [class.collapsed]="(isGroupNode || isModuleNode) && collapsible && !isGroupExpanded"
+            [class.expanded]="(isGroupNode || isModuleNode) && collapsible && isGroupExpanded"
+          >
+            @for (m of menuChildrenList; track getMenuKey(m)) {
+              <ih-menu
+                [collapsible]="collapsible"
+                [depth]="depth + 1"
+                [dragEnabled]="dragEnabled"
+                [favoriteMode]="favoriteMode"
+                [filter]="filter"
+                [menu]="m"
+                [pathByKey]="pathByKey"
+                [selectedMenuId]="selectedMenuId"
+                [showApplication]="showApplication"
+                (favoriteToggle)="onChildFavoriteToggle($event)"
+              />
+            }
+          </ul>
+        }
+      </li>
+    }
+  `,
+                }]
+        }], propDecorators: { menu: [{
+                type: Input
+            }], selectedMenuId: [{
+                type: Input
+            }], filter: [{
+                type: Input
+            }], favoriteMode: [{
+                type: Input
+            }], collapsible: [{
+                type: Input
+            }], depth: [{
+                type: Input
+            }], dragEnabled: [{
+                type: Input
+            }], showApplication: [{
+                type: Input
+            }], pathByKey: [{
+                type: Input
+            }], clicked: [{
+                type: Output
+            }], favoriteToggle: [{
+                type: Output
+            }], menus: [{
+                type: ViewChildren,
+                args: [IHMenu]
+            }], menuItemRef: [{
+                type: ViewChild,
+                args: ['menuItem', { static: false }]
+            }], isHidden: [{
+                type: HostBinding,
+                args: ['class.hidden']
+            }] } });
+
+/**
+ * Validate and sanitize a `returnUrl` for post-login / post-callback redirect.
+ * Ported from iam-web's `signin.ts::sanitizeReturnUrl()` — behavior is kept
+ * identical so consumer apps and iam-web enforce the exact same open-redirect
+ * protection:
+ *
+ * - Relative paths (starting with `/`) are always allowed.
+ * - Protocol-relative URLs (`//`) are rejected — always fall back to `/`.
+ * - Absolute URLs are checked against `allowedReturnOrigins` (wildcard
+ *   supported, e.g. `https://*.paramount-land.com`).
+ * - Anything else (invalid URL, untrusted origin, unknown scheme) falls back to `/`.
+ *
+ * `isExternal: true` means the caller must do a full `window.location.href`
+ * navigation, not an in-app router navigation.
+ */
+function sanitizeReturnUrl(url, allowedReturnOrigins) {
+    if (!url) {
+        return { returnUrl: '/', isExternal: false };
+    }
+    // Block protocol-relative URLs (//evil.com)
+    if (url.startsWith('//')) {
+        return { returnUrl: '/', isExternal: false };
+    }
+    // Relative path — always safe
+    if (url.startsWith('/')) {
+        return { returnUrl: url, isExternal: false };
+    }
+    // Absolute URL — validate against trusted origins
+    if (/^https?:\/\//i.test(url)) {
+        try {
+            const parsed = new URL(url);
+            if (isAllowedOrigin(parsed.origin, allowedReturnOrigins)) {
+                return { returnUrl: url, isExternal: true };
+            }
+        }
+        catch {
+            // Invalid URL — reject
+        }
+    }
+    // Unknown scheme or untrusted origin — fall back to home
+    return { returnUrl: '/', isExternal: false };
+}
+/** Check whether an origin matches the `allowedReturnOrigins` whitelist (wildcard supported). */
+function isAllowedOrigin(origin, allowedReturnOrigins) {
+    const allowed = allowedReturnOrigins ?? [];
+    return allowed.some((pattern) => {
+        // Convert wildcard pattern to regex: https://*.example.com → ^https:\/\/[^.]+\.example\.com$
+        // Escape each literal segment separately so `*` itself is never escaped away.
+        const regexStr = pattern
+            .split('*')
+            .map((segment) => segment.replace(/[.+^${}()|[\]\\]/g, '\\$&')) // escape regex specials
+            .join('[^.]+'); // * matches a single subdomain label
+        try {
+            return new RegExp(`^${regexStr}$`, 'i').test(origin);
+        }
+        catch {
+            return origin === pattern; // fallback: exact match
+        }
+    });
+}
+
 /**
  * Registers the @insight/ui shared auth package (`IApiService`,
  * `ISessionService`, `ICsrfService`, `authGuard`) for a consumer app.
@@ -12553,1245 +13755,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 args: ['class']
             }] } });
 
-/* =========================================================
- * host.ts (insight-ui-angular)
- * ✅ Includes:
- * - IHBreadcrumbItem
- * - IHNavigationSnapshot
- * - IHTitleBreadcrumbService (signals)
- * - IHContent that reacts to overrides IMMEDIATELY (no NavigationEnd needed)
- * - Override breadcrumbs support routerLink + correct href with baseHref "/-/" (NO "/-/-/" bug)
- * - Override breadcrumb click also notifies React Router (popstate) so React pages update
- * - IHMenu / IHSidebar kept as close as possible to original
- *
- * Sidebar navigation rule:
- * - openInNewTab === true => href + target="_blank"
- * - reload === true => href same tab
- * - route starts with "http" => href same tab
- * - otherwise => routerLink SPA navigation
- * ========================================================= */
-function getMenuRoute(menu) {
-    return menu?.route?.trim() || null;
-}
-/**
- * Very intentionally simple:
- * If route starts with "http", never use routerLink.
- */
-function isHttpRoute(route) {
-    return !!route?.trim().toLowerCase().startsWith('http');
-}
-/**
- * Node key used for tracking and selection — prefers the modern UUID `id`,
- * falls back to the legacy numeric `menuId`.
- */
-function getMenuKey(menu) {
-    return menu?.id ?? menu?.menuId ?? null;
-}
-/** Display label — prefers the modern `name`, falls back to legacy `menuName`. */
-function getMenuLabel(menu) {
-    return menu?.name?.trim() || menu?.menuName || '';
-}
-/** Children — prefers the modern `children`, falls back to legacy `child`. */
-function getMenuChildren(menu) {
-    return menu?.children ?? menu?.child ?? [];
-}
-function hasMenuChildren(menu) {
-    return getMenuChildren(menu).length > 0;
-}
-/**
- * Walks a menu tree (roots -> children) looking for the node whose key matches
- * `targetKey`, returning the chain from the matching root down to that node.
- * Used to resolve a favorite leaf's ancestor path from the sidebar menu tree.
- */
-function collectMenuChain(menus, targetKey) {
-    for (const menu of menus ?? []) {
-        if (String(getMenuKey(menu)) === targetKey) {
-            return [menu];
-        }
-        const childChain = collectMenuChain(getMenuChildren(menu), targetKey);
-        if (childChain) {
-            return [menu, ...childChain];
-        }
-    }
-    return null;
-}
-/**
- * Builds a per-menu-key ancestor path label map for the sidebar Favorites
- * section. The label is the chain of ancestor NAMES (excluding the leaf itself)
- * joined by "> ", resolved from the full menu tree - never from the item's
- * route, since route and tree position can differ. A favorite that is not
- * found in the tree maps to `undefined` (callers fall back to the app label);
- * a root-level favorite (no ancestors) maps to an empty string.
- */
-function buildFavoritePathMap(menus, favorites) {
-    const pathByKey = {};
-    for (const favorite of favorites ?? []) {
-        const key = getMenuKey(favorite);
-        if (key === null)
-            continue;
-        const keyString = String(key);
-        const chain = collectMenuChain(menus, keyString);
-        if (!chain) {
-            pathByKey[keyString] = undefined;
-            continue;
-        }
-        const ancestorLabels = chain
-            .slice(0, -1)
-            .map((node) => getMenuLabel(node))
-            .filter((label) => label.length > 0);
-        pathByKey[keyString] = ancestorLabels.join(' > ');
-    }
-    return pathByKey;
-}
-/** True for a legacy top-level module header (menuTypeId === 2). */
-function isModuleMenu(menu) {
-    if (!menu)
-        return false;
-    if (menu.type)
-        return false;
-    return Number(menu.menuTypeId) === 2;
-}
-/** True for a structural group/module node (non-navigable container). */
-function isGroupNode(menu) {
-    if (!menu)
-        return false;
-    if (menu.type)
-        return menu.type === 'group';
-    const typeId = Number(menu.menuTypeId);
-    return typeId === 2 || (typeId === 3 && hasMenuChildren(menu));
-}
-/** True for a navigable leaf node (item / function / legacy leaf menu). */
-function isLeafItem(menu) {
-    if (!menu)
-        return false;
-    if (menu.type)
-        return menu.type === 'item' || menu.type === 'function';
-    return Number(menu.menuTypeId) === 3 && !hasMenuChildren(menu);
-}
-function isNewTabMenu(menu) {
-    const route = getMenuRoute(menu);
-    if (!route)
-        return false;
-    if (menu?.openIn)
-        return menu.openIn === 'NEW_TAB' || menu.openIn === 'NEW_WINDOW';
-    return !!menu?.openInNewTab;
-}
-function isReloadMenu(menu) {
-    const route = getMenuRoute(menu);
-    if (!route)
-        return false;
-    if (menu?.openIn) {
-        return menu.openIn === 'CURRENT_TAB' && isHttpRoute(route);
-    }
-    if (menu?.openInNewTab)
-        return false;
-    return !!menu?.reload || isHttpRoute(route);
-}
-function isSpaMenu(menu) {
-    const route = getMenuRoute(menu);
-    if (!route)
-        return false;
-    if (menu?.openIn)
-        return menu.openIn === 'CURRENT_TAB' && !isHttpRoute(route);
-    if (menu?.openInNewTab)
-        return false;
-    if (menu?.reload)
-        return false;
-    if (isHttpRoute(route))
-        return false;
-    return true;
-}
-const isModernMenu = (menu) => !!menu.type;
-function normalizeMenu(menu, level) {
-    if (!isModernMenu(menu))
-        return menu;
-    const children = getMenuChildren(menu);
-    const normalized = {
-        ...menu,
-        menuName: getMenuLabel(menu),
-        menuTypeId: 3,
-        parentId: 0,
-        sequence: Number(menu.sequence) || 0,
-        level,
-        child: children.map((child) => normalizeMenu(child, level + 1)),
-        children: undefined,
-        name: undefined,
-        type: menu.type === 'group' ? 'group' : undefined,
-    };
-    return normalized;
-}
-/**
- * Converts modern (contract-aligned) menu nodes into the legacy `IMenu` shape
- * that `IHMenu` renders. Modern extras (`id`, `isFavorite`, `application`,
- * `companies`, `openIn`, `route`, `icon`) are preserved for pin / favorites /
- * application-grouping rendering. Explicit group types are retained even when
- * children are empty. Legacy nodes pass through untouched.
- */
-function normalizeMenuTree(menus) {
-    return (menus ?? []).map((menu) => normalizeMenu(menu, 0));
-}
-/** Synthetic group id used by the sidebar's Favorites section — keeps its icon. */
-const SIDEBAR_FAVORITES_GROUP_ID = 'favorites';
-/**
- * Fallback FontAwesome classes used by the sidebar row icon when a menu has no
- * icon or the icon is not a valid FontAwesome class
- */
-const MENU_ICON_FALLBACK = 'fa-brands fa-microsoft';
-/**
- * Default Personal Profile URL opened from the sidebar user dropdown. Consumer
- * apps override it via the `personalProfileUrl` input (per environment).
- */
-const DEFAULT_PERSONAL_PROFILE_URL = 'https://account-dev.paramountenterprise.co.id/personal-profile';
-class IHTitleBreadcrumbService {
-    /**
-     * null = use normal (route-based) title/breadcrumbs
-     * non-null = override (e.g. React remote controls shell display)
-     */
-    titleOverride = signal(null, ...(ngDevMode ? [{ debugName: "titleOverride" }] : []));
-    breadcrumbsOverride = signal(null, ...(ngDevMode ? [{ debugName: "breadcrumbsOverride" }] : []));
-    setTitle(title) {
-        this.titleOverride.set(title ?? null);
-    }
-    setBreadcrumbs(items) {
-        this.breadcrumbsOverride.set(items ?? null);
-    }
-    clear() {
-        this.titleOverride.set(null);
-        this.breadcrumbsOverride.set(null);
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHTitleBreadcrumbService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHTitleBreadcrumbService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHTitleBreadcrumbService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
-/* =========================================================
- * IHContent
- * - Route breadcrumbs/title still supported
- * - Override breadcrumbs/title update immediately (signals)
- * - IMPORTANT: baseHref is "/-/" (intentional)
- *   - routerLink must receive URL WITHOUT "/-/" prefix
- *   - href must INCLUDE "/-/" prefix for right click open-new-tab
- * - NEW: clicking override crumbs triggers popstate so React Router updates
- * ========================================================= */
-class IHContent {
-    router = inject(Router);
-    activatedRoute = inject(ActivatedRoute);
-    // IMPORTANT: your app base href is intentionally "/-/"
-    baseHref = inject(APP_BASE_HREF);
-    // ✅ bridge (set by host / React remotes)
-    shell = inject(IHTitleBreadcrumbService);
-    sidebarVisibility = true;
-    onSidebarToggled = new EventEmitter();
-    session = inject(ISessionService);
-    userMenuStore = inject(IUserMenuStore);
-    /** Aggregated boot loading state — true while session restore or sidebar menu data is loading. */
-    initializing = signal(true, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
-    /** Emits the aggregated loading state so consumer apps can render their own loader. */
-    loading = new EventEmitter();
-    // Push session + menu-store initializing changes through the `loading` output.
-    loadingEffect = effect(() => {
-        const value = this.session.initializing() || this.userMenuStore.initializing();
-        if (value !== this.initializing()) {
-            this.initializing.set(value);
-            this.loading.emit(value);
-        }
-    }, ...(ngDevMode ? [{ debugName: "loadingEffect" }] : []));
-    /** route-based breadcrumbs */
-    breadcrumb$ = this.router.events.pipe(filter$1((e) => e instanceof NavigationEnd), startWith(null), map(() => this.buildBreadcrumb(this.activatedRoute.root)), shareReplay$1(1));
-    /** last breadcrumb label = route-based page title */
-    pageTitle$ = this.breadcrumb$.pipe(map((breadcrumbs) => breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null), shareReplay$1(1));
-    buildBreadcrumb(route, url = '', breadcrumbs = []) {
-        const routeConfig = route.routeConfig;
-        if (routeConfig) {
-            const path = routeConfig.path ?? '';
-            // Resolve path segments, including route params
-            const segments = path
-                .split('/')
-                .filter(Boolean)
-                .map((segment) => {
-                if (segment.startsWith(':')) {
-                    const paramName = segment.substring(1);
-                    return route.snapshot.params[paramName] ?? segment;
-                }
-                return segment;
-            });
-            const nextUrlPart = segments.join('/');
-            // Always advance the URL, even if we don't render a breadcrumb for this level
-            const nextUrl = nextUrlPart.length > 0 ? `${url}/${nextUrlPart}` : url || '/';
-            // 🔑 Use route config data, not snapshot data, to avoid inherited data
-            const data = routeConfig.data;
-            const label = data?.title;
-            if (label) {
-                breadcrumbs.push({
-                    label,
-                    url: nextUrl,
-                });
-            }
-            url = nextUrl;
-        }
-        if (route.firstChild) {
-            return this.buildBreadcrumb(route.firstChild, url, breadcrumbs);
-        }
-        return breadcrumbs;
-    }
-    toggleSidebar() {
-        this.sidebarVisibility = !this.sidebarVisibility;
-        this.onSidebarToggled.emit(this.sidebarVisibility);
-    }
-    /* =========================================================
-     * IMPORTANT: React Router sync when Angular changes URL
-     * ========================================================= */
-    onOverrideBreadcrumbClick(e) {
-        // Only for normal left-click navigation.
-        // Let browser handle right-click, ctrl/cmd-click, middle click, etc.
-        if (e.button !== 0)
-            return;
-        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
-            return;
-        // Angular routerLink will update the URL via pushState.
-        // React Router BrowserRouter will not notice unless popstate is fired.
-        queueMicrotask(() => {
-            window.dispatchEvent(new PopStateEvent('popstate'));
-        });
-    }
-    /* =========================================================
-     * Override breadcrumb link helpers (baseHref aware)
-     * ========================================================= */
-    normalizeBaseHref() {
-        let b = (this.baseHref ?? '/').trim();
-        // ensure leading slash
-        if (!b.startsWith('/'))
-            b = `/${b}`;
-        // ensure trailing slash
-        if (!b.endsWith('/'))
-            b = `${b}/`;
-        // collapse repeated slashes
-        b = b.replace(/\/{2,}/g, '/');
-        return b;
-    }
-    normalizePath(url) {
-        let u = (url ?? '').trim();
-        if (!u)
-            return '/';
-        // support only path-like urls here; if ever full origin is passed, keep it
-        if (/^https?:\/\//i.test(u))
-            return u;
-        if (!u.startsWith('/'))
-            u = `/${u}`;
-        u = u.replace(/\/{2,}/g, '/');
-        // fix common mistake: "/-/-/dashboard" -> "/-/dashboard"
-        u = u.replace(/^\/-\/-\/+/, '/-/');
-        return u;
-    }
-    /**
-     * RouterLink will prefix baseHref automatically.
-     * So we must NOT include baseHref in the value passed to [routerLink].
-     *
-     * baseHref "/-/" examples:
-     * - "/-/dashboard" -> "/dashboard"
-     * - "/dashboard"   -> "/dashboard"
-     * - "/"            -> "/"
-     */
-    overrideRouterLink(url) {
-        const base = this.normalizeBaseHref();
-        const abs = this.normalizePath(url);
-        // if already includes baseHref, strip it
-        if (abs.startsWith(base)) {
-            // base ends with "/" so slice base.length - 1 keeps leading "/"
-            const stripped = abs.slice(base.length - 1);
-            return stripped.length ? stripped : '/';
-        }
-        return abs;
-    }
-    /**
-     * Browser href must include baseHref so "open in new tab" goes to the correct URL.
-     *
-     * baseHref "/-/" examples:
-     * - "/dashboard"   -> "/-/dashboard"
-     * - "/-/dashboard" -> "/-/dashboard"
-     * - "/"            -> "/-/"
-     */
-    overrideHref(url) {
-        const base = this.normalizeBaseHref();
-        const abs = this.normalizePath(url);
-        // already includes baseHref
-        if (abs.startsWith(base))
-            return abs;
-        // home
-        if (abs === '/')
-            return base;
-        // join
-        return `${base}${abs.slice(1)}`.replace(/\/{2,}/g, '/');
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IHContent, isStandalone: true, selector: "ih-content", outputs: { onSidebarToggled: "onSidebarToggled", loading: "loading" }, ngImport: i0, template: `
-    <div class="ih-content-header">
-      <a class="i-clickable" (click)="toggleSidebar()">
-        @if (sidebarVisibility) {
-          <img alt="sidebar-left" src="svgs/sidebar-left.svg" />
-        } @else {
-          <img alt="sidebar-right" src="svgs/sidebar-right.svg" />
-        }
-      </a>
-
-      <!-- ✅ title override reacts immediately -->
-      <h1>{{ shell.titleOverride() || (pageTitle$ | async) || 'Insight' }}</h1>
-    </div>
-
-    <div class="ih-content-breadcrumbs">
-      @let override = shell.breadcrumbsOverride();
-
-      @if (override && override.length > 0) {
-        @for (b of override; track $index; let first = $first; let last = $last) {
-          @if (!last) {
-            @if (!first) {
-              @if (b.url) {
-                <a
-                  class="ih-content-breadcrumb ih-content-breadcrumb__link"
-                  [attr.href]="overrideHref(b.url)"
-                  [routerLink]="overrideRouterLink(b.url)"
-                  (click)="onOverrideBreadcrumbClick($event)"
-                >
-                  {{ b.label }}
-                </a>
-              } @else {
-                <span class="ih-content-breadcrumb ih-content-breadcrumb__link">
-                  {{ b.label }}
-                </span>
-              }
-            } @else {
-              <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
-                {{ b.label }}
-              </span>
-            }
-            <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
-          } @else {
-            <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
-              {{ b.label }}
-            </span>
-          }
-        }
-      } @else {
-        <!-- ✅ Fallback to route-based breadcrumbs (Angular routes) -->
-        @if (breadcrumb$ | async; as breadcrumbs) {
-          @if (breadcrumbs.length > 0) {
-            @for (
-              breadcrumb of breadcrumbs;
-              track breadcrumb.url;
-              let first = $first;
-              let last = $last
-            ) {
-              @if (!last) {
-                @if (!first) {
-                  <a
-                    class="ih-content-breadcrumb ih-content-breadcrumb__link"
-                    [routerLink]="breadcrumb.url"
-                  >
-                    {{ breadcrumb.label }}
-                  </a>
-                } @else {
-                  <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
-                    {{ breadcrumb.label }}
-                  </span>
-                }
-                <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
-              } @else {
-                <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
-                  {{ breadcrumb.label }}
-                </span>
-              }
-            }
-          } @else {
-            <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
-          }
-        } @else {
-          <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
-        }
-      }
-    </div>
-
-    <div class="ih-content-body scroll scroll-y">
-      <router-outlet />
-    </div>
-  `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHContent, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'ih-content',
-                    imports: [RouterOutlet, AsyncPipe, RouterLink],
-                    template: `
-    <div class="ih-content-header">
-      <a class="i-clickable" (click)="toggleSidebar()">
-        @if (sidebarVisibility) {
-          <img alt="sidebar-left" src="svgs/sidebar-left.svg" />
-        } @else {
-          <img alt="sidebar-right" src="svgs/sidebar-right.svg" />
-        }
-      </a>
-
-      <!-- ✅ title override reacts immediately -->
-      <h1>{{ shell.titleOverride() || (pageTitle$ | async) || 'Insight' }}</h1>
-    </div>
-
-    <div class="ih-content-breadcrumbs">
-      @let override = shell.breadcrumbsOverride();
-
-      @if (override && override.length > 0) {
-        @for (b of override; track $index; let first = $first; let last = $last) {
-          @if (!last) {
-            @if (!first) {
-              @if (b.url) {
-                <a
-                  class="ih-content-breadcrumb ih-content-breadcrumb__link"
-                  [attr.href]="overrideHref(b.url)"
-                  [routerLink]="overrideRouterLink(b.url)"
-                  (click)="onOverrideBreadcrumbClick($event)"
-                >
-                  {{ b.label }}
-                </a>
-              } @else {
-                <span class="ih-content-breadcrumb ih-content-breadcrumb__link">
-                  {{ b.label }}
-                </span>
-              }
-            } @else {
-              <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
-                {{ b.label }}
-              </span>
-            }
-            <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
-          } @else {
-            <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
-              {{ b.label }}
-            </span>
-          }
-        }
-      } @else {
-        <!-- ✅ Fallback to route-based breadcrumbs (Angular routes) -->
-        @if (breadcrumb$ | async; as breadcrumbs) {
-          @if (breadcrumbs.length > 0) {
-            @for (
-              breadcrumb of breadcrumbs;
-              track breadcrumb.url;
-              let first = $first;
-              let last = $last
-            ) {
-              @if (!last) {
-                @if (!first) {
-                  <a
-                    class="ih-content-breadcrumb ih-content-breadcrumb__link"
-                    [routerLink]="breadcrumb.url"
-                  >
-                    {{ breadcrumb.label }}
-                  </a>
-                } @else {
-                  <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
-                    {{ breadcrumb.label }}
-                  </span>
-                }
-                <span class="ih-content-breadcrumb ih-content-breadcrumb__separator">></span>
-              } @else {
-                <span class="ih-content-breadcrumb ih-content-breadcrumb__current">
-                  {{ breadcrumb.label }}
-                </span>
-              }
-            }
-          } @else {
-            <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
-          }
-        } @else {
-          <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
-        }
-      }
-    </div>
-
-    <div class="ih-content-body scroll scroll-y">
-      <router-outlet />
-    </div>
-  `,
-                }]
-        }], propDecorators: { onSidebarToggled: [{
-                type: Output
-            }], loading: [{
-                type: Output
-            }] } });
-/* =========================================================
- * IHMenu
- * - Parent/group menu: toggles expanded/collapsed
- * - Leaf new-tab menu: href + target="_blank"
- * - Leaf reload menu: href
- * - Leaf SPA menu: routerLink
- * ========================================================= */
-class IHMenu {
-    confirmService = inject(IConfirmService);
-    menu;
-    selectedMenuId = null;
-    filter = '';
-    /** When true, renders a pin/star toggle on leaf items (emits `favoriteToggle`). */
-    favoriteMode = false;
-    /** When true, groups collapse/expand via a chevron (flat is the default). */
-    collapsible = false;
-    /** Nesting depth from the sidebar root (0 = top level). Drives indentation and
-        the top-level "no group icon" rule — independent of the data's `level`. */
-    depth = 0;
-    /** When true, leaf items render with `cdkDrag` so the parent `cdkDropList` can reorder them (used for the Favorites section). */
-    dragEnabled = false;
-    /** When true, leaf items render their owning application name next to the label (used for the Favorites section). */
-    showApplication = false;
-    /** Per-menu-key ancestor path labels (sidebar Favorites section) - rendered instead of the application name when present. */
-    pathByKey;
-    clicked = new EventEmitter();
-    favoriteToggle = new EventEmitter();
-    menus;
-    /** Template-bound helper for stable `@for` tracking (UUID-first). */
-    getMenuKey = getMenuKey;
-    // the actual clickable DOM element (only on leaf items)
-    menuItemRef;
-    isHidden = false;
-    get menuRoute() {
-        return getMenuRoute(this.menu);
-    }
-    get isSpa() {
-        return isSpaMenu(this.menu);
-    }
-    get isReload() {
-        return isReloadMenu(this.menu);
-    }
-    get isNewTab() {
-        return isNewTabMenu(this.menu);
-    }
-    get menuLabel() {
-        return getMenuLabel(this.menu);
-    }
-    /**
-     * Subtitle shown on favorite leaves: the ancestor path resolved from the
-     * sidebar menu tree when available, falling back to the owning application
-     * name when the leaf is not present in the tree.
-     */
-    get applicationLabel() {
-        if (!this.showApplication || !this.menu)
-            return null;
-        const key = getMenuKey(this.menu);
-        if (key !== null && this.pathByKey) {
-            const path = this.pathByKey[String(key)];
-            if (path !== undefined)
-                return path;
-        }
-        return this.menu.application?.name ?? null;
-    }
-    get menuChildrenList() {
-        return getMenuChildren(this.menu);
-    }
-    get menuHasChildren() {
-        return hasMenuChildren(this.menu);
-    }
-    /** Legacy top-level module header (menuTypeId === 2). */
-    get isModuleNode() {
-        return isModuleMenu(this.menu);
-    }
-    /** Structural group header (non-leaf container). Modules are handled by `isModuleNode`. */
-    get isGroupNode() {
-        if (!this.menu)
-            return false;
-        if (this.isModuleNode)
-            return false;
-        if (this.menu.type)
-            return this.menu.type === 'group';
-        return Number(this.menu.menuTypeId) === 3 && hasMenuChildren(this.menu);
-    }
-    /** Group is expanded unless explicitly marked collapsed (manual toggle wins). */
-    get isGroupExpanded() {
-        return this.menu?.visibility !== 'collapsed';
-    }
-    /** The synthetic Favorites group — keeps its icon at the top level. */
-    get isFavoritesGroup() {
-        return getMenuKey(this.menu) === SIDEBAR_FAVORITES_GROUP_ID;
-    }
-    get menuVisibility() {
-        return this.menu?.visibility ?? '';
-    }
-    /**
-     * Icon classes for the row icon. Appends FontAwesome's `fa-fw` (fixed-width)
-     * so icons with different glyph widths (e.g. fa-users vs fa-bars) still keep
-     * the menu title aligned.
-     *
-     * Falls back to `MENU_ICON_FALLBACK` (`fa-brands fa-microsoft`) when the menu
-     * has no icon or the icon is not a valid FontAwesome class (e.g. legacy named
-     * icons like `home`, `dashboard` that contain no `fa-*` token and would render
-     * as an empty glyph).
-     */
-    get menuIcon() {
-        const icon = this.menu?.icon?.trim();
-        const isValidFa = !!icon && /(?:^|\s)fa-[a-z0-9-]+(?:\s|$)/i.test(icon);
-        return `${isValidFa ? icon : MENU_ICON_FALLBACK} fa-fw`;
-    }
-    /** 0-based nesting level; top-level groups are always 0 (never negative). */
-    get menuLevel() {
-        return Math.max(0, Number(this.menu?.level) || 0);
-    }
-    /**
-     * Indent level used for rendering: first-level children of a group render
-     * flush-left (0) so the first level looks flat; deeper levels indent from
-     * there (depth - 1, never negative).
-     */
-    get indentLevel() {
-        return Math.max(0, this.depth - 1);
-    }
-    get menuTypeId() {
-        return Number(this.menu?.menuTypeId) || 0;
-    }
-    get menuIsFavorite() {
-        return !!this.menu?.isFavorite;
-    }
-    /** only true for the *leaf* menu that matches selectedMenuId */
-    get isSelected() {
-        if (!this.menu)
-            return false;
-        const matchesId = getMenuKey(this.menu) === this.selectedMenuId;
-        if (!matchesId)
-            return false;
-        const hasChildren = this.menuHasChildren;
-        // keep selection only on "leaf" items (same rule as flattenNavigableMenus)
-        const isLeaf = this.menu.type !== 'group' &&
-            this.menuTypeId === 3 &&
-            (!hasChildren || this.menu.visibility === 'no-child');
-        return isLeaf;
-    }
-    ngOnChanges(changes) {
-        // whenever selectedMenuId changes, scroll the selected item into view
-        if (changes['selectedMenuId'] && this.isSelected && this.menuItemRef) {
-            this.menuItemRef.nativeElement.scrollIntoView({
-                block: 'nearest',
-                behavior: 'smooth',
-            });
-        }
-    }
-    indent(level) {
-        const n = Math.max(0, Number(level) || 0);
-        // return [0,1,2,...] so each item is stable and unique
-        return Array.from({ length: n }, (_, i) => i);
-    }
-    click() {
-        if (!this.menu)
-            return;
-        if (this.menu.visibility !== 'no-child') {
-            // Treat an unset visibility as expanded so a default (flat) group
-            // collapses on the first click (modern nodes have no visibility).
-            this.menu.visibility = this.isGroupExpanded ? 'collapsed' : 'expanded';
-        }
-        else {
-            this.clicked.emit(this.menu);
-        }
-    }
-    onFavoriteClick(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        const id = getMenuKey(this.menu);
-        if (id === null)
-            return;
-        const isUnfavorite = this.menuIsFavorite;
-        // Unfavorite is destructive - confirm before removing the pin.
-        if (isUnfavorite) {
-            const menuName = getMenuLabel(this.menu) || 'this menu';
-            this.confirmService
-                .warning('Remove from Favorites', `Remove <strong>${menuName}</strong> from your favorites?`)
-                .subscribe((confirmed) => {
-                if (!confirmed)
-                    return;
-                this.favoriteToggle.emit({ id, isFavorite: false });
-            });
-            return;
-        }
-        this.favoriteToggle.emit({ id, isFavorite: true });
-    }
-    onChildFavoriteToggle(event) {
-        this.favoriteToggle.emit(event);
-    }
-    hrefWithMenuFilter(raw) {
-        const term = (this.filter ?? '').trim();
-        if (!term)
-            return raw;
-        try {
-            const u = new URL(raw);
-            u.searchParams.set('menu-filter', term);
-            return u.toString();
-        }
-        catch {
-            const origin = window.location.origin;
-            const u = new URL(raw, origin);
-            u.searchParams.set('menu-filter', term);
-            return `${u.pathname}${u.search}${u.hash}`;
-        }
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHMenu, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter", favoriteMode: "favoriteMode", collapsible: "collapsible", depth: "depth", dragEnabled: "dragEnabled", showApplication: "showApplication", pathByKey: "pathByKey" }, outputs: { clicked: "clicked", favoriteToggle: "favoriteToggle" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
-    @if (menu) {
-      @let hasChild = menuHasChildren;
-      @let route = menuRoute;
-
-      <li [class.is-module]="isModuleNode" [ngClass]="isModuleNode ? menuVisibility : ''">
-        @if (isModuleNode) {
-          <!-- old-style module header; chevron + collapse in collapsible mode -->
-          <small
-            class="ih-menu-module"
-            [class.ih-menu-module--collapsible]="collapsible && menuHasChildren"
-            (click)="collapsible && menuHasChildren ? click() : null"
-          >
-            <span [innerHTML]="menuLabel | highlightSearch: filter"></span>
-
-            @if (collapsible && menuHasChildren) {
-              <i
-                class="ih-menu-chevron"
-                [ngClass]="isGroupExpanded ? 'fas fa-angle-up' : 'fas fa-angle-down'"
-              ></i>
-            }
-          </small>
-        } @else if (isGroupNode) {
-          <!-- unified old-style group row; chevron + collapse only in collapsible mode -->
-          <div
-            class="ih-menu-group"
-            [class.ih-menu-group--collapsible]="collapsible"
-            [class.ih-menu-group--top]="depth === 0"
-            (click)="collapsible ? click() : null"
-          >
-            @if (indentLevel > 0) {
-              @for (i of indent(indentLevel); track i) {
-                <span class="indent-{{ depth }}"></span>
-              }
-            }
-
-            <!-- Top-level groups carry no icon (except the Favorites group) so
-                 group titles align with module headers. -->
-            @if (depth > 0 || isFavoritesGroup) {
-              <i [class]="menuIcon"></i>
-            }
-            <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-
-            @if (collapsible) {
-              <i
-                class="ih-menu-chevron"
-                [ngClass]="isGroupExpanded ? 'fas fa-angle-up' : 'fas fa-angle-down'"
-              ></i>
-            }
-          </div>
-        } @else {
-          <!-- IMPORTANT:
-               Order matters.
-               Route starting with "http" must hit href branch before SPA/routerLink branch.
-          -->
-
-          <!-- leaf item: open in new tab -->
-          @if (isNewTab && route) {
-            <a
-              #menuItem
-              class="is-new-tab"
-              rel="noopener noreferrer"
-              target="_blank"
-              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
-              [class.is-selected]="isSelected"
-              [href]="hrefWithMenuFilter(route)"
-            >
-              @if (indentLevel > 0) {
-                @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
-                }
-              }
-
-              <i [class]="menuIcon"></i>
-              <span
-                class="ih-menu-label"
-                [class.ih-menu-label--compact]="showApplication"
-                [title]="menuLabel"
-              >
-                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (applicationLabel) {
-                  <small class="ih-menu-application">{{ applicationLabel }}</small>
-                }
-              </span>
-
-              @if (favoriteMode) {
-                <i
-                  class="ih-menu-favorite {{
-                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
-                  }}"
-                  role="button"
-                  tabindex="0"
-                  [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
-                  (click)="onFavoriteClick($event)"
-                  (keydown.enter)="onFavoriteClick($event)"
-                ></i>
-              }
-            </a>
-          }
-
-          <!-- leaf item: full reload, same tab -->
-          @else if (isReload && route) {
-            <a
-              #menuItem
-              class="is-reload"
-              target="_self"
-              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
-              [class.is-selected]="isSelected"
-              [href]="hrefWithMenuFilter(route)"
-            >
-              @if (indentLevel > 0) {
-                @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
-                }
-              }
-
-              <i [class]="menuIcon"></i>
-              <span
-                class="ih-menu-label"
-                [class.ih-menu-label--compact]="showApplication"
-                [title]="menuLabel"
-              >
-                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (applicationLabel) {
-                  <small class="ih-menu-application">{{ applicationLabel }}</small>
-                }
-              </span>
-
-              @if (favoriteMode) {
-                <i
-                  class="ih-menu-favorite {{
-                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
-                  }}"
-                  role="button"
-                  tabindex="0"
-                  [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
-                  (click)="onFavoriteClick($event)"
-                  (keydown.enter)="onFavoriteClick($event)"
-                ></i>
-              }
-            </a>
-          }
-
-          <!-- leaf item: SPA navigation -->
-          @else if (isSpa && route) {
-            <a
-              #menuItem
-              class="is-spa"
-              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
-              [class.is-selected]="isSelected"
-              [queryParamsHandling]="'merge'"
-              [routerLink]="route"
-            >
-              @if (indentLevel > 0) {
-                @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
-                }
-              }
-
-              <i [class]="menuIcon"></i>
-              <span
-                class="ih-menu-label"
-                [class.ih-menu-label--compact]="showApplication"
-                [title]="menuLabel"
-              >
-                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (applicationLabel) {
-                  <small class="ih-menu-application">{{ applicationLabel }}</small>
-                }
-              </span>
-
-              @if (favoriteMode) {
-                <i
-                  class="ih-menu-favorite {{
-                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
-                  }}"
-                  role="button"
-                  tabindex="0"
-                  [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
-                  (click)="onFavoriteClick($event)"
-                  (keydown.enter)="onFavoriteClick($event)"
-                ></i>
-              }
-            </a>
-          }
-        }
-
-        @if (hasChild) {
-          <ul
-            [class.collapsed]="(isGroupNode || isModuleNode) && collapsible && !isGroupExpanded"
-            [class.expanded]="(isGroupNode || isModuleNode) && collapsible && isGroupExpanded"
-          >
-            @for (m of menuChildrenList; track getMenuKey(m)) {
-              <ih-menu
-                [collapsible]="collapsible"
-                [depth]="depth + 1"
-                [dragEnabled]="dragEnabled"
-                [favoriteMode]="favoriteMode"
-                [filter]="filter"
-                [menu]="m"
-                [pathByKey]="pathByKey"
-                [selectedMenuId]="selectedMenuId"
-                [showApplication]="showApplication"
-                (favoriteToggle)="onChildFavoriteToggle($event)"
-              />
-            }
-          </ul>
-        }
-      </li>
-    }
-  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHMenu, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'ih-menu',
-                    imports: [NgClass, RouterLink, IHighlightSearchPipe],
-                    host: { 'data-ih-menu': '' },
-                    template: `
-    @if (menu) {
-      @let hasChild = menuHasChildren;
-      @let route = menuRoute;
-
-      <li [class.is-module]="isModuleNode" [ngClass]="isModuleNode ? menuVisibility : ''">
-        @if (isModuleNode) {
-          <!-- old-style module header; chevron + collapse in collapsible mode -->
-          <small
-            class="ih-menu-module"
-            [class.ih-menu-module--collapsible]="collapsible && menuHasChildren"
-            (click)="collapsible && menuHasChildren ? click() : null"
-          >
-            <span [innerHTML]="menuLabel | highlightSearch: filter"></span>
-
-            @if (collapsible && menuHasChildren) {
-              <i
-                class="ih-menu-chevron"
-                [ngClass]="isGroupExpanded ? 'fas fa-angle-up' : 'fas fa-angle-down'"
-              ></i>
-            }
-          </small>
-        } @else if (isGroupNode) {
-          <!-- unified old-style group row; chevron + collapse only in collapsible mode -->
-          <div
-            class="ih-menu-group"
-            [class.ih-menu-group--collapsible]="collapsible"
-            [class.ih-menu-group--top]="depth === 0"
-            (click)="collapsible ? click() : null"
-          >
-            @if (indentLevel > 0) {
-              @for (i of indent(indentLevel); track i) {
-                <span class="indent-{{ depth }}"></span>
-              }
-            }
-
-            <!-- Top-level groups carry no icon (except the Favorites group) so
-                 group titles align with module headers. -->
-            @if (depth > 0 || isFavoritesGroup) {
-              <i [class]="menuIcon"></i>
-            }
-            <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-
-            @if (collapsible) {
-              <i
-                class="ih-menu-chevron"
-                [ngClass]="isGroupExpanded ? 'fas fa-angle-up' : 'fas fa-angle-down'"
-              ></i>
-            }
-          </div>
-        } @else {
-          <!-- IMPORTANT:
-               Order matters.
-               Route starting with "http" must hit href branch before SPA/routerLink branch.
-          -->
-
-          <!-- leaf item: open in new tab -->
-          @if (isNewTab && route) {
-            <a
-              #menuItem
-              class="is-new-tab"
-              rel="noopener noreferrer"
-              target="_blank"
-              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
-              [class.is-selected]="isSelected"
-              [href]="hrefWithMenuFilter(route)"
-            >
-              @if (indentLevel > 0) {
-                @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
-                }
-              }
-
-              <i [class]="menuIcon"></i>
-              <span
-                class="ih-menu-label"
-                [class.ih-menu-label--compact]="showApplication"
-                [title]="menuLabel"
-              >
-                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (applicationLabel) {
-                  <small class="ih-menu-application">{{ applicationLabel }}</small>
-                }
-              </span>
-
-              @if (favoriteMode) {
-                <i
-                  class="ih-menu-favorite {{
-                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
-                  }}"
-                  role="button"
-                  tabindex="0"
-                  [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
-                  (click)="onFavoriteClick($event)"
-                  (keydown.enter)="onFavoriteClick($event)"
-                ></i>
-              }
-            </a>
-          }
-
-          <!-- leaf item: full reload, same tab -->
-          @else if (isReload && route) {
-            <a
-              #menuItem
-              class="is-reload"
-              target="_self"
-              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
-              [class.is-selected]="isSelected"
-              [href]="hrefWithMenuFilter(route)"
-            >
-              @if (indentLevel > 0) {
-                @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
-                }
-              }
-
-              <i [class]="menuIcon"></i>
-              <span
-                class="ih-menu-label"
-                [class.ih-menu-label--compact]="showApplication"
-                [title]="menuLabel"
-              >
-                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (applicationLabel) {
-                  <small class="ih-menu-application">{{ applicationLabel }}</small>
-                }
-              </span>
-
-              @if (favoriteMode) {
-                <i
-                  class="ih-menu-favorite {{
-                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
-                  }}"
-                  role="button"
-                  tabindex="0"
-                  [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
-                  (click)="onFavoriteClick($event)"
-                  (keydown.enter)="onFavoriteClick($event)"
-                ></i>
-              }
-            </a>
-          }
-
-          <!-- leaf item: SPA navigation -->
-          @else if (isSpa && route) {
-            <a
-              #menuItem
-              class="is-spa"
-              [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
-              [class.is-selected]="isSelected"
-              [queryParamsHandling]="'merge'"
-              [routerLink]="route"
-            >
-              @if (indentLevel > 0) {
-                @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
-                }
-              }
-
-              <i [class]="menuIcon"></i>
-              <span
-                class="ih-menu-label"
-                [class.ih-menu-label--compact]="showApplication"
-                [title]="menuLabel"
-              >
-                <h6 [innerHTML]="menuLabel | highlightSearch: filter"></h6>
-                @if (applicationLabel) {
-                  <small class="ih-menu-application">{{ applicationLabel }}</small>
-                }
-              </span>
-
-              @if (favoriteMode) {
-                <i
-                  class="ih-menu-favorite {{
-                    menuIsFavorite ? 'fa-solid fa-star is-favorite' : 'fa-regular fa-star'
-                  }}"
-                  role="button"
-                  tabindex="0"
-                  [attr.aria-label]="menuIsFavorite ? 'Remove from favorites' : 'Add to favorites'"
-                  (click)="onFavoriteClick($event)"
-                  (keydown.enter)="onFavoriteClick($event)"
-                ></i>
-              }
-            </a>
-          }
-        }
-
-        @if (hasChild) {
-          <ul
-            [class.collapsed]="(isGroupNode || isModuleNode) && collapsible && !isGroupExpanded"
-            [class.expanded]="(isGroupNode || isModuleNode) && collapsible && isGroupExpanded"
-          >
-            @for (m of menuChildrenList; track getMenuKey(m)) {
-              <ih-menu
-                [collapsible]="collapsible"
-                [depth]="depth + 1"
-                [dragEnabled]="dragEnabled"
-                [favoriteMode]="favoriteMode"
-                [filter]="filter"
-                [menu]="m"
-                [pathByKey]="pathByKey"
-                [selectedMenuId]="selectedMenuId"
-                [showApplication]="showApplication"
-                (favoriteToggle)="onChildFavoriteToggle($event)"
-              />
-            }
-          </ul>
-        }
-      </li>
-    }
-  `,
-                }]
-        }], propDecorators: { menu: [{
-                type: Input
-            }], selectedMenuId: [{
-                type: Input
-            }], filter: [{
-                type: Input
-            }], favoriteMode: [{
-                type: Input
-            }], collapsible: [{
-                type: Input
-            }], depth: [{
-                type: Input
-            }], dragEnabled: [{
-                type: Input
-            }], showApplication: [{
-                type: Input
-            }], pathByKey: [{
-                type: Input
-            }], clicked: [{
-                type: Output
-            }], favoriteToggle: [{
-                type: Output
-            }], menus: [{
-                type: ViewChildren,
-                args: [IHMenu]
-            }], menuItemRef: [{
-                type: ViewChild,
-                args: ['menuItem', { static: false }]
-            }], isHidden: [{
-                type: HostBinding,
-                args: ['class.hidden']
-            }] } });
-/* =========================================================
- * IHSidebar
- * ========================================================= */
 class IHSidebar {
     router = inject(Router);
     hostElement = inject(ElementRef);
@@ -13856,9 +13819,9 @@ class IHSidebar {
     /* ---------------------------
      * OUTPUTS (to parent)
      * --------------------------- */
-    /** Bubbled up from leaf pin toggles — the host app persists via the favorites API. */
+    /** Bubbled up from leaf pin toggles - the host app persists via the favorites API. */
     onFavoriteToggle = new EventEmitter();
-    /** Emitted after a favorites drag-drop with the ordered favorite menu ids — the host app persists via the reorder API. */
+    /** Emitted after a favorites drag-drop with the ordered favorite menu ids - the host app persists via the reorder API. */
     onFavoriteReorder = new EventEmitter();
     /* ---------------------------
      * INTERNAL STREAMS / STATE
@@ -13870,12 +13833,12 @@ class IHSidebar {
     keyboardNavActive = signal(false, ...(ngDevMode ? [{ debugName: "keyboardNavActive" }] : []));
     selectedIndex = signal(null, ...(ngDevMode ? [{ debugName: "selectedIndex" }] : []));
     selectedMenuId = signal(null, ...(ngDevMode ? [{ debugName: "selectedMenuId" }] : []));
-    /** Index the dragged favorite would land at — drives the drop placeholder + cursor. */
+    /** Index the dragged favorite would land at - drives the drop placeholder + cursor. */
     dragOverIndex = signal(null, ...(ngDevMode ? [{ debugName: "dragOverIndex" }] : []));
     /** Template-bound helper for stable `@for` tracking. */
     getMenuKey = getMenuKey;
     favoritesGroupCache = null;
-    /** Latest favorites array mirrored from `favorites$` — source of truth for drag reorder. */
+    /** Latest favorites array mirrored from `favorites$` - source of truth for drag reorder. */
     favoriteItems = signal([], ...(ngDevMode ? [{ debugName: "favoriteItems" }] : []));
     /** Full (unfiltered) normalized menu tree - source for favorite ancestor paths. */
     fullMenus = signal([], ...(ngDevMode ? [{ debugName: "fullMenus" }] : []));
@@ -13978,7 +13941,7 @@ class IHSidebar {
         }
         this.dragOverIndex.set(targetIndex);
     };
-    /** Document mouseup — finalize (emit) or cancel the favorites drag. */
+    /** Document mouseup - finalize (emit) or cancel the favorites drag. */
     onDocumentMouseUp = () => {
         const state = this.dragState;
         if (!state)
@@ -14006,7 +13969,7 @@ class IHSidebar {
             return;
         // Prevent text selection and any native drag/OS behavior.
         event.preventDefault();
-        // Build a translucent clone (drag ghost) that follows the pointer — it is
+        // Build a translucent clone (drag ghost) that follows the pointer - it is
         // hidden until the drag actually starts (past the 5px threshold).
         const ghost = leaf.cloneNode(true);
         ghost.classList.add('ih-drag-ghost');
@@ -14345,7 +14308,7 @@ class IHSidebar {
 
           <span class="user-info">
             <small class="text-subtle">{{ user.employeeCode }}</small>
-            <h6>asd{{ user.fullName }}</h6>
+            <h6>{{ user.fullName }}</h6>
           </span>
 
           <i
@@ -14419,7 +14382,7 @@ class IHSidebar {
 
       @if (menus && menus.length > 0) {
         @let groups = buildMenuGroups(menus);
-        <!-- Single <ul> for the whole menu tree — all roots live in one list. -->
+        <!-- Single <ul> for the whole menu tree - all roots live in one list. -->
         <ul>
           @for (group of groups; track group.key) {
             @if (groupByApplication && group.label && groups.length > 1) {
@@ -14470,7 +14433,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
 
           <span class="user-info">
             <small class="text-subtle">{{ user.employeeCode }}</small>
-            <h6>asd{{ user.fullName }}</h6>
+            <h6>{{ user.fullName }}</h6>
           </span>
 
           <i
@@ -14544,7 +14507,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
 
       @if (menus && menus.length > 0) {
         @let groups = buildMenuGroups(menus);
-        <!-- Single <ul> for the whole menu tree — all roots live in one list. -->
+        <!-- Single <ul> for the whole menu tree - all roots live in one list. -->
         <ul>
           @for (group of groups; track group.key) {
             @if (groupByApplication && group.label && groups.length > 1) {
