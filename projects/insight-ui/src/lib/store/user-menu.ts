@@ -4,8 +4,9 @@ import { forkJoin, map, Observable, of, throwError } from 'rxjs';
 import { catchError, filter, finalize, shareReplay, switchMap, take, tap } from 'rxjs/operators';
 
 import { type INormalizedApiError, normalizeApiError, resolveApiErrorDisplayMessage } from '../api';
-import { getMenuKey, IMenu, IUser } from '../host';
 import { I_AUTH_CONFIG } from '../auth/auth-config';
+import type { IMenu, IUser } from '../host/host.types';
+import { getMenuKey } from '../host/menu/menu.utils';
 import { ISessionService } from '../session/session';
 import {
   IAuthorizationSource,
