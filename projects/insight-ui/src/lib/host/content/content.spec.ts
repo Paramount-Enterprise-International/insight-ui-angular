@@ -74,4 +74,47 @@ describe('host and remote breadcrumb composition', () => {
     expect(text()).toContain('Unauthorized Access');
     expect(text()).not.toContain('Customers');
   });
+  it('prefers configured host titles over menu labels and appends remote labels', async () => {
+    TestBed.configureTestingModule({
+      imports: [IHContent],
+      providers: [
+        provideHttpClient(),
+        { provide: APP_BASE_HREF, useValue: '/-/' },
+        provideRouter([
+          {
+            path: 'sales/customer',
+            data: {
+              remoteMount: true,
+              hostBreadcrumbs: [
+                { label: 'Sales', url: '/sales' },
+                { label: 'Customer', url: '/sales/customer' },
+              ],
+            },
+            children: [{ path: '', component: Page, data: { title: 'Remote page' } }],
+          },
+        ]),
+        { provide: ISessionService, useValue: { initializing: signal(false) } },
+        {
+          provide: IUserMenuStore,
+          useFactory: (): Pick<IUserMenuStore, 'initializing' | 'menus$'> => ({
+            initializing: signal(false),
+            menus$: toObservable(
+              signal<IMenu[]>([{ name: 'Backend label', route: '/sales/customer' }]),
+            ),
+          }),
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(IHContent);
+    fixture.detectChanges();
+    await TestBed.inject(Router).navigateByUrl('/sales/customer');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const text = fixture.nativeElement.querySelector('.ih-content-breadcrumbs').textContent;
+    expect(text).toContain('Sales');
+    expect(text).toContain('Customer');
+    expect(text).toContain('Remote page');
+    expect(text).not.toContain('Backend label');
+  });
 });

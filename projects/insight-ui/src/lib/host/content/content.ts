@@ -150,14 +150,16 @@ export class IHContent {
     map(([, menus, remote]) => {
       const state = this.routeBreadcrumbState();
       const chain = state.mount ? findBreadcrumbMenuChain(menus, state.mount.url) : [];
-      const host = chain.length
-        ? chain
-            .map((node) => ({
-              label: getMenuLabel(node),
-              url: getMenuRoute(node) ?? undefined,
-            }))
-            .filter((item) => !!item.label)
-        : state.host;
+      const host = state.mount?.hostBreadcrumbs?.length
+        ? state.mount.hostBreadcrumbs
+        : chain.length
+          ? chain
+              .map((node) => ({
+                label: getMenuLabel(node),
+                url: getMenuRoute(node) ?? undefined,
+              }))
+              .filter((item) => !!item.label)
+          : state.host;
       return [...host, ...state.remote, ...remote];
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
@@ -173,7 +175,7 @@ export class IHContent {
     host: IBreadcrumbItem[];
     remote: IBreadcrumbItem[];
     title: string | null;
-    mount?: { url: string };
+    mount?: { url: string; hostBreadcrumbs?: IBreadcrumbItem[] };
   } {
     const state: ReturnType<IHContent['routeBreadcrumbState']> = {
       host: [],
@@ -189,7 +191,8 @@ export class IHContent {
       if (data?.['title']) state.title = data['title'];
       const label = data?.['breadcrumb'] ?? data?.['title'];
       if (label) (state.mount ? state.remote : state.host).push({ label, url: url || '/' });
-      if (data?.['remoteMount']) state.mount = { url: url || '/' };
+      if (data?.['remoteMount'])
+        state.mount = { url: url || '/', hostBreadcrumbs: data['hostBreadcrumbs'] };
       route = route.children.find((child) => child.outlet === 'primary') ?? null;
     }
     return state;
