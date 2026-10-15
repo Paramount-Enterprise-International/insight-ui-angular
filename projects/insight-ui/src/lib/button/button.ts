@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   booleanAttribute,
   ChangeDetectionStrategy,
@@ -7,7 +8,6 @@ import {
   Input,
   Output,
 } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { IIcon, IIconName } from '../icon/icon';
 import { IUISize, IUIVariant } from '../interfaces';
@@ -31,6 +31,7 @@ export type IButtonVariant = Extract<
       <a
         class="i-button-inner"
         [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.aria-label]="ariaLabel"
         [attr.rel]="computedRel"
         [attr.target]="target"
         [fragment]="fragment"
@@ -48,6 +49,7 @@ export type IButtonVariant = Extract<
       <a
         class="i-button-inner"
         [attr.aria-disabled]="isDisabled ? 'true' : null"
+        [attr.aria-label]="ariaLabel"
         [attr.href]="isDisabled ? null : href"
         [attr.rel]="computedRel"
         [attr.target]="target"
@@ -61,6 +63,7 @@ export type IButtonVariant = Extract<
     @else {
       <button
         class="i-button-inner"
+        [attr.aria-label]="ariaLabel"
         [disabled]="isDisabled"
         [type]="type"
         (click)="handleClick($event)"
@@ -89,6 +92,7 @@ export class IButton {
   @Input({ transform: booleanAttribute }) loading = false;
 
   @Input() type: IButtonType = 'button';
+  @Input() ariaLabel: string | undefined;
   @Input() loadingText = '';
 
   @Input() variant: IButtonVariant = 'primary';

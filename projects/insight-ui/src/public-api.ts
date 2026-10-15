@@ -2,12 +2,13 @@
  * Public API Surface of insight-ui
  */
 
+export * from './lib/avatar';
 export * from './lib/button';
 export * from './lib/card';
 export * from './lib/code-viewer';
 export * from './lib/datepicker';
 export * from './lib/dialog';
-export * from './lib/grid';
+export * from './lib/error-page';
 export * from './lib/grid';
 export * from './lib/highlight-search.pipe';
 export * from './lib/host';
@@ -21,4 +22,31 @@ export * from './lib/select';
 export * from './lib/textarea';
 export * from './lib/toggle';
 export * from './lib/ui';
-export * from './lib/avatar';
+
+// Shared SSO / auth package (IApiService, ISessionService, ICsrfService,
+// authGuard, authInterceptor, IEnvironment-style config, auth-callback helper)
+export * from './lib/api';
+export * from './lib/auth';
+export * from './lib/csrf';
+export * from './lib/guards';
+export * from './lib/interceptors';
+export * from './lib/session';
+
+// Current-user navigation & favorites data layer (API services + mappers)
+export * from './lib/user';
+
+// Session storage + session-expired overlay state
+export * from './lib/session-expired';
+export * from './lib/storage';
+
+// In-memory sidebar/user/menu store + permission checks
+export * from './lib/store';
+
+// Permission directives (iHasMn / iNotHasMn - async authorization predicates)
+export * from './lib/directives';
+
+// Default environment (no identity host baked in - consumer apps supply their own)
+export * from './environments/environment';
+export * from './environments/environment.interface';
+
+export * from './lib/impersonation';

@@ -1,15 +1,4 @@
-/**
- * IDatepicker
- * Version: 1.5.4
- *
- * Fixes:
- * - ✅ IMPORTANT: prevent value from being wiped due to bubbled "input" events
- *   from inner month/year i-select inputs.
- *   -> Only handle input when event.target is the date input itself.
- * - Keep portal + positioning + flicker guard for portaled i-options.
- * - IFCDatepicker included in same file
- * - Add absolute minYear/maxYear and relative minYearRange/maxYearRange
- */
+/** Date input with a calendar panel and form control wrapper. */
 
 import { formatDate, NgClass } from '@angular/common';
 import {
@@ -68,6 +57,39 @@ export type IDatepickerPanelPosition =
 const noop = (): void => {
   /**/
 };
+
+function parseDateByFormat(value: string, format: string): Date | null {
+  if (!value) return null;
+
+  const chunks = format.match(/yyyy|MM|dd|./g) ?? [];
+  const fields = chunks.filter((chunk) => /^(yyyy|MM|dd)$/.test(chunk));
+  if (fields.length !== 3 || new Set(fields).size !== 3) return null;
+
+  const pattern = chunks
+    .map((chunk) =>
+      /^(yyyy|MM|dd)$/.test(chunk)
+        ? `(\\d{${chunk.length}})`
+        : chunk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+    )
+    .join('');
+  const match = new RegExp(`^${pattern}$`).exec(value);
+  if (!match) return null;
+
+  const parts = Object.fromEntries(fields.map((field, index) => [field, Number(match[index + 1])]));
+  const year = parts['yyyy'];
+  const month = parts['MM'];
+  const day = parts['dd'];
+  if (!year || !month || !day || month > 12) return null;
+
+  const date = new Date(0);
+  date.setFullYear(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return null;
+  }
+
+  return date;
+}
 
 @Component({
   selector: 'i-datepicker',
@@ -156,7 +178,24 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   @Input() disabled = false;
   @Input() invalid = false;
 
-  @Input() format = 'dd/MM/yyyy';
+  private _format = 'dd/MM/yyyy';
+  private writtenString: string | null = null;
+  @Input()
+  get format(): string {
+    return this._format;
+  }
+  set format(value: string) {
+    const next = value || 'dd/MM/yyyy';
+    if (next === this._format) return;
+    this._format = next;
+    if (this.writtenString !== null) {
+      this.writeValue(this.writtenString);
+    } else if (this._modelValue && !this.isEditing) {
+      this._displayText = this.formatDate(this._modelValue);
+      this.cdr.markForCheck();
+    }
+  }
+  @Input() displayFormat?: string;
   @Input() panelPosition: IDatepickerPanelPosition = 'bottom left';
 
   private _minYear: number | null = null;
@@ -225,7 +264,13 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   private _modelValue: Date | null = null;
 
   private _displayText = '';
+  private isEditing = false;
+  private pendingExternalValue: Date | null | undefined;
   get displayText(): string {
+    // Valid dates use the display pattern outside the input.
+    if (this._modelValue && (!this.isEditing || this.disabled)) {
+      return this.formatDate(this._modelValue, this.displayFormat || this.format);
+    }
     return this._displayText;
   }
 
@@ -278,9 +323,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   private listeningGlobal = false;
 
   ngOnInit(): void {
-    // Initialize calendar view to today WITHOUT setting a model value.
-    // The input stays empty until a date is picked or written via form control.
-    // Fixes: optional/null date fields no longer auto-fill with today.
+    // Initialize the calendar view while leaving the input empty.
     if (!this._modelValue && !this._displayText) {
       this.updateView(this.startOfDay(new Date()));
     }
@@ -291,6 +334,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   }
 
   writeValue(value: Date | string | null): void {
+    this.writtenString = typeof value === 'string' && value.trim() ? value.trim() : null;
     let date: Date | null = null;
 
     if (value instanceof Date) {
@@ -299,6 +343,15 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
       date = this.parseInputDate(value.trim());
     } else {
       date = null;
+    }
+
+    if (this.isEditing) {
+      const same =
+        (!date && !this._modelValue) ||
+        (!!date && !!this._modelValue && this.isSameDate(date, this._modelValue));
+      if (same) return;
+      this.pendingExternalValue = date;
+      return;
     }
 
     this._modelValue = date;
@@ -365,6 +418,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   }
 
   private handleInput(raw: string): void {
+    this.writtenString = null;
     this._displayText = raw;
 
     const parsed = this.parseInputDate(raw);
@@ -380,7 +434,14 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   }
 
   private handleBlur(): void {
+    this.isEditing = false;
+    if (this.pendingExternalValue !== undefined) {
+      const next = this.pendingExternalValue;
+      this.pendingExternalValue = undefined;
+      this.writeValue(next);
+    }
     this.onTouched();
+    this.cdr.markForCheck();
   }
 
   toggleOpen(): void {
@@ -714,8 +775,11 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     if (this.disabled) return;
 
     const selected = this.startOfDay(day.date);
+    this.writtenString = null;
     this._modelValue = selected;
     this._displayText = this.formatDate(selected);
+    this.pendingExternalValue = undefined;
+    this.isEditing = false;
 
     this.onChange(selected);
     this.onTouched();
@@ -723,6 +787,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
 
     this.updateView(selected);
     this.closePanel();
+    this.getInnerInput()?.blur();
     this.cdr.markForCheck();
   }
 
@@ -857,7 +922,9 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   }
 
   private startOfDay(date: Date): Date {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const result = new Date(date);
+    result.setHours(0, 0, 0, 0);
+    return result;
   }
 
   private isSameDate(a: Date, b: Date): boolean {
@@ -869,41 +936,20 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   }
 
   private parseInputDate(value: string): Date | null {
-    if (!value) return null;
-
-    const fmt = this.format || 'yyyy-MM-dd';
-    const parts = value.match(/\d+/g);
-    if (!parts || parts.length < 3) return null;
-
-    const tokens = fmt.match(/(yyyy|MM|dd)/g) || ['yyyy', 'MM', 'dd'];
-
-    let year: number | undefined;
-    let month: number | undefined;
-    let day: number | undefined;
-
-    tokens.forEach((t, idx) => {
-      const p = parts[idx];
-      if (!p) return;
-      const n = Number(p);
-
-      if (t === 'yyyy') year = n;
-      else if (t === 'MM') month = n;
-      else if (t === 'dd') day = n;
-    });
-
-    if (!year || !month || !day) return null;
-
-    const date = new Date(year, month - 1, day);
-    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
-      return null;
-    }
-
-    return this.startOfDay(date);
+    return parseDateByFormat(value, this.format);
   }
 
-  private formatDate(date: Date): string {
-    const fmt = this.format || 'yyyy-MM-dd';
+  private formatDate(date: Date, format = this.format): string {
+    const fmt = format || 'dd/MM/yyyy';
     return formatDate(date, fmt, 'en');
+  }
+
+  @HostListener('focusin', ['$event'])
+  onHostFocusIn(event: FocusEvent): void {
+    if (event.target !== this.getInnerInput() || this.disabled) return;
+    this.isEditing = true;
+    if (this._modelValue) this._displayText = this.formatDate(this._modelValue);
+    this.cdr.markForCheck();
   }
 
   @HostListener('input', ['$event'])
@@ -917,8 +963,9 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     this.handleInput(dateInput.value);
   }
 
-  @HostListener('focusout')
-  onHostFocusOut(): void {
+  @HostListener('focusout', ['$event'])
+  onHostFocusOut(event: FocusEvent): void {
+    if (event.target !== this.getInnerInput()) return;
     this.handleBlur();
   }
 
@@ -950,10 +997,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
   }
 }
 
-/**
- * IFCDatepicker
- * Version: 1.5.4 (smart wrapper)
- */
+/** Form control wrapper for the datepicker. */
 
 @Component({
   selector: 'i-fc-datepicker',
@@ -971,6 +1015,7 @@ export class IDatepicker implements ControlValueAccessor, OnInit, OnDestroy {
     <i-datepicker
       #inner
       [disabled]="isDisabled"
+      [displayFormat]="displayFormat"
       [format]="format"
       [invalid]="controlInvalid"
       [maxYear]="maxYear"
@@ -996,7 +1041,17 @@ export class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDes
 
   @Input() label = '';
   @Input() placeholder = '';
-  @Input() format = 'dd/MM/yyyy';
+  @Input()
+  get format(): string {
+    return this._format;
+  }
+  set format(value: string) {
+    this._format = value || 'dd/MM/yyyy';
+    if (this.externalStringValue !== null) {
+      this.applyExternalValue(parseDateByFormat(this.externalStringValue, this._format));
+    }
+  }
+  @Input() displayFormat?: string;
   @Input() panelPosition: IDatepickerPanelPosition = 'bottom left';
   @Input() minYear: number | string | null = null;
   @Input() maxYear: number | string | null = null;
@@ -1008,11 +1063,14 @@ export class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDes
   get value(): Date | null {
     return this._value;
   }
-  set value(v: Date | null) {
-    this.applyExternalValue(v ?? null);
+  set value(v: Date | string | null) {
+    this.externalStringValue = typeof v === 'string' ? v : null;
+    this.applyExternalValue(this.coerceValue(v));
   }
 
+  private _format = 'dd/MM/yyyy';
   private _value: Date | null = null;
+  private externalStringValue: string | null = null;
 
   forwardedValue: Date | null = null;
 
@@ -1048,16 +1106,17 @@ export class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDes
     this.submitSub?.unsubscribe?.();
   }
 
-  writeValue(v: any): void {
-    let next: Date | null = null;
+  writeValue(v: Date | string | null): void {
+    this.value = v;
+  }
 
-    if (v instanceof Date) next = v;
-    else if (typeof v === 'string' && v.trim()) {
-      const parsed = new Date(v);
-      next = isNaN(parsed.getTime()) ? null : parsed;
-    } else next = null;
-
-    this.applyExternalValue(next);
+  private coerceValue(value: Date | string | null): Date | null {
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value;
+    }
+    return typeof value === 'string'
+      ? parseDateByFormat(value.trim(), this.format)
+      : null;
   }
 
   registerOnChange(fn: any): void {
@@ -1078,7 +1137,7 @@ export class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDes
     this.lastEmittedKey = this.dateKey(this._value);
 
     this.onChange(this._value);
-    this.onTouched();
+    if (date) this.onTouched();
   }
 
   private applyExternalValue(next: Date | null): void {
@@ -1155,7 +1214,10 @@ export class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDes
 
   onInnerFocusOut(): void {
     queueMicrotask(() => {
-      if (!this.isInnerInputFocused()) this.tryFlushPendingExternal();
+      if (!this.isInnerInputFocused()) {
+        this.onTouched();
+        this.tryFlushPendingExternal();
+      }
     });
   }
 
@@ -1163,13 +1225,10 @@ export class IFCDatepicker implements ControlValueAccessor, AfterViewInit, OnDes
     const c = this.ngControl?.control;
     if (!c) return false;
 
-    // Show error when: submitted, OR user has interacted (touched/dirty).
-    // Previously only checked submitted when formDir is present, so
-    // markAllAsTouched() had no effect on error visibility.
     if (this.formDir) {
-      return c.invalid && (this.formDir.submitted || c.touched || c.dirty);
+      return c.invalid && (this.formDir.submitted || c.touched);
     }
-    return c.invalid && (c.dirty || c.touched);
+    return c.invalid && c.touched;
   }
 
   get required(): boolean {
