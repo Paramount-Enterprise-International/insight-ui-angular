@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { toSessionExpiredReason } from './session-expired';
 
 import { ISessionExpiredService } from './session-expired';
 
@@ -61,5 +62,11 @@ describe('ISessionExpiredService', () => {
 
     expect(service.visible()).toBe(false);
     expect(service.reason()).toBe('TOKEN_EXPIRED');
+  });
+});
+
+describe('impersonation expiry reason', () => {
+  it('maps impersonation invalid to revoked', () => {
+    expect(toSessionExpiredReason('IMPERSONATION_SESSION_INVALID')).toBe('SESSION_REVOKED');
   });
 });

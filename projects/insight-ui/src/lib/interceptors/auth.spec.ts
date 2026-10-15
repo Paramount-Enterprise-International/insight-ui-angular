@@ -5,8 +5,8 @@ import { Subject, throwError } from 'rxjs';
 import { IApiService } from '../api/api';
 import { I_AUTH_CONFIG, type IAuthConfig } from '../auth/auth-config';
 import { ICsrfService } from '../csrf/csrf';
-import { ISessionService } from '../session/session';
 import { ISessionExpiredService } from '../session-expired/session-expired';
+import { ISessionService } from '../session/session';
 import { authInterceptor } from './auth';
 
 describe('auth refresh retry contracts', () => {
@@ -51,6 +51,34 @@ describe('auth refresh retry contracts', () => {
   afterEach(() => {
     refreshed.complete();
     http.verify();
+  });
+
+  it('expires invalid impersonation immediately without refresh', () => {
+    api.get('/item').subscribe({ error: () => undefined });
+    http
+      .expectOne(config.api.identity + '/item')
+      .flush(
+        { errorCode: 'IMPERSONATION_SESSION_INVALID', message: 'Ended' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+    expect(session.refreshToken).not.toHaveBeenCalled();
+    expect(session.clearSession).toHaveBeenCalledTimes(1);
+    expect(expired.show).toHaveBeenCalledWith(
+      jasmine.any(String),
+      'SESSION_REVOKED',
+      'IMPERSONATION_SESSION_INVALID',
+      undefined,
+      'Ended',
+      jasmine.anything(),
+    );
+  });
+  it('does not refresh End Session and retains a retryable failure', () => {
+    api.post('/auth/impersonation/end', {}).subscribe({ error: () => undefined });
+    http
+      .expectOne(config.api.identity + '/auth/impersonation/end')
+      .flush({ message: 'Unavailable' }, { status: 503, statusText: 'Unavailable' });
+    expect(session.refreshToken).not.toHaveBeenCalled();
+    expect(session.clearSession).not.toHaveBeenCalled();
   });
 
   it('replaces Authorization and CSRF once, without treating retry business errors as refresh failure', () => {

@@ -1,11 +1,21 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, Injector, signal } from '@angular/core';
-import { lastValueFrom, Observable, of, throwError, timeout } from 'rxjs';
+import { defer, finalize, lastValueFrom, Observable, of, throwError, timeout } from 'rxjs';
 import { catchError, map, shareReplay, switchMap, tap } from 'rxjs/operators';
+import { IApiService } from '../api/api';
+import { getAuthEndpointPath, requireIdentityHost } from '../auth/auth-config';
+import {
+  type IEndImpersonationResult,
+  type IImpersonationActor,
+  impersonationContextKey,
+  isImpersonationCsrfError,
+  readImpersonationActor,
+} from '../impersonation/impersonation-utils';
+import { IStorageService } from '../storage/storage';
 
-import { I_AUTH_CONFIG } from '../auth/auth-config';
-import { IAuthService, IAuthUser } from '../auth/auth';
 import { normalizeApiError } from '../api/api-error';
+import { IAuthService, IAuthUser } from '../auth/auth';
+import { I_AUTH_CONFIG } from '../auth/auth-config';
 import { ICsrfService } from '../csrf/csrf';
 import {
   extractProblemDetailsErrorCode,
@@ -111,6 +121,55 @@ export class ISessionService {
    * established (`setAccessToken`/`setSession`) or `tryRestoreSession()` settles.
    */
   readonly initializing = signal(true);
+  readonly impersonationContext = signal('');
+  private endingImpersonation: Observable<IEndImpersonationResult> | null = null;
+
+  actor(): IImpersonationActor | null {
+    this.impersonationContext();
+    return readImpersonationActor(this.accessToken);
+  }
+  isImpersonating(): boolean {
+    return this.actor() !== null;
+  }
+
+  endImpersonation(): Observable<IEndImpersonationResult> {
+    if (this.endingImpersonation) return this.endingImpersonation;
+    const generation = this.sessionGeneration;
+    const api = this.injector.get(IApiService);
+    const request = (): Observable<IEndImpersonationResult | null> => {
+      if (generation !== this.sessionGeneration)
+        return throwError(() => new Error('Session changed while ending impersonation.'));
+      return api.post<IEndImpersonationResult | null>(
+        getAuthEndpointPath(this.config, 'impersonationEnd'),
+        {},
+        { apiUrl: requireIdentityHost(this.config) },
+      );
+    };
+    const result = defer(() =>
+      this.csrf.getToken() ? of(undefined) : this.csrf.ensureToken(),
+    ).pipe(
+      switchMap(() => defer(request)),
+      catchError((error: unknown) =>
+        isImpersonationCsrfError(error)
+          ? this.csrf.ensureToken().pipe(switchMap(() => defer(request)))
+          : throwError(() => error),
+      ),
+      map((response) => {
+        if (generation !== this.sessionGeneration)
+          throw new Error('Session changed while ending impersonation.');
+        this.clearSession();
+        sessionStorage.removeItem('iam.session.active');
+        this.injector.get(IStorageService).clear();
+        return response ?? {};
+      }),
+      finalize(() => {
+        if (this.endingImpersonation === result) this.endingImpersonation = null;
+      }),
+      shareReplay({ bufferSize: 1, refCount: true }),
+    );
+    this.endingImpersonation = result;
+    return result;
+  }
 
   // Single-flight refresh: one in-flight /auth/refresh shared by all callers,
   // retained until it completes/errors so a cancelled caller cannot abort it.
@@ -209,9 +268,13 @@ export class ISessionService {
     if (!this.accessToken) {
       return [];
     }
-    const decoded = decodeJwtPayload(this.accessToken) as { realm_access?: { roles?: unknown } } | null;
+    const decoded = decodeJwtPayload(this.accessToken) as {
+      realm_access?: { roles?: unknown };
+    } | null;
     const roles = decoded?.realm_access?.roles;
-    return Array.isArray(roles) ? roles.filter((role): role is string => typeof role === 'string') : [];
+    return Array.isArray(roles)
+      ? roles.filter((role): role is string => typeof role === 'string')
+      : [];
   }
 
   /** True if the current access token claims ANY of the given roles. */
@@ -230,9 +293,18 @@ export class ISessionService {
    */
   setAccessToken(accessToken: string, expiresIn?: number): void {
     this.sessionGeneration++;
+    this.endingImpersonation = null;
+    if (
+      this.accessToken &&
+      impersonationContextKey(this.accessToken) !== impersonationContextKey(accessToken)
+    )
+      this.injector.get(IUserMenuStore, null, { optional: true })?.reset();
     this.accessToken = accessToken;
+    this.impersonationContext.set(impersonationContextKey(accessToken));
     const effectiveExpiresIn =
-      expiresIn ?? this.readExpiresInFromToken(accessToken) ?? this.config.tokenLifespan.accessTokenSeconds;
+      expiresIn ??
+      this.readExpiresInFromToken(accessToken) ??
+      this.config.tokenLifespan.accessTokenSeconds;
     // 30-second buffer to avoid edge cases, matches iam-web's convention.
     this.expiresAt = Date.now() + (effectiveExpiresIn - 30) * 1000;
     if (this.sessionStartedAt === null) {
@@ -248,11 +320,17 @@ export class ISessionService {
    * start from a refresh-after-revocation.
    */
   setSession(accessToken: string, expiresIn: number, user: IAuthUser, refreshToken?: string): void {
-    if (this.currentUser?.sub && this.currentUser.sub !== user.sub) {
+    if (
+      (this.currentUser?.sub && this.currentUser.sub !== user.sub) ||
+      (this.accessToken &&
+        impersonationContextKey(this.accessToken) !== impersonationContextKey(accessToken))
+    ) {
       this.injector.get(IUserMenuStore, null, { optional: true })?.reset();
     }
     this.sessionGeneration++;
+    this.endingImpersonation = null;
     this.accessToken = accessToken;
+    this.impersonationContext.set(impersonationContextKey(accessToken));
     if (refreshToken) {
       this._refreshToken = refreshToken;
     }
@@ -270,7 +348,9 @@ export class ISessionService {
 
   clearSession(): void {
     this.sessionGeneration++;
+    this.endingImpersonation = null;
     this.accessToken = null;
+    this.impersonationContext.set('');
     this._refreshToken = null;
     this.expiresAt = null;
     this.currentUser = null;
@@ -327,7 +407,8 @@ export class ISessionService {
       const source = this.authService.refresh().pipe(
         timeout({
           each: REFRESH_TIMEOUT_MS,
-          with: () => throwError(() => new Error(`Refresh request timed out after ${REFRESH_TIMEOUT_MS}ms`)),
+          with: () =>
+            throwError(() => new Error(`Refresh request timed out after ${REFRESH_TIMEOUT_MS}ms`)),
         }),
         tap((res) => {
           if (generation !== this.sessionGeneration) {
@@ -406,7 +487,8 @@ export class ISessionService {
 
     const pathname = window.location.pathname ?? '';
     const isSigninPage = /^\/auth\/signin$|^\/signin$/i.test(pathname);
-    const isOtherAuthPage = /^\/auth(\/|$)|^\/forgot-password|^\/reset-password/i.test(pathname) && !isSigninPage;
+    const isOtherAuthPage =
+      /^\/auth(\/|$)|^\/forgot-password|^\/reset-password/i.test(pathname) && !isSigninPage;
 
     if (isOtherAuthPage) {
       this.initializing.set(false);

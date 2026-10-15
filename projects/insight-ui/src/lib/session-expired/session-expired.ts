@@ -35,12 +35,15 @@ export const extractProblemDetailsErrorCode = (error: unknown): string | undefin
 };
 
 /** Maps current backend and legacy error codes to the session-expired UI states. */
-export const toSessionExpiredReason = (errorCode: string | undefined): ISessionExpiredReason | undefined => {
+export const toSessionExpiredReason = (
+  errorCode: string | undefined,
+): ISessionExpiredReason | undefined => {
   switch (errorCode) {
     case 'AUTH_TOKEN_EXPIRED':
     case 'TOKEN_EXPIRED':
     case 'AUTH_NO_SESSION':
       return 'TOKEN_EXPIRED';
+    case 'IMPERSONATION_SESSION_INVALID':
     case 'AUTH_SESSION_REVOKED':
     case 'SESSION_REVOKED':
       return 'SESSION_REVOKED';
@@ -63,7 +66,10 @@ export const isSessionExpiredError = (error: unknown): boolean => {
       return true;
     }
   }
-  if ((error as { status?: number } | null)?.status === 401 || (error as { status?: number } | null)?.status === 498) {
+  if (
+    (error as { status?: number } | null)?.status === 401 ||
+    (error as { status?: number } | null)?.status === 498
+  ) {
     return true;
   }
   return toSessionExpiredReason(extractProblemDetailsErrorCode(error)) !== undefined;
