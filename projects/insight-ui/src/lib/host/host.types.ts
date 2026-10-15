@@ -3,6 +3,12 @@ import type { Route } from '@angular/router';
 export type IRoute = Omit<Route, 'data' | 'children'> & {
   data: {
     title: string;
+    /** false suppresses this breadcrumb; otherwise defaults to title. */
+    breadcrumb?: string | false;
+    /** Host mount: descendants contribute the remote portion. */
+    remoteMount?: boolean;
+    /** Explicit host labels collected from the runtime route hierarchy. */
+    hostBreadcrumbs?: IBreadcrumbItem[];
     [key: string]: any;
   };
   children?: IRoutes;

@@ -1,7 +1,9 @@
 import { APP_BASE_HREF, AsyncPipe } from '@angular/common';
 import { Component, effect, EventEmitter, inject, Output, signal } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { filter, map, Observable, shareReplay, startWith } from 'rxjs';
+import { combineLatest, filter, map, Observable, shareReplay, startWith } from 'rxjs';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { findBreadcrumbMenuChain, getMenuLabel, getMenuRoute } from '../menu/menu.utils';
 import { ISessionService } from '../../session/session';
 import { IUserMenuStore } from '../../store/user-menu';
 import { type IBreadcrumbItem } from '../host.types';
@@ -21,13 +23,15 @@ import { IHTitleBreadcrumbService } from '../shell/title-breadcrumb.service';
       </a>
 
       <!-- title override reacts immediately -->
-      <h1>{{ shell.titleOverride() || (pageTitle$ | async) || 'Insight' }}</h1>
+      <h1>
+        {{ shell.titleOverride() || shell.remoteTitle() || (pageTitle$ | async) || 'Insight' }}
+      </h1>
     </div>
 
     <div class="ih-content-breadcrumbs">
       @let override = shell.breadcrumbsOverride();
 
-      @if (override && override.length > 0) {
+      @if (override !== null) {
         @for (b of override; track $index; let first = $first; let last = $last) {
           @if (!last) {
             @if (!first) {
@@ -56,25 +60,26 @@ import { IHTitleBreadcrumbService } from '../shell/title-breadcrumb.service';
               {{ b.label }}
             </span>
           }
+        } @empty {
+          <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
         }
       } @else {
         <!-- Fallback to route-based breadcrumbs (Angular routes) -->
         @if (breadcrumb$ | async; as breadcrumbs) {
           @if (breadcrumbs.length > 0) {
-            @for (
-              breadcrumb of breadcrumbs;
-              track breadcrumb.url;
-              let first = $first;
-              let last = $last
-            ) {
+            @for (breadcrumb of breadcrumbs; track $index; let first = $first; let last = $last) {
               @if (!last) {
                 @if (!first) {
-                  <a
-                    class="ih-content-breadcrumb ih-content-breadcrumb__link"
-                    [routerLink]="breadcrumb.url"
-                  >
-                    {{ breadcrumb.label }}
-                  </a>
+                  @if (breadcrumb.url) {
+                    <a
+                      class="ih-content-breadcrumb ih-content-breadcrumb__link"
+                      [routerLink]="overrideRouterLink(breadcrumb.url)"
+                      (click)="onOverrideBreadcrumbClick($event)"
+                      >{{ breadcrumb.label }}</a
+                    >
+                  } @else {
+                    <span class="ih-content-breadcrumb">{{ breadcrumb.label }}</span>
+                  }
                 } @else {
                   <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
                     {{ breadcrumb.label }}
@@ -133,69 +138,66 @@ export class IHContent {
     }
   });
 
-  /** route-based breadcrumbs */
-  readonly breadcrumb$: Observable<IBreadcrumbItem[]> = this.router.events.pipe(
+  private readonly navigation$ = this.router.events.pipe(
     filter((e) => e instanceof NavigationEnd),
     startWith(null),
-    map(() => this.buildBreadcrumb(this.activatedRoute.root)),
-    shareReplay(1),
   );
 
-  /** last breadcrumb label = route-based page title */
-  readonly pageTitle$: Observable<string | null> = this.breadcrumb$.pipe(
-    map((breadcrumbs) =>
-      breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null,
-    ),
-    shareReplay(1),
+  /** Menu loading and React contributions also update the visible trail. */
+  readonly breadcrumb$: Observable<IBreadcrumbItem[]> = combineLatest([
+    this.navigation$,
+    this.userMenuStore.menus$,
+    toObservable(this.shell.remoteBreadcrumbs),
+  ]).pipe(
+    map(([, menus, remote]) => {
+      const state = this.routeBreadcrumbState();
+      const chain = state.mount ? findBreadcrumbMenuChain(menus, state.mount.url) : [];
+      const host = state.mount?.hostBreadcrumbs?.length
+        ? state.mount.hostBreadcrumbs
+        : chain.length
+          ? chain
+              .map((node) => ({
+                label: getMenuLabel(node),
+                url: getMenuRoute(node) ?? undefined,
+              }))
+              .filter((item) => !!item.label)
+          : state.host;
+      return [...host, ...state.remote, ...remote];
+    }),
+    shareReplay({ bufferSize: 1, refCount: true }),
   );
 
-  private buildBreadcrumb(
-    route: ActivatedRoute,
-    url = '',
-    breadcrumbs: IBreadcrumbItem[] = [],
-  ): IBreadcrumbItem[] {
-    const routeConfig = route.routeConfig;
+  /** Heading comes from route titles independently of breadcrumb labels. */
+  readonly pageTitle$ = this.navigation$.pipe(
+    map(() => this.routeBreadcrumbState().title),
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
 
-    if (routeConfig) {
-      const path = routeConfig.path ?? '';
-
-      // Resolve path segments, including route params
-      const segments = path
-        .split('/')
-        .filter(Boolean)
-        .map((segment) => {
-          if (segment.startsWith(':')) {
-            const paramName = segment.substring(1);
-            return route.snapshot.params[paramName] ?? segment;
-          }
-
-          return segment;
-        });
-
-      const nextUrlPart = segments.join('/');
-
-      // Always advance the URL, even if we don't render a breadcrumb for this level
-      const nextUrl = nextUrlPart.length > 0 ? `${url}/${nextUrlPart}` : url || '/';
-
-      // Use route config data, not snapshot data, to avoid inherited data
-      const data = routeConfig.data as { title?: string } | undefined;
-      const label = data?.title;
-
-      if (label) {
-        breadcrumbs.push({
-          label,
-          url: nextUrl,
-        });
-      }
-
-      url = nextUrl;
+  private routeBreadcrumbState(): {
+    host: IBreadcrumbItem[];
+    remote: IBreadcrumbItem[];
+    title: string | null;
+    mount?: { url: string; hostBreadcrumbs?: IBreadcrumbItem[] };
+  } {
+    const state: ReturnType<IHContent['routeBreadcrumbState']> = {
+      host: [],
+      remote: [],
+      title: null,
+    };
+    let route: ActivatedRoute | null = this.activatedRoute.root;
+    let url = '';
+    while (route) {
+      const segments = route.snapshot.url.map((segment) => segment.toString()).join('/');
+      if (segments) url += '/' + segments;
+      const data = route.routeConfig?.data;
+      if (data?.['title']) state.title = data['title'];
+      const label = data?.['breadcrumb'] ?? data?.['title'];
+      if (label) (state.mount ? state.remote : state.host).push({ label, url: url || '/' });
+      if (data?.['remoteMount'])
+        state.mount = { url: url || '/', hostBreadcrumbs: data['hostBreadcrumbs'] };
+      route = route.children.find((child) => child.outlet === 'primary') ?? null;
     }
-
-    if (route.firstChild) {
-      return this.buildBreadcrumb(route.firstChild, url, breadcrumbs);
-    }
-
-    return breadcrumbs;
+    return state;
   }
 
   toggleSidebar(): void {
