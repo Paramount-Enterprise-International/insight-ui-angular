@@ -123,7 +123,15 @@ export class ISectionTabHeader {
   `,
 })
 export class ISectionTabContent {
-  @Input('class') className = '';
+  @Input() class = '';
+
+  get className(): string {
+    return this.class;
+  }
+
+  set className(value: string) {
+    this.class = value;
+  }
 
   @ViewChild('tpl', { static: true }) tpl!: TemplateRef<unknown>;
 }
@@ -265,9 +273,9 @@ export class ISectionTab implements AfterContentInit {
 
     <div
       class="i-section-tabs-content"
-      [ngClass]="activeTab?.contentCmp?.className"
       [class.scroll]="isFixedHeight"
       [class.scroll-y]="isFixedHeight"
+      [ngClass]="activeTab?.contentCmp?.className"
       [style.height.px]="contentHeightPx"
     >
       @if (activeTab; as tab) {

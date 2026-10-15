@@ -20,9 +20,9 @@ describe('provideIAuth', () => {
   });
 
   it('fails fast when signinUrl is missing', () => {
-    expect(() =>
-      provideIAuth({ api: { identity: 'https://app.example.com/api' } }),
-    ).toThrowError(/signinUrl/);
+    expect(() => provideIAuth({ api: { identity: 'https://app.example.com/api' } })).toThrowError(
+      /signinUrl/,
+    );
   });
 
   it('fails fast when api.identity is missing', () => {
@@ -46,6 +46,7 @@ describe('provideIAuth', () => {
     expect(config.tokenLifespan).toEqual(defaultEnvironment.tokenLifespan);
     expect(config.csrfTokenMaxAgeSeconds).toBe(defaultEnvironment.csrfTokenMaxAgeSeconds);
     expect(config.endpoints?.refresh).toBe('/auth/refresh');
+    expect(config.endpoints?.impersonationEnd).toBe('/auth/impersonation/end');
   });
 
   it('deep-merges a partial `api` override, keeping the other api defaults', () => {
@@ -84,9 +85,7 @@ describe('provideIAuth', () => {
 
   it('deep-merges a partial `tokenLifespan` override, keeping the other lifespan defaults', () => {
     TestBed.configureTestingModule({
-      providers: [
-        provideIAuth({ ...VALID_OVERRIDES, tokenLifespan: { accessTokenSeconds: 900 } }),
-      ],
+      providers: [provideIAuth({ ...VALID_OVERRIDES, tokenLifespan: { accessTokenSeconds: 900 } })],
     });
 
     const config = TestBed.inject(I_AUTH_CONFIG);
