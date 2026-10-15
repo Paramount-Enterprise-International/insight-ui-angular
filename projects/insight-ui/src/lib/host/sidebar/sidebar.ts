@@ -70,7 +70,7 @@ import {
 
           <span class="user-info">
             <small class="text-subtle">{{ user.employeeCode }}</small>
-            <h6>{{ user.fullName }}</h6>
+            <h6>{{ impersonating ? 'Acting As: ' : '' }}{{ user.fullName }}</h6>
           </span>
 
           <i
@@ -225,6 +225,7 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   @Input() user$!: Observable<IUser>;
   @Input() menusInput$!: Observable<IMenu[]>;
   @Input() visible = true;
+  @Input() impersonating = false;
   @Input() footerText = 'Insight Local';
   /** When true, leaf items render a pin/star toggle and the Favorites section is shown. */
   @Input() favoriteMode = false;

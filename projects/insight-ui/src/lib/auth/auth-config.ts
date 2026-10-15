@@ -13,7 +13,7 @@ export type ITokenLifespan = {
   accessTokenSeconds: number;
   refreshTokenSeconds: number;
   ssoSessionMaxSeconds: number;
-}
+};
 
 /**
  * Relative endpoint paths served by the configured identity host (`api.identity`).
@@ -28,6 +28,7 @@ export type ITokenLifespan = {
  * by identity-owner apps only (e.g. iam-web) and stay fixed.
  */
 export type IAuthEndpoints = {
+  impersonationEnd?: string;
   /** CSRF bootstrap: `GET {identity}{csrf}` returns `{ csrfToken }` and sets the CSRF cookie. */
   csrf?: string;
   /** Mode-2 username/password login: `POST {identity}{login}` (identity-owner apps only). */
@@ -44,6 +45,7 @@ export type IAuthEndpoints = {
 export function getDefaultIAuthEndpoints(): IAuthEndpoints {
   return {
     csrf: '/auth/csrf',
+    impersonationEnd: '/auth/impersonation/end',
     login: '/auth/login',
     refresh: '/auth/refresh',
     logout: '/auth/logout',
@@ -59,6 +61,7 @@ export function getDefaultIAuthEndpoints(): IAuthEndpoints {
  * `app.config.ts` / bootstrap `ApplicationConfig`.
  */
 export type IAuthConfig = {
+  impersonation?: { source: 'iam-user' | 'bff'; informationText?: string };
   /**
    * API base URLs grouped by backend service. `identity` is REQUIRED and must
    * point at this app's OWN auth backend (typically a same-origin BFF that
@@ -135,7 +138,7 @@ export type IAuthConfig = {
   errorCatalogResolver?: IApiErrorCatalogResolver;
   /** Optional application-owned backend error display formatter. */
   errorDisplayFormatter?: IApiErrorDisplayFormatter;
-}
+};
 
 /**
  * Overrides accepted by `provideIAuth()`. Every field is optional and
@@ -204,7 +207,7 @@ export const I_AUTH_CONFIG = new InjectionToken<IAuthConfig>('I_AUTH_CONFIG', {
 export function requireIdentityHost(config: IAuthConfig): string {
   if (!config.api.identity) {
     throw new Error(
-      '[@insight/ui] api.identity is not configured. Point it at this app\'s own auth host/BFF ' +
+      "[@insight/ui] api.identity is not configured. Point it at this app's own auth host/BFF " +
         '(e.g. provideIAuth({ api: { identity: "https://<your-app>/api" }, signinUrl: "..." })).',
     );
   }
@@ -215,10 +218,7 @@ export function requireIdentityHost(config: IAuthConfig): string {
  * Relative path of an identity endpoint for the current config. Falls back to
  * `getDefaultIAuthEndpoints()` when the consumer did not override it.
  */
-export function getAuthEndpointPath(
-  config: IAuthConfig,
-  key: keyof IAuthEndpoints,
-): string {
+export function getAuthEndpointPath(config: IAuthConfig, key: keyof IAuthEndpoints): string {
   return config.endpoints?.[key] ?? getDefaultIAuthEndpoints()[key] ?? '';
 }
 
@@ -226,10 +226,7 @@ export function getAuthEndpointPath(
  * Absolute URL of an identity endpoint: `{api.identity}{path}`. Throws a
  * descriptive error when the identity host is not configured.
  */
-export function getAuthEndpointUrl(
-  config: IAuthConfig,
-  key: keyof IAuthEndpoints,
-): string {
+export function getAuthEndpointUrl(config: IAuthConfig, key: keyof IAuthEndpoints): string {
   return `${requireIdentityHost(config)}${getAuthEndpointPath(config, key)}`;
 }
 
@@ -242,13 +239,13 @@ export function getAuthEndpointUrl(
 export function validateIAuthConfig(config: IAuthConfig): void {
   if (!config.api.identity) {
     throw new Error(
-      '[@insight/ui] provideIAuth() requires api.identity - the base URL of this app\'s own ' +
+      "[@insight/ui] provideIAuth() requires api.identity - the base URL of this app's own " +
         'auth host/BFF. The library no longer defaults to a shared identity provider.',
     );
   }
   if (!config.signinUrl) {
     throw new Error(
-      '[@insight/ui] provideIAuth() requires signinUrl - the full URL of this app\'s ' +
+      "[@insight/ui] provideIAuth() requires signinUrl - the full URL of this app's " +
         'sign-in page / BFF login route.',
     );
   }

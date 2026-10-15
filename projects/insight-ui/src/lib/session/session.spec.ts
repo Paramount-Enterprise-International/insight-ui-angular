@@ -1,7 +1,8 @@
 import { fakeAsync, flushMicrotasks, TestBed, tick } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
+import { IApiService } from '../api/api';
+import { IStorageService } from '../storage/storage';
 
-import { ISessionService } from './session';
 import { IAuthService, IRefreshResponse } from '../auth/auth';
 import { I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
 import { ICsrfService } from '../csrf/csrf';
@@ -9,12 +10,17 @@ import { ISessionExpiredService } from '../session-expired/session-expired';
 import { IUserMenuStore } from '../store/user-menu';
 import { ICurrentUserService } from '../user/current-user';
 import { IUserMenuService } from '../user/user-menu';
+import { ISessionService } from './session';
 
 const testConfig: IAuthConfig = {
   api: { identity: 'http://localhost:3001/api' },
   signinUrl: 'http://localhost:4200/auth/signin',
   allowedReturnOrigins: ['http://localhost:4207'],
-  tokenLifespan: { accessTokenSeconds: 3600, refreshTokenSeconds: 7200, ssoSessionMaxSeconds: 54000 },
+  tokenLifespan: {
+    accessTokenSeconds: 3600,
+    refreshTokenSeconds: 7200,
+    ssoSessionMaxSeconds: 54000,
+  },
   csrfTokenMaxAgeSeconds: 7170,
 };
 
@@ -32,13 +38,18 @@ describe('ISessionService', () => {
 
   beforeEach(() => {
     authSpy = jasmine.createSpyObj<IAuthService>('IAuthService', ['refresh', 'logout']);
-    sessionExpiredSpy = jasmine.createSpyObj<ISessionExpiredService>('ISessionExpiredService', ['show', 'hide']);
+    sessionExpiredSpy = jasmine.createSpyObj<ISessionExpiredService>('ISessionExpiredService', [
+      'show',
+      'hide',
+    ]);
     TestBed.configureTestingModule({
       providers: [
         { provide: IAuthService, useValue: authSpy },
         {
           provide: ICsrfService,
-          useValue: { ensureToken: jasmine.createSpy('ensureToken').and.returnValue(of(undefined)) },
+          useValue: {
+            ensureToken: jasmine.createSpy('ensureToken').and.returnValue(of(undefined)),
+          },
         },
         {
           provide: ISessionExpiredService,
@@ -163,7 +174,9 @@ describe('ISessionService', () => {
   it('keeps initialization pending until the 30-second refresh deadline', fakeAsync(() => {
     authSpy.refresh.and.returnValue(new Subject<IRefreshResponse>());
     let settled = false;
-    void service.tryRestoreSession().then(() => { settled = true; });
+    void service.tryRestoreSession().then(() => {
+      settled = true;
+    });
 
     tick(10_000);
     flushMicrotasks();
@@ -202,18 +215,16 @@ describe('ISessionService', () => {
   it('tryRestoreSession() propagates the normalized backend message to session-expired state', async () => {
     sessionStorage.setItem('iam.session.active', 'true');
     authSpy.refresh.and.returnValue(
-      throwError(
-        () => ({
-          error: {
-            errorCode: 'AUTH_SESSION_REVOKED',
-            message: 'Your session was revoked by an administrator.',
-            revision: 6,
-            traceId: 'trace-restore',
-          },
-          status: 401,
-          message: 'HTTP transport message',
-        }),
-      ),
+      throwError(() => ({
+        error: {
+          errorCode: 'AUTH_SESSION_REVOKED',
+          message: 'Your session was revoked by an administrator.',
+          revision: 6,
+          traceId: 'trace-restore',
+        },
+        status: 401,
+        message: 'HTTP transport message',
+      })),
     );
     authSpy.logout.and.returnValue(of(undefined));
 
@@ -240,5 +251,75 @@ describe('ISessionService', () => {
       expect(store.reset).toHaveBeenCalled();
       done();
     });
+  });
+});
+
+describe('ISessionService impersonation', () => {
+  let service: ISessionService;
+  let api: jasmine.SpyObj<IApiService>;
+  let csrf: jasmine.SpyObj<ICsrfService>;
+  let store: { reset: jasmine.Spy };
+  beforeEach(() => {
+    api = jasmine.createSpyObj<IApiService>('IApiService', ['post']);
+    csrf = jasmine.createSpyObj<ICsrfService>('ICsrfService', ['getToken', 'ensureToken']);
+    csrf.getToken.and.returnValue('csrf');
+    csrf.ensureToken.and.returnValue(of(undefined));
+    store = { reset: jasmine.createSpy('reset') };
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: I_AUTH_CONFIG, useValue: testConfig },
+        { provide: IAuthService, useValue: {} },
+        { provide: IApiService, useValue: api },
+        { provide: ICsrfService, useValue: csrf },
+        { provide: ISessionExpiredService, useValue: {} },
+        { provide: IUserMenuStore, useValue: store },
+        { provide: IStorageService, useValue: { clear: jasmine.createSpy('clear') } },
+      ],
+    });
+    service = TestBed.inject(ISessionService);
+    service.setAccessToken(makeJwt({ sub: 'b', act: { sub: 'a' }, sid: 'one' }));
+  });
+  it('detects the actor and clears local state after a successful 204', () => {
+    api.post.and.returnValue(of(null));
+    expect(service.actor()).toEqual({ sub: 'a' });
+    let result: unknown;
+    service.endImpersonation().subscribe((value) => (result = value));
+    expect(result).toEqual({});
+    expect(service.getAccessToken()).toBeNull();
+    expect(store.reset).toHaveBeenCalled();
+    expect(api.post).toHaveBeenCalledWith(
+      '/auth/impersonation/end',
+      {},
+      { apiUrl: testConfig.api.identity },
+    );
+  });
+  it('retries CSRF once and preserves the BFF redirect', () => {
+    api.post.and.returnValues(
+      throwError(() => ({ status: 403, message: 'CSRF validation failed' })),
+      of({ redirectTo: '/api/auth/login' }),
+    );
+    let result: unknown;
+    service.endImpersonation().subscribe((value) => (result = value));
+    expect(api.post).toHaveBeenCalledTimes(2);
+    expect(csrf.ensureToken).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ redirectTo: '/api/auth/login' });
+  });
+  it('retains the current session on 503', () => {
+    api.post.and.returnValue(throwError(() => ({ status: 503 })));
+    const token = service.getAccessToken();
+    service.endImpersonation().subscribe({ error: () => undefined });
+    expect(service.getAccessToken()).toBe(token);
+  });
+  it('deduplicates pending calls and cannot clear a replacement session', () => {
+    const response = new Subject<null>();
+    api.post.and.returnValue(response);
+    const first = service.endImpersonation();
+    expect(service.endImpersonation()).toBe(first);
+    first.subscribe({ error: () => undefined });
+    service.setAccessToken(makeJwt({ sub: 'c', sid: 'two' }));
+    const token = service.getAccessToken();
+    response.next(null);
+    response.complete();
+    expect(service.getAccessToken()).toBe(token);
   });
 });

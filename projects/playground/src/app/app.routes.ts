@@ -1,12 +1,14 @@
 import { Routes } from '@angular/router';
 import { Avatar } from './routes/avatar/avatar';
-import { Grid } from './routes/grid/grid';
-import { GridTree } from './routes/grid-tree/grid-tree';
 import { Dialog } from './routes/dialog/dialog';
-import { Select } from './routes/select/select';
+import { GridTree } from './routes/grid-tree/grid-tree';
+import { Grid } from './routes/grid/grid';
+import { Impersonation } from './routes/impersonation/impersonation';
 import { SectionTabs } from './routes/section-tabs/section-tabs';
+import { Select } from './routes/select/select';
 
 export const routes: Routes = [
+  { path: 'impersonation', component: Impersonation },
   {
     path: 'avatar',
     component: Avatar,

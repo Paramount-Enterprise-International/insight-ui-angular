@@ -1,0 +1,62 @@
+@if (visible()) {
+  <section
+    aria-label="Impersonation session"
+    class="i-banner i-banner-warning px-lg py-sm"
+    data-testid="impersonation-banner"
+  >
+    <div class="flex flex-wrap align-center gap-sm">
+      <div class="i-banner-details flex flex-wrap align-center gap-sm flex-fill text-md">
+        <span class="flex align-start gap-sm">
+          <span>
+            <strong>Signed In As:&nbsp;</strong>
+            <span data-testid="banner-actor">{{ actorName() }}</span>
+          </span>
+        </span>
+        <span>
+          <strong>Acting As:&nbsp;</strong>
+          <span data-testid="banner-subject">
+            {{ subjectName() }}
+            @if (occupation()) {
+              ({{ occupation() }})
+            }
+          </span>
+        </span>
+        <span>
+          <strong>Grant ends:&nbsp;</strong>
+          <span data-testid="banner-end-date">{{ endDateLabel() }}</span>
+        </span>
+        @if (countdown()) {
+          <span aria-live="off" role="timer">
+            <strong>Time remaining:&nbsp;</strong>
+            <span data-testid="banner-countdown">{{ countdown() }}</span>
+          </span>
+        }
+      </div>
+      <div class="flex flex-wrap align-center gap-sm shrink-0">
+        <i-button
+          ariaLabel="About impersonation sessions"
+          data-testid="impersonation-info"
+          icon="fa-solid fa-info"
+          size="sm"
+          variant="primary"
+          [disabled]="ending() || confirming()"
+          (onClick)="onShowInfo()"
+        />
+        <i-button
+          data-testid="end-impersonation"
+          icon="fa-solid fa-right-from-bracket"
+          size="sm"
+          variant="danger"
+          [disabled]="ending() || confirming()"
+          [loading]="ending()"
+          (onClick)="onEndSession()"
+        >
+          End Impersonate Session
+        </i-button>
+      </div>
+    </div>
+    @if (errorMessage()) {
+      <p class="mt-sm text-red-900 leading-snug" role="alert">{{ errorMessage() }}</p>
+    }
+  </section>
+}
