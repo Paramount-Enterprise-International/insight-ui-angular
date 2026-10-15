@@ -184,3 +184,33 @@ function normalizeMenu(menu: IMenu, level: number): IMenu {
 export function normalizeMenuTree(menus: IMenu[] | null | undefined): IMenu[] {
   return (menus ?? []).map((menu) => normalizeMenu(menu, 0));
 }
+
+/** Match the longest segment-aligned menu route and return its ancestors. */
+export function findBreadcrumbMenuChain(menus: IMenu[], path: string): IMenu[] {
+  const normalize = (value: string): string =>
+    ('/' + value.split(/[?#]/)[0].replace(/^\/-?(?:\/|$)/, ''))
+      .replace(/\/{2,}/g, '/')
+      .replace(/\/$/, '') || '/';
+  const current = normalize(path);
+  let best: IMenu[] = [];
+  let length = -1;
+  const visit = (nodes: IMenu[], ancestors: IMenu[]): void => {
+    for (const node of nodes) {
+      const chain = [...ancestors, node];
+      const route = getMenuRoute(node);
+      if (route && !isHttpRoute(route)) {
+        const candidate = normalize(route);
+        if (
+          (current === candidate || (candidate !== '/' && current.startsWith(candidate + '/'))) &&
+          candidate.length > length
+        ) {
+          best = chain;
+          length = candidate.length;
+        }
+      }
+      visit(getMenuChildren(node), chain);
+    }
+  };
+  visit(menus, []);
+  return best;
+}
