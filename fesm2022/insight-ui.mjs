@@ -1,10 +1,10 @@
-import * as i1$1 from '@angular/common';
-import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
 import * as i0 from '@angular/core';
 import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ContentChildren, ViewContainerRef, signal, computed, effect, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER, DestroyRef, untracked } from '@angular/core';
+import * as i1$1 from '@angular/common';
+import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { firstValueFrom, Subject, BehaviorSubject, map, throwError, from, defer, Observable, forkJoin, of, timeout, lastValueFrom, filter as filter$1, startWith, shareReplay as shareReplay$1, tap as tap$1, combineLatest, take as take$1, distinctUntilChanged } from 'rxjs';
+import { firstValueFrom, Subject, BehaviorSubject, map, throwError, from, defer, Observable, forkJoin, of, finalize as finalize$1, timeout, lastValueFrom, filter as filter$1, startWith, combineLatest, shareReplay as shareReplay$1, tap as tap$1, take as take$1, distinctUntilChanged, takeUntil, switchMap as switchMap$1, EMPTY, catchError as catchError$1 } from 'rxjs';
 import * as i1 from '@angular/forms';
 import { Validators, NG_VALUE_ACCESSOR, NgControl, FormGroupDirective, FormBuilder, FormControl, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { debounceTime, tap, map as map$1, catchError, switchMap, filter, take, finalize, shareReplay } from 'rxjs/operators';
@@ -80,10 +80,10 @@ class IIcon {
     get iconClass() {
         return `${I_ICON_NAMES[this.icon] || this.icon} ${this.iconSize}`;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IIcon, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: IIcon, isStandalone: true, selector: "i-icon", inputs: { icon: "icon", size: "size" }, ngImport: i0, template: `<i [ngClass]="iconClass"></i>`, isInline: true, dependencies: [{ kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }] });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IIcon, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: IIcon, isStandalone: true, selector: "i-icon", inputs: { icon: "icon", size: "size" }, ngImport: i0, template: `<i [ngClass]="iconClass"></i>`, isInline: true, dependencies: [{ kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IIcon, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IIcon, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-icon',
@@ -97,6 +97,167 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
             }] } });
 
 /**
+ * IAvatar
+ * Version: 1.0.0
+ * <i-avatar />
+ *
+ * Displays a user photo in a circle, square, or rounded-square container.
+ * Falls back to a FontAwesome user icon when no image is available.
+ */
+// ─── Size Mapping ────────────────────────────────────────────────────────────
+const SIZE_PRESETS = {
+    '3xs': 12,
+    '2xs': 16,
+    xs: 20,
+    sm: 32,
+    md: 48,
+    lg: 64,
+    xl: 96,
+    '2xl': 128,
+    '3xl': 160,
+    '4xl': 200,
+};
+/**
+ * Resolve the best IIconSize for a given avatar pixel size.
+ * The icon should fill roughly 50–60% of the container.
+ */
+function resolveIconSizeFromPx(px) {
+    if (px <= 24)
+        return 'sm';
+    if (px <= 40)
+        return 'md';
+    if (px <= 64)
+        return 'lg';
+    if (px <= 96)
+        return 'xl';
+    if (px <= 128)
+        return '2xl';
+    if (px <= 160)
+        return '3xl';
+    return '4xl';
+}
+// ─── Component ───────────────────────────────────────────────────────────────
+class IAvatar {
+    // ─── Inputs ────────────────────────────────────────────────────────────
+    /** Image URL. When empty or on error, falls back to fallbackSrc or icon. */
+    src;
+    /** Alt text for the image. */
+    alt;
+    /**
+     * Container size.
+     * - `number` → treated as pixels (e.g. `200` = 200px)
+     * - `IIconSize` string → uses a preset mapping (e.g. `'lg'` = 64px)
+     * @default 40
+     */
+    size = 40;
+    /**
+     * Container shape.
+     * @default 'circle'
+     */
+    shape = 'circle';
+    /** Fallback image URL. Used when `src` fails to load. If not set (or also fails), shows the user icon. */
+    fallbackSrc;
+    /** Additional CSS classes to inject onto the host element (e.g. `"border-2 border-primary"`). */
+    className;
+    // ─── Internal state ────────────────────────────────────────────────────
+    /** Whether the primary `src` image failed to load. */
+    hasError = false;
+    /** Whether the `fallbackSrc` image also failed to load. */
+    hasFallbackError = false;
+    // ─── Host bindings ─────────────────────────────────────────────────────
+    baseClass = true;
+    get attrShape() {
+        return this.shape ?? 'circle';
+    }
+    get resolvedSizePx() {
+        if (typeof this.size === 'number')
+            return this.size;
+        return SIZE_PRESETS[this.size] ?? 40;
+    }
+    get hostClass() {
+        return this.className;
+    }
+    // ─── Computed ──────────────────────────────────────────────────────────
+    /** Icon size for the fallback `<i-icon>`. */
+    get resolvedIconSize() {
+        if (typeof this.size === 'string')
+            return this.size;
+        return resolveIconSizeFromPx(this.size);
+    }
+    // ─── Event handlers ────────────────────────────────────────────────────
+    onImgError() {
+        this.hasError = true;
+    }
+    onFallbackError() {
+        this.hasFallbackError = true;
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IAvatar, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IAvatar, isStandalone: true, selector: "i-avatar", inputs: { src: "src", alt: "alt", size: "size", shape: "shape", fallbackSrc: "fallbackSrc", className: "className" }, host: { properties: { "class.i-avatar": "this.baseClass", "attr.data-shape": "this.attrShape", "style.width.px": "this.resolvedSizePx", "style.height.px": "this.resolvedSizePx", "class": "this.hostClass" } }, ngImport: i0, template: `
+    <!-- Primary image -->
+    @if (!hasError && src) {
+      <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
+    }
+    <!-- Fallback image -->
+    @else if (fallbackSrc && !hasFallbackError) {
+      <img [alt]="alt ?? ''" [src]="fallbackSrc" (error)="onFallbackError()" />
+    }
+    <!-- Ultimate fallback: user icon -->
+    @else {
+      <i-icon icon="user" [size]="resolvedIconSize" />
+    }
+  `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }] });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IAvatar, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-avatar',
+                    standalone: true,
+                    imports: [IIcon],
+                    template: `
+    <!-- Primary image -->
+    @if (!hasError && src) {
+      <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
+    }
+    <!-- Fallback image -->
+    @else if (fallbackSrc && !hasFallbackError) {
+      <img [alt]="alt ?? ''" [src]="fallbackSrc" (error)="onFallbackError()" />
+    }
+    <!-- Ultimate fallback: user icon -->
+    @else {
+      <i-icon icon="user" [size]="resolvedIconSize" />
+    }
+  `,
+                }]
+        }], propDecorators: { src: [{
+                type: Input
+            }], alt: [{
+                type: Input
+            }], size: [{
+                type: Input
+            }], shape: [{
+                type: Input
+            }], fallbackSrc: [{
+                type: Input
+            }], className: [{
+                type: Input
+            }], baseClass: [{
+                type: HostBinding,
+                args: ['class.i-avatar']
+            }], attrShape: [{
+                type: HostBinding,
+                args: ['attr.data-shape']
+            }], resolvedSizePx: [{
+                type: HostBinding,
+                args: ['style.width.px']
+            }, {
+                type: HostBinding,
+                args: ['style.height.px']
+            }], hostClass: [{
+                type: HostBinding,
+                args: ['class']
+            }] } });
+
+/**
  * ILoading
  * Version: 1.0.0
  * <i-loading></i-loading>
@@ -107,15 +268,15 @@ class ILoading {
     get isLight() {
         return this.light;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ILoading, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ILoading, isStandalone: true, selector: "i-loading", inputs: { label: "label", light: "light" }, host: { properties: { "attr.light": "this.isLight" } }, ngImport: i0, template: `<div
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ILoading, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ILoading, isStandalone: true, selector: "i-loading", inputs: { label: "label", light: "light" }, host: { properties: { "attr.light": "this.isLight" } }, ngImport: i0, template: `<div
       class="spinner-border spinner-border-sm"
       role="status"
       [class.light]="light"
     ></div>
     {{ label }}`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ILoading, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ILoading, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-loading',
@@ -196,8 +357,8 @@ class IButton {
         }
         this.onClick.emit(event);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IButton, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IButton, isStandalone: true, selector: "i-button", inputs: { disabled: ["disabled", "disabled", booleanAttribute], loading: ["loading", "loading", booleanAttribute], type: "type", ariaLabel: "ariaLabel", loadingText: "loadingText", variant: "variant", size: "size", icon: "icon", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", state: "state", href: "href", target: "target", rel: "rel" }, outputs: { onClick: "onClick" }, host: { properties: { "attr.variant": "this.hostVariant", "attr.size": "this.hostSize", "attr.aria-disabled": "this.ariaDisabled", "attr.aria-busy": "this.ariaBusy", "attr.data-mode": "this.mode" } }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IButton, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IButton, isStandalone: true, selector: "i-button", inputs: { disabled: ["disabled", "disabled", booleanAttribute], loading: ["loading", "loading", booleanAttribute], type: "type", ariaLabel: "ariaLabel", loadingText: "loadingText", variant: "variant", size: "size", icon: "icon", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", state: "state", href: "href", target: "target", rel: "rel" }, outputs: { onClick: "onClick" }, host: { properties: { "attr.variant": "this.hostVariant", "attr.size": "this.hostSize", "attr.aria-disabled": "this.ariaDisabled", "attr.aria-busy": "this.ariaBusy", "attr.data-mode": "this.mode" } }, ngImport: i0, template: `
     <!-- ROUTER LINK -->
     @if (routerLink) {
       <a
@@ -257,7 +418,7 @@ class IButton {
     </ng-template>
   `, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IButton, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IButton, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-button',
@@ -471,8 +632,8 @@ class ICard {
             ev.preventDefault();
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICard, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: ICard, isStandalone: true, selector: "i-card", inputs: { href: "href", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", replaceUrl: "replaceUrl", skipLocationChange: "skipLocationChange", state: "state", target: "target", rel: "rel", disabled: "disabled" }, outputs: { onClick: "onClick" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICard, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ICard, isStandalone: true, selector: "i-card", inputs: { href: "href", routerLink: "routerLink", queryParams: "queryParams", fragment: "fragment", replaceUrl: "replaceUrl", skipLocationChange: "skipLocationChange", state: "state", target: "target", rel: "rel", disabled: "disabled" }, outputs: { onClick: "onClick" }, ngImport: i0, template: `
     <ng-template #content>
       <ng-content />
     </ng-template>
@@ -509,7 +670,7 @@ class ICard {
     }
   `, isInline: true, dependencies: [{ kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICard, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICard, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-card',
@@ -578,10 +739,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
             }] } });
 class ICardImage {
     src;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICardImage, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ICardImage, isStandalone: true, selector: "i-card-image", inputs: { src: "src" }, ngImport: i0, template: `<img alt="card-image" [src]="src" />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICardImage, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ICardImage, isStandalone: true, selector: "i-card-image", inputs: { src: "src" }, ngImport: i0, template: `<img alt="card-image" [src]="src" />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICardImage, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICardImage, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-card-image',
@@ -592,10 +753,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 type: Input
             }] } });
 class ICardBody {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICardBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ICardBody, isStandalone: true, selector: "i-card-body", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICardBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ICardBody, isStandalone: true, selector: "i-card-body", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICardBody, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICardBody, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-card-body',
@@ -604,10 +765,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 }]
         }] });
 class ICardFooter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICardFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ICardFooter, isStandalone: true, selector: "i-card-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICardFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ICardFooter, isStandalone: true, selector: "i-card-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICardFooter, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICardFooter, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-card-footer',
@@ -616,11 +777,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 }]
         }] });
 class ICardModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICardModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.33", ngImport: i0, type: ICardModule, imports: [ICard, ICardBody, ICardFooter, ICardImage], exports: [ICard, ICardBody, ICardFooter, ICardImage] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICardModule });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICardModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.34", ngImport: i0, type: ICardModule, imports: [ICard, ICardBody, ICardFooter, ICardImage], exports: [ICard, ICardBody, ICardFooter, ICardImage] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICardModule });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICardModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICardModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [ICard, ICardBody, ICardFooter, ICardImage],
@@ -982,8 +1143,8 @@ class ICodeViewer {
             // ignore
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICodeViewer, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: ICodeViewer, isStandalone: true, selector: "i-code-viewer", inputs: { language: "language", file: "file", code: "code", wrap: ["wrap", "wrap", coerceBool], compact: ["compact", "compact", coerceBool], lineNumbers: ["lineNumbers", "lineNumbers", coerceBool], overlay: ["overlay", "overlay", coerceBool], showFileType: ["showFileType", "showFileType", coerceBool], copy: ["copy", "copy", coerceBool], scroll: ["scroll", "scroll", coerceBool], height: "height", highlighter: "highlighter" }, outputs: { onFileLoaded: "onFileLoaded" }, viewQueries: [{ propertyName: "projectedTpl", first: true, predicate: ["projected"], descendants: true, static: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICodeViewer, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ICodeViewer, isStandalone: true, selector: "i-code-viewer", inputs: { language: "language", file: "file", code: "code", wrap: ["wrap", "wrap", coerceBool], compact: ["compact", "compact", coerceBool], lineNumbers: ["lineNumbers", "lineNumbers", coerceBool], overlay: ["overlay", "overlay", coerceBool], showFileType: ["showFileType", "showFileType", coerceBool], copy: ["copy", "copy", coerceBool], scroll: ["scroll", "scroll", coerceBool], height: "height", highlighter: "highlighter" }, outputs: { onFileLoaded: "onFileLoaded" }, viewQueries: [{ propertyName: "projectedTpl", first: true, predicate: ["projected"], descendants: true, static: true }], ngImport: i0, template: `
     <ng-template #projected>
       <ng-content />
     </ng-template>
@@ -1044,7 +1205,7 @@ class ICodeViewer {
     </div>
   `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICodeViewer, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICodeViewer, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-code-viewer',
@@ -1150,11 +1311,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 type: Output
             }] } });
 class ICodeViewerModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICodeViewerModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.33", ngImport: i0, type: ICodeViewerModule, imports: [ICodeViewer], exports: [ICodeViewer] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICodeViewerModule, imports: [ICodeViewer] });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICodeViewerModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.34", ngImport: i0, type: ICodeViewerModule, imports: [ICodeViewer], exports: [ICodeViewer] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICodeViewerModule, imports: [ICodeViewer] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICodeViewerModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICodeViewerModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [ICodeViewer],
@@ -1246,8 +1407,8 @@ class IInputAddon {
     get addonKind() {
         return this.addon?.type + '';
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IInputAddon, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IInputAddon, isStandalone: true, selector: "i-input-addon", inputs: { addon: "addon" }, host: { properties: { "attr.kind": "this.addonKind" } }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IInputAddon, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IInputAddon, isStandalone: true, selector: "i-input-addon", inputs: { addon: "addon" }, host: { properties: { "attr.kind": "this.addonKind" } }, ngImport: i0, template: `
     @if (!addon || addon.visible === false) {
       <!-- render nothing -->
     } @else if (addon.type === 'button') {
@@ -1277,7 +1438,7 @@ class IInputAddon {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IInputAddon, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IInputAddon, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-input-addon',
@@ -2477,10 +2638,10 @@ class IInputMaskDirective {
             this.safeSetSelectionRange(el, next.length, next.length);
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IInputMaskDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.33", type: IInputMaskDirective, isStandalone: true, selector: "[iInputMask]", inputs: { mask: ["iInputMask", "mask"], autoDefault: "autoDefault" }, host: { listeners: { "input": "onInput()", "blur": "onBlur()", "focus": "onFocus()", "keydown": "onKeydown($event)", "paste": "onPaste($event)" } }, usesOnChanges: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IInputMaskDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.34", type: IInputMaskDirective, isStandalone: true, selector: "[iInputMask]", inputs: { mask: ["iInputMask", "mask"], autoDefault: "autoDefault" }, host: { listeners: { "input": "onInput()", "blur": "onBlur()", "focus": "onFocus()", "keydown": "onKeydown($event)", "paste": "onPaste($event)" } }, usesOnChanges: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IInputMaskDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IInputMaskDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iInputMask]',
@@ -2591,8 +2752,8 @@ class IInput {
         }
         return Array.isArray(this.append) ? this.append : [this.append];
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IInput, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IInput, isStandalone: true, selector: "i-input", inputs: { type: "type", placeholder: "placeholder", autocomplete: "autocomplete", readonly: "readonly", invalid: "invalid", mask: "mask", value: "value", prepend: "prepend", append: "append", disabled: "disabled" }, host: { listeners: { "click": "handleHostClick($event)" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IInput, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IInput, isStandalone: true, selector: "i-input", inputs: { type: "type", placeholder: "placeholder", autocomplete: "autocomplete", readonly: "readonly", invalid: "invalid", mask: "mask", value: "value", prepend: "prepend", append: "append", disabled: "disabled" }, host: { listeners: { "click": "handleHostClick($event)" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => IInput),
@@ -2618,7 +2779,7 @@ class IInput {
       <i-input-addon [addon]="i" />
     }`, isInline: true, dependencies: [{ kind: "component", type: IInputAddon, selector: "i-input-addon", inputs: ["addon"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask", "autoDefault"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IInput, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IInput, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-input',
@@ -2781,8 +2942,8 @@ class IFCInput {
     get resolvedErrorText() {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IFCInput, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IFCInput, isStandalone: true, selector: "i-fc-input", inputs: { label: "label", placeholder: "placeholder", autocomplete: "autocomplete", readonly: "readonly", type: "type", mask: "mask", prepend: "prepend", append: "append", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerInput", first: true, predicate: IInput, descendants: true }], ngImport: i0, template: `@if (label) {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCInput, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IFCInput, isStandalone: true, selector: "i-fc-input", inputs: { label: "label", placeholder: "placeholder", autocomplete: "autocomplete", readonly: "readonly", type: "type", mask: "mask", prepend: "prepend", append: "append", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerInput", first: true, predicate: IInput, descendants: true }], ngImport: i0, template: `@if (label) {
       <label class="i-fc-input__label" (click)="focusInnerInput()">
         {{ label }} :
         @if (required) {
@@ -2812,7 +2973,7 @@ class IFCInput {
       </div>
     }`, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IFCInput, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCInput, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-fc-input',
@@ -2875,11 +3036,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 type: Input
             }] } });
 class IInputModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IInputModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.33", ngImport: i0, type: IInputModule, imports: [IInput, IFCInput, IInputAddon, IInputMaskDirective], exports: [IInput, IFCInput, IInputAddon, IInputMaskDirective] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IInputModule });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IInputModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.34", ngImport: i0, type: IInputModule, imports: [IInput, IFCInput, IInputAddon, IInputMaskDirective], exports: [IInput, IFCInput, IInputAddon, IInputMaskDirective] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IInputModule });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IInputModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IInputModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [IInput, IFCInput, IInputAddon, IInputMaskDirective],
@@ -2899,10 +3060,10 @@ class IHighlightSearchPipe {
             return `<span class="highlight-search">${match}</span>`;
         });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHighlightSearchPipe, deps: [], target: i0.ɵɵFactoryTarget.Pipe });
-    static ɵpipe = i0.ɵɵngDeclarePipe({ minVersion: "14.0.0", version: "20.3.33", ngImport: i0, type: IHighlightSearchPipe, isStandalone: true, name: "highlightSearch" });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHighlightSearchPipe, deps: [], target: i0.ɵɵFactoryTarget.Pipe });
+    static ɵpipe = i0.ɵɵngDeclarePipe({ minVersion: "14.0.0", version: "20.3.34", ngImport: i0, type: IHighlightSearchPipe, isStandalone: true, name: "highlightSearch" });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHighlightSearchPipe, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHighlightSearchPipe, decorators: [{
             type: Pipe,
             args: [{
                     name: 'highlightSearch',
@@ -2931,10 +3092,10 @@ class ISelectOptionDefDirective {
     set iSelectOption(_value) {
         // not used, needed for structural directive syntax
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISelectOptionDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.33", type: ISelectOptionDefDirective, isStandalone: true, selector: "[iSelectOption]", inputs: { iSelectOption: "iSelectOption" }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISelectOptionDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.34", type: ISelectOptionDefDirective, isStandalone: true, selector: "[iSelectOption]", inputs: { iSelectOption: "iSelectOption" }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISelectOptionDefDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISelectOptionDefDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iSelectOption]',
@@ -3722,8 +3883,8 @@ class ISelect {
             this.repositionRaf = 0;
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: ISelect, isStandalone: true, selector: "i-select", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", options: "options", options$: "options$", displayWith: "displayWith", filterPredicate: "filterPredicate", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, host: { listeners: { "keydown": "handleKeydown($event)", "input": "onHostInput($event)", "document:click": "onDocumentClick($event)" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISelect, isStandalone: true, selector: "i-select", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", options: "options", options$: "options$", displayWith: "displayWith", filterPredicate: "filterPredicate", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, host: { listeners: { "keydown": "handleKeydown($event)", "input": "onHostInput($event)", "document:click": "onDocumentClick($event)" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => ISelect),
@@ -3772,7 +3933,7 @@ class ISelect {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISelect, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISelect, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-select',
@@ -3981,8 +4142,8 @@ class IFCSelect {
     get resolvedErrorText() {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IFCSelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IFCSelect, isStandalone: true, selector: "i-fc-select", inputs: { label: "label", placeholder: "placeholder", options: "options", options$: "options$", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", panelOffset: "panelOffset", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", errorMessage: "errorMessage", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCSelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IFCSelect, isStandalone: true, selector: "i-fc-select", inputs: { label: "label", placeholder: "placeholder", options: "options", options$: "options$", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", panelOffset: "panelOffset", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", errorMessage: "errorMessage", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `
     @if (label) {
       <label class="i-fc-select__label" (click)="focusInnerSelect()">
         {{ label }} :
@@ -4018,7 +4179,7 @@ class IFCSelect {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IFCSelect, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCSelect, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-fc-select',
@@ -4824,8 +4985,8 @@ class IDatepicker {
         this.closePanel();
         this.cdr.markForCheck();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IDatepicker, isStandalone: true, selector: "i-datepicker", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", format: "format", displayFormat: "displayFormat", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", panelOffset: "panelOffset", value: "value" }, outputs: { onChanged: "onChanged" }, host: { listeners: { "focusin": "onHostFocusIn($event)", "input": "onHostInput($event)", "focusout": "onHostFocusOut($event)", "document:click": "onDocumentClick($event)" }, properties: { "class.i-datepicker--disabled": "this.disabledHostClass" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IDatepicker, isStandalone: true, selector: "i-datepicker", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", format: "format", displayFormat: "displayFormat", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", panelOffset: "panelOffset", value: "value" }, outputs: { onChanged: "onChanged" }, host: { listeners: { "focusin": "onHostFocusIn($event)", "input": "onHostInput($event)", "focusout": "onHostFocusOut($event)", "document:click": "onDocumentClick($event)" }, properties: { "class.i-datepicker--disabled": "this.disabledHostClass" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => IDatepicker),
@@ -4896,7 +5057,7 @@ class IDatepicker {
     </i-datepicker-panel>
   `, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask", "autoDefault"] }, { kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDatepicker, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDatepicker, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-datepicker',
@@ -5190,8 +5351,8 @@ class IFCDatepicker {
     get resolvedErrorText() {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IFCDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IFCDatepicker, isStandalone: true, selector: "i-fc-datepicker", inputs: { label: "label", placeholder: "placeholder", format: "format", displayFormat: "displayFormat", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", errorMessage: "errorMessage", value: "value", _smartFocusHook: "_smartFocusHook" }, viewQueries: [{ propertyName: "innerDatepicker", first: true, predicate: ["inner"], descendants: true, static: true }], ngImport: i0, template: `@if (label) {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCDatepicker, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IFCDatepicker, isStandalone: true, selector: "i-fc-datepicker", inputs: { label: "label", placeholder: "placeholder", format: "format", displayFormat: "displayFormat", panelPosition: "panelPosition", minYear: "minYear", maxYear: "maxYear", minYearRange: "minYearRange", maxYearRange: "maxYearRange", errorMessage: "errorMessage", value: "value", _smartFocusHook: "_smartFocusHook" }, viewQueries: [{ propertyName: "innerDatepicker", first: true, predicate: ["inner"], descendants: true, static: true }], ngImport: i0, template: `@if (label) {
       <label class="i-fc-datepicker__label" (click)="focusInnerDatepicker()">
         {{ label }} :
         @if (required) {
@@ -5223,7 +5384,7 @@ class IFCDatepicker {
       </div>
     }`, isInline: true, dependencies: [{ kind: "component", type: IDatepicker, selector: "i-datepicker", inputs: ["placeholder", "disabled", "invalid", "format", "displayFormat", "panelPosition", "minYear", "maxYear", "minYearRange", "maxYearRange", "portalToBody", "matchTriggerWidth", "panelOffset", "value"], outputs: ["onChanged"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IFCDatepicker, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCDatepicker, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-fc-datepicker',
@@ -5363,8 +5524,8 @@ class ITextArea {
             this.textareaRef.nativeElement.focus();
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ITextArea, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ITextArea, isStandalone: true, selector: "i-textarea", inputs: { placeholder: "placeholder", readonly: "readonly", rows: "rows", invalid: "invalid", value: "value", disabled: "disabled" }, host: { listeners: { "click": "handleHostClick()" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ITextArea, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ITextArea, isStandalone: true, selector: "i-textarea", inputs: { placeholder: "placeholder", readonly: "readonly", rows: "rows", invalid: "invalid", value: "value", disabled: "disabled" }, host: { listeners: { "click": "handleHostClick()" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => ITextArea),
@@ -5382,7 +5543,7 @@ class ITextArea {
     (input)="handleInput($event)"
   ></textarea>`, isInline: true, changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ITextArea, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ITextArea, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-textarea',
@@ -5518,8 +5679,8 @@ class IFCTextArea {
     get resolvedErrorText() {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IFCTextArea, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IFCTextArea, isStandalone: true, selector: "i-fc-textarea", inputs: { label: "label", placeholder: "placeholder", readonly: "readonly", rows: "rows", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerTextarea", first: true, predicate: ITextArea, descendants: true }], ngImport: i0, template: `@if (label) {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCTextArea, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IFCTextArea, isStandalone: true, selector: "i-fc-textarea", inputs: { label: "label", placeholder: "placeholder", readonly: "readonly", rows: "rows", errorMessage: "errorMessage", value: "value" }, viewQueries: [{ propertyName: "innerTextarea", first: true, predicate: ITextArea, descendants: true }], ngImport: i0, template: `@if (label) {
       <label class="i-fc-textarea__label" (click)="focusInnerTextarea()">
         {{ label }} :
         @if (required) {
@@ -5545,7 +5706,7 @@ class IFCTextArea {
       </div>
     }`, isInline: true, dependencies: [{ kind: "component", type: ITextArea, selector: "i-textarea", inputs: ["placeholder", "readonly", "rows", "invalid", "value", "disabled"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IFCTextArea, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCTextArea, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-fc-textarea',
@@ -5652,10 +5813,10 @@ class IDialogService {
     closeAll() {
         this._dialogs$.value.forEach((d) => d.ref.close());
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialogService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialogService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialogService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialogService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialogService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialogService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -5711,8 +5872,8 @@ class IDialogContainer {
             this.onClose.emit();
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialogContainer, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IDialogContainer, isStandalone: true, selector: "i-dialog-container", inputs: { instance: "instance", config: "config", ariaLabel: "ariaLabel", isTopMost: "isTopMost" }, outputs: { onClose: "onClose" }, host: { attributes: { "role": "dialog", "aria-modal": "true" }, listeners: { "document:keydown.escape": "onEscKey()" }, properties: { "attr.aria-label": "ariaLabel" } }, usesOnChanges: true, ngImport: i0, template: `<div class="i-dialog-backdrop" (click)="onBackdropClick()"></div>
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialogContainer, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IDialogContainer, isStandalone: true, selector: "i-dialog-container", inputs: { instance: "instance", config: "config", ariaLabel: "ariaLabel", isTopMost: "isTopMost" }, outputs: { onClose: "onClose" }, host: { attributes: { "role": "dialog", "aria-modal": "true" }, listeners: { "document:keydown.escape": "onEscKey()" }, properties: { "attr.aria-label": "ariaLabel" } }, usesOnChanges: true, ngImport: i0, template: `<div class="i-dialog-backdrop" (click)="onBackdropClick()"></div>
     <div class="i-dialog-wrapper">
       <div class="i-dialog-panel" [ngStyle]="panelStyles">
         @if (instance) {
@@ -5723,7 +5884,7 @@ class IDialogContainer {
       </div>
     </div> `, isInline: true, dependencies: [{ kind: "directive", type: NgComponentOutlet, selector: "[ngComponentOutlet]", inputs: ["ngComponentOutlet", "ngComponentOutletInputs", "ngComponentOutletInjector", "ngComponentOutletEnvironmentInjector", "ngComponentOutletContent", "ngComponentOutletNgModule", "ngComponentOutletNgModuleFactory"], exportAs: ["ngComponentOutlet"] }, { kind: "directive", type: NgStyle, selector: "[ngStyle]", inputs: ["ngStyle"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialogContainer, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialogContainer, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-dialog-container',
@@ -5765,14 +5926,14 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
 class IDialogOutlet {
     dialogService = inject(IDialogService);
     dialogs$ = this.dialogService.dialogs$;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialogOutlet, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IDialogOutlet, isStandalone: true, selector: "i-dialog-outlet", ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialogOutlet, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IDialogOutlet, isStandalone: true, selector: "i-dialog-outlet", ngImport: i0, template: `
     @for (dialog of (dialogs$ | async) ?? []; track dialog.id; let last = $last) {
       <i-dialog-container [instance]="dialog" [isTopMost]="last" />
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IDialogContainer, selector: "i-dialog-container", inputs: ["instance", "config", "ariaLabel", "isTopMost"], outputs: ["onClose"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialogOutlet, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialogOutlet, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-dialog-outlet',
@@ -5801,10 +5962,10 @@ class IDialogCloseDirective {
         event.preventDefault();
         this.dialogRef.close(this.result);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialogCloseDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.33", type: IDialogCloseDirective, isStandalone: true, selector: "[i-dialog-close], [iDialogClose]", inputs: { result: ["iDialogClose", "result"] }, host: { listeners: { "click": "onClick($event)" } }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialogCloseDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.34", type: IDialogCloseDirective, isStandalone: true, selector: "[i-dialog-close], [iDialogClose]", inputs: { result: ["iDialogClose", "result"] }, host: { listeners: { "click": "onClick($event)" } }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialogCloseDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialogCloseDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[i-dialog-close], [iDialogClose]',
@@ -5854,8 +6015,8 @@ class IDialog {
     onCustomActionClick(a) {
         this.onCustomAction.emit(a);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IDialog, isStandalone: true, selector: "i-dialog", inputs: { title: "title", actions: "actions" }, outputs: { onOk: "onOk", onConfirm: "onConfirm", onSave: "onSave", onCustomAction: "onCustomAction" }, ngImport: i0, template: `@if (title) {
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IDialog, isStandalone: true, selector: "i-dialog", inputs: { title: "title", actions: "actions" }, outputs: { onOk: "onOk", onConfirm: "onConfirm", onSave: "onSave", onCustomAction: "onCustomAction" }, ngImport: i0, template: `@if (title) {
       <h4 class="i-dialog-title">{{ title }}</h4>
     }
     <div class="i-dialog-content">
@@ -5933,7 +6094,7 @@ class IDialog {
       </div>
     } `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: IDialogCloseDirective, selector: "[i-dialog-close], [iDialogClose]", inputs: ["iDialogClose"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialog, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialog, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-dialog',
@@ -6039,8 +6200,8 @@ class IAlert {
     submit() {
         this.dialog.close();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IAlert, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IAlert, isStandalone: true, selector: "i-alert", ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IAlert, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IAlert, isStandalone: true, selector: "i-alert", ngImport: i0, template: `
     <i-dialog
       [actions]="[
         {
@@ -6068,7 +6229,7 @@ class IAlert {
     </i-dialog>
   `, isInline: true, dependencies: [{ kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: IDialog, selector: "i-dialog", inputs: ["title", "actions"], outputs: ["onOk", "onConfirm", "onSave", "onCustomAction"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IAlert, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IAlert, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-alert',
@@ -6130,10 +6291,10 @@ class IAlertService {
     danger(title, description) {
         return this.show({ title, description, type: 'danger' });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IAlertService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IAlertService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IAlertService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IAlertService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IAlertService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IAlertService, decorators: [{
             type: Injectable,
             args: [{
                     providedIn: 'root',
@@ -6164,8 +6325,8 @@ class IConfirm {
         }
         this.dialog.close(this.reason.value);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IConfirm, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IConfirm, isStandalone: true, selector: "i-confirm", viewQueries: [{ propertyName: "formGroupDir", first: true, predicate: FormGroupDirective, descendants: true }], ngImport: i0, template: `<i-dialog
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IConfirm, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IConfirm, isStandalone: true, selector: "i-confirm", viewQueries: [{ propertyName: "formGroupDir", first: true, predicate: FormGroupDirective, descendants: true }], ngImport: i0, template: `<i-dialog
     [actions]="[
       {
         type: 'confirm',
@@ -6208,7 +6369,7 @@ class IConfirm {
     }
   </i-dialog>`, isInline: true, dependencies: [{ kind: "component", type: IDialog, selector: "i-dialog", inputs: ["title", "actions"], outputs: ["onOk", "onConfirm", "onSave", "onCustomAction"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: IFCTextArea, selector: "i-fc-textarea", inputs: ["label", "placeholder", "readonly", "rows", "errorMessage", "value"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.ɵNgNoValidate, selector: "form:not([ngNoForm]):not([ngNativeValidate])" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.NgControlStatusGroup, selector: "[formGroupName],[formArrayName],[ngModelGroup],[formGroup],form:not([ngNoForm]),[ngForm]" }, { kind: "directive", type: i1.FormGroupDirective, selector: "[formGroup]", inputs: ["formGroup"], outputs: ["ngSubmit"], exportAs: ["ngForm"] }, { kind: "directive", type: i1.FormControlName, selector: "[formControlName]", inputs: ["formControlName", "disabled", "ngModel"], outputs: ["ngModelChange"] }, { kind: "ngmodule", type: FormsModule }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IConfirm, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IConfirm, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-confirm',
@@ -6287,21 +6448,21 @@ class IConfirmService {
     danger(title, description, reason) {
         return this.show({ title, description, type: 'danger', reason });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IConfirmService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IConfirmService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IConfirmService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IConfirmService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IConfirmService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IConfirmService, decorators: [{
             type: Injectable,
             args: [{
                     providedIn: 'root',
                 }]
         }] });
 class IDialogModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialogModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.33", ngImport: i0, type: IDialogModule, imports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm], exports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialogModule, imports: [IConfirm] });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialogModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.34", ngImport: i0, type: IDialogModule, imports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm], exports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialogModule, imports: [IConfirm] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IDialogModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDialogModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [IDialogContainer, IDialogOutlet, IDialogCloseDirective, IDialog, IAlert, IConfirm],
@@ -6384,14 +6545,14 @@ const CHEVRON_WIDTH_MAP = {
 // ─── ISectionTabHeader / ISectionTabContent ─────────────────────────────────
 class ISectionTabHeader {
     tpl;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionTabHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ISectionTabHeader, isStandalone: true, selector: "i-section-tab-header", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionTabHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ISectionTabHeader, isStandalone: true, selector: "i-section-tab-header", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
     <ng-template #tpl>
       <ng-content />
     </ng-template>
   `, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionTabHeader, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionTabHeader, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-tab-header',
@@ -6407,15 +6568,22 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 args: ['tpl', { static: true }]
             }] } });
 class ISectionTabContent {
+    class = '';
+    get className() {
+        return this.class;
+    }
+    set className(value) {
+        this.class = value;
+    }
     tpl;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionTabContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ISectionTabContent, isStandalone: true, selector: "i-section-tab-content", viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionTabContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ISectionTabContent, isStandalone: true, selector: "i-section-tab-content", inputs: { class: "class" }, viewQueries: [{ propertyName: "tpl", first: true, predicate: ["tpl"], descendants: true, static: true }], ngImport: i0, template: `
     <ng-template #tpl>
       <ng-content />
     </ng-template>
   `, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionTabContent, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionTabContent, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-tab-content',
@@ -6426,7 +6594,9 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
     </ng-template>
   `,
                 }]
-        }], propDecorators: { tpl: [{
+        }], propDecorators: { class: [{
+                type: Input
+            }], tpl: [{
                 type: ViewChild,
                 args: ['tpl', { static: true }]
             }] } });
@@ -6463,8 +6633,8 @@ class ISectionTab {
         this.headerTpl = this.headerCmp?.tpl ?? this.defaultHeaderTpl;
         this.contentTpl = this.contentCmp?.tpl ?? this.defaultContentTpl;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionTab, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: ISectionTab, isStandalone: true, selector: "i-section-tab", inputs: { title: "title", opened: ["opened", "opened", (v) => v !== null && `${v}` !== 'false'], badge: "badge" }, queries: [{ propertyName: "headerCmp", first: true, predicate: ISectionTabHeader, descendants: true }, { propertyName: "contentCmp", first: true, predicate: ISectionTabContent, descendants: true }], viewQueries: [{ propertyName: "defaultHeaderTpl", first: true, predicate: ["defaultHeaderTpl"], descendants: true, static: true }, { propertyName: "defaultContentTpl", first: true, predicate: ["defaultContentTpl"], descendants: true, static: true }], exportAs: ["iSectionTab"], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionTab, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISectionTab, isStandalone: true, selector: "i-section-tab", inputs: { title: "title", opened: ["opened", "opened", (v) => v !== null && `${v}` !== 'false'], badge: "badge" }, queries: [{ propertyName: "headerCmp", first: true, predicate: ISectionTabHeader, descendants: true }, { propertyName: "contentCmp", first: true, predicate: ISectionTabContent, descendants: true }], viewQueries: [{ propertyName: "defaultHeaderTpl", first: true, predicate: ["defaultHeaderTpl"], descendants: true, static: true }, { propertyName: "defaultContentTpl", first: true, predicate: ["defaultContentTpl"], descendants: true, static: true }], exportAs: ["iSectionTab"], ngImport: i0, template: `
     <ng-template #defaultHeaderTpl>
       <span class="i-section-tab-title">{{ title }}</span>
 
@@ -6482,7 +6652,7 @@ class ISectionTab {
     </ng-template>
   `, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionTab, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionTab, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-tab',
@@ -6682,8 +6852,8 @@ class ISectionTabs {
     isValidIndex(index) {
         return Number.isInteger(index) && index >= 0 && index < this.tabsArr.length;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionTabs, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: ISectionTabs, isStandalone: true, selector: "i-section-tabs", inputs: { selectedIndex: "selectedIndex", sticky: ["sticky", "sticky", booleanAttribute], stickyTopOffset: "stickyTopOffset", scrollable: ["scrollable", "scrollable", booleanAttribute], chevronSize: "chevronSize", tabMinHeight: "tabMinHeight", headerClass: "headerClass", tabClass: "tabClass", styleVariant: "styleVariant", height: "height" }, outputs: { onSelectedIndexChange: "onSelectedIndexChange", selectedIndexChange: "selectedIndexChange" }, host: { properties: { "class.i-section-tabs--bar": "styleVariant === 'bar'" } }, queries: [{ propertyName: "tabs", predicate: ISectionTab }], viewQueries: [{ propertyName: "scrollContainer", first: true, predicate: ["scrollContainer"], descendants: true }], ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionTabs, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISectionTabs, isStandalone: true, selector: "i-section-tabs", inputs: { selectedIndex: "selectedIndex", sticky: ["sticky", "sticky", booleanAttribute], stickyTopOffset: "stickyTopOffset", scrollable: ["scrollable", "scrollable", booleanAttribute], chevronSize: "chevronSize", tabMinHeight: "tabMinHeight", headerClass: "headerClass", tabClass: "tabClass", styleVariant: "styleVariant", height: "height" }, outputs: { onSelectedIndexChange: "onSelectedIndexChange", selectedIndexChange: "selectedIndexChange" }, host: { properties: { "class.i-section-tabs--bar": "styleVariant === 'bar'" } }, queries: [{ propertyName: "tabs", predicate: ISectionTab }], viewQueries: [{ propertyName: "scrollContainer", first: true, predicate: ["scrollContainer"], descendants: true }], ngImport: i0, template: `
     <div
       class="i-section-tabs-headers"
       role="tablist"
@@ -6745,6 +6915,7 @@ class ISectionTabs {
       class="i-section-tabs-content"
       [class.scroll]="isFixedHeight"
       [class.scroll-y]="isFixedHeight"
+      [ngClass]="activeTab?.contentCmp?.className"
       [style.height.px]="contentHeightPx"
     >
       @if (activeTab; as tab) {
@@ -6759,7 +6930,7 @@ class ISectionTabs {
     <ng-content select=":not(i-section-tab)" />
   `, isInline: true, dependencies: [{ kind: "ngmodule", type: CommonModule }, { kind: "directive", type: i1$1.NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: i1$1.NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionTabs, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionTabs, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-tabs',
@@ -6831,6 +7002,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
       class="i-section-tabs-content"
       [class.scroll]="isFixedHeight"
       [class.scroll-y]="isFixedHeight"
+      [ngClass]="activeTab?.contentCmp?.className"
       [style.height.px]="contentHeightPx"
     >
       @if (activeTab; as tab) {
@@ -6892,10 +7064,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
  * </i-section>
  */
 class ISection {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISection, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ISection, isStandalone: true, selector: "i-section", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISection, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ISection, isStandalone: true, selector: "i-section", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISection, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISection, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section',
@@ -6904,10 +7076,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 }]
         }] });
 class ISectionHeader {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ISectionHeader, isStandalone: true, selector: "i-section-header", ngImport: i0, template: `<h4><ng-content /></h4>`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ISectionHeader, isStandalone: true, selector: "i-section-header", ngImport: i0, template: `<h4><ng-content /></h4>`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionHeader, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionHeader, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-header',
@@ -6916,10 +7088,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 }]
         }] });
 class ISectionSubHeader {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionSubHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ISectionSubHeader, isStandalone: true, selector: "i-section-sub-header", ngImport: i0, template: `<h6><ng-content /></h6>`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionSubHeader, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ISectionSubHeader, isStandalone: true, selector: "i-section-sub-header", ngImport: i0, template: `<h6><ng-content /></h6>`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionSubHeader, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionSubHeader, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-sub-header',
@@ -6928,10 +7100,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 }]
         }] });
 class ISectionFilter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionFilter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ISectionFilter, isStandalone: true, selector: "i-section-filter", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionFilter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ISectionFilter, isStandalone: true, selector: "i-section-filter", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionFilter, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionFilter, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-filter',
@@ -6940,10 +7112,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 }]
         }] });
 class ISectionBody {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ISectionBody, isStandalone: true, selector: "i-section-body", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionBody, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ISectionBody, isStandalone: true, selector: "i-section-body", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionBody, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionBody, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-body',
@@ -6952,10 +7124,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 }]
         }] });
 class ISectionFooter {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: ISectionFooter, isStandalone: true, selector: "i-section-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionFooter, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: ISectionFooter, isStandalone: true, selector: "i-section-footer", ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionFooter, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionFooter, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-section-footer',
@@ -6964,17 +7136,17 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 }]
         }] });
 class ISectionModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.33", ngImport: i0, type: ISectionModule, imports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.34", ngImport: i0, type: ISectionModule, imports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
             ISectionTab,
             ISectionTabHeader,
             ISectionTabContent], exports: [ISection, ISectionHeader, ISectionSubHeader, ISectionFilter, ISectionBody, ISectionFooter, ISectionTabs,
             ISectionTab,
             ISectionTabHeader,
             ISectionTabContent] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionModule, imports: [ISectionTabs] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionModule, imports: [ISectionTabs] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISectionModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISectionModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [
@@ -7101,8 +7273,8 @@ class IErrorPage {
             code: this.code ?? preset.code,
         };
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IErrorPage, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IErrorPage, isStandalone: true, selector: "i-error-page", inputs: { kind: "kind", mode: "mode", title: "title", description: "description", icon: "icon", code: "code", supportEmail: "supportEmail", actions: "actions" }, outputs: { onAction: "onAction" }, host: { properties: { "class.i-error-page--not-found": "kind === \"not-found\"", "class.i-error-page--fullpage": "mode === \"fullpage\"" }, classAttribute: "i-error-page" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IErrorPage, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IErrorPage, isStandalone: true, selector: "i-error-page", inputs: { kind: "kind", mode: "mode", title: "title", description: "description", icon: "icon", code: "code", supportEmail: "supportEmail", actions: "actions" }, outputs: { onAction: "onAction" }, host: { properties: { "class.i-error-page--not-found": "kind === \"not-found\"", "class.i-error-page--fullpage": "mode === \"fullpage\"" }, classAttribute: "i-error-page" }, ngImport: i0, template: `
     @if (mode === 'contained') {
       <i-section class="i-error-page__section">
         <i-section-body class="i-error-page__body">
@@ -7164,7 +7336,7 @@ class IErrorPage {
     </ng-template>
   `, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ISection, selector: "i-section" }, { kind: "component", type: ISectionBody, selector: "i-section-body" }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IErrorPage, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IErrorPage, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-error-page',
@@ -7373,8 +7545,8 @@ class IPaginator {
         this.pageIndex = Math.floor(firstItemIndex / newSize);
         this.emit();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IPaginator, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IPaginator, isStandalone: true, selector: "i-paginator", inputs: { length: "length", pageIndex: "pageIndex", pageSize: "pageSize", pageSizeOptions: "pageSizeOptions" }, outputs: { onPageChange: "onPageChange" }, host: { classAttribute: "i-paginator" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IPaginator, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IPaginator, isStandalone: true, selector: "i-paginator", inputs: { length: "length", pageIndex: "pageIndex", pageSize: "pageSize", pageSizeOptions: "pageSizeOptions" }, outputs: { onPageChange: "onPageChange" }, host: { classAttribute: "i-paginator" }, ngImport: i0, template: `
     <div class="i-paginator flex align-center gap-md flex-fill">
       <!-- Page size -->
       @for (size of pageSizeOptions; track size) {
@@ -7405,7 +7577,7 @@ class IPaginator {
     </div>
   `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IPaginator, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IPaginator, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-paginator',
@@ -7481,10 +7653,10 @@ class ITruncatedTooltipDirective {
     ngOnDestroy() {
         this.observer?.disconnect();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ITruncatedTooltipDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "16.1.0", version: "20.3.33", type: ITruncatedTooltipDirective, isStandalone: true, selector: "[truncatedTooltip]", inputs: { enabled: ["truncatedTooltip", "enabled", booleanAttribute] }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ITruncatedTooltipDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "16.1.0", version: "20.3.34", type: ITruncatedTooltipDirective, isStandalone: true, selector: "[truncatedTooltip]", inputs: { enabled: ["truncatedTooltip", "enabled", booleanAttribute] }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ITruncatedTooltipDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ITruncatedTooltipDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[truncatedTooltip]',
@@ -7884,10 +8056,10 @@ class IGridDataSource {
  * ---------------------------------------------------- */
 class IGridHeaderCellDefDirective {
     template = inject((TemplateRef));
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridHeaderCellDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.33", type: IGridHeaderCellDefDirective, isStandalone: true, selector: "[iHeaderCellDef]", ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridHeaderCellDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.34", type: IGridHeaderCellDefDirective, isStandalone: true, selector: "[iHeaderCellDef]", ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridHeaderCellDefDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridHeaderCellDefDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iHeaderCellDef]',
@@ -7896,10 +8068,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
         }] });
 class IGridCellDefDirective {
     template = inject((TemplateRef));
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridCellDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.33", type: IGridCellDefDirective, isStandalone: true, selector: "[iCellDef]", ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridCellDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.34", type: IGridCellDefDirective, isStandalone: true, selector: "[iCellDef]", ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridCellDefDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridCellDefDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iCellDef]',
@@ -7920,10 +8092,10 @@ class IGridRowDefDirective {
     static ngTemplateContextGuard(_dir, _ctx) {
         return true;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridRowDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.33", type: IGridRowDefDirective, isStandalone: true, selector: "[iRowDef]", inputs: { iRowDefExpandSingle: "iRowDefExpandSingle" }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridRowDefDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.34", type: IGridRowDefDirective, isStandalone: true, selector: "[iRowDef]", inputs: { iRowDefExpandSingle: "iRowDefExpandSingle" }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridRowDefDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridRowDefDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: '[iRowDef]',
@@ -7933,10 +8105,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 type: Input
             }] } });
 class IGridExpandableRow {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridExpandableRow, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: IGridExpandableRow, isStandalone: true, selector: "i-grid-expandable-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-expandable-row flex" }, ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridExpandableRow, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: IGridExpandableRow, isStandalone: true, selector: "i-grid-expandable-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-expandable-row flex" }, ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridExpandableRow, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridExpandableRow, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-expandable-row',
@@ -7952,10 +8124,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
  * ROW DIRECTIVES
  * ---------------------------------------------------- */
 class IGridHeaderRowDirective {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridHeaderRowDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.33", type: IGridHeaderRowDirective, isStandalone: true, selector: "i-grid-header-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-header-row" }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridHeaderRowDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.34", type: IGridHeaderRowDirective, isStandalone: true, selector: "i-grid-header-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-header-row" }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridHeaderRowDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridHeaderRowDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: 'i-grid-header-row',
@@ -7967,10 +8139,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 }]
         }] });
 class IGridRowDirective {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridRowDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.33", type: IGridRowDirective, isStandalone: true, selector: "i-grid-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-row" }, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridRowDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.34", type: IGridRowDirective, isStandalone: true, selector: "i-grid-row", host: { attributes: { "role": "row" }, classAttribute: "i-grid-row" }, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridRowDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridRowDirective, decorators: [{
             type: Directive,
             args: [{
                     selector: 'i-grid-row',
@@ -7985,10 +8157,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
  * HEADER GROUP TAGS (internal render tags)
  * ---------------------------------------------------- */
 class IGridHeaderCellGroup {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridHeaderCellGroup, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: IGridHeaderCellGroup, isStandalone: true, selector: "i-grid-header-cell-group", host: { attributes: { "role": "presentation" }, classAttribute: "i-grid-header-cell-group" }, ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridHeaderCellGroup, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: IGridHeaderCellGroup, isStandalone: true, selector: "i-grid-header-cell-group", host: { attributes: { "role": "presentation" }, classAttribute: "i-grid-header-cell-group" }, ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridHeaderCellGroup, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridHeaderCellGroup, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-header-cell-group',
@@ -8001,10 +8173,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 }]
         }] });
 class IGridHeaderCellGroupColumns {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridHeaderCellGroupColumns, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: IGridHeaderCellGroupColumns, isStandalone: true, selector: "i-grid-header-cell-group-columns", host: { attributes: { "role": "presentation" }, classAttribute: "i-grid-header-cell-group-columns" }, ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridHeaderCellGroupColumns, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: IGridHeaderCellGroupColumns, isStandalone: true, selector: "i-grid-header-cell-group-columns", host: { attributes: { "role": "presentation" }, classAttribute: "i-grid-header-cell-group-columns" }, ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridHeaderCellGroupColumns, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridHeaderCellGroupColumns, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-header-cell-group-columns',
@@ -8029,10 +8201,10 @@ class IGridColumn {
     headerDef;
     cellDef;
     isAuto;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.33", type: IGridColumn, isStandalone: true, selector: "i-grid-column", inputs: { fieldName: "fieldName", title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.34", type: IGridColumn, isStandalone: true, selector: "i-grid-column", inputs: { fieldName: "fieldName", title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridColumn, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridColumn, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-column',
@@ -8073,10 +8245,10 @@ class IGridCustomColumn {
     headerDef;
     cellDef;
     isAuto;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridCustomColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.33", type: IGridCustomColumn, isStandalone: true, selector: "i-grid-custom-column", inputs: { title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridCustomColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.34", type: IGridCustomColumn, isStandalone: true, selector: "i-grid-custom-column", inputs: { title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridCustomColumn, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridCustomColumn, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-custom-column',
@@ -8109,10 +8281,10 @@ class IGridColumnGroup {
     title = '';
     columns;
     customColumns;
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridColumnGroup, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: IGridColumnGroup, isStandalone: true, selector: "i-grid-column-group", inputs: { title: "title" }, queries: [{ propertyName: "columns", predicate: IGridColumn }, { propertyName: "customColumns", predicate: IGridCustomColumn }], ngImport: i0, template: '', isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridColumnGroup, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: IGridColumnGroup, isStandalone: true, selector: "i-grid-column-group", inputs: { title: "title" }, queries: [{ propertyName: "columns", predicate: IGridColumn }, { propertyName: "customColumns", predicate: IGridCustomColumn }], ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridColumnGroup, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridColumnGroup, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-column-group',
@@ -8173,10 +8345,10 @@ class IGridCell {
     get stickyZ() {
         return this._isFrozen ? 2 : null;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: IGridCell, isStandalone: true, selector: "i-grid-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "cell" }, properties: { "style.flex": "this.flex", "class.i-grid-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-cell" }, ngImport: i0, template: ` <ng-content /> `, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: IGridCell, isStandalone: true, selector: "i-grid-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "cell" }, properties: { "style.flex": "this.flex", "class.i-grid-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-cell" }, ngImport: i0, template: ` <ng-content /> `, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridCell, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridCell, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-cell',
@@ -8347,8 +8519,8 @@ class IGridHeaderCell {
             this._isResizing = false;
         }, 0);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridHeaderCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IGridHeaderCell, isStandalone: true, selector: "i-grid-header-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "columnheader" }, listeners: { "click": "onClick()", "document:mousemove": "onDocumentMouseMove($event)", "document:mouseup": "onDocumentMouseUp()" }, properties: { "style.flex": "this.flex", "class.i-grid-header-cell--sortable": "this.sortable", "class.i-grid-header-cell--sorted": "this.isSorted", "class.i-grid-header-cell--sorted-asc": "this.isSortedAsc", "class.i-grid-header-cell--sorted-desc": "this.isSortedDesc", "class.i-grid-header-cell--resizable": "this.isResizableClass", "class.i-grid-header-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-header-cell" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridHeaderCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IGridHeaderCell, isStandalone: true, selector: "i-grid-header-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "columnheader" }, listeners: { "click": "onClick()", "document:mousemove": "onDocumentMouseMove($event)", "document:mouseup": "onDocumentMouseUp()" }, properties: { "style.flex": "this.flex", "class.i-grid-header-cell--sortable": "this.sortable", "class.i-grid-header-cell--sorted": "this.isSorted", "class.i-grid-header-cell--sorted-asc": "this.isSortedAsc", "class.i-grid-header-cell--sorted-desc": "this.isSortedDesc", "class.i-grid-header-cell--resizable": "this.isResizableClass", "class.i-grid-header-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-header-cell" }, ngImport: i0, template: `
     <span class="i-grid-header-cell__content" truncatedTooltip>
       <ng-content />
     </span>
@@ -8362,7 +8534,7 @@ class IGridHeaderCell {
     <span class="i-grid-header-cell__resize-handle" (mousedown)="onResizeMouseDown($event)"> </span>
   `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridHeaderCell, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridHeaderCell, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-header-cell',
@@ -8431,10 +8603,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 args: ['document:mouseup']
             }] } });
 class IGridViewport {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridViewport, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: IGridViewport, isStandalone: true, selector: "i-grid-viewport", host: { classAttribute: "i-grid-viewport" }, ngImport: i0, template: `<ng-content />`, isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridViewport, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: IGridViewport, isStandalone: true, selector: "i-grid-viewport", host: { classAttribute: "i-grid-viewport" }, ngImport: i0, template: `<ng-content />`, isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridViewport, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridViewport, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid-viewport',
@@ -9662,8 +9834,8 @@ class IGrid {
         const groups = this.columnGroupDefs?.toArray?.() ?? [];
         return groups.length > 0 || directCols.length > 0 || directCustom.length > 0;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGrid, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IGrid, isStandalone: true, selector: "i-grid", inputs: { dataSource: "dataSource", selectionMode: "selectionMode", selectionRowHidden: "selectionRowHidden", selectionRowDisabled: "selectionRowDisabled", tree: "tree", treeIndent: "treeIndent", trackBy: "trackBy", treeColumn: "treeColumn", treeInitialExpandLevel: "treeInitialExpandLevel", showNumberColumn: ["showNumberColumn", "showNumberColumn", booleanAttribute], sortMode: "sortMode" }, outputs: { onSelectionChange: "onSelectionChange", onRowClick: "onRowClick", onRowExpandChange: "onRowExpandChange", onExpandedRowsChange: "onExpandedRowsChange", onServerSortChange: "onServerSortChange", onServerPageChange: "onServerPageChange", onServerFilterChange: "onServerFilterChange" }, host: { attributes: { "role": "table" }, classAttribute: "i-grid" }, queries: [{ propertyName: "expandableRowDef", first: true, predicate: IGridRowDefDirective, descendants: true }, { propertyName: "columnDefs", predicate: IGridColumn }, { propertyName: "customColumnDefs", predicate: IGridCustomColumn }, { propertyName: "columnGroupDefs", predicate: IGridColumnGroup }], exportAs: ["iGrid"], usesOnChanges: true, ngImport: i0, template: `<i-grid-viewport>
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGrid, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IGrid, isStandalone: true, selector: "i-grid", inputs: { dataSource: "dataSource", selectionMode: "selectionMode", selectionRowHidden: "selectionRowHidden", selectionRowDisabled: "selectionRowDisabled", tree: "tree", treeIndent: "treeIndent", trackBy: "trackBy", treeColumn: "treeColumn", treeInitialExpandLevel: "treeInitialExpandLevel", showNumberColumn: ["showNumberColumn", "showNumberColumn", booleanAttribute], sortMode: "sortMode" }, outputs: { onSelectionChange: "onSelectionChange", onRowClick: "onRowClick", onRowExpandChange: "onRowExpandChange", onExpandedRowsChange: "onExpandedRowsChange", onServerSortChange: "onServerSortChange", onServerPageChange: "onServerPageChange", onServerFilterChange: "onServerFilterChange" }, host: { attributes: { "role": "table" }, classAttribute: "i-grid" }, queries: [{ propertyName: "expandableRowDef", first: true, predicate: IGridRowDefDirective, descendants: true }, { propertyName: "columnDefs", predicate: IGridColumn }, { propertyName: "customColumnDefs", predicate: IGridCustomColumn }, { propertyName: "columnGroupDefs", predicate: IGridColumnGroup }], exportAs: ["iGrid"], usesOnChanges: true, ngImport: i0, template: `<i-grid-viewport>
       <!-- HEADER -->
       @if (headerItems.length) {
         <i-grid-header-row>
@@ -9992,7 +10164,7 @@ class IGrid {
       </div>
     }`, isInline: true, dependencies: [{ kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }, { kind: "directive", type: IGridHeaderRowDirective, selector: "i-grid-header-row" }, { kind: "directive", type: IGridRowDirective, selector: "i-grid-row" }, { kind: "component", type: IGridHeaderCell, selector: "i-grid-header-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IGridCell, selector: "i-grid-cell", inputs: ["column", "fixedWidth"] }, { kind: "component", type: IPaginator, selector: "i-paginator", inputs: ["length", "pageIndex", "pageSize", "pageSizeOptions"], outputs: ["onPageChange"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: ITruncatedTooltipDirective, selector: "[truncatedTooltip]", inputs: ["truncatedTooltip"] }, { kind: "component", type: IGridHeaderCellGroup, selector: "i-grid-header-cell-group" }, { kind: "component", type: IGridHeaderCellGroupColumns, selector: "i-grid-header-cell-group-columns" }, { kind: "component", type: IGridViewport, selector: "i-grid-viewport" }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGrid, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGrid, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-grid',
@@ -10416,809 +10588,17 @@ const I_GRID_DECLARATIONS = [
     IGridHeaderCellGroupColumns,
 ];
 class IGridModule {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.33", ngImport: i0, type: IGridModule, imports: [IGrid, IGridViewport, IGridColumn, IGridCustomColumn, IGridColumnGroup, IGridHeaderCellDefDirective, IGridCellDefDirective, IGridRowDefDirective, IGridExpandableRow, IGridHeaderCell, IGridCell, IGridHeaderRowDirective, IGridRowDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IPaginator], exports: [IGrid, IGridViewport, IGridColumn, IGridCustomColumn, IGridColumnGroup, IGridHeaderCellDefDirective, IGridCellDefDirective, IGridRowDefDirective, IGridExpandableRow, IGridHeaderCell, IGridCell, IGridHeaderRowDirective, IGridRowDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IPaginator] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridModule });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridModule, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.34", ngImport: i0, type: IGridModule, imports: [IGrid, IGridViewport, IGridColumn, IGridCustomColumn, IGridColumnGroup, IGridHeaderCellDefDirective, IGridCellDefDirective, IGridRowDefDirective, IGridExpandableRow, IGridHeaderCell, IGridCell, IGridHeaderRowDirective, IGridRowDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IPaginator], exports: [IGrid, IGridViewport, IGridColumn, IGridCustomColumn, IGridColumnGroup, IGridHeaderCellDefDirective, IGridCellDefDirective, IGridRowDefDirective, IGridExpandableRow, IGridHeaderCell, IGridCell, IGridHeaderRowDirective, IGridRowDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IPaginator] });
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridModule });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IGridModule, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridModule, decorators: [{
             type: NgModule,
             args: [{
                     imports: [...I_GRID_DECLARATIONS, IPaginator],
                     exports: [...I_GRID_DECLARATIONS, IPaginator],
                 }]
         }] });
-
-/**
- * Default environment for `@insight/ui`'s shared data layer.
- *
- * `api.identity` and `signinUrl` are intentionally EMPTY -
- * the library does not default to any shared identity provider. Each consumer
- * app supplies its own values (its own BFF/identity host) via
- * `provideIAuth()`. The `user`/`configuration`/`application` keys keep
- * defaulting to the platform services and can still be overridden.
- */
-const environment = {
-    production: false,
-    releaseStage: 'development',
-    appName: 'Insight UI',
-    version: '1.0.2',
-    api: {
-        identity: '',
-        user: 'https://account-dev.paramountenterprise.co.id/api/v1/users',
-        configuration: 'https://account-dev.paramountenterprise.co.id/api/v1',
-        application: 'https://account-dev.paramountenterprise.co.id/api/v1/applications',
-    },
-    signinUrl: '',
-    tokenLifespan: {
-        accessTokenSeconds: 3600,
-        refreshTokenSeconds: 7200,
-        ssoSessionMaxSeconds: 54000,
-    },
-    csrfTokenMaxAgeSeconds: 7170,
-};
-
-/** Default relative endpoint paths for the configured identity host. */
-function getDefaultIAuthEndpoints() {
-    return {
-        csrf: '/auth/csrf',
-        login: '/auth/login',
-        refresh: '/auth/refresh',
-        logout: '/auth/logout',
-        exchange: '/auth/exchange',
-    };
-}
-/**
- * Default `IAuthConfig`. `api.identity` and `signinUrl` are left EMPTY
- * (no shared identity host is baked in) - a consumer app MUST supply its own
- * values via `provideIAuth({ ... })` and is validated fail-fast when it
- * forgets. All other fields default sensibly: `allowedReturnOrigins` to this
- * app's own origin, `endpoints` to the platform/BFF path contract, and lifespan /
- * csrf / api-key values from the library's default environment.
- */
-function getDefaultIAuthConfig() {
-    return {
-        api: {
-            identity: '', // no default identity host - the consumer app supplies its own
-            user: environment.api.user,
-            configuration: environment.api.configuration,
-            application: environment.api.application,
-        },
-        signinUrl: '', // no default sign-in page - the consumer app supplies its own
-        callbackPath: '/auth/callback',
-        allowedReturnOrigins: [window.location.origin],
-        tokenLifespan: { ...environment.tokenLifespan },
-        csrfTokenMaxAgeSeconds: environment.csrfTokenMaxAgeSeconds,
-        endpoints: { ...getDefaultIAuthEndpoints() },
-        apiKey: environment.apiKey,
-        appId: environment.appId,
-        unauthorizedHandling: 'dialog',
-    };
-}
-/**
- * Injection token carrying the consumer app's `IAuthConfig`. Provided via
- * `provideIAuth()`. Falls back to `getDefaultIAuthConfig()` (empty
- * `api.identity`/`signinUrl`) so services still resolve when the provider is
- * omitted - any auth call then throws a descriptive "identity host not
- * configured" error instead of silently hitting a default host.
- */
-const I_AUTH_CONFIG = new InjectionToken('I_AUTH_CONFIG', {
-    providedIn: 'root',
-    factory: () => getDefaultIAuthConfig(),
-});
-/**
- * The configured identity host (`api.identity`) or a descriptive error. Used by
- * auth services before building a request URL so a missing per-app host fails
- * loudly instead of producing a relative/undefined URL.
- */
-function requireIdentityHost(config) {
-    if (!config.api.identity) {
-        throw new Error('[@insight/ui] api.identity is not configured. Point it at this app\'s own auth host/BFF ' +
-            '(e.g. provideIAuth({ api: { identity: "https://<your-app>/api" }, signinUrl: "..." })).');
-    }
-    return config.api.identity;
-}
-/**
- * Relative path of an identity endpoint for the current config. Falls back to
- * `getDefaultIAuthEndpoints()` when the consumer did not override it.
- */
-function getAuthEndpointPath(config, key) {
-    return config.endpoints?.[key] ?? getDefaultIAuthEndpoints()[key] ?? '';
-}
-/**
- * Absolute URL of an identity endpoint: `{api.identity}{path}`. Throws a
- * descriptive error when the identity host is not configured.
- */
-function getAuthEndpointUrl(config, key) {
-    return `${requireIdentityHost(config)}${getAuthEndpointPath(config, key)}`;
-}
-/**
- * Validate a resolved auth config at bootstrap. Throws a descriptive error when
- * the mandatory per-app values (`api.identity`, `signinUrl`) are missing so a
- * misconfigured consumer fails fast instead of silently calling an undefined
- * host.
- */
-function validateIAuthConfig(config) {
-    if (!config.api.identity) {
-        throw new Error('[@insight/ui] provideIAuth() requires api.identity - the base URL of this app\'s own ' +
-            'auth host/BFF. The library no longer defaults to a shared identity provider.');
-    }
-    if (!config.signinUrl) {
-        throw new Error('[@insight/ui] provideIAuth() requires signinUrl - the full URL of this app\'s ' +
-            'sign-in page / BFF login route.');
-    }
-}
-
-/**
- * CSRF token management - cookie-to-header pattern for @insight/ui consumer apps.
- *
- *   1. FE calls GET {api.identity}{csrf endpoint} (default `/auth/csrf`).
- *   2. Backend returns `{ csrfToken }` in the JSON body AND sets a `csrf_token` cookie.
- *   3. FE stores the token in memory (JS cannot read cross-origin cookies).
- *   4. FE sends the token back as `X-CSRF-Token` header on mutating requests.
- *   5. Backend validates: header value === cookie value.
- *
- * Token expiration mirrors the backend cookie maxAge (minus a safety buffer,
- * configured via `csrfTokenMaxAgeSeconds`) so the FE transparently re-fetches
- * before the server-side cookie actually expires.
- */
-class ICsrfService {
-    http = inject(HttpClient);
-    config = inject(I_AUTH_CONFIG);
-    /** In-memory CSRF token — retrieved from the backend response body, never from document.cookie directly. */
-    token = null;
-    tokenFetchedAt = null;
-    /**
-     * Return the in-memory CSRF token, or `null` if never fetched or expired
-     * (expiry triggers callers to re-invoke `ensureToken()`).
-     */
-    getToken() {
-        if (this.token && this.isTokenExpired()) {
-            return null;
-        }
-        return this.token;
-    }
-    /** Whether the in-memory token has exceeded its TTL (`csrfTokenMaxAgeSeconds`). */
-    isTokenExpired() {
-        if (this.tokenFetchedAt === null) {
-            return false;
-        }
-        const maxAgeMs = (this.config.csrfTokenMaxAgeSeconds ?? 7170) * 1000;
-        return Date.now() - this.tokenFetchedAt >= maxAgeMs;
-    }
-    /**
-     * Fetch a fresh CSRF token from the configured identity host and store it in
-     * memory. On failure the error is propagated (callers that want best-effort
-     * behavior can catch it) - a failed fetch must not be silently swallowed,
-     * e.g. so the `retryOnCsrfError` pattern can re-trigger the fetch.
-     */
-    ensureToken() {
-        return this.http
-            .get(getAuthEndpointUrl(this.config, 'csrf'), { withCredentials: true })
-            .pipe(tap((res) => {
-            this.token = res.csrfToken ?? null;
-            this.tokenFetchedAt = Date.now();
-        }), map$1(() => undefined), catchError((err) => {
-            // Never log the token itself — status code only.
-            console.warn('[@insight/ui][CSRF] Failed to fetch CSRF token', err?.status);
-            return throwError(() => err);
-        }));
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICsrfService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICsrfService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICsrfService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
-
-/**
- * Build the full external URL to the app's configured sign-in page
- * (`config.signinUrl` - its own BFF login or iam-web signin) for a cross-domain
- * SSO redirect, routing the eventual handoff through THIS APP'S OWN callback
- * route (`config.callbackPath`, default `/auth/callback`) — never through the
- * page the user originally tried to visit.
- *
- * This is deliberate and fixes a real redirect loop: if the guard/interceptor
- * used `window.location.href` (the current page) as the returnUrl directly,
- * the sign-in page's handoff would append `#at=<token>` to THAT SAME page. Since that
- * page still doesn't have a stored session yet at the moment it re-renders,
- * the guard would fire again, capture `window.location.href` again — which
- * NOW ALREADY CONTAINS the previous `#at=` fragment — and redirect back to
- * back to the sign-in page with an ever-growing `returnUrl`, eventually overflowing header
- * size limits (HTTP 431).
- *
- * Routing through a dedicated callback route breaks the loop: the callback
- * page (`IAuthCallback`) consumes and strips the token BEFORE navigating
- * (via the in-app router, not a full reload) to `targetPath` — so the guard
- * only ever sees a clean, token-free URL on its next check.
- */
-function buildExternalSigninUrl(config, targetPath) {
-    const callbackPath = config.callbackPath ?? '/auth/callback';
-    const callbackUrl = `${window.location.origin}${callbackPath}?returnUrl=${encodeURIComponent(targetPath)}`;
-    return `${config.signinUrl}?returnUrl=${encodeURIComponent(callbackUrl)}`;
-}
-
-const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
-const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
-const readString = (value, key) => {
-    const candidate = value[key];
-    return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate : undefined;
-};
-const readNumber = (value, key) => {
-    const candidate = value[key];
-    return typeof candidate === 'number' && Number.isFinite(candidate) ? candidate : undefined;
-};
-const toSafeExtensionValue = (value, ancestors = new Set()) => {
-    if (value === null || typeof value === 'string' || typeof value === 'boolean') {
-        return value;
-    }
-    if (typeof value === 'number') {
-        return Number.isFinite(value) ? value : undefined;
-    }
-    if (typeof value !== 'object' || ancestors.has(value)) {
-        return undefined;
-    }
-    const nextAncestors = new Set(ancestors).add(value);
-    if (Array.isArray(value)) {
-        const result = [];
-        for (const item of value) {
-            const safeItem = toSafeExtensionValue(item, nextAncestors);
-            if (safeItem !== undefined) {
-                result.push(safeItem);
-            }
-        }
-        return result;
-    }
-    const result = {};
-    for (const [key, item] of Object.entries(value)) {
-        if (UNSAFE_KEYS.has(key)) {
-            continue;
-        }
-        const safeItem = toSafeExtensionValue(item, nextAncestors);
-        if (safeItem !== undefined) {
-            result[key] = safeItem;
-        }
-    }
-    return result;
-};
-const readRetryAfterHeader = (transport) => {
-    const headers = transport['headers'];
-    if (!isRecord(headers) || typeof headers['get'] !== 'function') {
-        return undefined;
-    }
-    const value = headers['get']('Retry-After');
-    if (typeof value !== 'string' || value.trim().length === 0) {
-        return undefined;
-    }
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-};
-/**
- * Purely normalizes current error bodies, legacy Problem Details bodies, and
- * raw Angular `HttpErrorResponse`-like values into one strict shape.
- */
-const normalizeApiError = (error) => {
-    const transport = isRecord(error) ? error : {};
-    const nestedBody = isRecord(transport['error']) ? transport['error'] : undefined;
-    const body = nestedBody ?? transport;
-    const normalized = {};
-    for (const [key, value] of Object.entries(body)) {
-        if (UNSAFE_KEYS.has(key)) {
-            continue;
-        }
-        const safeValue = toSafeExtensionValue(value);
-        if (safeValue !== undefined) {
-            normalized[key] = safeValue;
-        }
-    }
-    const status = readNumber(transport, 'status') ?? readNumber(body, 'status');
-    const bodyMessage = readString(body, 'message') ?? readString(body, 'Message');
-    const retryAfter = readNumber(body, 'retryAfter') ?? readRetryAfterHeader(transport);
-    if (status !== undefined)
-        normalized.status = status;
-    if (bodyMessage !== undefined)
-        normalized.message = bodyMessage;
-    if (retryAfter !== undefined)
-        normalized.retryAfter = retryAfter;
-    return normalized;
-};
-/** Format common field-validation dictionaries without changing the error payload. */
-function formatApiFieldErrors(error) {
-    const fields = error['errors'] ?? error['ModelState'];
-    if (!isRecord(fields))
-        return undefined;
-    const parts = Object.entries(fields).flatMap(([field, value]) => {
-        const messages = (Array.isArray(value) ? value : [value]).filter((item) => typeof item === 'string' && item.trim().length > 0);
-        return messages.length ? [`${field.replace(/^model\./i, '')}: ${messages.join(', ')}`] : [];
-    });
-    return parts.length ? parts.join('; ') : undefined;
-}
-/** Resolve display text without changing the canonical backend error fields. */
-const resolveApiErrorDisplayMessage = (error, localFallback, catalogResolver, formatter) => {
-    const normalized = normalizeApiError(error);
-    try {
-        const formatted = formatter?.(normalized);
-        if (formatted?.trim())
-            return formatted;
-    }
-    catch {
-        // Optional formatters fall back to the default display behavior.
-    }
-    const validation = formatApiFieldErrors(normalized);
-    if (validation)
-        return validation;
-    const backendMessage = normalized.message;
-    if (backendMessage) {
-        return backendMessage;
-    }
-    if (catalogResolver && normalized.errorCode) {
-        try {
-            const catalogMessage = catalogResolver(normalized.errorCode, normalized.revision, normalized);
-            if (catalogMessage?.trim()) {
-                return catalogMessage;
-            }
-        }
-        catch {
-            // A consumer catalog is optional; lookup failures fall through safely.
-        }
-    }
-    return normalized.detail ?? normalized.title ?? localFallback;
-};
-
-const valueAt = (value, key) => {
-    if (typeof value !== 'object' || value === null) {
-        return undefined;
-    }
-    const candidate = value[key];
-    return typeof candidate === 'string' && candidate.length > 0 ? candidate : undefined;
-};
-/** Supports normalized Problem Details errors and raw legacy HTTP error bodies. */
-const extractProblemDetailsErrorCode = (error) => {
-    if (error === null || error === undefined) {
-        return undefined;
-    }
-    const problem = error;
-    return (problem.errorCode ??
-        problem.code ??
-        valueAt(error?.error, 'errorCode') ??
-        valueAt(error?.error, 'code'));
-};
-/** Maps current backend and legacy error codes to the session-expired UI states. */
-const toSessionExpiredReason = (errorCode) => {
-    switch (errorCode) {
-        case 'AUTH_TOKEN_EXPIRED':
-        case 'TOKEN_EXPIRED':
-        case 'AUTH_NO_SESSION':
-            return 'TOKEN_EXPIRED';
-        case 'AUTH_SESSION_REVOKED':
-        case 'SESSION_REVOKED':
-            return 'SESSION_REVOKED';
-        case 'AUTH_SESSION_REPLACED':
-        case 'SESSION_REPLACED':
-            return 'SESSION_REPLACED';
-        default:
-            return undefined;
-    }
-};
-/**
- * True when an error is semantically a session-expiry event (HTTP 401/498 or a
- * recognized session-related error code). Other statuses are business/transport
- * errors and must be handled by the caller instead of forcing a logout.
- */
-const isSessionExpiredError = (error) => {
-    if (error instanceof HttpErrorResponse) {
-        if (error.status === 401 || error.status === 498) {
-            return true;
-        }
-    }
-    if (error?.status === 401 || error?.status === 498) {
-        return true;
-    }
-    return toSessionExpiredReason(extractProblemDetailsErrorCode(error)) !== undefined;
-};
-/**
- * In-memory overlay state for the session-expired UI.
- *
- * Besides the derived `reason`, the service exposes current backend error
- * fields and legacy `detail` so the shared dialog or consumer UI can resolve
- * display text without making its own configuration API call.
- *
- * @overridable — consumers may provide `{ provide: ISessionExpiredService, useClass: ... }`.
- */
-class ISessionExpiredService {
-    visible = signal(false, ...(ngDevMode ? [{ debugName: "visible" }] : []));
-    returnUrl = signal('/', ...(ngDevMode ? [{ debugName: "returnUrl" }] : []));
-    reason = signal(undefined, ...(ngDevMode ? [{ debugName: "reason" }] : []));
-    /** Raw error code from the backend Problem Details response (e.g. `AUTH_TOKEN_EXPIRED`). */
-    errorCode = signal(null, ...(ngDevMode ? [{ debugName: "errorCode" }] : []));
-    /** Backend-provided `detail` message from the Problem Details response — display fallback. */
-    detail = signal(null, ...(ngDevMode ? [{ debugName: "detail" }] : []));
-    /** Backend-provided message from the current error contract — highest display precedence. */
-    message = signal(null, ...(ngDevMode ? [{ debugName: "message" }] : []));
-    /** Full normalized error, including revision and safe extension fields. */
-    apiError = signal(null, ...(ngDevMode ? [{ debugName: "apiError" }] : []));
-    show(returnUrl, reason, errorCode, detail, message, apiError) {
-        this.returnUrl.set(returnUrl || '/');
-        this.reason.set(reason);
-        this.errorCode.set(errorCode ?? null);
-        this.detail.set(detail ?? null);
-        this.message.set(message ?? null);
-        this.apiError.set(apiError ?? null);
-        this.visible.set(true);
-    }
-    hide() {
-        this.visible.set(false);
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISessionExpiredService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISessionExpiredService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISessionExpiredService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
-
-const IH_SKIP_BEARER_HEADER = 'X-IH-Skip-Bearer';
-const isAuthSkipUrl = (url, config) => ['csrf', 'refresh', 'login', 'logout', 'exchange'].some((key) => url.split('?')[0] === getAuthEndpointUrl(config, key));
-const addAuthHeader = (req, token) => req.clone({ headers: req.headers.set('Authorization', `Bearer ${token}`) });
-/** Attach the application token and retry unauthorized requests once after shared refresh. */
-const authInterceptor = (req, next) => {
-    const session = inject(ISessionService);
-    const config = inject(I_AUTH_CONFIG);
-    const sessionExpired = inject(ISessionExpiredService);
-    const csrf = inject(ICsrfService);
-    if (req.headers.has(IH_SKIP_BEARER_HEADER)) {
-        return next(req.clone({ headers: req.headers.delete(IH_SKIP_BEARER_HEADER) }));
-    }
-    if (isAuthSkipUrl(req.url, config))
-        return next(req);
-    const expire = (error) => {
-        const apiError = normalizeApiError(error);
-        if (apiError['name'] === 'AbortError' || apiError['name'] === 'TimeoutError') {
-            return throwError(() => error);
-        }
-        session.clearSession();
-        if (config.onUnauthorized)
-            config.onUnauthorized(error);
-        else if ((config.unauthorizedHandling ?? 'dialog') === 'dialog') {
-            const errorCode = extractProblemDetailsErrorCode(apiError);
-            sessionExpired.show(window.location.pathname + window.location.search, toSessionExpiredReason(errorCode), errorCode, apiError.detail, apiError.message, apiError);
-        }
-        else {
-            window.location.href = buildExternalSigninUrl(config, window.location.pathname + window.location.search);
-        }
-        return throwError(() => error);
-    };
-    const token = session.getAccessToken();
-    return next(token ? addAuthHeader(req, token) : req).pipe(catchError((error) => {
-        if (!(error instanceof HttpErrorResponse) || error.status !== 401)
-            return throwError(() => error);
-        return session.refreshToken().pipe(catchError(expire), switchMap((newToken) => {
-            let retry = addAuthHeader(req, newToken);
-            const csrfToken = csrf.getToken();
-            if (csrfToken)
-                retry = retry.clone({ setHeaders: { 'X-CSRF-Token': csrfToken } });
-            else
-                retry = retry.clone({ headers: retry.headers.delete('X-CSRF-Token') });
-            return next(retry).pipe(catchError((retryError) => retryError instanceof HttpErrorResponse && retryError.status === 401
-                ? expire(retryError)
-                : throwError(() => retryError)));
-        }));
-    }));
-};
-
-/** Sends authenticated application requests through the shared SSO transport. */
-class IApiService {
-    http = inject(HttpClient);
-    csrf = inject(ICsrfService);
-    config = inject(I_AUTH_CONFIG);
-    mergeHeaders(body, options) {
-        const headers = { Accept: 'application/json', ...options.headers };
-        const findContentType = () => Object.keys(headers).find((key) => key.toLowerCase() === 'content-type');
-        if (body instanceof FormData) {
-            for (const key of Object.keys(headers)) {
-                if (key.toLowerCase() === 'content-type')
-                    delete headers[key];
-            }
-        }
-        else if (body !== undefined &&
-            body !== null &&
-            !(body instanceof Blob) &&
-            !(body instanceof ArrayBuffer) &&
-            !findContentType()) {
-            headers['Content-Type'] = 'application/json';
-        }
-        const csrfToken = this.csrf.getToken();
-        if (csrfToken)
-            headers['X-CSRF-Token'] = csrfToken;
-        if (this.config.apiKey)
-            headers['Api-Key'] = this.config.apiKey;
-        if (options.skipBearer)
-            headers[IH_SKIP_BEARER_HEADER] = 'true';
-        return headers;
-    }
-    enrichError(err) {
-        const transport = err;
-        const decode = (body) => {
-            if (typeof body === 'string') {
-                try {
-                    return JSON.parse(body);
-                }
-                catch {
-                    return {};
-                }
-            }
-            return body;
-        };
-        if (transport?.error instanceof ArrayBuffer) {
-            const body = decode(new TextDecoder().decode(transport.error));
-            return throwError(() => normalizeApiError({
-                ...transport,
-                error: body,
-            }));
-        }
-        if (transport?.error instanceof Blob) {
-            return from(transport.error.text()).pipe(catchError(() => from(Promise.resolve(''))), switchMap((body) => throwError(() => normalizeApiError({ ...transport, error: decode(body) }))));
-        }
-        return throwError(() => normalizeApiError(typeof transport?.error === 'string'
-            ? { ...transport, error: decode(transport.error) }
-            : err));
-    }
-    /** Cancel the transport subscription, including its refresh waiter, on deadline or signal. */
-    request(method, path, body, options = {}, params) {
-        return defer(() => {
-            const baseUrl = options.apiUrl ?? this.config.api.identity;
-            if (!baseUrl)
-                throw new Error('No API base URL configured. Set api.identity or IApiOptions.apiUrl.');
-            const timeoutMs = options.timeoutMs ?? 60_000;
-            if (!Number.isFinite(timeoutMs) || timeoutMs <= 0)
-                throw new Error('timeoutMs must be a positive finite number.');
-            const common = {
-                body,
-                params: params ?? options.params,
-                withCredentials: true,
-                headers: this.mergeHeaders(body, options),
-                observe: 'response',
-            };
-            const source = options.responseType === 'blob'
-                ? this.http.request(method, `${baseUrl}${path}`, { ...common, responseType: 'blob' })
-                : options.responseType === 'arraybuffer'
-                    ? this.http.request(method, `${baseUrl}${path}`, {
-                        ...common,
-                        responseType: 'arraybuffer',
-                    })
-                    : options.responseType === 'text'
-                        ? this.http.request(method, `${baseUrl}${path}`, { ...common, responseType: 'text' })
-                        : this.http.request(method, `${baseUrl}${path}`, {
-                            ...common,
-                            responseType: 'json',
-                        });
-            return new Observable((subscriber) => {
-                const fail = (kind) => subscriber.error(normalizeApiError({
-                    status: 0,
-                    name: kind === 'timeout' ? 'TimeoutError' : 'AbortError',
-                    errorCode: kind === 'timeout' ? 'REQUEST_TIMEOUT' : 'REQUEST_ABORTED',
-                    message: kind === 'timeout' ? 'Request timed out' : 'Request aborted',
-                }));
-                if (options.signal?.aborted) {
-                    fail('abort');
-                    return;
-                }
-                const abort = () => fail('abort');
-                options.signal?.addEventListener('abort', abort, { once: true });
-                const timer = setTimeout(() => fail('timeout'), timeoutMs);
-                const subscription = source
-                    .pipe(catchError((err) => this.enrichError(err)), map$1((response) => (options.observe === 'response' ? response : response.body)))
-                    .subscribe(subscriber);
-                return () => {
-                    clearTimeout(timer);
-                    options.signal?.removeEventListener('abort', abort);
-                    subscription.unsubscribe();
-                };
-            });
-        });
-    }
-    get(path, params, options) {
-        return this.request('GET', path, undefined, options, params);
-    }
-    post(path, body = {}, options) {
-        return this.request('POST', path, body, options);
-    }
-    put(path, body = {}, options) {
-        return this.request('PUT', path, body, options);
-    }
-    patch(path, body = {}, options) {
-        return this.request('PATCH', path, body, options);
-    }
-    delete(path, options) {
-        return this.request('DELETE', path, options?.body, options);
-    }
-    upload(path, file, options) {
-        const body = file instanceof FormData ? file : new FormData();
-        if (!(file instanceof FormData))
-            body.append('file', file);
-        return this.request('POST', path, body, options);
-    }
-    /** Downloads a binary response body. */
-    getBlob(path, params, options) {
-        return this.request('GET', path, undefined, { ...options, responseType: 'blob', observe: 'body' }, params);
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IApiService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IApiService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IApiService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
-
-/**
- * Login lockout constants (local, client-side supplement to Keycloak
- * brute-force protection). 5 failed attempts → 1-minute suspend; counter
- * resets after 12h idle or a successful login.
- */
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 1 * 60 * 1000;
-const IDLE_RESET_MS = 12 * 60 * 60 * 1000;
-const LOCK_STORAGE_KEY = 'iam.mock.login_lockout';
-/**
- * Auth facade against the configured identity host (`api.identity`) - typically
- * a Mode-2 proxy (Keycloak is never exposed to the frontend) or an app's own
- * BFF. Endpoint paths are relative and come from `config.endpoints` (defaults
- * match the platform/BFF contract). MFA/password methods are identity-owner
- * routes and stay fixed.
- *
- * @overridable - consumers may provide `{ provide: IAuthService, useClass: ... }`.
- */
-class IAuthService {
-    api = inject(IApiService);
-    config = inject(I_AUTH_CONFIG);
-    get identityUrl() {
-        return requireIdentityHost(this.config);
-    }
-    login(username, password, recaptchaToken, isChallengeResponse) {
-        const cleanUsername = username.trim().toLowerCase();
-        const lockData = this.getLockoutData(cleanUsername);
-        if (lockData.lockedUntil && lockData.lockedUntil > Date.now()) {
-            const retryAfter = Math.ceil((lockData.lockedUntil - Date.now()) / 1000);
-            return throwError(() => ({
-                status: 423,
-                message: 'Login access is temporarily restricted. Please try again in a few moments.',
-                detail: 'Login access is temporarily restricted. Please try again in a few moments.',
-                retryAfter,
-            }));
-        }
-        return this.api
-            .post(getAuthEndpointPath(this.config, 'login'), {
-            username,
-            password,
-            recaptchaToken,
-            isChallengeResponse: isChallengeResponse ?? false,
-        })
-            .pipe(tap((res) => {
-            if (res.accessToken || res.mfaRequired || res.passwordExpired) {
-                this.resetLockout(cleanUsername);
-            }
-        }), catchError((err) => {
-            if (err?.status === 401 || err?.status === 423) {
-                this.recordFailedAttempt(cleanUsername);
-            }
-            return throwError(() => err);
-        }));
-    }
-    /** Silently refresh the access token via the HttpOnly session cookie. */
-    refresh() {
-        return this.api.post(getAuthEndpointPath(this.config, 'refresh'), {});
-    }
-    /** Clear the server-side session and expire the HttpOnly session cookie. */
-    logout(refreshToken) {
-        return this.api
-            .post(getAuthEndpointPath(this.config, 'logout'), { refreshToken })
-            .pipe(map$1(() => undefined));
-    }
-    /** Exchange a short-lived `at=` auth token for a full session (cross-app handoff). */
-    exchangeAuthToken(authToken) {
-        return this.api.post(getAuthEndpointPath(this.config, 'exchange'), {}, { headers: { Authorization: authToken } });
-    }
-    /** Verify the MFA TOTP code during a login challenge. */
-    verifyMfaChallenge(mfaSessionId, totpCode) {
-        return this.api.post('/auth/mfa/verify', { mfaSessionId, totpCode });
-    }
-    /** Verify the TOTP code during first-time MFA enrollment (forced at login). */
-    verifyMfaEnroll(mfaSessionId, totpCode) {
-        return this.api.post('/auth/mfa/enroll/verify', {
-            mfaSessionId,
-            totpCode,
-        });
-    }
-    /** Self-service MFA — check enrollment status (`GET /profile/mfa`). */
-    selfServiceGetStatus() {
-        return this.api.get('/profile/mfa');
-    }
-    /** Self-service MFA — initiate enrollment to get the QR & session id (`POST /profile/mfa/enroll`). */
-    selfServiceEnrollInitiate() {
-        return this.api.post('/profile/mfa/enroll', {});
-    }
-    /** Self-service MFA — verify OTP and complete enrollment (`POST /profile/mfa/enroll/verify`). */
-    selfServiceEnrollVerify(enrollmentSessionId, totpCode) {
-        return this.api
-            .post('/profile/mfa/enroll/verify', { enrollmentSessionId, totpCode })
-            .pipe(map$1(() => undefined));
-    }
-    /** Self-service reset (un-enroll) MFA for the current user — requires password (`DELETE /profile/mfa`). */
-    selfServiceResetMfa(userSub, password) {
-        return this.api
-            .delete('/profile/mfa', { apiUrl: this.identityUrl, body: { password } })
-            .pipe(map$1(() => undefined));
-    }
-    /**
-     * Change password when it has expired (forced change flow). Uses a short-lived
-     * `changePasswordToken` (10 min, scope `change_password_only`) as the Bearer
-     * header. Backend returns a full accessToken on success so the user continues
-     * seamlessly without re-login.
-     */
-    changePassword(changePasswordToken, newPassword, confirmPassword) {
-        return this.api.post('/auth/change-password', { newPassword, confirmPassword }, { headers: { Authorization: `Bearer ${changePasswordToken}` } });
-    }
-    /** Request a password-reset link via email or WhatsApp (`POST /auth/forgot-password`). */
-    forgotPassword(identifier, mode) {
-        return this.api.post('/auth/forgot-password', {
-            identifier,
-            method: mode,
-        });
-    }
-    /** Validate a reset token before showing the reset form (`GET /auth/reset-password/validate`). */
-    validateResetToken(token) {
-        return this.api.get('/auth/reset-password/validate', new HttpParams().set('token', token));
-    }
-    /** Submit a new password using the reset token (`POST /auth/reset-password`). */
-    resetPassword(token, newPassword, confirmPassword) {
-        return this.api.post('/auth/reset-password', {
-            token,
-            newPassword,
-            confirmPassword,
-        });
-    }
-    // ─── Login lockout helpers (sessionStorage per-username) ─────────────────────
-    getLockoutData(username) {
-        try {
-            const raw = sessionStorage.getItem(`${LOCK_STORAGE_KEY}_${username}`);
-            const data = raw ? JSON.parse(raw) : { attempts: 0, lockedUntil: null, lastAttemptAt: null };
-            if (data.lastAttemptAt && Date.now() - data.lastAttemptAt >= IDLE_RESET_MS) {
-                return { attempts: 0, lockedUntil: null, lastAttemptAt: null };
-            }
-            return data;
-        }
-        catch {
-            return { attempts: 0, lockedUntil: null, lastAttemptAt: null };
-        }
-    }
-    recordFailedAttempt(username) {
-        const data = this.getLockoutData(username);
-        data.attempts += 1;
-        data.lastAttemptAt = Date.now();
-        if (data.attempts >= MAX_LOGIN_ATTEMPTS - 1) {
-            data.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
-        }
-        sessionStorage.setItem(`${LOCK_STORAGE_KEY}_${username}`, JSON.stringify(data));
-    }
-    resetLockout(username) {
-        sessionStorage.removeItem(`${LOCK_STORAGE_KEY}_${username}`);
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IAuthService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IAuthService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IAuthService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
-
-/**
- * Known API error codes surfaced by the platform services (mirrors the
- * iam-user-api error catalog — see `iam-user-api/src/common/errors/user-errors.ts`).
- *
- * Consumers branch on these to tailor UX (e.g. showing the "Access Unavailable"
- * page when the current user has no application mapping).
- */
-const USER_APPLICATION_MAPPING_NOT_FOUND = 'USER_APPLICATION_MAPPING_NOT_FOUND';
 
 function getMenuRoute(menu) {
     return menu?.route?.trim() || null;
@@ -11380,6 +10760,1033 @@ function normalizeMenu(menu, level) {
 function normalizeMenuTree(menus) {
     return (menus ?? []).map((menu) => normalizeMenu(menu, 0));
 }
+/** Match the longest segment-aligned menu route and return its ancestors. */
+function findBreadcrumbMenuChain(menus, path) {
+    const normalize = (value) => ('/' + value.split(/[?#]/)[0].replace(/^\/-?(?:\/|$)/, ''))
+        .replace(/\/{2,}/g, '/')
+        .replace(/\/$/, '') || '/';
+    const current = normalize(path);
+    let best = [];
+    let length = -1;
+    const visit = (nodes, ancestors) => {
+        for (const node of nodes) {
+            const chain = [...ancestors, node];
+            const route = getMenuRoute(node);
+            if (route && !isHttpRoute(route)) {
+                const candidate = normalize(route);
+                if ((current === candidate || (candidate !== '/' && current.startsWith(candidate + '/'))) &&
+                    candidate.length > length) {
+                    best = chain;
+                    length = candidate.length;
+                }
+            }
+            visit(getMenuChildren(node), chain);
+        }
+    };
+    visit(menus, []);
+    return best;
+}
+
+/**
+ * Default environment for `@insight/ui`'s shared data layer.
+ *
+ * `api.identity` and `signinUrl` are intentionally EMPTY -
+ * the library does not default to any shared identity provider. Each consumer
+ * app supplies its own values (its own BFF/identity host) via
+ * `provideIAuth()`. The `user`/`configuration`/`application` keys keep
+ * defaulting to the platform services and can still be overridden.
+ */
+const environment = {
+    production: false,
+    releaseStage: 'development',
+    appName: 'Insight UI',
+    version: '1.0.2',
+    api: {
+        identity: '',
+        user: 'https://account-dev.paramountenterprise.co.id/api/v1/users',
+        configuration: 'https://account-dev.paramountenterprise.co.id/api/v1',
+        application: 'https://account-dev.paramountenterprise.co.id/api/v1/applications',
+    },
+    signinUrl: '',
+    tokenLifespan: {
+        accessTokenSeconds: 3600,
+        refreshTokenSeconds: 7200,
+        ssoSessionMaxSeconds: 54000,
+    },
+    csrfTokenMaxAgeSeconds: 7170,
+};
+
+/** Default relative endpoint paths for the configured identity host. */
+function getDefaultIAuthEndpoints() {
+    return {
+        csrf: '/auth/csrf',
+        impersonationEnd: '/auth/impersonation/end',
+        login: '/auth/login',
+        refresh: '/auth/refresh',
+        logout: '/auth/logout',
+        exchange: '/auth/exchange',
+    };
+}
+/**
+ * Default `IAuthConfig`. `api.identity` and `signinUrl` are left EMPTY
+ * (no shared identity host is baked in) - a consumer app MUST supply its own
+ * values via `provideIAuth({ ... })` and is validated fail-fast when it
+ * forgets. All other fields default sensibly: `allowedReturnOrigins` to this
+ * app's own origin, `endpoints` to the platform/BFF path contract, and lifespan /
+ * csrf / api-key values from the library's default environment.
+ */
+function getDefaultIAuthConfig() {
+    return {
+        api: {
+            identity: '', // no default identity host - the consumer app supplies its own
+            user: environment.api.user,
+            configuration: environment.api.configuration,
+            application: environment.api.application,
+        },
+        signinUrl: '', // no default sign-in page - the consumer app supplies its own
+        callbackPath: '/auth/callback',
+        allowedReturnOrigins: [window.location.origin],
+        tokenLifespan: { ...environment.tokenLifespan },
+        csrfTokenMaxAgeSeconds: environment.csrfTokenMaxAgeSeconds,
+        endpoints: { ...getDefaultIAuthEndpoints() },
+        apiKey: environment.apiKey,
+        appId: environment.appId,
+        unauthorizedHandling: 'dialog',
+    };
+}
+/**
+ * Injection token carrying the consumer app's `IAuthConfig`. Provided via
+ * `provideIAuth()`. Falls back to `getDefaultIAuthConfig()` (empty
+ * `api.identity`/`signinUrl`) so services still resolve when the provider is
+ * omitted - any auth call then throws a descriptive "identity host not
+ * configured" error instead of silently hitting a default host.
+ */
+const I_AUTH_CONFIG = new InjectionToken('I_AUTH_CONFIG', {
+    providedIn: 'root',
+    factory: () => getDefaultIAuthConfig(),
+});
+/**
+ * The configured identity host (`api.identity`) or a descriptive error. Used by
+ * auth services before building a request URL so a missing per-app host fails
+ * loudly instead of producing a relative/undefined URL.
+ */
+function requireIdentityHost(config) {
+    if (!config.api.identity) {
+        throw new Error("[@insight/ui] api.identity is not configured. Point it at this app's own auth host/BFF " +
+            '(e.g. provideIAuth({ api: { identity: "https://<your-app>/api" }, signinUrl: "..." })).');
+    }
+    return config.api.identity;
+}
+/**
+ * Relative path of an identity endpoint for the current config. Falls back to
+ * `getDefaultIAuthEndpoints()` when the consumer did not override it.
+ */
+function getAuthEndpointPath(config, key) {
+    return config.endpoints?.[key] ?? getDefaultIAuthEndpoints()[key] ?? '';
+}
+/**
+ * Absolute URL of an identity endpoint: `{api.identity}{path}`. Throws a
+ * descriptive error when the identity host is not configured.
+ */
+function getAuthEndpointUrl(config, key) {
+    return `${requireIdentityHost(config)}${getAuthEndpointPath(config, key)}`;
+}
+/**
+ * Validate a resolved auth config at bootstrap. Throws a descriptive error when
+ * the mandatory per-app values (`api.identity`, `signinUrl`) are missing so a
+ * misconfigured consumer fails fast instead of silently calling an undefined
+ * host.
+ */
+function validateIAuthConfig(config) {
+    if (!config.api.identity) {
+        throw new Error("[@insight/ui] provideIAuth() requires api.identity - the base URL of this app's own " +
+            'auth host/BFF. The library no longer defaults to a shared identity provider.');
+    }
+    if (!config.signinUrl) {
+        throw new Error("[@insight/ui] provideIAuth() requires signinUrl - the full URL of this app's " +
+            'sign-in page / BFF login route.');
+    }
+}
+
+/**
+ * CSRF token management - cookie-to-header pattern for @insight/ui consumer apps.
+ *
+ *   1. FE calls GET {api.identity}{csrf endpoint} (default `/auth/csrf`).
+ *   2. Backend returns `{ csrfToken }` in the JSON body AND sets a `csrf_token` cookie.
+ *   3. FE stores the token in memory (JS cannot read cross-origin cookies).
+ *   4. FE sends the token back as `X-CSRF-Token` header on mutating requests.
+ *   5. Backend validates: header value === cookie value.
+ *
+ * Token expiration mirrors the backend cookie maxAge (minus a safety buffer,
+ * configured via `csrfTokenMaxAgeSeconds`) so the FE transparently re-fetches
+ * before the server-side cookie actually expires.
+ */
+class ICsrfService {
+    http = inject(HttpClient);
+    config = inject(I_AUTH_CONFIG);
+    /** In-memory CSRF token — retrieved from the backend response body, never from document.cookie directly. */
+    token = null;
+    tokenFetchedAt = null;
+    /**
+     * Return the in-memory CSRF token, or `null` if never fetched or expired
+     * (expiry triggers callers to re-invoke `ensureToken()`).
+     */
+    getToken() {
+        if (this.token && this.isTokenExpired()) {
+            return null;
+        }
+        return this.token;
+    }
+    /** Whether the in-memory token has exceeded its TTL (`csrfTokenMaxAgeSeconds`). */
+    isTokenExpired() {
+        if (this.tokenFetchedAt === null) {
+            return false;
+        }
+        const maxAgeMs = (this.config.csrfTokenMaxAgeSeconds ?? 7170) * 1000;
+        return Date.now() - this.tokenFetchedAt >= maxAgeMs;
+    }
+    /**
+     * Fetch a fresh CSRF token from the configured identity host and store it in
+     * memory. On failure the error is propagated (callers that want best-effort
+     * behavior can catch it) - a failed fetch must not be silently swallowed,
+     * e.g. so the `retryOnCsrfError` pattern can re-trigger the fetch.
+     */
+    ensureToken() {
+        return this.http
+            .get(getAuthEndpointUrl(this.config, 'csrf'), { withCredentials: true })
+            .pipe(tap((res) => {
+            this.token = res.csrfToken ?? null;
+            this.tokenFetchedAt = Date.now();
+        }), map$1(() => undefined), catchError((err) => {
+            // Never log the token itself — status code only.
+            console.warn('[@insight/ui][CSRF] Failed to fetch CSRF token', err?.status);
+            return throwError(() => err);
+        }));
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICsrfService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICsrfService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICsrfService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const isRecord = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
+const readString = (value, key) => {
+    const candidate = value[key];
+    return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate : undefined;
+};
+const readNumber = (value, key) => {
+    const candidate = value[key];
+    return typeof candidate === 'number' && Number.isFinite(candidate) ? candidate : undefined;
+};
+const toSafeExtensionValue = (value, ancestors = new Set()) => {
+    if (value === null || typeof value === 'string' || typeof value === 'boolean') {
+        return value;
+    }
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : undefined;
+    }
+    if (typeof value !== 'object' || ancestors.has(value)) {
+        return undefined;
+    }
+    const nextAncestors = new Set(ancestors).add(value);
+    if (Array.isArray(value)) {
+        const result = [];
+        for (const item of value) {
+            const safeItem = toSafeExtensionValue(item, nextAncestors);
+            if (safeItem !== undefined) {
+                result.push(safeItem);
+            }
+        }
+        return result;
+    }
+    const result = {};
+    for (const [key, item] of Object.entries(value)) {
+        if (UNSAFE_KEYS.has(key)) {
+            continue;
+        }
+        const safeItem = toSafeExtensionValue(item, nextAncestors);
+        if (safeItem !== undefined) {
+            result[key] = safeItem;
+        }
+    }
+    return result;
+};
+const readRetryAfterHeader = (transport) => {
+    const headers = transport['headers'];
+    if (!isRecord(headers) || typeof headers['get'] !== 'function') {
+        return undefined;
+    }
+    const value = headers['get']('Retry-After');
+    if (typeof value !== 'string' || value.trim().length === 0) {
+        return undefined;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+};
+/**
+ * Purely normalizes current error bodies, legacy Problem Details bodies, and
+ * raw Angular `HttpErrorResponse`-like values into one strict shape.
+ */
+const normalizeApiError = (error) => {
+    const transport = isRecord(error) ? error : {};
+    const nestedBody = isRecord(transport['error']) ? transport['error'] : undefined;
+    const body = nestedBody ?? transport;
+    const normalized = {};
+    for (const [key, value] of Object.entries(body)) {
+        if (UNSAFE_KEYS.has(key)) {
+            continue;
+        }
+        const safeValue = toSafeExtensionValue(value);
+        if (safeValue !== undefined) {
+            normalized[key] = safeValue;
+        }
+    }
+    const status = readNumber(transport, 'status') ?? readNumber(body, 'status');
+    const bodyMessage = readString(body, 'message') ?? readString(body, 'Message');
+    const retryAfter = readNumber(body, 'retryAfter') ?? readRetryAfterHeader(transport);
+    if (status !== undefined)
+        normalized.status = status;
+    if (bodyMessage !== undefined)
+        normalized.message = bodyMessage;
+    if (retryAfter !== undefined)
+        normalized.retryAfter = retryAfter;
+    return normalized;
+};
+/** Format common field-validation dictionaries without changing the error payload. */
+function formatApiFieldErrors(error) {
+    const fields = error['errors'] ?? error['ModelState'];
+    if (!isRecord(fields))
+        return undefined;
+    const parts = Object.entries(fields).flatMap(([field, value]) => {
+        const messages = (Array.isArray(value) ? value : [value]).filter((item) => typeof item === 'string' && item.trim().length > 0);
+        return messages.length ? [`${field.replace(/^model\./i, '')}: ${messages.join(', ')}`] : [];
+    });
+    return parts.length ? parts.join('; ') : undefined;
+}
+/** Resolve display text without changing the canonical backend error fields. */
+const resolveApiErrorDisplayMessage = (error, localFallback, catalogResolver, formatter) => {
+    const normalized = normalizeApiError(error);
+    try {
+        const formatted = formatter?.(normalized);
+        if (formatted?.trim())
+            return formatted;
+    }
+    catch {
+        // Optional formatters fall back to the default display behavior.
+    }
+    const validation = formatApiFieldErrors(normalized);
+    if (validation)
+        return validation;
+    const backendMessage = normalized.message;
+    if (backendMessage) {
+        return backendMessage;
+    }
+    if (catalogResolver && normalized.errorCode) {
+        try {
+            const catalogMessage = catalogResolver(normalized.errorCode, normalized.revision, normalized);
+            if (catalogMessage?.trim()) {
+                return catalogMessage;
+            }
+        }
+        catch {
+            // A consumer catalog is optional; lookup failures fall through safely.
+        }
+    }
+    return normalized.detail ?? normalized.title ?? localFallback;
+};
+
+/**
+ * Build the full external URL to the app's configured sign-in page
+ * (`config.signinUrl` - its own BFF login or iam-web signin) for a cross-domain
+ * SSO redirect, routing the eventual handoff through THIS APP'S OWN callback
+ * route (`config.callbackPath`, default `/auth/callback`) — never through the
+ * page the user originally tried to visit.
+ *
+ * This is deliberate and fixes a real redirect loop: if the guard/interceptor
+ * used `window.location.href` (the current page) as the returnUrl directly,
+ * the sign-in page's handoff would append `#at=<token>` to THAT SAME page. Since that
+ * page still doesn't have a stored session yet at the moment it re-renders,
+ * the guard would fire again, capture `window.location.href` again — which
+ * NOW ALREADY CONTAINS the previous `#at=` fragment — and redirect back to
+ * back to the sign-in page with an ever-growing `returnUrl`, eventually overflowing header
+ * size limits (HTTP 431).
+ *
+ * Routing through a dedicated callback route breaks the loop: the callback
+ * page (`IAuthCallback`) consumes and strips the token BEFORE navigating
+ * (via the in-app router, not a full reload) to `targetPath` — so the guard
+ * only ever sees a clean, token-free URL on its next check.
+ */
+function buildExternalSigninUrl(config, targetPath) {
+    const callbackPath = config.callbackPath ?? '/auth/callback';
+    const callbackUrl = `${window.location.origin}${callbackPath}?returnUrl=${encodeURIComponent(targetPath)}`;
+    return `${config.signinUrl}?returnUrl=${encodeURIComponent(callbackUrl)}`;
+}
+
+const IMPERSONATION_INFORMATION = 'To end only this session (the grant stays active), log out normally from the application. ' +
+    'The End Impersonate Session button ends the session and revokes the grant.';
+const IMPERSONATION_CONFIRMATION = 'End this impersonation session and revoke your impersonation grant? You will be signed out and ' +
+    'cannot start another session with this grant.';
+const COUNTDOWN_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
+/** Decodes display claims only; backend authorization remains authoritative. */
+function readImpersonationClaims(token) {
+    try {
+        const segment = token?.split('.')[1];
+        if (!segment)
+            return {};
+        const base64 = segment.replace(/-/g, '+').replace(/_/g, '/');
+        const bytes = Uint8Array.from(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')), (c) => c.charCodeAt(0));
+        const value = JSON.parse(new TextDecoder().decode(bytes));
+        return value && typeof value === 'object' && !Array.isArray(value)
+            ? value
+            : {};
+    }
+    catch {
+        return {};
+    }
+}
+function record(value) {
+    return value && typeof value === 'object' ? value : {};
+}
+function text(value) {
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+function readImpersonationActor(token) {
+    const sub = text(record(readImpersonationClaims(token)['act'])['sub']);
+    return sub ? { sub } : null;
+}
+function impersonationContextKey(token) {
+    if (!token)
+        return '';
+    const claims = readImpersonationClaims(token);
+    return JSON.stringify([
+        claims['sub'] ?? '',
+        record(claims['act'])['sub'] ?? '',
+        claims['sid'] ?? '',
+        claims['imp_grant_id'] ?? '',
+    ]);
+}
+function actorDisplayNameFromToken(token) {
+    if (!readImpersonationActor(token))
+        return '-';
+    const act = record(readImpersonationClaims(token)['act']);
+    return text(act['name']) ?? text(act['preferred_username']) ?? text(act['sub']) ?? '-';
+}
+function normalizeImpersonationStatus(value, source) {
+    const data = record(value);
+    if (source === 'bff') {
+        const actor = record(data['actor']);
+        const grant = record(data['impersonation']);
+        return {
+            mode: text(actor['sub']) && text(grant['grantId']) ? 'IMPERSONATING' : 'NONE',
+            actorName: text(actor['name']),
+            subjectName: text(record(data['user'])['name']),
+            grantId: text(grant['grantId']),
+            endAt: text(grant['endAt']),
+        };
+    }
+    return {
+        mode: data['mode'] === 'IMPERSONATING'
+            ? 'IMPERSONATING'
+            : data['mode'] === 'HAS_ACTIVE_GRANT'
+                ? 'HAS_ACTIVE_GRANT'
+                : 'NONE',
+        actorName: text(record(data['impersonatingUser'])['fullName']),
+        subjectName: text(record(data['impersonatedUser'])['fullName']),
+        occupation: text(record(data['impersonatedUser'])['jabatan']),
+        grantId: text(data['grantId']),
+        endDate: text(data['endDate']),
+        endAt: text(data['endAt']),
+    };
+}
+function resolveGrantEnd(endAt, endDate) {
+    for (const value of [endAt, endDate ? endDate.slice(0, 10) + 'T23:59:59.999+07:00' : null]) {
+        if (!value)
+            continue;
+        const time = new Date(value).getTime();
+        if (Number.isFinite(time))
+            return time;
+    }
+    return null;
+}
+function grantEndLabel(status) {
+    let day = status?.endDate?.slice(0, 10);
+    if (!day && status?.endAt) {
+        const instant = new Date(status.endAt).getTime();
+        if (Number.isFinite(instant))
+            day = new Date(instant + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    }
+    if (!day)
+        return '-';
+    const date = new Date(day + 'T00:00:00');
+    if (!Number.isFinite(date.getTime()))
+        return '-';
+    const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+    ];
+    return (String(date.getDate()).padStart(2, '0') +
+        ' ' +
+        months[date.getMonth()] +
+        ' ' +
+        date.getFullYear());
+}
+function formatCountdown(remainingMs) {
+    const seconds = Math.max(0, Math.floor(remainingMs / 1000));
+    return [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60), seconds % 60]
+        .map((n) => String(n).padStart(2, '0'))
+        .join(':');
+}
+function resolveImpersonationRedirect(result, identity, signinUrl) {
+    try {
+        if (result?.redirectTo) {
+            const host = new URL(identity, window.location.origin);
+            const target = new URL(result.redirectTo, host.origin);
+            if (['http:', 'https:'].includes(target.protocol) &&
+                target.origin === host.origin &&
+                !target.username &&
+                !target.password)
+                return target.href;
+        }
+    }
+    catch {
+        /* Use the configured sign-in destination. */
+    }
+    return signinUrl;
+}
+function isImpersonationCsrfError(error) {
+    const data = record(error);
+    const body = record(data['error']);
+    const code = text(data['errorCode']) ?? text(data['code']) ?? text(body['errorCode']) ?? text(body['code']);
+    const message = text(data['message']) ?? text(body['message']) ?? text(data['detail']) ?? '';
+    return (data['status'] === 403 &&
+        ((code?.toUpperCase().includes('CSRF') ?? false) || /csrf/i.test(message)));
+}
+
+const valueAt = (value, key) => {
+    if (typeof value !== 'object' || value === null) {
+        return undefined;
+    }
+    const candidate = value[key];
+    return typeof candidate === 'string' && candidate.length > 0 ? candidate : undefined;
+};
+/** Supports normalized Problem Details errors and raw legacy HTTP error bodies. */
+const extractProblemDetailsErrorCode = (error) => {
+    if (error === null || error === undefined) {
+        return undefined;
+    }
+    const problem = error;
+    return (problem.errorCode ??
+        problem.code ??
+        valueAt(error?.error, 'errorCode') ??
+        valueAt(error?.error, 'code'));
+};
+/** Maps current backend and legacy error codes to the session-expired UI states. */
+const toSessionExpiredReason = (errorCode) => {
+    switch (errorCode) {
+        case 'AUTH_TOKEN_EXPIRED':
+        case 'TOKEN_EXPIRED':
+        case 'AUTH_NO_SESSION':
+            return 'TOKEN_EXPIRED';
+        case 'IMPERSONATION_SESSION_INVALID':
+        case 'AUTH_SESSION_REVOKED':
+        case 'SESSION_REVOKED':
+            return 'SESSION_REVOKED';
+        case 'AUTH_SESSION_REPLACED':
+        case 'SESSION_REPLACED':
+            return 'SESSION_REPLACED';
+        default:
+            return undefined;
+    }
+};
+/**
+ * True when an error is semantically a session-expiry event (HTTP 401/498 or a
+ * recognized session-related error code). Other statuses are business/transport
+ * errors and must be handled by the caller instead of forcing a logout.
+ */
+const isSessionExpiredError = (error) => {
+    if (error instanceof HttpErrorResponse) {
+        if (error.status === 401 || error.status === 498) {
+            return true;
+        }
+    }
+    if (error?.status === 401 ||
+        error?.status === 498) {
+        return true;
+    }
+    return toSessionExpiredReason(extractProblemDetailsErrorCode(error)) !== undefined;
+};
+/**
+ * In-memory overlay state for the session-expired UI.
+ *
+ * Besides the derived `reason`, the service exposes current backend error
+ * fields and legacy `detail` so the shared dialog or consumer UI can resolve
+ * display text without making its own configuration API call.
+ *
+ * @overridable — consumers may provide `{ provide: ISessionExpiredService, useClass: ... }`.
+ */
+class ISessionExpiredService {
+    visible = signal(false, ...(ngDevMode ? [{ debugName: "visible" }] : []));
+    returnUrl = signal('/', ...(ngDevMode ? [{ debugName: "returnUrl" }] : []));
+    reason = signal(undefined, ...(ngDevMode ? [{ debugName: "reason" }] : []));
+    /** Raw error code from the backend Problem Details response (e.g. `AUTH_TOKEN_EXPIRED`). */
+    errorCode = signal(null, ...(ngDevMode ? [{ debugName: "errorCode" }] : []));
+    /** Backend-provided `detail` message from the Problem Details response — display fallback. */
+    detail = signal(null, ...(ngDevMode ? [{ debugName: "detail" }] : []));
+    /** Backend-provided message from the current error contract — highest display precedence. */
+    message = signal(null, ...(ngDevMode ? [{ debugName: "message" }] : []));
+    /** Full normalized error, including revision and safe extension fields. */
+    apiError = signal(null, ...(ngDevMode ? [{ debugName: "apiError" }] : []));
+    show(returnUrl, reason, errorCode, detail, message, apiError) {
+        this.returnUrl.set(returnUrl || '/');
+        this.reason.set(reason);
+        this.errorCode.set(errorCode ?? null);
+        this.detail.set(detail ?? null);
+        this.message.set(message ?? null);
+        this.apiError.set(apiError ?? null);
+        this.visible.set(true);
+    }
+    hide() {
+        this.visible.set(false);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISessionExpiredService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISessionExpiredService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISessionExpiredService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+const IH_SKIP_BEARER_HEADER = 'X-IH-Skip-Bearer';
+const isAuthSkipUrl = (url, config) => ['csrf', 'refresh', 'login', 'logout', 'exchange', 'impersonationEnd'].some((key) => url.split('?')[0] === getAuthEndpointUrl(config, key));
+const addAuthHeader = (req, token) => req.clone({ headers: req.headers.set('Authorization', `Bearer ${token}`) });
+/** Attach the application token and retry unauthorized requests once after shared refresh. */
+const authInterceptor = (req, next) => {
+    const session = inject(ISessionService);
+    const config = inject(I_AUTH_CONFIG);
+    const sessionExpired = inject(ISessionExpiredService);
+    const csrf = inject(ICsrfService);
+    if (req.headers.has(IH_SKIP_BEARER_HEADER)) {
+        return next(req.clone({ headers: req.headers.delete(IH_SKIP_BEARER_HEADER) }));
+    }
+    const requestContext = impersonationContextKey(session.getAccessToken());
+    const expire = (error) => {
+        const apiError = normalizeApiError(error);
+        if (apiError['name'] === 'AbortError' || apiError['name'] === 'TimeoutError') {
+            return throwError(() => error);
+        }
+        if (requestContext !== impersonationContextKey(session.getAccessToken()))
+            return throwError(() => error);
+        session.clearSession();
+        if (config.onUnauthorized)
+            config.onUnauthorized(error);
+        else if ((config.unauthorizedHandling ?? 'dialog') === 'dialog') {
+            const errorCode = extractProblemDetailsErrorCode(apiError);
+            sessionExpired.show(window.location.pathname + window.location.search, toSessionExpiredReason(errorCode), errorCode, apiError.detail, apiError.message, apiError);
+        }
+        else {
+            window.location.href = buildExternalSigninUrl(config, window.location.pathname + window.location.search);
+        }
+        return throwError(() => error);
+    };
+    if (req.url.split('?')[0] === getAuthEndpointUrl(config, 'impersonationEnd')) {
+        return next(req).pipe(catchError((error) => error instanceof HttpErrorResponse && error.status === 401
+            ? expire(error)
+            : throwError(() => error)));
+    }
+    if (isAuthSkipUrl(req.url, config))
+        return next(req);
+    const token = session.getAccessToken();
+    return next(token ? addAuthHeader(req, token) : req).pipe(catchError((error) => {
+        if (!(error instanceof HttpErrorResponse) || error.status !== 401)
+            return throwError(() => error);
+        if (extractProblemDetailsErrorCode(error) === 'IMPERSONATION_SESSION_INVALID')
+            return expire(error);
+        return session.refreshToken().pipe(catchError(expire), switchMap((newToken) => {
+            let retry = addAuthHeader(req, newToken);
+            const csrfToken = csrf.getToken();
+            if (csrfToken)
+                retry = retry.clone({ setHeaders: { 'X-CSRF-Token': csrfToken } });
+            else
+                retry = retry.clone({ headers: retry.headers.delete('X-CSRF-Token') });
+            return next(retry).pipe(catchError((retryError) => retryError instanceof HttpErrorResponse && retryError.status === 401
+                ? expire(retryError)
+                : throwError(() => retryError)));
+        }));
+    }));
+};
+
+/** Sends authenticated application requests through the shared SSO transport. */
+class IApiService {
+    http = inject(HttpClient);
+    csrf = inject(ICsrfService);
+    config = inject(I_AUTH_CONFIG);
+    mergeHeaders(body, options) {
+        const headers = { Accept: 'application/json', ...options.headers };
+        const findContentType = () => Object.keys(headers).find((key) => key.toLowerCase() === 'content-type');
+        if (body instanceof FormData) {
+            for (const key of Object.keys(headers)) {
+                if (key.toLowerCase() === 'content-type')
+                    delete headers[key];
+            }
+        }
+        else if (body !== undefined &&
+            body !== null &&
+            !(body instanceof Blob) &&
+            !(body instanceof ArrayBuffer) &&
+            !findContentType()) {
+            headers['Content-Type'] = 'application/json';
+        }
+        const csrfToken = this.csrf.getToken();
+        if (csrfToken)
+            headers['X-CSRF-Token'] = csrfToken;
+        if (this.config.apiKey)
+            headers['Api-Key'] = this.config.apiKey;
+        if (options.skipBearer)
+            headers[IH_SKIP_BEARER_HEADER] = 'true';
+        return headers;
+    }
+    enrichError(err) {
+        const transport = err;
+        const decode = (body) => {
+            if (typeof body === 'string') {
+                try {
+                    return JSON.parse(body);
+                }
+                catch {
+                    return {};
+                }
+            }
+            return body;
+        };
+        if (transport?.error instanceof ArrayBuffer) {
+            const body = decode(new TextDecoder().decode(transport.error));
+            return throwError(() => normalizeApiError({
+                ...transport,
+                error: body,
+            }));
+        }
+        if (transport?.error instanceof Blob) {
+            return from(transport.error.text()).pipe(catchError(() => from(Promise.resolve(''))), switchMap((body) => throwError(() => normalizeApiError({ ...transport, error: decode(body) }))));
+        }
+        return throwError(() => normalizeApiError(typeof transport?.error === 'string'
+            ? { ...transport, error: decode(transport.error) }
+            : err));
+    }
+    /** Cancel the transport subscription, including its refresh waiter, on deadline or signal. */
+    request(method, path, body, options = {}, params) {
+        return defer(() => {
+            const baseUrl = options.apiUrl ?? this.config.api.identity;
+            if (!baseUrl)
+                throw new Error('No API base URL configured. Set api.identity or IApiOptions.apiUrl.');
+            const timeoutMs = options.timeoutMs ?? 60_000;
+            if (!Number.isFinite(timeoutMs) || timeoutMs <= 0)
+                throw new Error('timeoutMs must be a positive finite number.');
+            const common = {
+                body,
+                params: params ?? options.params,
+                withCredentials: true,
+                headers: this.mergeHeaders(body, options),
+                observe: 'response',
+            };
+            const source = options.responseType === 'blob'
+                ? this.http.request(method, `${baseUrl}${path}`, { ...common, responseType: 'blob' })
+                : options.responseType === 'arraybuffer'
+                    ? this.http.request(method, `${baseUrl}${path}`, {
+                        ...common,
+                        responseType: 'arraybuffer',
+                    })
+                    : options.responseType === 'text'
+                        ? this.http.request(method, `${baseUrl}${path}`, { ...common, responseType: 'text' })
+                        : this.http.request(method, `${baseUrl}${path}`, {
+                            ...common,
+                            responseType: 'json',
+                        });
+            return new Observable((subscriber) => {
+                const fail = (kind) => subscriber.error(normalizeApiError({
+                    status: 0,
+                    name: kind === 'timeout' ? 'TimeoutError' : 'AbortError',
+                    errorCode: kind === 'timeout' ? 'REQUEST_TIMEOUT' : 'REQUEST_ABORTED',
+                    message: kind === 'timeout' ? 'Request timed out' : 'Request aborted',
+                }));
+                if (options.signal?.aborted) {
+                    fail('abort');
+                    return;
+                }
+                const abort = () => fail('abort');
+                options.signal?.addEventListener('abort', abort, { once: true });
+                const timer = setTimeout(() => fail('timeout'), timeoutMs);
+                const subscription = source
+                    .pipe(catchError((err) => this.enrichError(err)), map$1((response) => (options.observe === 'response' ? response : response.body)))
+                    .subscribe(subscriber);
+                return () => {
+                    clearTimeout(timer);
+                    options.signal?.removeEventListener('abort', abort);
+                    subscription.unsubscribe();
+                };
+            });
+        });
+    }
+    get(path, params, options) {
+        return this.request('GET', path, undefined, options, params);
+    }
+    post(path, body = {}, options) {
+        return this.request('POST', path, body, options);
+    }
+    put(path, body = {}, options) {
+        return this.request('PUT', path, body, options);
+    }
+    patch(path, body = {}, options) {
+        return this.request('PATCH', path, body, options);
+    }
+    delete(path, options) {
+        return this.request('DELETE', path, options?.body, options);
+    }
+    upload(path, file, options) {
+        const body = file instanceof FormData ? file : new FormData();
+        if (!(file instanceof FormData))
+            body.append('file', file);
+        return this.request('POST', path, body, options);
+    }
+    /** Downloads a binary response body. */
+    getBlob(path, params, options) {
+        return this.request('GET', path, undefined, { ...options, responseType: 'blob', observe: 'body' }, params);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IApiService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IApiService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IApiService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Session-storage wrapper for non-sensitive UI state (returnUrl, nonce/state).
+ * Tokens are NEVER stored here — the access token lives in-memory
+ * (`ISessionService`) and the refresh token lives in an HttpOnly cookie set by
+ * iam-identity-api.
+ *
+ * @overridable — consumers may provide `{ provide: IStorageService, useClass: ... }`.
+ */
+class IStorageService {
+    storageKey = '@insight/ui';
+    get(key) {
+        const session = JSON.parse(sessionStorage.getItem(this.storageKey) || '{}') || {};
+        return session[key] ?? '';
+    }
+    set(key, value) {
+        const session = JSON.parse(sessionStorage.getItem(this.storageKey) || '{}') || {};
+        session[key] = value;
+        sessionStorage.setItem(this.storageKey, JSON.stringify(session));
+    }
+    delete(key) {
+        const session = JSON.parse(sessionStorage.getItem(this.storageKey) || '{}') || {};
+        delete session[key];
+        sessionStorage.setItem(this.storageKey, JSON.stringify(session));
+    }
+    clear() {
+        sessionStorage.removeItem(this.storageKey);
+    }
+    /** Save the return URL for post-login/post-password-change redirect (keyed `ru`). */
+    setReturnUrl(url) {
+        this.set('ru', url);
+    }
+    /** Retrieve and clear the saved return URL. Returns `'/'` when none is saved. */
+    getReturnUrl() {
+        const url = this.get('ru');
+        this.delete('ru');
+        return url || '/';
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IStorageService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IStorageService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IStorageService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Login lockout constants (local, client-side supplement to Keycloak
+ * brute-force protection). 5 failed attempts → 1-minute suspend; counter
+ * resets after 12h idle or a successful login.
+ */
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 1 * 60 * 1000;
+const IDLE_RESET_MS = 12 * 60 * 60 * 1000;
+const LOCK_STORAGE_KEY = 'iam.mock.login_lockout';
+/**
+ * Auth facade against the configured identity host (`api.identity`) - typically
+ * a Mode-2 proxy (Keycloak is never exposed to the frontend) or an app's own
+ * BFF. Endpoint paths are relative and come from `config.endpoints` (defaults
+ * match the platform/BFF contract). MFA/password methods are identity-owner
+ * routes and stay fixed.
+ *
+ * @overridable - consumers may provide `{ provide: IAuthService, useClass: ... }`.
+ */
+class IAuthService {
+    api = inject(IApiService);
+    config = inject(I_AUTH_CONFIG);
+    get identityUrl() {
+        return requireIdentityHost(this.config);
+    }
+    login(username, password, recaptchaToken, isChallengeResponse) {
+        const cleanUsername = username.trim().toLowerCase();
+        const lockData = this.getLockoutData(cleanUsername);
+        if (lockData.lockedUntil && lockData.lockedUntil > Date.now()) {
+            const retryAfter = Math.ceil((lockData.lockedUntil - Date.now()) / 1000);
+            return throwError(() => ({
+                status: 423,
+                message: 'Login access is temporarily restricted. Please try again in a few moments.',
+                detail: 'Login access is temporarily restricted. Please try again in a few moments.',
+                retryAfter,
+            }));
+        }
+        return this.api
+            .post(getAuthEndpointPath(this.config, 'login'), {
+            username,
+            password,
+            recaptchaToken,
+            isChallengeResponse: isChallengeResponse ?? false,
+        })
+            .pipe(tap((res) => {
+            if (res.accessToken || res.mfaRequired || res.passwordExpired) {
+                this.resetLockout(cleanUsername);
+            }
+        }), catchError((err) => {
+            if (err?.status === 401 || err?.status === 423) {
+                this.recordFailedAttempt(cleanUsername);
+            }
+            return throwError(() => err);
+        }));
+    }
+    /** Silently refresh the access token via the HttpOnly session cookie. */
+    refresh() {
+        return this.api.post(getAuthEndpointPath(this.config, 'refresh'), {});
+    }
+    /** Clear the server-side session and expire the HttpOnly session cookie. */
+    logout(refreshToken) {
+        return this.api
+            .post(getAuthEndpointPath(this.config, 'logout'), { refreshToken })
+            .pipe(map$1(() => undefined));
+    }
+    /** Exchange a short-lived `at=` auth token for a full session (cross-app handoff). */
+    exchangeAuthToken(authToken) {
+        return this.api.post(getAuthEndpointPath(this.config, 'exchange'), {}, { headers: { Authorization: authToken } });
+    }
+    /** Verify the MFA TOTP code during a login challenge. */
+    verifyMfaChallenge(mfaSessionId, totpCode) {
+        return this.api.post('/auth/mfa/verify', { mfaSessionId, totpCode });
+    }
+    /** Verify the TOTP code during first-time MFA enrollment (forced at login). */
+    verifyMfaEnroll(mfaSessionId, totpCode) {
+        return this.api.post('/auth/mfa/enroll/verify', {
+            mfaSessionId,
+            totpCode,
+        });
+    }
+    /** Self-service MFA — check enrollment status (`GET /profile/mfa`). */
+    selfServiceGetStatus() {
+        return this.api.get('/profile/mfa');
+    }
+    /** Self-service MFA — initiate enrollment to get the QR & session id (`POST /profile/mfa/enroll`). */
+    selfServiceEnrollInitiate() {
+        return this.api.post('/profile/mfa/enroll', {});
+    }
+    /** Self-service MFA — verify OTP and complete enrollment (`POST /profile/mfa/enroll/verify`). */
+    selfServiceEnrollVerify(enrollmentSessionId, totpCode) {
+        return this.api
+            .post('/profile/mfa/enroll/verify', { enrollmentSessionId, totpCode })
+            .pipe(map$1(() => undefined));
+    }
+    /** Self-service reset (un-enroll) MFA for the current user — requires password (`DELETE /profile/mfa`). */
+    selfServiceResetMfa(userSub, password) {
+        return this.api
+            .delete('/profile/mfa', { apiUrl: this.identityUrl, body: { password } })
+            .pipe(map$1(() => undefined));
+    }
+    /**
+     * Change password when it has expired (forced change flow). Uses a short-lived
+     * `changePasswordToken` (10 min, scope `change_password_only`) as the Bearer
+     * header. Backend returns a full accessToken on success so the user continues
+     * seamlessly without re-login.
+     */
+    changePassword(changePasswordToken, newPassword, confirmPassword) {
+        return this.api.post('/auth/change-password', { newPassword, confirmPassword }, { headers: { Authorization: `Bearer ${changePasswordToken}` } });
+    }
+    /** Request a password-reset link via email or WhatsApp (`POST /auth/forgot-password`). */
+    forgotPassword(identifier, mode) {
+        return this.api.post('/auth/forgot-password', {
+            identifier,
+            method: mode,
+        });
+    }
+    /** Validate a reset token before showing the reset form (`GET /auth/reset-password/validate`). */
+    validateResetToken(token) {
+        return this.api.get('/auth/reset-password/validate', new HttpParams().set('token', token));
+    }
+    /** Submit a new password using the reset token (`POST /auth/reset-password`). */
+    resetPassword(token, newPassword, confirmPassword) {
+        return this.api.post('/auth/reset-password', {
+            token,
+            newPassword,
+            confirmPassword,
+        });
+    }
+    // ─── Login lockout helpers (sessionStorage per-username) ─────────────────────
+    getLockoutData(username) {
+        try {
+            const raw = sessionStorage.getItem(`${LOCK_STORAGE_KEY}_${username}`);
+            const data = raw ? JSON.parse(raw) : { attempts: 0, lockedUntil: null, lastAttemptAt: null };
+            if (data.lastAttemptAt && Date.now() - data.lastAttemptAt >= IDLE_RESET_MS) {
+                return { attempts: 0, lockedUntil: null, lastAttemptAt: null };
+            }
+            return data;
+        }
+        catch {
+            return { attempts: 0, lockedUntil: null, lastAttemptAt: null };
+        }
+    }
+    recordFailedAttempt(username) {
+        const data = this.getLockoutData(username);
+        data.attempts += 1;
+        data.lastAttemptAt = Date.now();
+        if (data.attempts >= MAX_LOGIN_ATTEMPTS - 1) {
+            data.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+        }
+        sessionStorage.setItem(`${LOCK_STORAGE_KEY}_${username}`, JSON.stringify(data));
+    }
+    resetLockout(username) {
+        sessionStorage.removeItem(`${LOCK_STORAGE_KEY}_${username}`);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IAuthService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IAuthService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IAuthService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+/**
+ * Known API error codes surfaced by the platform services (mirrors the
+ * iam-user-api error catalog — see `iam-user-api/src/common/errors/user-errors.ts`).
+ *
+ * Consumers branch on these to tailor UX (e.g. showing the "Access Unavailable"
+ * page when the current user has no application mapping).
+ */
+const USER_APPLICATION_MAPPING_NOT_FOUND = 'USER_APPLICATION_MAPPING_NOT_FOUND';
 
 /**
  * Types for the current-user navigation, favorites and effective-authorization
@@ -11640,10 +12047,10 @@ class IUserMenuService {
         }));
         return this.api.put('/me/menus/favorites', { items }, { apiUrl: this.baseUrl });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IUserMenuService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IUserMenuService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IUserMenuService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IUserMenuService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IUserMenuService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IUserMenuService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -11667,10 +12074,10 @@ class ICurrentUserService {
     getCurrentUser() {
         return this.api.get('/users/user', undefined, { apiUrl: this.baseUrl });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICurrentUserService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICurrentUserService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICurrentUserService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICurrentUserService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ICurrentUserService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ICurrentUserService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -11984,10 +12391,10 @@ class IUserMenuStore {
         console.error(`[@insight/ui][STORE] load "${source}" failed`, err);
         return of(null);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IUserMenuStore, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IUserMenuStore, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IUserMenuStore, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IUserMenuStore, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IUserMenuStore, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IUserMenuStore, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -12071,6 +12478,41 @@ class ISessionService {
      * established (`setAccessToken`/`setSession`) or `tryRestoreSession()` settles.
      */
     initializing = signal(true, ...(ngDevMode ? [{ debugName: "initializing" }] : []));
+    impersonationContext = signal('', ...(ngDevMode ? [{ debugName: "impersonationContext" }] : []));
+    endingImpersonation = null;
+    actor() {
+        this.impersonationContext();
+        return readImpersonationActor(this.accessToken);
+    }
+    isImpersonating() {
+        return this.actor() !== null;
+    }
+    endImpersonation() {
+        if (this.endingImpersonation)
+            return this.endingImpersonation;
+        const generation = this.sessionGeneration;
+        const api = this.injector.get(IApiService);
+        const request = () => {
+            if (generation !== this.sessionGeneration)
+                return throwError(() => new Error('Session changed while ending impersonation.'));
+            return api.post(getAuthEndpointPath(this.config, 'impersonationEnd'), {}, { apiUrl: requireIdentityHost(this.config) });
+        };
+        const result = defer(() => this.csrf.getToken() ? of(undefined) : this.csrf.ensureToken()).pipe(switchMap(() => defer(request)), catchError((error) => isImpersonationCsrfError(error)
+            ? this.csrf.ensureToken().pipe(switchMap(() => defer(request)))
+            : throwError(() => error)), map$1((response) => {
+            if (generation !== this.sessionGeneration)
+                throw new Error('Session changed while ending impersonation.');
+            this.clearSession();
+            sessionStorage.removeItem('iam.session.active');
+            this.injector.get(IStorageService).clear();
+            return response ?? {};
+        }), finalize$1(() => {
+            if (this.endingImpersonation === result)
+                this.endingImpersonation = null;
+        }), shareReplay({ bufferSize: 1, refCount: true }));
+        this.endingImpersonation = result;
+        return result;
+    }
     // Single-flight refresh: one in-flight /auth/refresh shared by all callers,
     // retained until it completes/errors so a cancelled caller cannot abort it.
     refreshInFlight = null;
@@ -12155,7 +12597,9 @@ class ISessionService {
         }
         const decoded = decodeJwtPayload(this.accessToken);
         const roles = decoded?.realm_access?.roles;
-        return Array.isArray(roles) ? roles.filter((role) => typeof role === 'string') : [];
+        return Array.isArray(roles)
+            ? roles.filter((role) => typeof role === 'string')
+            : [];
     }
     /** True if the current access token claims ANY of the given roles. */
     hasRole(code) {
@@ -12172,8 +12616,15 @@ class ISessionService {
      */
     setAccessToken(accessToken, expiresIn) {
         this.sessionGeneration++;
+        this.endingImpersonation = null;
+        if (this.accessToken &&
+            impersonationContextKey(this.accessToken) !== impersonationContextKey(accessToken))
+            this.injector.get(IUserMenuStore, null, { optional: true })?.reset();
         this.accessToken = accessToken;
-        const effectiveExpiresIn = expiresIn ?? this.readExpiresInFromToken(accessToken) ?? this.config.tokenLifespan.accessTokenSeconds;
+        this.impersonationContext.set(impersonationContextKey(accessToken));
+        const effectiveExpiresIn = expiresIn ??
+            this.readExpiresInFromToken(accessToken) ??
+            this.config.tokenLifespan.accessTokenSeconds;
         // 30-second buffer to avoid edge cases, matches iam-web's convention.
         this.expiresAt = Date.now() + (effectiveExpiresIn - 30) * 1000;
         if (this.sessionStartedAt === null) {
@@ -12188,11 +12639,15 @@ class ISessionService {
      * start from a refresh-after-revocation.
      */
     setSession(accessToken, expiresIn, user, refreshToken) {
-        if (this.currentUser?.sub && this.currentUser.sub !== user.sub) {
+        if ((this.currentUser?.sub && this.currentUser.sub !== user.sub) ||
+            (this.accessToken &&
+                impersonationContextKey(this.accessToken) !== impersonationContextKey(accessToken))) {
             this.injector.get(IUserMenuStore, null, { optional: true })?.reset();
         }
         this.sessionGeneration++;
+        this.endingImpersonation = null;
         this.accessToken = accessToken;
+        this.impersonationContext.set(impersonationContextKey(accessToken));
         if (refreshToken) {
             this._refreshToken = refreshToken;
         }
@@ -12209,7 +12664,9 @@ class ISessionService {
     }
     clearSession() {
         this.sessionGeneration++;
+        this.endingImpersonation = null;
         this.accessToken = null;
+        this.impersonationContext.set('');
         this._refreshToken = null;
         this.expiresAt = null;
         this.currentUser = null;
@@ -12362,10 +12819,10 @@ class ISessionService {
         }
         return Math.max(0, decoded['exp'] - Math.floor(Date.now() / 1000));
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISessionService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISessionService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISessionService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISessionService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISessionService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISessionService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -12373,10 +12830,23 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
 class IHTitleBreadcrumbService {
     /**
      * null = use normal (route-based) title/breadcrumbs
-     * non-null = override (e.g. React remote controls shell display)
+     * non-null = complete override (e.g. access error). React uses remote contributions.
      */
     titleOverride = signal(null, ...(ngDevMode ? [{ debugName: "titleOverride" }] : []));
     breadcrumbsOverride = signal(null, ...(ngDevMode ? [{ debugName: "breadcrumbsOverride" }] : []));
+    /** React contributions are composed after host ancestry, never full overrides. */
+    remoteTitle = signal(null, ...(ngDevMode ? [{ debugName: "remoteTitle" }] : []));
+    setRemoteTitle(title) {
+        this.remoteTitle.set(title);
+    }
+    remoteBreadcrumbs = signal([], ...(ngDevMode ? [{ debugName: "remoteBreadcrumbs" }] : []));
+    setRemoteBreadcrumbs(items) {
+        this.remoteBreadcrumbs.set(items ?? []);
+    }
+    clearRemote() {
+        this.remoteTitle.set(null);
+        this.remoteBreadcrumbs.set([]);
+    }
     setTitle(title) {
         this.titleOverride.set(title ?? null);
     }
@@ -12386,11 +12856,13 @@ class IHTitleBreadcrumbService {
     clear() {
         this.titleOverride.set(null);
         this.breadcrumbsOverride.set(null);
+        this.remoteBreadcrumbs.set([]);
+        this.remoteTitle.set(null);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHTitleBreadcrumbService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHTitleBreadcrumbService, providedIn: 'root' });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHTitleBreadcrumbService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHTitleBreadcrumbService, providedIn: 'root' });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHTitleBreadcrumbService, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHTitleBreadcrumbService, decorators: [{
             type: Injectable,
             args: [{ providedIn: 'root' }]
         }] });
@@ -12418,43 +12890,52 @@ class IHContent {
             this.loading.emit(value);
         }
     }, ...(ngDevMode ? [{ debugName: "loadingEffect" }] : []));
-    /** route-based breadcrumbs */
-    breadcrumb$ = this.router.events.pipe(filter$1((e) => e instanceof NavigationEnd), startWith(null), map(() => this.buildBreadcrumb(this.activatedRoute.root)), shareReplay$1(1));
-    /** last breadcrumb label = route-based page title */
-    pageTitle$ = this.breadcrumb$.pipe(map((breadcrumbs) => breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : null), shareReplay$1(1));
-    buildBreadcrumb(route, url = '', breadcrumbs = []) {
-        const routeConfig = route.routeConfig;
-        if (routeConfig) {
-            const path = routeConfig.path ?? '';
-            // Resolve path segments, including route params
-            const segments = path
-                .split('/')
-                .filter(Boolean)
-                .map((segment) => {
-                if (segment.startsWith(':')) {
-                    const paramName = segment.substring(1);
-                    return route.snapshot.params[paramName] ?? segment;
-                }
-                return segment;
-            });
-            const nextUrlPart = segments.join('/');
-            // Always advance the URL, even if we don't render a breadcrumb for this level
-            const nextUrl = nextUrlPart.length > 0 ? `${url}/${nextUrlPart}` : url || '/';
-            // Use route config data, not snapshot data, to avoid inherited data
-            const data = routeConfig.data;
-            const label = data?.title;
-            if (label) {
-                breadcrumbs.push({
-                    label,
-                    url: nextUrl,
-                });
-            }
-            url = nextUrl;
+    navigation$ = this.router.events.pipe(filter$1((e) => e instanceof NavigationEnd), startWith(null));
+    /** Menu loading and React contributions also update the visible trail. */
+    breadcrumb$ = combineLatest([
+        this.navigation$,
+        this.userMenuStore.menus$,
+        toObservable(this.shell.remoteBreadcrumbs),
+    ]).pipe(map(([, menus, remote]) => {
+        const state = this.routeBreadcrumbState();
+        const chain = state.mount ? findBreadcrumbMenuChain(menus, state.mount.url) : [];
+        const host = state.mount?.hostBreadcrumbs?.length
+            ? state.mount.hostBreadcrumbs
+            : chain.length
+                ? chain
+                    .map((node) => ({
+                    label: getMenuLabel(node),
+                    url: getMenuRoute(node) ?? undefined,
+                }))
+                    .filter((item) => !!item.label)
+                : state.host;
+        return [...host, ...state.remote, ...remote];
+    }), shareReplay$1({ bufferSize: 1, refCount: true }));
+    /** Heading comes from route titles independently of breadcrumb labels. */
+    pageTitle$ = this.navigation$.pipe(map(() => this.routeBreadcrumbState().title), shareReplay$1({ bufferSize: 1, refCount: true }));
+    routeBreadcrumbState() {
+        const state = {
+            host: [],
+            remote: [],
+            title: null,
+        };
+        let route = this.activatedRoute.root;
+        let url = '';
+        while (route) {
+            const segments = route.snapshot.url.map((segment) => segment.toString()).join('/');
+            if (segments)
+                url += '/' + segments;
+            const data = route.routeConfig?.data;
+            if (data?.['title'])
+                state.title = data['title'];
+            const label = data?.['breadcrumb'] ?? data?.['title'];
+            if (label)
+                (state.mount ? state.remote : state.host).push({ label, url: url || '/' });
+            if (data?.['remoteMount'])
+                state.mount = { url: url || '/', hostBreadcrumbs: data['hostBreadcrumbs'] };
+            route = route.children.find((child) => child.outlet === 'primary') ?? null;
         }
-        if (route.firstChild) {
-            return this.buildBreadcrumb(route.firstChild, url, breadcrumbs);
-        }
-        return breadcrumbs;
+        return state;
     }
     toggleSidebar() {
         this.sidebarVisibility = !this.sidebarVisibility;
@@ -12539,8 +13020,8 @@ class IHContent {
         // join
         return `${base}${abs.slice(1)}`.replace(/\/{2,}/g, '/');
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IHContent, isStandalone: true, selector: "ih-content", outputs: { onSidebarToggled: "onSidebarToggled", loading: "loading" }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHContent, isStandalone: true, selector: "ih-content", outputs: { onSidebarToggled: "onSidebarToggled", loading: "loading" }, ngImport: i0, template: `
     <div class="ih-content-header">
       <a class="i-clickable" (click)="toggleSidebar()">
         @if (sidebarVisibility) {
@@ -12551,13 +13032,15 @@ class IHContent {
       </a>
 
       <!-- title override reacts immediately -->
-      <h1>{{ shell.titleOverride() || (pageTitle$ | async) || 'Insight' }}</h1>
+      <h1>
+        {{ shell.titleOverride() || shell.remoteTitle() || (pageTitle$ | async) || 'Insight' }}
+      </h1>
     </div>
 
     <div class="ih-content-breadcrumbs">
       @let override = shell.breadcrumbsOverride();
 
-      @if (override && override.length > 0) {
+      @if (override !== null) {
         @for (b of override; track $index; let first = $first; let last = $last) {
           @if (!last) {
             @if (!first) {
@@ -12586,25 +13069,26 @@ class IHContent {
               {{ b.label }}
             </span>
           }
+        } @empty {
+          <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
         }
       } @else {
         <!-- Fallback to route-based breadcrumbs (Angular routes) -->
         @if (breadcrumb$ | async; as breadcrumbs) {
           @if (breadcrumbs.length > 0) {
-            @for (
-              breadcrumb of breadcrumbs;
-              track breadcrumb.url;
-              let first = $first;
-              let last = $last
-            ) {
+            @for (breadcrumb of breadcrumbs; track $index; let first = $first; let last = $last) {
               @if (!last) {
                 @if (!first) {
-                  <a
-                    class="ih-content-breadcrumb ih-content-breadcrumb__link"
-                    [routerLink]="breadcrumb.url"
-                  >
-                    {{ breadcrumb.label }}
-                  </a>
+                  @if (breadcrumb.url) {
+                    <a
+                      class="ih-content-breadcrumb ih-content-breadcrumb__link"
+                      [routerLink]="overrideRouterLink(breadcrumb.url)"
+                      (click)="onOverrideBreadcrumbClick($event)"
+                      >{{ breadcrumb.label }}</a
+                    >
+                  } @else {
+                    <span class="ih-content-breadcrumb">{{ breadcrumb.label }}</span>
+                  }
                 } @else {
                   <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
                     {{ breadcrumb.label }}
@@ -12631,7 +13115,7 @@ class IHContent {
     </div>
   `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHContent, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHContent, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-content',
@@ -12647,13 +13131,15 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
       </a>
 
       <!-- title override reacts immediately -->
-      <h1>{{ shell.titleOverride() || (pageTitle$ | async) || 'Insight' }}</h1>
+      <h1>
+        {{ shell.titleOverride() || shell.remoteTitle() || (pageTitle$ | async) || 'Insight' }}
+      </h1>
     </div>
 
     <div class="ih-content-breadcrumbs">
       @let override = shell.breadcrumbsOverride();
 
-      @if (override && override.length > 0) {
+      @if (override !== null) {
         @for (b of override; track $index; let first = $first; let last = $last) {
           @if (!last) {
             @if (!first) {
@@ -12682,25 +13168,26 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
               {{ b.label }}
             </span>
           }
+        } @empty {
+          <span class="ih-content-breadcrumb ih-content-breadcrumb__first">Home</span>
         }
       } @else {
         <!-- Fallback to route-based breadcrumbs (Angular routes) -->
         @if (breadcrumb$ | async; as breadcrumbs) {
           @if (breadcrumbs.length > 0) {
-            @for (
-              breadcrumb of breadcrumbs;
-              track breadcrumb.url;
-              let first = $first;
-              let last = $last
-            ) {
+            @for (breadcrumb of breadcrumbs; track $index; let first = $first; let last = $last) {
               @if (!last) {
                 @if (!first) {
-                  <a
-                    class="ih-content-breadcrumb ih-content-breadcrumb__link"
-                    [routerLink]="breadcrumb.url"
-                  >
-                    {{ breadcrumb.label }}
-                  </a>
+                  @if (breadcrumb.url) {
+                    <a
+                      class="ih-content-breadcrumb ih-content-breadcrumb__link"
+                      [routerLink]="overrideRouterLink(breadcrumb.url)"
+                      (click)="onOverrideBreadcrumbClick($event)"
+                      >{{ breadcrumb.label }}</a
+                    >
+                  } @else {
+                    <span class="ih-content-breadcrumb">{{ breadcrumb.label }}</span>
+                  }
                 } @else {
                   <span class="ih-content-breadcrumb ih-content-breadcrumb__first">
                     {{ breadcrumb.label }}
@@ -12947,8 +13434,8 @@ class IHMenu {
             return `${u.pathname}${u.search}${u.hash}`;
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHMenu, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter", favoriteMode: "favoriteMode", collapsible: "collapsible", depth: "depth", dragEnabled: "dragEnabled", showApplication: "showApplication", pathByKey: "pathByKey" }, outputs: { clicked: "clicked", favoriteToggle: "favoriteToggle" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHMenu, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter", favoriteMode: "favoriteMode", collapsible: "collapsible", depth: "depth", dragEnabled: "dragEnabled", showApplication: "showApplication", pathByKey: "pathByKey" }, outputs: { clicked: "clicked", favoriteToggle: "favoriteToggle" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
     @if (menu) {
       @let hasChild = menuHasChildren;
       @let route = menuRoute;
@@ -13160,7 +13647,7 @@ class IHMenu {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHMenu, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHMenu, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-menu',
@@ -13582,10 +14069,10 @@ class IAuthCallback {
             this.router.navigateByUrl(safeReturnUrl);
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IAuthCallback, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: IAuthCallback, isStandalone: true, selector: "i-auth-callback", ngImport: i0, template: '', isInline: true });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IAuthCallback, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: IAuthCallback, isStandalone: true, selector: "i-auth-callback", ngImport: i0, template: '', isInline: true });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IAuthCallback, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IAuthCallback, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-auth-callback',
@@ -13593,167 +14080,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                     template: '',
                 }]
         }] });
-
-/**
- * IAvatar
- * Version: 1.0.0
- * <i-avatar />
- *
- * Displays a user photo in a circle, square, or rounded-square container.
- * Falls back to a FontAwesome user icon when no image is available.
- */
-// ─── Size Mapping ────────────────────────────────────────────────────────────
-const SIZE_PRESETS = {
-    '3xs': 12,
-    '2xs': 16,
-    xs: 20,
-    sm: 32,
-    md: 48,
-    lg: 64,
-    xl: 96,
-    '2xl': 128,
-    '3xl': 160,
-    '4xl': 200,
-};
-/**
- * Resolve the best IIconSize for a given avatar pixel size.
- * The icon should fill roughly 50–60% of the container.
- */
-function resolveIconSizeFromPx(px) {
-    if (px <= 24)
-        return 'sm';
-    if (px <= 40)
-        return 'md';
-    if (px <= 64)
-        return 'lg';
-    if (px <= 96)
-        return 'xl';
-    if (px <= 128)
-        return '2xl';
-    if (px <= 160)
-        return '3xl';
-    return '4xl';
-}
-// ─── Component ───────────────────────────────────────────────────────────────
-class IAvatar {
-    // ─── Inputs ────────────────────────────────────────────────────────────
-    /** Image URL. When empty or on error, falls back to fallbackSrc or icon. */
-    src;
-    /** Alt text for the image. */
-    alt;
-    /**
-     * Container size.
-     * - `number` → treated as pixels (e.g. `200` = 200px)
-     * - `IIconSize` string → uses a preset mapping (e.g. `'lg'` = 64px)
-     * @default 40
-     */
-    size = 40;
-    /**
-     * Container shape.
-     * @default 'circle'
-     */
-    shape = 'circle';
-    /** Fallback image URL. Used when `src` fails to load. If not set (or also fails), shows the user icon. */
-    fallbackSrc;
-    /** Additional CSS classes to inject onto the host element (e.g. `"border-2 border-primary"`). */
-    className;
-    // ─── Internal state ────────────────────────────────────────────────────
-    /** Whether the primary `src` image failed to load. */
-    hasError = false;
-    /** Whether the `fallbackSrc` image also failed to load. */
-    hasFallbackError = false;
-    // ─── Host bindings ─────────────────────────────────────────────────────
-    baseClass = true;
-    get attrShape() {
-        return this.shape ?? 'circle';
-    }
-    get resolvedSizePx() {
-        if (typeof this.size === 'number')
-            return this.size;
-        return SIZE_PRESETS[this.size] ?? 40;
-    }
-    get hostClass() {
-        return this.className;
-    }
-    // ─── Computed ──────────────────────────────────────────────────────────
-    /** Icon size for the fallback `<i-icon>`. */
-    get resolvedIconSize() {
-        if (typeof this.size === 'string')
-            return this.size;
-        return resolveIconSizeFromPx(this.size);
-    }
-    // ─── Event handlers ────────────────────────────────────────────────────
-    onImgError() {
-        this.hasError = true;
-    }
-    onFallbackError() {
-        this.hasFallbackError = true;
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IAvatar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IAvatar, isStandalone: true, selector: "i-avatar", inputs: { src: "src", alt: "alt", size: "size", shape: "shape", fallbackSrc: "fallbackSrc", className: "className" }, host: { properties: { "class.i-avatar": "this.baseClass", "attr.data-shape": "this.attrShape", "style.width.px": "this.resolvedSizePx", "style.height.px": "this.resolvedSizePx", "class": "this.hostClass" } }, ngImport: i0, template: `
-    <!-- Primary image -->
-    @if (!hasError && src) {
-      <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
-    }
-    <!-- Fallback image -->
-    @else if (fallbackSrc && !hasFallbackError) {
-      <img [alt]="alt ?? ''" [src]="fallbackSrc" (error)="onFallbackError()" />
-    }
-    <!-- Ultimate fallback: user icon -->
-    @else {
-      <i-icon icon="user" [size]="resolvedIconSize" />
-    }
-  `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }] });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IAvatar, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-avatar',
-                    standalone: true,
-                    imports: [IIcon],
-                    template: `
-    <!-- Primary image -->
-    @if (!hasError && src) {
-      <img [alt]="alt ?? ''" [src]="src" (error)="onImgError()" />
-    }
-    <!-- Fallback image -->
-    @else if (fallbackSrc && !hasFallbackError) {
-      <img [alt]="alt ?? ''" [src]="fallbackSrc" (error)="onFallbackError()" />
-    }
-    <!-- Ultimate fallback: user icon -->
-    @else {
-      <i-icon icon="user" [size]="resolvedIconSize" />
-    }
-  `,
-                }]
-        }], propDecorators: { src: [{
-                type: Input
-            }], alt: [{
-                type: Input
-            }], size: [{
-                type: Input
-            }], shape: [{
-                type: Input
-            }], fallbackSrc: [{
-                type: Input
-            }], className: [{
-                type: Input
-            }], baseClass: [{
-                type: HostBinding,
-                args: ['class.i-avatar']
-            }], attrShape: [{
-                type: HostBinding,
-                args: ['attr.data-shape']
-            }], resolvedSizePx: [{
-                type: HostBinding,
-                args: ['style.width.px']
-            }, {
-                type: HostBinding,
-                args: ['style.height.px']
-            }], hostClass: [{
-                type: HostBinding,
-                args: ['class']
-            }] } });
 
 class IHSidebar {
     router = inject(Router);
@@ -13802,6 +14128,7 @@ class IHSidebar {
     user$;
     menusInput$;
     visible = true;
+    impersonating = false;
     footerText = 'Insight Local';
     /** When true, leaf items render a pin/star toggle and the Favorites section is shown. */
     favoriteMode = false;
@@ -14290,8 +14617,8 @@ class IHSidebar {
         });
         this.queryParams = queryParams;
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHSidebar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible", personalProfileUrl: "personalProfileUrl" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder" }, host: { properties: { "class.hidden": "this.sidebarVisibility" } }, usesOnChanges: true, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHSidebar, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", impersonating: "impersonating", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible", personalProfileUrl: "personalProfileUrl" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder" }, host: { properties: { "class.hidden": "this.sidebarVisibility" } }, usesOnChanges: true, ngImport: i0, template: `
     @let user = user$ | async;
     <div class="ih-sidebar-header">
       @if (user) {
@@ -14308,7 +14635,7 @@ class IHSidebar {
 
           <span class="user-info">
             <small class="text-subtle">{{ user.employeeCode }}</small>
-            <h6>{{ user.fullName }}</h6>
+            <h6>{{ impersonating ? 'Acting As: ' : '' }}{{ user.fullName }}</h6>
           </span>
 
           <i
@@ -14411,7 +14738,7 @@ class IHSidebar {
     </div>
   `, isInline: true, dependencies: [{ kind: "component", type: IAvatar, selector: "i-avatar", inputs: ["src", "alt", "size", "shape", "fallbackSrc", "className"] }, { kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.DefaultValueAccessor, selector: "input:not([type=checkbox])[formControlName],textarea[formControlName],input:not([type=checkbox])[formControl],textarea[formControl],input:not([type=checkbox])[ngModel],textarea[ngModel],[ngDefaultControl]" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.FormControlDirective, selector: "[formControl]", inputs: ["formControl", "disabled", "ngModel"], outputs: ["ngModelChange"], exportAs: ["ngForm"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHSidebar, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHSidebar, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-sidebar',
@@ -14433,7 +14760,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
 
           <span class="user-info">
             <small class="text-subtle">{{ user.employeeCode }}</small>
-            <h6>{{ user.fullName }}</h6>
+            <h6>{{ impersonating ? 'Acting As: ' : '' }}{{ user.fullName }}</h6>
           </span>
 
           <i
@@ -14542,6 +14869,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
                 type: Input
             }], visible: [{
                 type: Input
+            }], impersonating: [{
+                type: Input
             }], footerText: [{
                 type: Input
             }], favoriteMode: [{
@@ -14620,8 +14949,8 @@ class IPill {
         if (this.hasOnCloseHandler)
             this.onClose.emit(e);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IPill, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IPill, isStandalone: true, selector: "i-pill", inputs: { icon: "icon", size: "size", variant: "variant", disabled: ["disabled", "disabled", booleanAttribute], closable: ["closable", "closable", booleanAttribute] }, outputs: { onClose: "onClose", onClick: "onClick" }, host: { listeners: { "click": "handleHostClick($event)" }, properties: { "class.i-pill": "this.baseClass", "attr.size": "this.attrSize", "attr.variant": "this.attrVariant", "attr.aria-disabled": "this.ariaDisabled" } }, ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IPill, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IPill, isStandalone: true, selector: "i-pill", inputs: { icon: "icon", size: "size", variant: "variant", disabled: ["disabled", "disabled", booleanAttribute], closable: ["closable", "closable", booleanAttribute] }, outputs: { onClose: "onClose", onClick: "onClick" }, host: { listeners: { "click": "handleHostClick($event)" }, properties: { "class.i-pill": "this.baseClass", "attr.size": "this.attrSize", "attr.variant": "this.attrVariant", "attr.aria-disabled": "this.ariaDisabled" } }, ngImport: i0, template: `
     @if (icon) {
       <i-icon [icon]="icon" [size]="size" />
     }
@@ -14643,7 +14972,7 @@ class IPill {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IPill, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IPill, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-pill',
@@ -14823,8 +15152,8 @@ class IToggle {
         // click anywhere else (thumb/label/host) toggles input
         this.inputRef.nativeElement.click();
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IToggle, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.33", type: IToggle, isStandalone: true, selector: "i-toggle", inputs: { disabled: "disabled", labelPosition: "labelPosition", size: "size" }, outputs: { onChange: "onChange", onTouched: "onTouched" }, host: { listeners: { "click": "onHostClick($event)" }, properties: { "class.i-toggle": "this.baseClass", "class.i-toggle__active": "this.activeClass", "class.i-toggle__disabled": "this.disabledClass", "class.i-toggle__label-left": "this.labelLeftClass", "style.--i-toggle-height": "this.toggleHeight", "style.--i-toggle-width": "this.toggleWidth", "style.--i-toggle-handle-size": "this.toggleHandleSize" } }, providers: [
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IToggle, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: IToggle, isStandalone: true, selector: "i-toggle", inputs: { disabled: "disabled", labelPosition: "labelPosition", size: "size" }, outputs: { onChange: "onChange", onTouched: "onTouched" }, host: { listeners: { "click": "onHostClick($event)" }, properties: { "class.i-toggle": "this.baseClass", "class.i-toggle__active": "this.activeClass", "class.i-toggle__disabled": "this.disabledClass", "class.i-toggle__label-left": "this.labelLeftClass", "style.--i-toggle-height": "this.toggleHeight", "style.--i-toggle-width": "this.toggleWidth", "style.--i-toggle-handle-size": "this.toggleHandleSize" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => IToggle),
@@ -14848,7 +15177,7 @@ class IToggle {
     </span>
   `, isInline: true, changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IToggle, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IToggle, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-toggle',
@@ -14919,8 +15248,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
             }] } });
 
 class IUI {
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IUI, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
-    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.33", ngImport: i0, type: IUI, imports: [IAvatar,
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IUI, deps: [], target: i0.ɵɵFactoryTarget.NgModule });
+    static ɵmod = i0.ɵɵngDeclareNgModule({ minVersion: "14.0.0", version: "20.3.34", ngImport: i0, type: IUI, imports: [IAvatar,
             IButton,
             ICardModule,
             ICodeViewerModule,
@@ -14961,7 +15290,7 @@ class IUI {
             IFCTextArea,
             IToggle,
             IPill] });
-    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IUI, imports: [ICardModule,
+    static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IUI, imports: [ICardModule,
             ICodeViewerModule,
             IDialogModule,
             IGridModule,
@@ -14974,7 +15303,7 @@ class IUI {
             IInputModule,
             ISectionModule] });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IUI, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IUI, decorators: [{
             type: NgModule,
             args: [{
                     imports: [
@@ -15208,10 +15537,10 @@ class IMenuGateDirective {
             this.viewCreated = false;
         }
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IMenuGateDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.33", type: IMenuGateDirective, isStandalone: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IMenuGateDirective, deps: [], target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.34", type: IMenuGateDirective, isStandalone: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IMenuGateDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IMenuGateDirective, decorators: [{
             type: Directive,
             args: [{ standalone: true }]
         }] });
@@ -15221,10 +15550,10 @@ class IHasMnDirective extends IMenuGateDirective {
     set iHasMn(value) {
         this.value$.next(value);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.33", type: IHasMnDirective, isStandalone: true, selector: "[iHasMn]", inputs: { iHasMn: "iHasMn" }, usesInheritance: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.34", type: IHasMnDirective, isStandalone: true, selector: "[iHasMn]", inputs: { iHasMn: "iHasMn" }, usesInheritance: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHasMnDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHasMnDirective, decorators: [{
             type: Directive,
             args: [{ selector: '[iHasMn]', standalone: true }]
         }], propDecorators: { iHasMn: [{
@@ -15271,8 +15600,8 @@ class IHasMnRoute {
             });
         });
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHasMnRoute, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: IHasMnRoute, isStandalone: true, selector: "i-has-mn-route", ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHasMnRoute, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHasMnRoute, isStandalone: true, selector: "i-has-mn-route", ngImport: i0, template: `
     @if (!ready()) {
       <i-loading aria-live="polite" label="Loading access..." />
     } @else if (!allowed()) {
@@ -15282,7 +15611,7 @@ class IHasMnRoute {
     }
   `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "component", type: IErrorPage, selector: "i-error-page", inputs: ["kind", "mode", "title", "description", "icon", "code", "supportEmail", "actions"], outputs: ["onAction"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IHasMnRoute, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHasMnRoute, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-has-mn-route',
@@ -15323,51 +15652,6 @@ function hasMn(value, route) {
         ],
     };
 }
-
-/**
- * Session-storage wrapper for non-sensitive UI state (returnUrl, nonce/state).
- * Tokens are NEVER stored here — the access token lives in-memory
- * (`ISessionService`) and the refresh token lives in an HttpOnly cookie set by
- * iam-identity-api.
- *
- * @overridable — consumers may provide `{ provide: IStorageService, useClass: ... }`.
- */
-class IStorageService {
-    storageKey = '@insight/ui';
-    get(key) {
-        const session = JSON.parse(sessionStorage.getItem(this.storageKey) || '{}') || {};
-        return session[key] ?? '';
-    }
-    set(key, value) {
-        const session = JSON.parse(sessionStorage.getItem(this.storageKey) || '{}') || {};
-        session[key] = value;
-        sessionStorage.setItem(this.storageKey, JSON.stringify(session));
-    }
-    delete(key) {
-        const session = JSON.parse(sessionStorage.getItem(this.storageKey) || '{}') || {};
-        delete session[key];
-        sessionStorage.setItem(this.storageKey, JSON.stringify(session));
-    }
-    clear() {
-        sessionStorage.removeItem(this.storageKey);
-    }
-    /** Save the return URL for post-login/post-password-change redirect (keyed `ru`). */
-    setReturnUrl(url) {
-        this.set('ru', url);
-    }
-    /** Retrieve and clear the saved return URL. Returns `'/'` when none is saved. */
-    getReturnUrl() {
-        const url = this.get('ru');
-        this.delete('ru');
-        return url || '/';
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IStorageService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IStorageService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: IStorageService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
 
 /** Binds session-expiry state to a non-dismissible Insight dialog and SSO handoff. */
 class ISessionExpiredDialog {
@@ -15425,8 +15709,8 @@ class ISessionExpiredDialog {
         this.sessionExpired.hide();
         window.location.href = buildExternalSigninUrl(this.config, returnUrl);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISessionExpiredDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.33", type: ISessionExpiredDialog, isStandalone: true, selector: "i-session-expired-dialog", ngImport: i0, template: `
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISessionExpiredDialog, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISessionExpiredDialog, isStandalone: true, selector: "i-session-expired-dialog", ngImport: i0, template: `
     @if (visible()) {
       <i-dialog-container
         style="z-index: 9999"
@@ -15444,7 +15728,7 @@ class ISessionExpiredDialog {
     }
   `, isInline: true, dependencies: [{ kind: "component", type: IDialogContainer, selector: "i-dialog-container", inputs: ["instance", "config", "ariaLabel", "isTopMost"], outputs: ["onClose"] }, { kind: "component", type: IDialog, selector: "i-dialog", inputs: ["title", "actions"], outputs: ["onOk", "onConfirm", "onSave", "onCustomAction"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: ISessionExpiredDialog, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISessionExpiredDialog, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-session-expired-dialog',
@@ -15477,13 +15761,261 @@ class INotHasMnDirective extends IMenuGateDirective {
     set iNotHasMn(value) {
         this.value$.next(value);
     }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: INotHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
-    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.33", type: INotHasMnDirective, isStandalone: true, selector: "[iNotHasMn]", inputs: { iNotHasMn: "iNotHasMn" }, usesInheritance: true, ngImport: i0 });
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotHasMnDirective, deps: null, target: i0.ɵɵFactoryTarget.Directive });
+    static ɵdir = i0.ɵɵngDeclareDirective({ minVersion: "14.0.0", version: "20.3.34", type: INotHasMnDirective, isStandalone: true, selector: "[iNotHasMn]", inputs: { iNotHasMn: "iNotHasMn" }, usesInheritance: true, ngImport: i0 });
 }
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImport: i0, type: INotHasMnDirective, decorators: [{
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotHasMnDirective, decorators: [{
             type: Directive,
             args: [{ selector: '[iNotHasMn]', standalone: true }]
         }], propDecorators: { iNotHasMn: [{
+                type: Input
+            }] } });
+
+class IImpersonationStateService {
+    session = inject(ISessionService);
+    api = inject(IApiService);
+    config = inject(I_AUTH_CONFIG);
+    key = '';
+    version = 0;
+    inFlight = null;
+    value = signal(null, ...(ngDevMode ? [{ debugName: "value" }] : []));
+    cancelled = new Subject();
+    status = computed(() => {
+        this.context();
+        return this.key === impersonationContextKey(this.session.getAccessToken())
+            ? this.value()
+            : null;
+    }, ...(ngDevMode ? [{ debugName: "status" }] : []));
+    context = computed(() => this.session.impersonationContext(), ...(ngDevMode ? [{ debugName: "context" }] : []));
+    constructor() {
+        inject(DestroyRef).onDestroy(() => {
+            this.clear();
+            this.cancelled.complete();
+        });
+        effect(() => {
+            this.context();
+            this.syncContext();
+        });
+    }
+    actor() {
+        return this.session.actor();
+    }
+    isImpersonating() {
+        return this.session.isImpersonating();
+    }
+    clear() {
+        this.version++;
+        this.cancelled.next();
+        this.value.set(null);
+        this.inFlight = null;
+    }
+    syncContext() {
+        const key = impersonationContextKey(this.session.getAccessToken());
+        if (key !== this.key) {
+            this.key = key;
+            this.clear();
+        }
+    }
+    loadStatus() {
+        this.syncContext();
+        if (!this.isImpersonating())
+            return of({ mode: 'NONE' });
+        const cached = this.status();
+        if (cached)
+            return of(cached);
+        if (this.inFlight)
+            return this.inFlight;
+        const version = this.version;
+        const key = this.key;
+        const current = () => version === this.version && key === impersonationContextKey(this.session.getAccessToken());
+        const source = this.config.impersonation?.source ?? 'iam-user';
+        const base = source === 'bff' ? requireIdentityHost(this.config) : this.config.api['user'];
+        if (!base)
+            return throwError(() => new Error('Impersonation status requires api.user.'));
+        const result = this.api
+            .get(source === 'bff' ? '/auth/me' : '/me/impersonation', undefined, {
+            apiUrl: base,
+        })
+            .pipe(map((value) => normalizeImpersonationStatus(value, source)), takeUntil(this.cancelled), tap$1((value) => {
+            if (current())
+                this.value.set(value);
+        }), map((value) => (current() ? value : null)), 
+        // Stale completions cannot affect either data or errors in the replacement session.
+        switchMap$1((value) => (value ? of(value) : EMPTY)), catchError$1((error) => (current() ? throwError(() => error) : EMPTY)), finalize$1(() => {
+            if (this.inFlight === result)
+                this.inFlight = null;
+        }), shareReplay$1({ bufferSize: 1, refCount: true }));
+        this.inFlight = result;
+        return result;
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IImpersonationStateService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IImpersonationStateService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IImpersonationStateService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }], ctorParameters: () => [] });
+
+const I_IMPERSONATION_ERROR_RESOLVER = new InjectionToken('I_IMPERSONATION_ERROR_RESOLVER');
+class IHImpersonationBanner {
+    resolveError = inject(I_IMPERSONATION_ERROR_RESOLVER, { optional: true });
+    state = inject(IImpersonationStateService);
+    session = inject(ISessionService);
+    store = inject(IUserMenuStore);
+    config = inject(I_AUTH_CONFIG);
+    confirm = inject(IConfirmService);
+    alerts = inject(IAlertService);
+    destroyRef = inject(DestroyRef);
+    ending = signal(false, ...(ngDevMode ? [{ debugName: "ending" }] : []));
+    infoOpen = signal(false, ...(ngDevMode ? [{ debugName: "infoOpen" }] : []));
+    confirming = signal(false, ...(ngDevMode ? [{ debugName: "confirming" }] : []));
+    errorMessage = signal('', ...(ngDevMode ? [{ debugName: "errorMessage" }] : []));
+    countdown = signal(null, ...(ngDevMode ? [{ debugName: "countdown" }] : []));
+    visible = computed(() => {
+        this.session.impersonationContext();
+        const status = this.state.status();
+        return this.session.isImpersonating() && (!status || status.mode === 'IMPERSONATING');
+    }, ...(ngDevMode ? [{ debugName: "visible" }] : []));
+    actorName = computed(() => {
+        this.session.impersonationContext();
+        return (this.state.status()?.actorName || actorDisplayNameFromToken(this.session.getAccessToken()));
+    }, ...(ngDevMode ? [{ debugName: "actorName" }] : []));
+    subjectName = computed(() => {
+        this.session.impersonationContext();
+        return this.state.status()?.subjectName || this.session.getUser()?.name || '-';
+    }, ...(ngDevMode ? [{ debugName: "subjectName" }] : []));
+    occupation = computed(() => this.state.status()?.occupation || this.store.rawCurrentUser()?.occupationName || null, ...(ngDevMode ? [{ debugName: "occupation" }] : []));
+    endDateLabel = computed(() => grantEndLabel(this.state.status()), ...(ngDevMode ? [{ debugName: "endDateLabel" }] : []));
+    constructor() {
+        effect((onCleanup) => {
+            this.session.impersonationContext();
+            untracked(() => {
+                this.errorMessage.set('');
+                this.confirming.set(false);
+                this.ending.set(false);
+            });
+            if (!this.session.isImpersonating())
+                return;
+            const subscription = untracked(() => this.state.loadStatus().subscribe({
+                error: () => {
+                    /* Token fallback remains visible. */
+                },
+            }));
+            onCleanup(() => subscription.unsubscribe());
+        });
+        effect((onCleanup) => {
+            const status = this.state.status();
+            const end = resolveGrantEnd(status?.endAt, status?.endDate);
+            let timer;
+            const tick = () => {
+                if (end === null || !this.visible()) {
+                    this.countdown.set(null);
+                    return;
+                }
+                const remaining = Math.max(0, end - Date.now());
+                this.countdown.set(remaining < COUNTDOWN_THRESHOLD_MS ? formatCountdown(remaining) : null);
+                if (remaining > 0)
+                    timer = setTimeout(tick, remaining >= COUNTDOWN_THRESHOLD_MS
+                        ? Math.min(remaining - COUNTDOWN_THRESHOLD_MS + 1, MAX_TIMER_DELAY_MS)
+                        : Math.min(1000, remaining));
+            };
+            tick();
+            onCleanup(() => clearTimeout(timer));
+        });
+    }
+    redirect(result) {
+        window.location.assign(resolveImpersonationRedirect(result, this.config.api.identity, this.config.signinUrl));
+    }
+    onShowInfo() {
+        if (this.infoOpen())
+            return;
+        this.infoOpen.set(true);
+        this.alerts
+            .information('About Impersonation Sessions', this.config.impersonation?.informationText ?? IMPERSONATION_INFORMATION)
+            .pipe(takeUntilDestroyed(this.destroyRef), finalize$1(() => this.infoOpen.set(false)))
+            .subscribe();
+    }
+    onEndSession() {
+        if (this.ending() || this.confirming())
+            return;
+        const context = this.session.impersonationContext();
+        this.confirming.set(true);
+        this.confirm
+            .danger('End Impersonate Session', IMPERSONATION_CONFIRMATION)
+            .pipe(takeUntilDestroyed(this.destroyRef), finalize$1(() => this.confirming.set(false)))
+            .subscribe((confirmed) => {
+            if (!confirmed || context !== this.session.impersonationContext())
+                return;
+            this.ending.set(true);
+            this.errorMessage.set('');
+            this.session
+                .endImpersonation()
+                .pipe(takeUntilDestroyed(this.destroyRef))
+                .subscribe({
+                next: (result) => this.redirect(result),
+                error: (error) => {
+                    if (context !== this.session.impersonationContext())
+                        return;
+                    this.ending.set(false);
+                    this.errorMessage.set(this.resolveError
+                        ? this.resolveError(error, 'Failed to end the impersonation session. Please try again.')
+                        : resolveApiErrorDisplayMessage(error, 'Failed to end the impersonation session. Please try again.', this.config.errorCatalogResolver, this.config.errorDisplayFormatter));
+                },
+            });
+        });
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHImpersonationBanner, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHImpersonationBanner, isStandalone: true, selector: "ih-impersonation-banner", host: { classAttribute: "ih-impersonation-banner" }, ngImport: i0, template: "@if (visible()) {\n  <section\n    aria-label=\"Impersonation session\"\n    class=\"i-banner i-banner-warning px-lg py-sm\"\n    data-testid=\"impersonation-banner\"\n  >\n    <div class=\"flex flex-wrap align-center gap-sm\">\n      <div class=\"i-banner-details flex flex-wrap align-center gap-sm flex-fill text-md\">\n        <span class=\"flex align-start gap-sm\">\n          <span>\n            <strong>Signed In As:&nbsp;</strong>\n            <span data-testid=\"banner-actor\">{{ actorName() }}</span>\n          </span>\n        </span>\n        <span>\n          <strong>Acting As:&nbsp;</strong>\n          <span data-testid=\"banner-subject\">\n            {{ subjectName() }}\n            @if (occupation()) {\n              ({{ occupation() }})\n            }\n          </span>\n        </span>\n        <span>\n          <strong>Grant ends:&nbsp;</strong>\n          <span data-testid=\"banner-end-date\">{{ endDateLabel() }}</span>\n        </span>\n        @if (countdown()) {\n          <span aria-live=\"off\" role=\"timer\">\n            <strong>Time remaining:&nbsp;</strong>\n            <span data-testid=\"banner-countdown\">{{ countdown() }}</span>\n          </span>\n        }\n      </div>\n      <div class=\"flex flex-wrap align-center gap-sm shrink-0\">\n        <i-button\n          ariaLabel=\"About impersonation sessions\"\n          data-testid=\"impersonation-info\"\n          icon=\"fa-solid fa-info\"\n          size=\"sm\"\n          variant=\"primary\"\n          [disabled]=\"ending() || confirming()\"\n          (onClick)=\"onShowInfo()\"\n        />\n        <i-button\n          data-testid=\"end-impersonation\"\n          icon=\"fa-solid fa-right-from-bracket\"\n          size=\"sm\"\n          variant=\"danger\"\n          [disabled]=\"ending() || confirming()\"\n          [loading]=\"ending()\"\n          (onClick)=\"onEndSession()\"\n        >\n          End Impersonate Session\n        </i-button>\n      </div>\n    </div>\n    @if (errorMessage()) {\n      <p class=\"mt-sm text-red-900 leading-snug\" role=\"alert\">{{ errorMessage() }}</p>\n    }\n  </section>\n}\n", dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHImpersonationBanner, decorators: [{
+            type: Component,
+            args: [{ selector: 'ih-impersonation-banner', changeDetection: ChangeDetectionStrategy.OnPush, imports: [IButton], host: { class: 'ih-impersonation-banner' }, template: "@if (visible()) {\n  <section\n    aria-label=\"Impersonation session\"\n    class=\"i-banner i-banner-warning px-lg py-sm\"\n    data-testid=\"impersonation-banner\"\n  >\n    <div class=\"flex flex-wrap align-center gap-sm\">\n      <div class=\"i-banner-details flex flex-wrap align-center gap-sm flex-fill text-md\">\n        <span class=\"flex align-start gap-sm\">\n          <span>\n            <strong>Signed In As:&nbsp;</strong>\n            <span data-testid=\"banner-actor\">{{ actorName() }}</span>\n          </span>\n        </span>\n        <span>\n          <strong>Acting As:&nbsp;</strong>\n          <span data-testid=\"banner-subject\">\n            {{ subjectName() }}\n            @if (occupation()) {\n              ({{ occupation() }})\n            }\n          </span>\n        </span>\n        <span>\n          <strong>Grant ends:&nbsp;</strong>\n          <span data-testid=\"banner-end-date\">{{ endDateLabel() }}</span>\n        </span>\n        @if (countdown()) {\n          <span aria-live=\"off\" role=\"timer\">\n            <strong>Time remaining:&nbsp;</strong>\n            <span data-testid=\"banner-countdown\">{{ countdown() }}</span>\n          </span>\n        }\n      </div>\n      <div class=\"flex flex-wrap align-center gap-sm shrink-0\">\n        <i-button\n          ariaLabel=\"About impersonation sessions\"\n          data-testid=\"impersonation-info\"\n          icon=\"fa-solid fa-info\"\n          size=\"sm\"\n          variant=\"primary\"\n          [disabled]=\"ending() || confirming()\"\n          (onClick)=\"onShowInfo()\"\n        />\n        <i-button\n          data-testid=\"end-impersonation\"\n          icon=\"fa-solid fa-right-from-bracket\"\n          size=\"sm\"\n          variant=\"danger\"\n          [disabled]=\"ending() || confirming()\"\n          [loading]=\"ending()\"\n          (onClick)=\"onEndSession()\"\n        >\n          End Impersonate Session\n        </i-button>\n      </div>\n    </div>\n    @if (errorMessage()) {\n      <p class=\"mt-sm text-red-900 leading-snug\" role=\"alert\">{{ errorMessage() }}</p>\n    }\n  </section>\n}\n" }]
+        }], ctorParameters: () => [] });
+
+class IInfoNotice {
+    message = '';
+    title = '';
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IInfoNotice, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IInfoNotice, isStandalone: true, selector: "i-info-notice", inputs: { message: "message", title: "title" }, host: { properties: { "style.display": "message?.trim() ? null : \"none\"" } }, ngImport: i0, template: `@if (message?.trim()) {
+    <div
+      class="i-info-notice flex align-start gap-sm p-sm px-md radius-3xs text-md font-body"
+      role="status"
+    >
+      <i-icon aria-hidden="true" class="shrink-0" icon="info" size="lg" />
+      <span class="min-w-0 leading-snug">
+        @if (title) {
+          <strong>{{ title }}</strong>
+        }
+        {{ message }}</span
+      >
+    </div>
+  }`, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IInfoNotice, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-info-notice',
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    imports: [IIcon],
+                    host: { '[style.display]': 'message?.trim() ? null : "none"' },
+                    template: `@if (message?.trim()) {
+    <div
+      class="i-info-notice flex align-start gap-sm p-sm px-md radius-3xs text-md font-body"
+      role="status"
+    >
+      <i-icon aria-hidden="true" class="shrink-0" icon="info" size="lg" />
+      <span class="min-w-0 leading-snug">
+        @if (title) {
+          <strong>{{ title }}</strong>
+        }
+        {{ message }}</span
+      >
+    </div>
+  }`,
+                }]
+        }], propDecorators: { message: [{
+                type: Input
+            }], title: [{
                 type: Input
             }] } });
 
@@ -15495,5 +16027,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.33", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
+export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IImpersonationStateService, IInfoNotice, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
 //# sourceMappingURL=insight-ui.mjs.map

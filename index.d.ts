@@ -73,6 +73,43 @@ declare class IIcon {
     static ɵcmp: i0.ɵɵComponentDeclaration<IIcon, "i-icon", never, { "icon": { "alias": "icon"; "required": false; }; "size": { "alias": "size"; "required": false; }; }, {}, never, never, true, never>;
 }
 
+declare class IAvatar {
+    /** Image URL. When empty or on error, falls back to fallbackSrc or icon. */
+    src?: string | null;
+    /** Alt text for the image. */
+    alt?: string;
+    /**
+     * Container size.
+     * - `number` → treated as pixels (e.g. `200` = 200px)
+     * - `IIconSize` string → uses a preset mapping (e.g. `'lg'` = 64px)
+     * @default 40
+     */
+    size: number | IIconSize;
+    /**
+     * Container shape.
+     * @default 'circle'
+     */
+    shape?: 'circle' | 'square' | 'rounded-square';
+    /** Fallback image URL. Used when `src` fails to load. If not set (or also fails), shows the user icon. */
+    fallbackSrc?: string | null;
+    /** Additional CSS classes to inject onto the host element (e.g. `"border-2 border-primary"`). */
+    className?: string;
+    /** Whether the primary `src` image failed to load. */
+    hasError: boolean;
+    /** Whether the `fallbackSrc` image also failed to load. */
+    hasFallbackError: boolean;
+    readonly baseClass = true;
+    get attrShape(): string;
+    get resolvedSizePx(): number;
+    get hostClass(): string | undefined;
+    /** Icon size for the fallback `<i-icon>`. */
+    get resolvedIconSize(): IIconSize;
+    onImgError(): void;
+    onFallbackError(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IAvatar, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IAvatar, "i-avatar", never, { "src": { "alias": "src"; "required": false; }; "alt": { "alias": "alt"; "required": false; }; "size": { "alias": "size"; "required": false; }; "shape": { "alias": "shape"; "required": false; }; "fallbackSrc": { "alias": "fallbackSrc"; "required": false; }; "className": { "alias": "className"; "required": false; }; }, {}, never, never, true, never>;
+}
+
 type IFormControlErrorMessage = {
     required?: string;
     requiredTrue?: string;
@@ -1620,6 +1657,12 @@ declare class IHighlightSearchPipe implements PipeTransform {
 type IRoute = Omit<Route, 'data' | 'children'> & {
     data: {
         title: string;
+        /** false suppresses this breadcrumb; otherwise defaults to title. */
+        breadcrumb?: string | false;
+        /** Host mount: descendants contribute the remote portion. */
+        remoteMount?: boolean;
+        /** Explicit host labels collected from the runtime route hierarchy. */
+        hostBreadcrumbs?: IBreadcrumbItem[];
         [key: string]: any;
     };
     children?: IRoutes;
@@ -1723,10 +1766,16 @@ type IHNavigationSnapshot = {
 declare class IHTitleBreadcrumbService {
     /**
      * null = use normal (route-based) title/breadcrumbs
-     * non-null = override (e.g. React remote controls shell display)
+     * non-null = complete override (e.g. access error). React uses remote contributions.
      */
     readonly titleOverride: i0.WritableSignal<string | null>;
     readonly breadcrumbsOverride: i0.WritableSignal<IBreadcrumbItem[] | null>;
+    /** React contributions are composed after host ancestry, never full overrides. */
+    readonly remoteTitle: i0.WritableSignal<string | null>;
+    setRemoteTitle(title: string | null): void;
+    readonly remoteBreadcrumbs: i0.WritableSignal<IBreadcrumbItem[]>;
+    setRemoteBreadcrumbs(items: IBreadcrumbItem[] | null): void;
+    clearRemote(): void;
     setTitle(title: string | null): void;
     setBreadcrumbs(items: IBreadcrumbItem[] | null): void;
     clear(): void;
@@ -1748,11 +1797,12 @@ declare class IHContent {
     /** Emits the aggregated loading state so consumer apps can render their own loader. */
     readonly loading: EventEmitter<boolean>;
     private readonly loadingEffect;
-    /** route-based breadcrumbs */
+    private readonly navigation$;
+    /** Menu loading and React contributions also update the visible trail. */
     readonly breadcrumb$: Observable<IBreadcrumbItem[]>;
-    /** last breadcrumb label = route-based page title */
+    /** Heading comes from route titles independently of breadcrumb labels. */
     readonly pageTitle$: Observable<string | null>;
-    private buildBreadcrumb;
+    private routeBreadcrumbState;
     toggleSidebar(): void;
     onOverrideBreadcrumbClick(e: MouseEvent): void;
     private normalizeBaseHref;
@@ -1928,6 +1978,7 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     user$: Observable<IUser>;
     menusInput$: Observable<IMenu[]>;
     visible: boolean;
+    impersonating: boolean;
     footerText: string;
     /** When true, leaf items render a pin/star toggle and the Favorites section is shown. */
     favoriteMode: boolean;
@@ -2028,7 +2079,7 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private navigateToMenu;
     updateUrl(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHSidebar, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "favorites$": { "alias": "favorites$"; "required": false; }; "groupByApplication": { "alias": "groupByApplication"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "personalProfileUrl": { "alias": "personalProfileUrl"; "required": false; }; }, { "onFavoriteToggle": "onFavoriteToggle"; "onFavoriteReorder": "onFavoriteReorder"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "impersonating": { "alias": "impersonating"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "favorites$": { "alias": "favorites$"; "required": false; }; "groupByApplication": { "alias": "groupByApplication"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "personalProfileUrl": { "alias": "personalProfileUrl"; "required": false; }; }, { "onFavoriteToggle": "onFavoriteToggle"; "onFavoriteReorder": "onFavoriteReorder"; }, never, never, true, never>;
 }
 
 declare class ILoading {
@@ -2074,9 +2125,12 @@ declare class ISectionTabHeader {
     static ɵcmp: i0.ɵɵComponentDeclaration<ISectionTabHeader, "i-section-tab-header", never, {}, {}, never, ["*"], true, never>;
 }
 declare class ISectionTabContent {
+    class: string;
+    get className(): string;
+    set className(value: string);
     tpl: TemplateRef<unknown>;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISectionTabContent, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionTabContent, "i-section-tab-content", never, {}, {}, never, ["*"], true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionTabContent, "i-section-tab-content", never, { "class": { "alias": "class"; "required": false; }; }, {}, never, ["*"], true, never>;
 }
 declare class ISectionTab implements AfterContentInit {
     title: string;
@@ -2303,43 +2357,6 @@ declare class IToggle implements ControlValueAccessor {
     static ɵcmp: i0.ɵɵComponentDeclaration<IToggle, "i-toggle", never, { "disabled": { "alias": "disabled"; "required": false; }; "labelPosition": { "alias": "labelPosition"; "required": false; }; "size": { "alias": "size"; "required": false; }; }, { "onChange": "onChange"; "onTouched": "onTouched"; }, never, ["*"], true, never>;
 }
 
-declare class IAvatar {
-    /** Image URL. When empty or on error, falls back to fallbackSrc or icon. */
-    src?: string | null;
-    /** Alt text for the image. */
-    alt?: string;
-    /**
-     * Container size.
-     * - `number` → treated as pixels (e.g. `200` = 200px)
-     * - `IIconSize` string → uses a preset mapping (e.g. `'lg'` = 64px)
-     * @default 40
-     */
-    size: number | IIconSize;
-    /**
-     * Container shape.
-     * @default 'circle'
-     */
-    shape?: 'circle' | 'square' | 'rounded-square';
-    /** Fallback image URL. Used when `src` fails to load. If not set (or also fails), shows the user icon. */
-    fallbackSrc?: string | null;
-    /** Additional CSS classes to inject onto the host element (e.g. `"border-2 border-primary"`). */
-    className?: string;
-    /** Whether the primary `src` image failed to load. */
-    hasError: boolean;
-    /** Whether the `fallbackSrc` image also failed to load. */
-    hasFallbackError: boolean;
-    readonly baseClass = true;
-    get attrShape(): string;
-    get resolvedSizePx(): number;
-    get hostClass(): string | undefined;
-    /** Icon size for the fallback `<i-icon>`. */
-    get resolvedIconSize(): IIconSize;
-    onImgError(): void;
-    onFallbackError(): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IAvatar, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IAvatar, "i-avatar", never, { "src": { "alias": "src"; "required": false; }; "alt": { "alias": "alt"; "required": false; }; "size": { "alias": "size"; "required": false; }; "shape": { "alias": "shape"; "required": false; }; "fallbackSrc": { "alias": "fallbackSrc"; "required": false; }; "className": { "alias": "className"; "required": false; }; }, {}, never, never, true, never>;
-}
-
 declare class IUI {
     static ɵfac: i0.ɵɵFactoryDeclaration<IUI, never>;
     static ɵmod: i0.ɵɵNgModuleDeclaration<IUI, never, [typeof IAvatar, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IFCDatepicker, typeof IDialogModule, typeof IErrorPage, typeof IGridModule, typeof IHContent, typeof IHSidebar, typeof IIcon, typeof IInputModule, typeof ILoading, typeof ISectionModule, typeof ISelect, typeof IFCSelect, typeof ITextArea, typeof IFCTextArea, typeof IToggle, typeof IPill], [typeof IAvatar, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IFCDatepicker, typeof IDialogModule, typeof IErrorPage, typeof IGridModule, typeof IHContent, typeof IHSidebar, typeof IIcon, typeof IInputModule, typeof ILoading, typeof ISectionModule, typeof ISelect, typeof IFCSelect, typeof ITextArea, typeof IFCTextArea, typeof IToggle, typeof IPill]>;
@@ -2383,6 +2400,255 @@ declare function formatApiFieldErrors(error: INormalizedApiError): string | unde
 /** Resolve display text without changing the canonical backend error fields. */
 declare const resolveApiErrorDisplayMessage: (error: unknown, localFallback: string, catalogResolver?: IApiErrorCatalogResolver, formatter?: IApiErrorDisplayFormatter) => string;
 
+/** Response body returned by JSON API calls. */
+type IApiResponse<T = any> = T;
+/** Shared transport options accepted by every API method. */
+type IApiOptions = {
+    apiUrl?: string;
+    headers?: Record<string, string>;
+    body?: any;
+    params?: HttpParams | Record<string, string | number | boolean | readonly (string | number | boolean)[]>;
+    skipBearer?: boolean;
+    observe?: 'body' | 'response';
+    responseType?: 'json' | 'blob' | 'arraybuffer' | 'text';
+    signal?: AbortSignal;
+    /** Total subscription deadline, including refresh and retry. Defaults to 60000 ms. */
+    timeoutMs?: number;
+};
+/** Sends authenticated application requests through the shared SSO transport. */
+declare class IApiService {
+    private readonly http;
+    private readonly csrf;
+    private readonly config;
+    private mergeHeaders;
+    private enrichError;
+    /** Cancel the transport subscription, including its refresh waiter, on deadline or signal. */
+    private request;
+    /** Sends a GET request and returns either the response body or full response. */
+    get<T = any>(path: string, params: HttpParams | undefined, options?: IApiOptions & {
+        responseType?: 'json';
+        observe?: 'body';
+    }): Observable<T>;
+    get<T = any>(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType?: 'json';
+        observe: 'response';
+    }): Observable<HttpResponse<T>>;
+    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType: 'blob';
+        observe?: 'body';
+    }): Observable<Blob>;
+    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType: 'blob';
+        observe: 'response';
+    }): Observable<HttpResponse<Blob>>;
+    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe?: 'body';
+    }): Observable<ArrayBuffer>;
+    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe: 'response';
+    }): Observable<HttpResponse<ArrayBuffer>>;
+    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType: 'text';
+        observe?: 'body';
+    }): Observable<string>;
+    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
+        responseType: 'text';
+        observe: 'response';
+    }): Observable<HttpResponse<string>>;
+    get<T = any>(path: string, params: HttpParams | undefined, options?: IApiOptions): Observable<T>;
+    get<T = any>(path: string, params?: HttpParams, options?: IApiOptions): Observable<T>;
+    /** Sends a POST request and returns either the response body or full response. */
+    post<T = any>(path: string, body: any, options?: IApiOptions & {
+        responseType?: 'json';
+        observe?: 'body';
+    }): Observable<T>;
+    post<T = any>(path: string, body: any, options: IApiOptions & {
+        responseType?: 'json';
+        observe: 'response';
+    }): Observable<HttpResponse<T>>;
+    post(path: string, body: any, options: IApiOptions & {
+        responseType: 'blob';
+        observe?: 'body';
+    }): Observable<Blob>;
+    post(path: string, body: any, options: IApiOptions & {
+        responseType: 'blob';
+        observe: 'response';
+    }): Observable<HttpResponse<Blob>>;
+    post(path: string, body: any, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe?: 'body';
+    }): Observable<ArrayBuffer>;
+    post(path: string, body: any, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe: 'response';
+    }): Observable<HttpResponse<ArrayBuffer>>;
+    post(path: string, body: any, options: IApiOptions & {
+        responseType: 'text';
+        observe?: 'body';
+    }): Observable<string>;
+    post(path: string, body: any, options: IApiOptions & {
+        responseType: 'text';
+        observe: 'response';
+    }): Observable<HttpResponse<string>>;
+    post<T = any>(path: string, body: any, options?: IApiOptions): Observable<T>;
+    post<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
+    /** Sends a PUT request and returns either the response body or full response. */
+    put<T = any>(path: string, body: any, options?: IApiOptions & {
+        responseType?: 'json';
+        observe?: 'body';
+    }): Observable<T>;
+    put<T = any>(path: string, body: any, options: IApiOptions & {
+        responseType?: 'json';
+        observe: 'response';
+    }): Observable<HttpResponse<T>>;
+    put(path: string, body: any, options: IApiOptions & {
+        responseType: 'blob';
+        observe?: 'body';
+    }): Observable<Blob>;
+    put(path: string, body: any, options: IApiOptions & {
+        responseType: 'blob';
+        observe: 'response';
+    }): Observable<HttpResponse<Blob>>;
+    put(path: string, body: any, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe?: 'body';
+    }): Observable<ArrayBuffer>;
+    put(path: string, body: any, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe: 'response';
+    }): Observable<HttpResponse<ArrayBuffer>>;
+    put(path: string, body: any, options: IApiOptions & {
+        responseType: 'text';
+        observe?: 'body';
+    }): Observable<string>;
+    put(path: string, body: any, options: IApiOptions & {
+        responseType: 'text';
+        observe: 'response';
+    }): Observable<HttpResponse<string>>;
+    put<T = any>(path: string, body: any, options?: IApiOptions): Observable<T>;
+    put<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
+    /** Sends a PATCH request and returns either the response body or full response. */
+    patch<T = any>(path: string, body: any, options?: IApiOptions & {
+        responseType?: 'json';
+        observe?: 'body';
+    }): Observable<T>;
+    patch<T = any>(path: string, body: any, options: IApiOptions & {
+        responseType?: 'json';
+        observe: 'response';
+    }): Observable<HttpResponse<T>>;
+    patch(path: string, body: any, options: IApiOptions & {
+        responseType: 'blob';
+        observe?: 'body';
+    }): Observable<Blob>;
+    patch(path: string, body: any, options: IApiOptions & {
+        responseType: 'blob';
+        observe: 'response';
+    }): Observable<HttpResponse<Blob>>;
+    patch(path: string, body: any, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe?: 'body';
+    }): Observable<ArrayBuffer>;
+    patch(path: string, body: any, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe: 'response';
+    }): Observable<HttpResponse<ArrayBuffer>>;
+    patch(path: string, body: any, options: IApiOptions & {
+        responseType: 'text';
+        observe?: 'body';
+    }): Observable<string>;
+    patch(path: string, body: any, options: IApiOptions & {
+        responseType: 'text';
+        observe: 'response';
+    }): Observable<HttpResponse<string>>;
+    patch<T = any>(path: string, body: any, options?: IApiOptions): Observable<T>;
+    patch<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
+    /** Sends a DELETE request and returns either the response body or full response. */
+    delete<T = any>(path: string, options?: IApiOptions & {
+        responseType?: 'json';
+        observe?: 'body';
+    }): Observable<T>;
+    delete<T = any>(path: string, options: IApiOptions & {
+        responseType?: 'json';
+        observe: 'response';
+    }): Observable<HttpResponse<T>>;
+    delete(path: string, options: IApiOptions & {
+        responseType: 'blob';
+        observe?: 'body';
+    }): Observable<Blob>;
+    delete(path: string, options: IApiOptions & {
+        responseType: 'blob';
+        observe: 'response';
+    }): Observable<HttpResponse<Blob>>;
+    delete(path: string, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe?: 'body';
+    }): Observable<ArrayBuffer>;
+    delete(path: string, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe: 'response';
+    }): Observable<HttpResponse<ArrayBuffer>>;
+    delete(path: string, options: IApiOptions & {
+        responseType: 'text';
+        observe?: 'body';
+    }): Observable<string>;
+    delete(path: string, options: IApiOptions & {
+        responseType: 'text';
+        observe: 'response';
+    }): Observable<HttpResponse<string>>;
+    delete<T = any>(path: string, options?: IApiOptions): Observable<T>;
+    /** Uploads a file or existing form payload as multipart form data. */
+    upload<T = any>(path: string, file: File | FormData, options?: IApiOptions & {
+        responseType?: 'json';
+        observe?: 'body';
+    }): Observable<T>;
+    upload<T = any>(path: string, file: File | FormData, options: IApiOptions & {
+        responseType?: 'json';
+        observe: 'response';
+    }): Observable<HttpResponse<T>>;
+    upload(path: string, file: File | FormData, options: IApiOptions & {
+        responseType: 'blob';
+        observe?: 'body';
+    }): Observable<Blob>;
+    upload(path: string, file: File | FormData, options: IApiOptions & {
+        responseType: 'blob';
+        observe: 'response';
+    }): Observable<HttpResponse<Blob>>;
+    upload(path: string, file: File | FormData, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe?: 'body';
+    }): Observable<ArrayBuffer>;
+    upload(path: string, file: File | FormData, options: IApiOptions & {
+        responseType: 'arraybuffer';
+        observe: 'response';
+    }): Observable<HttpResponse<ArrayBuffer>>;
+    upload(path: string, file: File | FormData, options: IApiOptions & {
+        responseType: 'text';
+        observe?: 'body';
+    }): Observable<string>;
+    upload(path: string, file: File | FormData, options: IApiOptions & {
+        responseType: 'text';
+        observe: 'response';
+    }): Observable<HttpResponse<string>>;
+    upload<T = any>(path: string, file: File | FormData, options?: IApiOptions): Observable<T>;
+    /** Downloads a binary response body. */
+    getBlob(path: string, params?: HttpParams, options?: IApiOptions): Observable<Blob>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IApiService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IApiService>;
+}
+
+/**
+ * Known API error codes surfaced by the platform services (mirrors the
+ * iam-user-api error catalog — see `iam-user-api/src/common/errors/user-errors.ts`).
+ *
+ * Consumers branch on these to tailor UX (e.g. showing the "Access Unavailable"
+ * page when the current user has no application mapping).
+ */
+declare const USER_APPLICATION_MAPPING_NOT_FOUND: "USER_APPLICATION_MAPPING_NOT_FOUND";
+/** Union of error codes the @insight/ui consumers may need to branch on. */
+type IKnownErrorCode = typeof USER_APPLICATION_MAPPING_NOT_FOUND;
+
 /**
  * Token lifespan configuration (seconds). Mirrors the platform-wide AC used by
  * iam-web: Access Token 1h, Refresh Token 2h, Max SSO Session 15h. Consumer
@@ -2407,6 +2673,7 @@ type ITokenLifespan = {
  * by identity-owner apps only (e.g. iam-web) and stay fixed.
  */
 type IAuthEndpoints = {
+    impersonationEnd?: string;
     /** CSRF bootstrap: `GET {identity}{csrf}` returns `{ csrfToken }` and sets the CSRF cookie. */
     csrf?: string;
     /** Mode-2 username/password login: `POST {identity}{login}` (identity-owner apps only). */
@@ -2428,6 +2695,10 @@ declare function getDefaultIAuthEndpoints(): IAuthEndpoints;
  * `app.config.ts` / bootstrap `ApplicationConfig`.
  */
 type IAuthConfig = {
+    impersonation?: {
+        source: 'iam-user' | 'bff';
+        informationText?: string;
+    };
     /**
      * API base URLs grouped by backend service. `identity` is REQUIRED and must
      * point at this app's OWN auth backend (typically a same-origin BFF that
@@ -2821,425 +3092,6 @@ declare class ICsrfService {
     ensureToken(): Observable<void>;
     static ɵfac: i0.ɵɵFactoryDeclaration<ICsrfService, never>;
     static ɵprov: i0.ɵɵInjectableDeclaration<ICsrfService>;
-}
-
-/** Response body returned by JSON API calls. */
-type IApiResponse<T = any> = T;
-/** Shared transport options accepted by every API method. */
-type IApiOptions = {
-    apiUrl?: string;
-    headers?: Record<string, string>;
-    body?: any;
-    params?: HttpParams | Record<string, string | number | boolean | readonly (string | number | boolean)[]>;
-    skipBearer?: boolean;
-    observe?: 'body' | 'response';
-    responseType?: 'json' | 'blob' | 'arraybuffer' | 'text';
-    signal?: AbortSignal;
-    /** Total subscription deadline, including refresh and retry. Defaults to 60000 ms. */
-    timeoutMs?: number;
-};
-/** Sends authenticated application requests through the shared SSO transport. */
-declare class IApiService {
-    private readonly http;
-    private readonly csrf;
-    private readonly config;
-    private mergeHeaders;
-    private enrichError;
-    /** Cancel the transport subscription, including its refresh waiter, on deadline or signal. */
-    private request;
-    /** Sends a GET request and returns either the response body or full response. */
-    get<T = any>(path: string, params: HttpParams | undefined, options?: IApiOptions & {
-        responseType?: 'json';
-        observe?: 'body';
-    }): Observable<T>;
-    get<T = any>(path: string, params: HttpParams | undefined, options: IApiOptions & {
-        responseType?: 'json';
-        observe: 'response';
-    }): Observable<HttpResponse<T>>;
-    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
-        responseType: 'blob';
-        observe?: 'body';
-    }): Observable<Blob>;
-    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
-        responseType: 'blob';
-        observe: 'response';
-    }): Observable<HttpResponse<Blob>>;
-    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
-        responseType: 'arraybuffer';
-        observe?: 'body';
-    }): Observable<ArrayBuffer>;
-    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
-        responseType: 'arraybuffer';
-        observe: 'response';
-    }): Observable<HttpResponse<ArrayBuffer>>;
-    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
-        responseType: 'text';
-        observe?: 'body';
-    }): Observable<string>;
-    get(path: string, params: HttpParams | undefined, options: IApiOptions & {
-        responseType: 'text';
-        observe: 'response';
-    }): Observable<HttpResponse<string>>;
-    get<T = any>(path: string, params: HttpParams | undefined, options?: IApiOptions): Observable<T>;
-    get<T = any>(path: string, params?: HttpParams, options?: IApiOptions): Observable<T>;
-    /** Sends a POST request and returns either the response body or full response. */
-    post<T = any>(path: string, body: any, options?: IApiOptions & {
-        responseType?: 'json';
-        observe?: 'body';
-    }): Observable<T>;
-    post<T = any>(path: string, body: any, options: IApiOptions & {
-        responseType?: 'json';
-        observe: 'response';
-    }): Observable<HttpResponse<T>>;
-    post(path: string, body: any, options: IApiOptions & {
-        responseType: 'blob';
-        observe?: 'body';
-    }): Observable<Blob>;
-    post(path: string, body: any, options: IApiOptions & {
-        responseType: 'blob';
-        observe: 'response';
-    }): Observable<HttpResponse<Blob>>;
-    post(path: string, body: any, options: IApiOptions & {
-        responseType: 'arraybuffer';
-        observe?: 'body';
-    }): Observable<ArrayBuffer>;
-    post(path: string, body: any, options: IApiOptions & {
-        responseType: 'arraybuffer';
-        observe: 'response';
-    }): Observable<HttpResponse<ArrayBuffer>>;
-    post(path: string, body: any, options: IApiOptions & {
-        responseType: 'text';
-        observe?: 'body';
-    }): Observable<string>;
-    post(path: string, body: any, options: IApiOptions & {
-        responseType: 'text';
-        observe: 'response';
-    }): Observable<HttpResponse<string>>;
-    post<T = any>(path: string, body: any, options?: IApiOptions): Observable<T>;
-    post<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
-    /** Sends a PUT request and returns either the response body or full response. */
-    put<T = any>(path: string, body: any, options?: IApiOptions & {
-        responseType?: 'json';
-        observe?: 'body';
-    }): Observable<T>;
-    put<T = any>(path: string, body: any, options: IApiOptions & {
-        responseType?: 'json';
-        observe: 'response';
-    }): Observable<HttpResponse<T>>;
-    put(path: string, body: any, options: IApiOptions & {
-        responseType: 'blob';
-        observe?: 'body';
-    }): Observable<Blob>;
-    put(path: string, body: any, options: IApiOptions & {
-        responseType: 'blob';
-        observe: 'response';
-    }): Observable<HttpResponse<Blob>>;
-    put(path: string, body: any, options: IApiOptions & {
-        responseType: 'arraybuffer';
-        observe?: 'body';
-    }): Observable<ArrayBuffer>;
-    put(path: string, body: any, options: IApiOptions & {
-        responseType: 'arraybuffer';
-        observe: 'response';
-    }): Observable<HttpResponse<ArrayBuffer>>;
-    put(path: string, body: any, options: IApiOptions & {
-        responseType: 'text';
-        observe?: 'body';
-    }): Observable<string>;
-    put(path: string, body: any, options: IApiOptions & {
-        responseType: 'text';
-        observe: 'response';
-    }): Observable<HttpResponse<string>>;
-    put<T = any>(path: string, body: any, options?: IApiOptions): Observable<T>;
-    put<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
-    /** Sends a PATCH request and returns either the response body or full response. */
-    patch<T = any>(path: string, body: any, options?: IApiOptions & {
-        responseType?: 'json';
-        observe?: 'body';
-    }): Observable<T>;
-    patch<T = any>(path: string, body: any, options: IApiOptions & {
-        responseType?: 'json';
-        observe: 'response';
-    }): Observable<HttpResponse<T>>;
-    patch(path: string, body: any, options: IApiOptions & {
-        responseType: 'blob';
-        observe?: 'body';
-    }): Observable<Blob>;
-    patch(path: string, body: any, options: IApiOptions & {
-        responseType: 'blob';
-        observe: 'response';
-    }): Observable<HttpResponse<Blob>>;
-    patch(path: string, body: any, options: IApiOptions & {
-        responseType: 'arraybuffer';
-        observe?: 'body';
-    }): Observable<ArrayBuffer>;
-    patch(path: string, body: any, options: IApiOptions & {
-        responseType: 'arraybuffer';
-        observe: 'response';
-    }): Observable<HttpResponse<ArrayBuffer>>;
-    patch(path: string, body: any, options: IApiOptions & {
-        responseType: 'text';
-        observe?: 'body';
-    }): Observable<string>;
-    patch(path: string, body: any, options: IApiOptions & {
-        responseType: 'text';
-        observe: 'response';
-    }): Observable<HttpResponse<string>>;
-    patch<T = any>(path: string, body: any, options?: IApiOptions): Observable<T>;
-    patch<T = any>(path: string, body?: any, options?: IApiOptions): Observable<T>;
-    /** Sends a DELETE request and returns either the response body or full response. */
-    delete<T = any>(path: string, options?: IApiOptions & {
-        responseType?: 'json';
-        observe?: 'body';
-    }): Observable<T>;
-    delete<T = any>(path: string, options: IApiOptions & {
-        responseType?: 'json';
-        observe: 'response';
-    }): Observable<HttpResponse<T>>;
-    delete(path: string, options: IApiOptions & {
-        responseType: 'blob';
-        observe?: 'body';
-    }): Observable<Blob>;
-    delete(path: string, options: IApiOptions & {
-        responseType: 'blob';
-        observe: 'response';
-    }): Observable<HttpResponse<Blob>>;
-    delete(path: string, options: IApiOptions & {
-        responseType: 'arraybuffer';
-        observe?: 'body';
-    }): Observable<ArrayBuffer>;
-    delete(path: string, options: IApiOptions & {
-        responseType: 'arraybuffer';
-        observe: 'response';
-    }): Observable<HttpResponse<ArrayBuffer>>;
-    delete(path: string, options: IApiOptions & {
-        responseType: 'text';
-        observe?: 'body';
-    }): Observable<string>;
-    delete(path: string, options: IApiOptions & {
-        responseType: 'text';
-        observe: 'response';
-    }): Observable<HttpResponse<string>>;
-    delete<T = any>(path: string, options?: IApiOptions): Observable<T>;
-    /** Uploads a file or existing form payload as multipart form data. */
-    upload<T = any>(path: string, file: File | FormData, options?: IApiOptions & {
-        responseType?: 'json';
-        observe?: 'body';
-    }): Observable<T>;
-    upload<T = any>(path: string, file: File | FormData, options: IApiOptions & {
-        responseType?: 'json';
-        observe: 'response';
-    }): Observable<HttpResponse<T>>;
-    upload(path: string, file: File | FormData, options: IApiOptions & {
-        responseType: 'blob';
-        observe?: 'body';
-    }): Observable<Blob>;
-    upload(path: string, file: File | FormData, options: IApiOptions & {
-        responseType: 'blob';
-        observe: 'response';
-    }): Observable<HttpResponse<Blob>>;
-    upload(path: string, file: File | FormData, options: IApiOptions & {
-        responseType: 'arraybuffer';
-        observe?: 'body';
-    }): Observable<ArrayBuffer>;
-    upload(path: string, file: File | FormData, options: IApiOptions & {
-        responseType: 'arraybuffer';
-        observe: 'response';
-    }): Observable<HttpResponse<ArrayBuffer>>;
-    upload(path: string, file: File | FormData, options: IApiOptions & {
-        responseType: 'text';
-        observe?: 'body';
-    }): Observable<string>;
-    upload(path: string, file: File | FormData, options: IApiOptions & {
-        responseType: 'text';
-        observe: 'response';
-    }): Observable<HttpResponse<string>>;
-    upload<T = any>(path: string, file: File | FormData, options?: IApiOptions): Observable<T>;
-    /** Downloads a binary response body. */
-    getBlob(path: string, params?: HttpParams, options?: IApiOptions): Observable<Blob>;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IApiService, never>;
-    static ɵprov: i0.ɵɵInjectableDeclaration<IApiService>;
-}
-
-/**
- * Known API error codes surfaced by the platform services (mirrors the
- * iam-user-api error catalog — see `iam-user-api/src/common/errors/user-errors.ts`).
- *
- * Consumers branch on these to tailor UX (e.g. showing the "Access Unavailable"
- * page when the current user has no application mapping).
- */
-declare const USER_APPLICATION_MAPPING_NOT_FOUND: "USER_APPLICATION_MAPPING_NOT_FOUND";
-/** Union of error codes the @insight/ui consumers may need to branch on. */
-type IKnownErrorCode = typeof USER_APPLICATION_MAPPING_NOT_FOUND;
-
-type ISessionExpiredReason = 'TOKEN_EXPIRED' | 'SESSION_REVOKED' | 'SESSION_REPLACED';
-/** Supports normalized Problem Details errors and raw legacy HTTP error bodies. */
-declare const extractProblemDetailsErrorCode: (error: unknown) => string | undefined;
-/** Maps current backend and legacy error codes to the session-expired UI states. */
-declare const toSessionExpiredReason: (errorCode: string | undefined) => ISessionExpiredReason | undefined;
-/**
- * True when an error is semantically a session-expiry event (HTTP 401/498 or a
- * recognized session-related error code). Other statuses are business/transport
- * errors and must be handled by the caller instead of forcing a logout.
- */
-declare const isSessionExpiredError: (error: unknown) => boolean;
-/**
- * In-memory overlay state for the session-expired UI.
- *
- * Besides the derived `reason`, the service exposes current backend error
- * fields and legacy `detail` so the shared dialog or consumer UI can resolve
- * display text without making its own configuration API call.
- *
- * @overridable — consumers may provide `{ provide: ISessionExpiredService, useClass: ... }`.
- */
-declare class ISessionExpiredService {
-    readonly visible: i0.WritableSignal<boolean>;
-    readonly returnUrl: i0.WritableSignal<string>;
-    readonly reason: i0.WritableSignal<ISessionExpiredReason | undefined>;
-    /** Raw error code from the backend Problem Details response (e.g. `AUTH_TOKEN_EXPIRED`). */
-    readonly errorCode: i0.WritableSignal<string | null>;
-    /** Backend-provided `detail` message from the Problem Details response — display fallback. */
-    readonly detail: i0.WritableSignal<string | null>;
-    /** Backend-provided message from the current error contract — highest display precedence. */
-    readonly message: i0.WritableSignal<string | null>;
-    /** Full normalized error, including revision and safe extension fields. */
-    readonly apiError: i0.WritableSignal<INormalizedApiError | null>;
-    show(returnUrl: string, reason?: ISessionExpiredReason, errorCode?: string | null, detail?: string | null, message?: string | null, apiError?: INormalizedApiError | null): void;
-    hide(): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionExpiredService, never>;
-    static ɵprov: i0.ɵɵInjectableDeclaration<ISessionExpiredService>;
-}
-
-/** User derived from Keycloak JWT claims. */
-type ISessionUser = {
-    sub: string;
-    email: string;
-    name: string;
-    roles: string[];
-    userType: 'internal' | 'external';
-};
-/**
- * Session management for @insight/ui consumer apps.
- *
- * Access token: stored IN MEMORY only (never Web Storage). Refresh token:
- * HttpOnly cookie managed by the app's own identity host/BFF; this service
- * never reads or stores it directly (an in-memory `refreshToken` is kept only
- * for server-side logout).
- *
- * Superset of the basic SSO session (used by remote apps via `setAccessToken` /
- * `authGuard` / `IAuthCallback`) and the richer iam-web session (session
- * restore, password-expiry, change-password token, proactive validation,
- * session-expired overlay).
- *
- * @overridable — consumers may provide `{ provide: ISessionService, useClass: ... }`.
- */
-declare class ISessionService {
-    private readonly authService;
-    private readonly config;
-    private readonly sessionExpiredService;
-    private readonly csrf;
-    private readonly injector;
-    private accessToken;
-    private _refreshToken;
-    private expiresAt;
-    private sessionStartedAt;
-    private currentUser;
-    private passwordExpired;
-    private changePasswordTokenValue;
-    private lastVerifiedAt;
-    private sessionGeneration;
-    /**
-     * True while the app is restoring/validating the session on load (starts
-     * `true` on cold start so guards can allow navigation during the restore and
-     * consumer apps can show a loading state). Cleared once the session is
-     * established (`setAccessToken`/`setSession`) or `tryRestoreSession()` settles.
-     */
-    readonly initializing: i0.WritableSignal<boolean>;
-    private refreshInFlight;
-    private restoreInFlight;
-    isAuth(): boolean;
-    isTokenExpired(): boolean;
-    /**
-     * Whether the max SSO session duration has been exceeded (default 15h,
-     * configured via `tokenLifespan.ssoSessionMaxSeconds`). After this, the
-     * user must re-authenticate regardless of token state.
-     */
-    isSsoSessionExpired(): boolean;
-    isPasswordExpired(): boolean;
-    clearPasswordExpired(): void;
-    setPasswordExpired(): void;
-    setChangePasswordToken(token: string): void;
-    getChangePasswordToken(): string | null;
-    clearChangePasswordToken(): void;
-    getAccessToken(): string | null;
-    getRefreshToken(): string | null;
-    getUser(): ISessionUser | null;
-    /** Role-membership check against the decoded token roles (ANY match). */
-    hasMn(mn: string | string[]): boolean;
-    /**
-     * Roles claimed by the current access token (Keycloak `realm_access.roles`).
-     * Returns an empty array while no token is set. Used by role-mode permission
-     * checks (`iHasMn` / `iNotHasMn` authorization predicates).
-     */
-    getRoles(): string[];
-    /** True if the current access token claims ANY of the given roles. */
-    hasRole(code: string | string[]): boolean;
-    /**
-     * Store the access token received from the SSO handoff (URL hash fragment)
-     * or from a refresh response. `expiresIn` (seconds) defaults to the token's
-     * own `exp` claim, then falls back to the configured `accessTokenSeconds`.
-     */
-    setAccessToken(accessToken: string, expiresIn?: number): void;
-    /**
-     * Full session establishment (login / MFA / exchange / refresh). Sets the
-     * user, decodes password-expiry claims, stamps the last-verified time, and
-     * marks an active session so `tryRestoreSession()` can distinguish a cold
-     * start from a refresh-after-revocation.
-     */
-    setSession(accessToken: string, expiresIn: number, user: IAuthUser, refreshToken?: string): void;
-    clearSession(): void;
-    /**
-     * Clears the client-side session AND invalidates the server-side session
-     * by revoking the refresh token. Returns an observable that completes after
-     * the server logout call finishes (or fails — failures are swallowed so the
-     * user is never stuck on a logout page).
-     */
-    logout(): Observable<void>;
-    /**
-     * Silently refresh the access token via the HttpOnly session cookie
-     * (`POST {api.identity}{refresh endpoint}`, `withCredentials: true`).
-     * Single-flight: concurrent callers share the in-flight refresh; the shared
-     * observable is retained until it completes/errors so a cancelled caller
-     * cannot abort the fetch.
-     */
-    refreshToken(): Observable<string>;
-    /** True if the session was verified against the backend within `cooldownMs` (default 30s). */
-    isRecentlyVerified(cooldownMs?: number): boolean;
-    /**
-     * Proactive session validation for guards. Refreshes the token to check
-     * session validity WITHOUT resetting the SSO session timer. Skips the refresh
-     * if the last check was within 30 seconds. Throws if the session was revoked
-     * (e.g. `SESSION_REPLACED`).
-     */
-    proactiveValidate(): Observable<string>;
-    /**
-     * Cold-start session restore from the HttpOnly cookie (called on app load).
-     * Skips non-signin auth sub-pages (forgot/reset password, MFA, callback).
-     * The signin page ALWAYS attempts the silent refresh: when the shared SSO
-     * cookie is still valid (e.g. after logging in via another app), restoring
-     * lets the signin page auto-redirect to the returnUrl / authenticated
-     * landing; when there is no session the refresh fails and the login form
-     * shows. (Explicit logout clears the cookie, so a bare signin after logout
-     * still ends up on the login form.) Shows the session-expired overlay when
-     * refreshing after a previously-active session. Returns the reason (if any)
-     * extracted from the error so the guard can decide overlay vs. signin.
-     */
-    tryRestoreSession(): Promise<{
-        reason?: ISessionExpiredReason;
-    }>;
-    private readExpiresInFromToken;
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionService, never>;
-    static ɵprov: i0.ɵɵInjectableDeclaration<ISessionService>;
 }
 
 /**
@@ -3715,6 +3567,229 @@ declare const IH_SKIP_BEARER_HEADER = "X-IH-Skip-Bearer";
 /** Attach the application token and retry unauthorized requests once after shared refresh. */
 declare const authInterceptor: HttpInterceptorFn;
 
+type IImpersonationActor = {
+    sub: string;
+};
+type IEndImpersonationResult = {
+    redirectTo?: string;
+};
+type IImpersonationStatus = {
+    mode: 'NONE' | 'HAS_ACTIVE_GRANT' | 'IMPERSONATING';
+    grantId?: string | null;
+    actorName?: string | null;
+    subjectName?: string | null;
+    occupation?: string | null;
+    endDate?: string | null;
+    endAt?: string | null;
+};
+declare const IMPERSONATION_INFORMATION: string;
+declare const IMPERSONATION_CONFIRMATION: string;
+declare const COUNTDOWN_THRESHOLD_MS: number;
+declare const MAX_TIMER_DELAY_MS = 2147483647;
+/** Decodes display claims only; backend authorization remains authoritative. */
+declare function readImpersonationClaims(token: string | null | undefined): Record<string, unknown>;
+declare function readImpersonationActor(token: string | null | undefined): IImpersonationActor | null;
+declare function impersonationContextKey(token: string | null | undefined): string;
+declare function actorDisplayNameFromToken(token: string | null | undefined): string;
+declare function normalizeImpersonationStatus(value: unknown, source: 'iam-user' | 'bff'): IImpersonationStatus;
+declare function resolveGrantEnd(endAt?: string | null, endDate?: string | null): number | null;
+declare function grantEndLabel(status: IImpersonationStatus | null): string;
+declare function formatCountdown(remainingMs: number): string;
+declare function resolveImpersonationRedirect(result: IEndImpersonationResult | null | undefined, identity: string, signinUrl: string): string;
+declare function isImpersonationCsrfError(error: unknown): boolean;
+
+type ISessionExpiredReason = 'TOKEN_EXPIRED' | 'SESSION_REVOKED' | 'SESSION_REPLACED';
+/** Supports normalized Problem Details errors and raw legacy HTTP error bodies. */
+declare const extractProblemDetailsErrorCode: (error: unknown) => string | undefined;
+/** Maps current backend and legacy error codes to the session-expired UI states. */
+declare const toSessionExpiredReason: (errorCode: string | undefined) => ISessionExpiredReason | undefined;
+/**
+ * True when an error is semantically a session-expiry event (HTTP 401/498 or a
+ * recognized session-related error code). Other statuses are business/transport
+ * errors and must be handled by the caller instead of forcing a logout.
+ */
+declare const isSessionExpiredError: (error: unknown) => boolean;
+/**
+ * In-memory overlay state for the session-expired UI.
+ *
+ * Besides the derived `reason`, the service exposes current backend error
+ * fields and legacy `detail` so the shared dialog or consumer UI can resolve
+ * display text without making its own configuration API call.
+ *
+ * @overridable — consumers may provide `{ provide: ISessionExpiredService, useClass: ... }`.
+ */
+declare class ISessionExpiredService {
+    readonly visible: i0.WritableSignal<boolean>;
+    readonly returnUrl: i0.WritableSignal<string>;
+    readonly reason: i0.WritableSignal<ISessionExpiredReason | undefined>;
+    /** Raw error code from the backend Problem Details response (e.g. `AUTH_TOKEN_EXPIRED`). */
+    readonly errorCode: i0.WritableSignal<string | null>;
+    /** Backend-provided `detail` message from the Problem Details response — display fallback. */
+    readonly detail: i0.WritableSignal<string | null>;
+    /** Backend-provided message from the current error contract — highest display precedence. */
+    readonly message: i0.WritableSignal<string | null>;
+    /** Full normalized error, including revision and safe extension fields. */
+    readonly apiError: i0.WritableSignal<INormalizedApiError | null>;
+    show(returnUrl: string, reason?: ISessionExpiredReason, errorCode?: string | null, detail?: string | null, message?: string | null, apiError?: INormalizedApiError | null): void;
+    hide(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionExpiredService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<ISessionExpiredService>;
+}
+
+/** User derived from Keycloak JWT claims. */
+type ISessionUser = {
+    sub: string;
+    email: string;
+    name: string;
+    roles: string[];
+    userType: 'internal' | 'external';
+};
+/**
+ * Session management for @insight/ui consumer apps.
+ *
+ * Access token: stored IN MEMORY only (never Web Storage). Refresh token:
+ * HttpOnly cookie managed by the app's own identity host/BFF; this service
+ * never reads or stores it directly (an in-memory `refreshToken` is kept only
+ * for server-side logout).
+ *
+ * Superset of the basic SSO session (used by remote apps via `setAccessToken` /
+ * `authGuard` / `IAuthCallback`) and the richer iam-web session (session
+ * restore, password-expiry, change-password token, proactive validation,
+ * session-expired overlay).
+ *
+ * @overridable — consumers may provide `{ provide: ISessionService, useClass: ... }`.
+ */
+declare class ISessionService {
+    private readonly authService;
+    private readonly config;
+    private readonly sessionExpiredService;
+    private readonly csrf;
+    private readonly injector;
+    private accessToken;
+    private _refreshToken;
+    private expiresAt;
+    private sessionStartedAt;
+    private currentUser;
+    private passwordExpired;
+    private changePasswordTokenValue;
+    private lastVerifiedAt;
+    private sessionGeneration;
+    /**
+     * True while the app is restoring/validating the session on load (starts
+     * `true` on cold start so guards can allow navigation during the restore and
+     * consumer apps can show a loading state). Cleared once the session is
+     * established (`setAccessToken`/`setSession`) or `tryRestoreSession()` settles.
+     */
+    readonly initializing: i0.WritableSignal<boolean>;
+    readonly impersonationContext: i0.WritableSignal<string>;
+    private endingImpersonation;
+    actor(): IImpersonationActor | null;
+    isImpersonating(): boolean;
+    endImpersonation(): Observable<IEndImpersonationResult>;
+    private refreshInFlight;
+    private restoreInFlight;
+    isAuth(): boolean;
+    isTokenExpired(): boolean;
+    /**
+     * Whether the max SSO session duration has been exceeded (default 15h,
+     * configured via `tokenLifespan.ssoSessionMaxSeconds`). After this, the
+     * user must re-authenticate regardless of token state.
+     */
+    isSsoSessionExpired(): boolean;
+    isPasswordExpired(): boolean;
+    clearPasswordExpired(): void;
+    setPasswordExpired(): void;
+    setChangePasswordToken(token: string): void;
+    getChangePasswordToken(): string | null;
+    clearChangePasswordToken(): void;
+    getAccessToken(): string | null;
+    getRefreshToken(): string | null;
+    getUser(): ISessionUser | null;
+    /** Role-membership check against the decoded token roles (ANY match). */
+    hasMn(mn: string | string[]): boolean;
+    /**
+     * Roles claimed by the current access token (Keycloak `realm_access.roles`).
+     * Returns an empty array while no token is set. Used by role-mode permission
+     * checks (`iHasMn` / `iNotHasMn` authorization predicates).
+     */
+    getRoles(): string[];
+    /** True if the current access token claims ANY of the given roles. */
+    hasRole(code: string | string[]): boolean;
+    /**
+     * Store the access token received from the SSO handoff (URL hash fragment)
+     * or from a refresh response. `expiresIn` (seconds) defaults to the token's
+     * own `exp` claim, then falls back to the configured `accessTokenSeconds`.
+     */
+    setAccessToken(accessToken: string, expiresIn?: number): void;
+    /**
+     * Full session establishment (login / MFA / exchange / refresh). Sets the
+     * user, decodes password-expiry claims, stamps the last-verified time, and
+     * marks an active session so `tryRestoreSession()` can distinguish a cold
+     * start from a refresh-after-revocation.
+     */
+    setSession(accessToken: string, expiresIn: number, user: IAuthUser, refreshToken?: string): void;
+    clearSession(): void;
+    /**
+     * Clears the client-side session AND invalidates the server-side session
+     * by revoking the refresh token. Returns an observable that completes after
+     * the server logout call finishes (or fails — failures are swallowed so the
+     * user is never stuck on a logout page).
+     */
+    logout(): Observable<void>;
+    /**
+     * Silently refresh the access token via the HttpOnly session cookie
+     * (`POST {api.identity}{refresh endpoint}`, `withCredentials: true`).
+     * Single-flight: concurrent callers share the in-flight refresh; the shared
+     * observable is retained until it completes/errors so a cancelled caller
+     * cannot abort the fetch.
+     */
+    refreshToken(): Observable<string>;
+    /** True if the session was verified against the backend within `cooldownMs` (default 30s). */
+    isRecentlyVerified(cooldownMs?: number): boolean;
+    /**
+     * Proactive session validation for guards. Refreshes the token to check
+     * session validity WITHOUT resetting the SSO session timer. Skips the refresh
+     * if the last check was within 30 seconds. Throws if the session was revoked
+     * (e.g. `SESSION_REPLACED`).
+     */
+    proactiveValidate(): Observable<string>;
+    /**
+     * Cold-start session restore from the HttpOnly cookie (called on app load).
+     * Skips non-signin auth sub-pages (forgot/reset password, MFA, callback).
+     * The signin page ALWAYS attempts the silent refresh: when the shared SSO
+     * cookie is still valid (e.g. after logging in via another app), restoring
+     * lets the signin page auto-redirect to the returnUrl / authenticated
+     * landing; when there is no session the refresh fails and the login form
+     * shows. (Explicit logout clears the cookie, so a bare signin after logout
+     * still ends up on the login form.) Shows the session-expired overlay when
+     * refreshing after a previously-active session. Returns the reason (if any)
+     * extracted from the error so the guard can decide overlay vs. signin.
+     */
+    tryRestoreSession(): Promise<{
+        reason?: ISessionExpiredReason;
+    }>;
+    private readExpiresInFromToken;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<ISessionService>;
+}
+
+/** Binds session-expiry state to a non-dismissible Insight dialog and SSO handoff. */
+declare class ISessionExpiredDialog {
+    private readonly sessionExpired;
+    private readonly config;
+    protected readonly visible: i0.WritableSignal<boolean>;
+    protected readonly dialogConfig: IDialogConfig;
+    protected readonly actions: IDialogAction[];
+    protected iconClass(): string;
+    protected title(): string;
+    protected message(): string;
+    private localFallbackMessage;
+    /** Perform the SSO handoff to the configured signinUrl, then clear the overlay state. */
+    onConfirm(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionExpiredDialog, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISessionExpiredDialog, "i-session-expired-dialog", never, {}, {}, never, never, true, never>;
+}
+
 /**
  * Session-storage wrapper for non-sensitive UI state (returnUrl, nonce/state).
  * Tokens are NEVER stored here — the access token lives in-memory
@@ -3735,23 +3810,6 @@ declare class IStorageService {
     getReturnUrl(): string;
     static ɵfac: i0.ɵɵFactoryDeclaration<IStorageService, never>;
     static ɵprov: i0.ɵɵInjectableDeclaration<IStorageService>;
-}
-
-/** Binds session-expiry state to a non-dismissible Insight dialog and SSO handoff. */
-declare class ISessionExpiredDialog {
-    private readonly sessionExpired;
-    private readonly config;
-    protected readonly visible: i0.WritableSignal<boolean>;
-    protected readonly dialogConfig: IDialogConfig;
-    protected readonly actions: IDialogAction[];
-    protected iconClass(): string;
-    protected title(): string;
-    protected message(): string;
-    private localFallbackMessage;
-    /** Perform the SSO handoff to the configured signinUrl, then clear the overlay state. */
-    onConfirm(): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISessionExpiredDialog, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISessionExpiredDialog, "i-session-expired-dialog", never, {}, {}, never, never, true, never>;
 }
 
 /** Renders the template when a menu shorthand or authorization predicate denies it. */
@@ -3810,5 +3868,61 @@ type IEnvironment = {
  */
 declare const environment: IEnvironment;
 
-export { DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, isControlRequired, isGroupNode, isHttpRoute, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeMenuTree, normalizeRoutePath, provideIAuth, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
-export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
+declare const I_IMPERSONATION_ERROR_RESOLVER: InjectionToken<(error: unknown, fallback: string) => string>;
+declare class IHImpersonationBanner {
+    private readonly resolveError;
+    private readonly state;
+    private readonly session;
+    private readonly store;
+    private readonly config;
+    private readonly confirm;
+    private readonly alerts;
+    private readonly destroyRef;
+    protected readonly ending: i0.WritableSignal<boolean>;
+    private readonly infoOpen;
+    protected readonly confirming: i0.WritableSignal<boolean>;
+    protected readonly errorMessage: i0.WritableSignal<string>;
+    protected readonly countdown: i0.WritableSignal<string | null>;
+    protected readonly visible: i0.Signal<boolean>;
+    protected readonly actorName: i0.Signal<string>;
+    protected readonly subjectName: i0.Signal<string>;
+    protected readonly occupation: i0.Signal<string | null>;
+    protected readonly endDateLabel: i0.Signal<string>;
+    constructor();
+    protected redirect(result: IEndImpersonationResult): void;
+    protected onShowInfo(): void;
+    protected onEndSession(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHImpersonationBanner, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHImpersonationBanner, "ih-impersonation-banner", never, {}, {}, never, never, true, never>;
+}
+
+declare class IImpersonationStateService {
+    private readonly session;
+    private readonly api;
+    private readonly config;
+    private key;
+    private version;
+    private inFlight;
+    private readonly value;
+    private readonly cancelled;
+    readonly status: i0.Signal<IImpersonationStatus | null>;
+    readonly context: i0.Signal<string>;
+    constructor();
+    actor(): ReturnType<ISessionService['actor']>;
+    isImpersonating(): boolean;
+    clear(): void;
+    private syncContext;
+    loadStatus(): Observable<IImpersonationStatus>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IImpersonationStateService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IImpersonationStateService>;
+}
+
+declare class IInfoNotice {
+    message: string | null | undefined;
+    title: string;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IInfoNotice, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IInfoNotice, "i-info-notice", never, { "message": { "alias": "message"; "required": false; }; "title": { "alias": "title"; "required": false; }; }, {}, never, never, true, never>;
+}
+
+export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IImpersonationStateService, IInfoNotice, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
+export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEndImpersonationResult, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IImpersonationActor, IImpersonationStatus, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
