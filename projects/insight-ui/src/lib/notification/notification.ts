@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, input, output, signal } from '@angular/core';
 import { NotificationOverlay } from './notification-overlay';
 import { INotificationBell } from './notification-bell';
 import { INotificationDrawer } from './notification-drawer';
@@ -26,8 +26,12 @@ import type { INotificationAction, INotificationState } from './notification.typ
       }
     }
     @if (state(); as value) {
-      @if (value.open) {
-        <i-notification-overlay (closeRequested)="onAction.emit({ type: 'close' })">
+      @if (value.open || retained()) {
+        <i-notification-overlay
+          [open]="value.open ?? false"
+          (closeRequested)="onAction.emit({ type: 'close' })"
+          (exited)="retained.set(false)"
+        >
           <i-notification-drawer
             [actionError]="value.actionError ?? null"
             [error]="value.error ?? null"
@@ -54,4 +58,13 @@ import type { INotificationAction, INotificationState } from './notification.typ
 export class INotification {
   readonly state = input<INotificationState | null>();
   readonly onAction = output<INotificationAction>();
+  protected readonly retained = signal(false);
+
+  constructor() {
+    effect(() => {
+      const state = this.state();
+      if (state?.open) this.retained.set(true);
+      else if (!state) this.retained.set(false);
+    });
+  }
 }

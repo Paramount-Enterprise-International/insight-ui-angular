@@ -297,6 +297,11 @@ Notification overlays reuse `IDialogContainer`, with body mounting, focus guards
 scroll locking and cleanup handled inside the library. They do not require Angular
 CDK. Load matching Insight CSS for the right-aligned full-height dialog layout.
 
+Toggling slides the drawer from the right over 240ms and fades its backdrop.
+Closing retains the modal and scroll lock until the exit finishes; reopening
+reverses the transition. Reduced-motion preferences disable animation. Removing
+state or destroying the component cleans up immediately.
+
 ## Resizable sidebar
 
 `IHSidebar` enables pointer and keyboard resizing by default. Load the matching
@@ -307,13 +312,13 @@ sidebar instance and do not change the root CSS token.
 The initial width is applied without animation, including after a tab refresh;
 the visibility toggle retains its transition.
 
-| Input/output | Default | Contract |
-| --- | --- | --- |
-| `resizable` | `true` | Enable the right-edge resize handle. |
-| `minWidth` | `220` | Minimum width in pixels. |
-| `maxWidth` | `480` | Maximum width in pixels. |
-| `widthStorageKey` | `'insight.sidebar.width'` | localStorage key; `null` disables persistence. |
-| `onWidthChange` | Output | Emit the final width in pixels after a changed pointer or keyboard interaction. |
+| Input/output      | Default                   | Contract                                                                        |
+| ----------------- | ------------------------- | ------------------------------------------------------------------------------- |
+| `resizable`       | `true`                    | Enable the right-edge resize handle.                                            |
+| `minWidth`        | `220`                     | Minimum width in pixels.                                                        |
+| `maxWidth`        | `480`                     | Maximum width in pixels.                                                        |
+| `widthStorageKey` | `'insight.sidebar.width'` | localStorage key; `null` disables persistence.                                  |
+| `onWidthChange`   | Output                    | Emit the final width in pixels after a changed pointer or keyboard interaction. |
 
 ```html
 <ih-sidebar

@@ -53,6 +53,7 @@ describe('INotification drawer lifecycle', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     expect(state.open).toBeFalse();
+    fixture.detectChanges();
     expect(overlay.querySelector('i-notification-drawer')).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
@@ -121,5 +122,49 @@ describe('INotification drawer lifecycle', () => {
     fixture.destroy();
     expect(document.body.style.overflow).not.toBe('hidden');
     expect(document.querySelector('i-notification-overlay')).toBeNull();
+  });
+  it('retains exit, cancels on reopen and restores focus after transition end', async () => {
+    const fixture = TestBed.createComponent(INotification);
+    fixture.componentRef.setInput('state', { unreadCount: 1 });
+    fixture.detectChanges();
+    const bell = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    bell.focus();
+    fixture.componentRef.setInput('state', { unreadCount: 1, open: true });
+    fixture.detectChanges();
+    const modal = document.querySelector<HTMLElement>('.i-notification-overlay')!;
+    const panel = modal.querySelector<HTMLElement>('.i-dialog-panel')!;
+    panel.style.transitionDuration = '240ms';
+    const end = (): boolean =>
+      panel.dispatchEvent(
+        new TransitionEvent('transitionend', { propertyName: 'transform', bubbles: true }),
+      );
+    fixture.componentRef.setInput('state', { unreadCount: 1, open: false });
+    fixture.detectChanges();
+    expect(modal.classList.contains('i-notification-closing')).toBeTrue();
+    expect(document.body.style.overflow).toBe('hidden');
+    fixture.componentRef.setInput('state', { unreadCount: 1, open: true });
+    fixture.detectChanges();
+    end();
+    fixture.detectChanges();
+    expect(document.querySelector('.i-notification-overlay')).toBe(modal);
+    expect(modal.classList.contains('i-notification-closing')).toBeFalse();
+    fixture.componentRef.setInput('state', { unreadCount: 1, open: false });
+    fixture.detectChanges();
+    end();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.querySelector('.i-notification-overlay')).toBeNull();
+    expect(document.body.style.overflow).not.toBe('hidden');
+    expect(document.activeElement).toBe(bell);
+    fixture.componentRef.setInput('state', { unreadCount: 1, open: true });
+    fixture.detectChanges();
+    document.querySelector<HTMLElement>('.i-dialog-panel')!.style.transitionDuration = '240ms';
+    fixture.componentRef.setInput('state', { unreadCount: 1, open: false });
+    fixture.detectChanges();
+    fixture.componentRef.setInput('state', null);
+    fixture.detectChanges();
+    expect(document.querySelector('.i-notification-overlay')).toBeNull();
+    expect(document.body.style.overflow).not.toBe('hidden');
+    fixture.destroy();
   });
 });
