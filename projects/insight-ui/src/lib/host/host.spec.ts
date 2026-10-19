@@ -151,6 +151,7 @@ const USER: IUser = {
       [favoriteMode]="favoriteMode()"
       [favorites$]="favorites$"
       [groupByApplication]="groupByApplication()"
+      [menuStateStorageKey]="null"
       [menusInput$]="menus$"
       [user$]="user$"
       (onFavoriteReorder)="reorders.push($event)"

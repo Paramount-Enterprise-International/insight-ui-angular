@@ -18,6 +18,7 @@ import { IConfirmService } from '../../dialog/dialog';
 import { IHighlightSearchPipe } from '../../highlight-search.pipe';
 import { MENU_ICON_FALLBACK, SIDEBAR_FAVORITES_GROUP_ID } from '../host.constants';
 import { type IMenu, type IMenuFavoriteToggleEvent } from '../host.types';
+import { getSidebarMenuKey, type MenuExpansionChange } from '../sidebar/sidebar-menu-state';
 import {
   getMenuChildren,
   getMenuKey,
@@ -98,6 +99,7 @@ import {
               rel="noopener noreferrer"
               target="_blank"
               [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [attr.data-sidebar-menu-key]="getSidebarMenuKey(menu)"
               [class.is-selected]="isSelected"
               [href]="hrefWithMenuFilter(route)"
             >
@@ -141,6 +143,7 @@ import {
               class="is-reload"
               target="_self"
               [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [attr.data-sidebar-menu-key]="getSidebarMenuKey(menu)"
               [class.is-selected]="isSelected"
               [href]="hrefWithMenuFilter(route)"
             >
@@ -183,6 +186,7 @@ import {
               #menuItem
               class="is-spa"
               [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [attr.data-sidebar-menu-key]="getSidebarMenuKey(menu)"
               [class.is-selected]="isSelected"
               [queryParamsHandling]="'merge'"
               [routerLink]="route"
@@ -226,7 +230,7 @@ import {
             [class.collapsed]="(isGroupNode || isModuleNode) && collapsible && !isGroupExpanded"
             [class.expanded]="(isGroupNode || isModuleNode) && collapsible && isGroupExpanded"
           >
-            @for (m of menuChildrenList; track getMenuKey(m)) {
+            @for (m of menuChildrenList; track getSidebarMenuKey(m) ?? getMenuKey(m)) {
               <ih-menu
                 [collapsible]="collapsible"
                 [depth]="depth + 1"
@@ -237,6 +241,7 @@ import {
                 [pathByKey]="pathByKey"
                 [selectedMenuId]="selectedMenuId"
                 [showApplication]="showApplication"
+                (expandedChange)="expandedChange.emit($event)"
                 (favoriteToggle)="onChildFavoriteToggle($event)"
               />
             }
@@ -268,10 +273,12 @@ export class IHMenu implements OnChanges {
 
   @Output() readonly clicked = new EventEmitter<any>();
   @Output() readonly favoriteToggle = new EventEmitter<IMenuFavoriteToggleEvent>();
+  @Output() readonly expandedChange = new EventEmitter<MenuExpansionChange>();
   @ViewChildren(IHMenu) menus!: QueryList<IHMenu>;
 
   /** Template-bound helper for stable `@for` tracking (UUID-first). */
   readonly getMenuKey = getMenuKey;
+  readonly getSidebarMenuKey = getSidebarMenuKey;
 
   // the actual clickable DOM element (only on leaf items)
   @ViewChild('menuItem', { static: false })
@@ -432,6 +439,7 @@ export class IHMenu implements OnChanges {
       // Treat an unset visibility as expanded so a default (flat) group
       // collapses on the first click (modern nodes have no visibility).
       this.menu.visibility = this.isGroupExpanded ? 'collapsed' : 'expanded';
+      this.expandedChange.emit({ menu: this.menu, expanded: this.isGroupExpanded });
     } else {
       this.clicked.emit(this.menu);
     }
