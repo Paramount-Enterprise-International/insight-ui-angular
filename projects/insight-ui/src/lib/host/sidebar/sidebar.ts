@@ -13,6 +13,7 @@ import {
   Output,
   signal,
   SimpleChanges,
+  ViewChild,
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -49,6 +50,11 @@ import {
   isSpaMenu,
   normalizeMenuTree,
 } from '../menu/menu.utils';
+import {
+  SidebarResizeController,
+  type SidebarResizeOptions,
+  type SidebarResizeState,
+} from './sidebar-resize';
 
 @Component({
   selector: 'ih-sidebar',
@@ -171,6 +177,18 @@ import {
     <div class="ih-sidebar-footer">
       <small>{{ footerText }}</small>
     </div>
+    <div
+      #resizeHandle
+      aria-label="Resize sidebar"
+      aria-orientation="vertical"
+      class="ih-sidebar-resize-handle"
+      role="separator"
+      [attr.aria-valuemax]="resizeState().maxWidth"
+      [attr.aria-valuemin]="resizeState().minWidth"
+      [attr.aria-valuenow]="resizeState().width"
+      [attr.tabindex]="resizable && visible ? 0 : -1"
+      [hidden]="!resizable || !visible"
+    ></div>
   `,
 })
 export class IHSidebar implements OnInit, OnChanges, OnDestroy {
@@ -178,6 +196,10 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   private hostElement = inject(ElementRef);
   private readonly sessionService = inject(ISessionService);
   private readonly config = inject(I_AUTH_CONFIG);
+  @ViewChild('resizeHandle', { static: true })
+  private resizeHandle!: ElementRef<HTMLElement>;
+  private resizeController?: SidebarResizeController;
+  readonly resizeState = signal<SidebarResizeState>({ width: 260, minWidth: 220, maxWidth: 480 });
 
   /** Sidebar user chip dropdown (Personal Profile / Logout) open state. */
   readonly accountMenuOpen = signal(false);
@@ -225,6 +247,12 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   @Input() user$!: Observable<IUser>;
   @Input() menusInput$!: Observable<IMenu[]>;
   @Input() visible = true;
+  /** Enable pointer and keyboard resizing with a persistent width preference. */
+  @Input() resizable = true;
+  @Input() minWidth = 220;
+  @Input() maxWidth = 480;
+  /** Set to null to keep the width in memory only. */
+  @Input() widthStorageKey: string | null = 'insight.sidebar.width';
   @Input() impersonating = false;
   @Input() footerText = 'Insight Local';
   /** When true, leaf items render a pin/star toggle and the Favorites section is shown. */
@@ -249,6 +277,8 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   @Output() readonly onFavoriteToggle = new EventEmitter<IMenuFavoriteToggleEvent>();
   /** Emitted after a favorites drag-drop with the ordered favorite menu ids - the host app persists via the reorder API. */
   @Output() readonly onFavoriteReorder = new EventEmitter<IMenuFavoriteReorderEvent>();
+  /** Emitted after a completed pointer or keyboard width change, in pixels. */
+  @Output() readonly onWidthChange = new EventEmitter<number>();
 
   /* ---------------------------
    * INTERNAL STREAMS / STATE
@@ -318,6 +348,13 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.resizeController = new SidebarResizeController(
+      this.hostElement.nativeElement as HTMLElement,
+      this.resizeHandle.nativeElement,
+      this.resizeOptions(),
+      (state) => this.resizeState.set(state),
+      (width) => this.onWidthChange.emit(width),
+    );
     document.addEventListener('keydown', this.onDocumentKeydown);
     document.addEventListener('pointerdown', this.onDocumentPointerDown);
 
@@ -344,6 +381,12 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (
+      changes['visible'] || changes['resizable'] || changes['minWidth'] ||
+      changes['maxWidth'] || changes['widthStorageKey']
+    ) {
+      this.resizeController?.configure(this.resizeOptions());
+    }
     if (changes['menusInput$'] && !changes['menusInput$'].firstChange) {
       this.originalMenus$ = this.normalizeMenusStream();
 
@@ -357,6 +400,7 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.resizeController?.destroy();
     document.removeEventListener('keydown', this.onDocumentKeydown);
     document.removeEventListener('pointerdown', this.onDocumentPointerDown);
     this.favoritesSubscription?.unsubscribe();
@@ -365,6 +409,16 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
     if (this.dragState) {
       this.cleanupFavoriteDrag();
     }
+  }
+
+  private resizeOptions(): SidebarResizeOptions {
+    return {
+      resizable: this.resizable,
+      visible: this.visible,
+      minWidth: this.minWidth,
+      maxWidth: this.maxWidth,
+      widthStorageKey: this.widthStorageKey,
+    };
   }
 
   /** Mirrors the `favorites$` input into the local `favoriteItems` signal. */

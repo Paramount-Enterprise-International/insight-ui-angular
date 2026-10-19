@@ -296,3 +296,57 @@ error messages, snackbar duration and deduplication remain consumer-owned.
 Notification overlays reuse `IDialogContainer`, with body mounting, focus guards,
 scroll locking and cleanup handled inside the library. They do not require Angular
 CDK. Load matching Insight CSS for the right-aligned full-height dialog layout.
+
+## Resizable sidebar
+
+`IHSidebar` enables pointer and keyboard resizing by default. Load the matching
+`insight-ui-css` stylesheet before mounting the sidebar; it owns the resize handle
+and interaction styles. The initial width comes from `--i-sidebar-width` (260px
+by default), unless a valid saved preference exists. Width overrides stay on the
+sidebar instance and do not change the root CSS token.
+The initial width is applied without animation, including after a tab refresh;
+the visibility toggle retains its transition.
+
+| Input/output | Default | Contract |
+| --- | --- | --- |
+| `resizable` | `true` | Enable the right-edge resize handle. |
+| `minWidth` | `220` | Minimum width in pixels. |
+| `maxWidth` | `480` | Maximum width in pixels. |
+| `widthStorageKey` | `'insight.sidebar.width'` | localStorage key; `null` disables persistence. |
+| `onWidthChange` | Output | Emit the final width in pixels after a changed pointer or keyboard interaction. |
+
+```html
+<ih-sidebar
+  [user$]="user$"
+  [menusInput$]="menus$"
+  [visible]="sidebarVisible"
+  [minWidth]="220"
+  [maxWidth]="480"
+  widthStorageKey="my-app.sidebar.width"
+  (onWidthChange)="onSidebarWidthChange($event)"
+/>
+```
+
+Drag the right edge with a mouse, pen or touch. Width snaps to the initial CSS
+default within 12px and moves freely outside that distance. Snapping applies
+only when the default is inside the configured bounds. The bounds stay fixed
+on narrow screens; the existing visibility toggle remains available.
+
+Focus the separator and use Left/Right arrows for 10px steps, Shift+arrows for
+50px steps, Home for minimum and End for maximum. Keyboard steps do not snap.
+Escape, pointer cancellation, lost capture, window blur, hide, disable or destroy
+cancel an active drag and restore its starting width without emitting or saving.
+Hiding and showing the sidebar preserves a completed width change.
+
+Preferences use a numeric string in localStorage, shared per browser origin
+across Angular and React. Use a custom key to isolate applications or instances;
+there is no account scoping or live cross-tab synchronization. Reads ignore
+invalid values and clamp valid values to the configured bounds. Writes occur
+only after completed width changes; blocked or full storage leaves resizing
+available in memory. Changing the key reloads that preference or the CSS default.
+
+An initially disabled sidebar keeps its CSS width and ignores saved preferences
+until enabled. Disabling an already initialized sidebar retains its last width.
+Changing bounds clamps the current width without emitting or saving. Bounds must
+be positive finite numbers; invalid values fall back to 220/480, and a maximum
+below the minimum is raised to the minimum.
