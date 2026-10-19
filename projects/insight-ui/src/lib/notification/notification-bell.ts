@@ -10,7 +10,7 @@ import { IIcon } from '../icon';
     <button
       aria-haspopup="dialog"
       class="notification-icon-action flex align-center justify-center p-2xs border-none
-        bg-transparent text-gray-700 radius-sm"
+        bg-transparent text-gray-600 radius-sm"
       title="Notifications"
       type="button"
       [attr.aria-expanded]="expanded()"
