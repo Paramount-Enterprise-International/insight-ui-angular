@@ -45,6 +45,28 @@ describe('IHContent', () => {
     expect(title?.textContent).toContain('Dashboard');
   });
 
+  it('hides absent notification input and forwards actions from the right header bell', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('i-notification')).toBeNull();
+    fixture.componentRef.setInput('notification', { unreadCount: 0 });
+    fixture.detectChanges();
+    const actions = host.querySelector('.ih-content-header-actions')!;
+    expect(actions.parentElement).toBe(host.querySelector<HTMLElement>('.ih-content-header'));
+    expect(actions.previousElementSibling?.tagName).toBe('H1');
+    expect(actions.querySelectorAll('i-notification-bell').length).toBe(1);
+    expect(actions.querySelector('.notification-badge')).toBeNull();
+    const action = jasmine.createSpy('action');
+    fixture.componentInstance.onNotificationAction.subscribe(action);
+    actions.querySelector<HTMLButtonElement>('button')!.click();
+    expect(action).toHaveBeenCalledWith({ type: 'toggle' });
+    fixture.componentRef.setInput('notification', { unreadCount: 100 });
+    fixture.detectChanges();
+    expect(actions.querySelector('.notification-badge')?.textContent?.trim()).toBe('99+');
+    fixture.componentRef.setInput('notification', null);
+    fixture.detectChanges();
+    expect(host.querySelector('.ih-content-header-actions')).toBeNull();
+  });
+
   it('shares the breadcrumb service between the facade and content', () => {
     const shell = TestBed.inject(IHTitleBreadcrumbService);
 
@@ -271,7 +293,11 @@ describe('IHSidebar (modern menus + favorites)', () => {
 
     const search = el.querySelector<HTMLInputElement>('.ih-sidebar-search input')!;
     search.focus();
-    const arrow = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+    const arrow = new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      cancelable: true,
+    });
     search.dispatchEvent(arrow);
     expect(arrow.defaultPrevented).toBe(false);
     expect(document.activeElement).toBe(search);
@@ -309,7 +335,10 @@ describe('IHSidebar (modern menus + favorites)', () => {
         host.menus$ = of([
           { id: 'empty-root', name: 'Docs Empty', type: 'group', route, children: [] },
           {
-            id: 'docs', name: 'Docs', type: 'group', children: [
+            id: 'docs',
+            name: 'Docs',
+            type: 'group',
+            children: [
               { id: 'empty-nested', name: 'Docs Section', type: 'group', route, children: [] },
               { id: 'page', name: 'Docs Page', type: 'item', route: '/page', children: [] },
             ],

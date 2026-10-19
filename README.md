@@ -22,7 +22,7 @@ hasMn('app.reports', {
   path: 'reports/:id',
   data: { title: 'Report' },
   loadComponent: () => import('./report').then((m) => m.Report),
-})
+});
 ```
 
 The helper provides its own outlet boundary and Unauthorized Access fallback.
@@ -130,16 +130,16 @@ Backend endpoints and enforcement remain unchanged.
 
 ### Breaking migration
 
-| Previous API | Replacement |
-| --- | --- |
-| `source.menu`, `source.permission` | `source.menuCodes` from authorizations |
-| `store.permissions`, Angular `permissions$` | `store.menuCodes`, Angular `menuCodes$` |
-| `hasPermission()` | `hasMenuCode()` |
-| `hasMenu()` | `hasMenuCode()` for access; `hasNavigableMenu()` for navigation |
-| `loadPermissions()` | `loadAuthorizations()` returning authorization DTOs |
-| `loadErrors.permissions`, load branch `permissions` | `loadErrors.authorizations`, branch `authorizations` |
-| Guard source `'menu'` / `'permission'` | `'menuCode'` |
-| `setPermissions()` | Removed; refresh backend authorizations |
+| Previous API                                        | Replacement                                                     |
+| --------------------------------------------------- | --------------------------------------------------------------- |
+| `source.menu`, `source.permission`                  | `source.menuCodes` from authorizations                          |
+| `store.permissions`, Angular `permissions$`         | `store.menuCodes`, Angular `menuCodes$`                         |
+| `hasPermission()`                                   | `hasMenuCode()`                                                 |
+| `hasMenu()`                                         | `hasMenuCode()` for access; `hasNavigableMenu()` for navigation |
+| `loadPermissions()`                                 | `loadAuthorizations()` returning authorization DTOs             |
+| `loadErrors.permissions`, load branch `permissions` | `loadErrors.authorizations`, branch `authorizations`            |
+| Guard source `'menu'` / `'permission'`              | `'menuCode'`                                                    |
+| `setPermissions()`                                  | Removed; refresh backend authorizations                         |
 
 No compatibility aliases or manual code override are provided.
 
@@ -155,6 +155,7 @@ readonly canShowExample = (source: IAuthorizationSource): boolean =>
 <button *iHasMn="'atlas.sales-administration.menu.451.hasmn-button-example'">Example</button>
 <button *iHasMn="canShowExample">Example for Jakarta</button>
 ```
+
 ## HTTP response contracts
 
 `IApiService` remains an application-injected service. Existing component/service
@@ -169,32 +170,42 @@ HttpParams argument. Other verbs accept `params` in options. DELETE payloads use
 ```ts
 const api = inject(IApiService);
 
-api.get<Order[]>('/orders', new HttpParams().set('page', 1), {
-  observe: 'response',
-}).subscribe(response => {
-  const total = response.headers.get('X-Total-Count');
-  const orders = response.body;
-});
+api
+  .get<Order[]>('/orders', new HttpParams().set('page', 1), {
+    observe: 'response',
+  })
+  .subscribe((response) => {
+    const total = response.headers.get('X-Total-Count');
+    const orders = response.body;
+  });
 
-api.post('/report', { id: 1 }, {
-  observe: 'response',
-  responseType: 'blob',
-  params: { format: 'pdf' },
-}).subscribe(response => {
-  const contentType = response.headers.get('Content-Type');
-  const disposition = response.headers.get('Content-Disposition');
-  const file = response.body;
-});
+api
+  .post(
+    '/report',
+    { id: 1 },
+    {
+      observe: 'response',
+      responseType: 'blob',
+      params: { format: 'pdf' },
+    },
+  )
+  .subscribe((response) => {
+    const contentType = response.headers.get('Content-Type');
+    const disposition = response.headers.get('Content-Disposition');
+    const file = response.body;
+  });
 
 const form = new FormData();
 form.append('file', selectedFile);
 api.post('/upload', form).subscribe();
 
 const controller = new AbortController();
-api.get('/orders', undefined, {
-  signal: controller.signal,
-  timeoutMs: 60_000,
-}).subscribe();
+api
+  .get('/orders', undefined, {
+    signal: controller.signal,
+    timeoutMs: 60_000,
+  })
+  .subscribe();
 ```
 
 All methods support `observe: 'body' | 'response'` and
@@ -240,3 +251,48 @@ Custom backend contracts can use the callback without a backend-specific adapter
 Business-backend token acceptance, audit username mapping, callback allowlists,
 CORS/cookie configuration and cross-origin exposure of pagination/download
 headers remain external integration requirements.
+
+## Controlled notifications
+
+```html
+<ih-content
+  [notification]="notificationState"
+  (onNotificationAction)="handleNotificationAction($event)"
+/>
+<!-- Outside IHContent, for example a profile header: -->
+<i-notification [state]="notificationState" (onAction)="handleNotificationAction($event)" />
+```
+
+`notification` is optional. Omit it or pass `null` to hide the bell and clean up
+its overlay. `{ unreadCount: 0 }` shows the bell without a badge. The header places
+it after the title at the far right. Supply it only on the owning shell; remote
+pages should not render a second notification instance.
+
+`INotificationState` requires only `unreadCount`. Optional fields are `open`,
+`items`, `loading`, `hasLoaded`, `loadingMore`, `readingId`, `hasMore`, `error`,
+`loadMoreError`, `actionError`, and `snackbar`. Lists default to empty, flags to
+false, and errors/snackbar to null. Set `hasLoaded` after the first successful
+list response, including an empty response, to distinguish refresh from initial
+loading. Replace state references when updating data.
+
+`INotificationAction` is a discriminated union using `type`: `toggle`, `close`,
+`open-all`, `open-item` (with `item`), `load-more`, `retry`, `retry-read`, and
+`dismiss-snackbar`. The consumer updates controlled `open` state in response to
+toggle/close. Opening a snackbar item emits `open-item` as well.
+
+`INotificationEntry` retains notification/module ids, module name, title,
+description, nullable link, `isDismissable`, group count, latest date, and optional
+visual metadata. `INotificationSnackbarMessage` contains key/title, optional
+module name and item. The separate bell, drawer, item, snackbar components and
+presentation helpers are also exported.
+
+Load the matching `insight-ui-css` stylesheet, which owns all notification layout
+and visuals. The drawer provides modal focus, backdrop, Escape, scroll locking,
+and focus restoration. Refresh keeps list entries mounted and interactive;
+load-more requests occur at 80% scroll and are suppressed while busy or failed.
+The library emits events only: API, session, SSE, routing, read operations, resolved
+error messages, snackbar duration and deduplication remain consumer-owned.
+
+Notification overlays reuse `IDialogContainer`, with body mounting, focus guards,
+scroll locking and cleanup handled inside the library. They do not require Angular
+CDK. Load matching Insight CSS for the right-aligned full-height dialog layout.

@@ -21,9 +21,10 @@ import { ISessionExpiredService } from './session-expired';
         [config]="dialogConfig"
         [isTopMost]="true"
       >
-        <i-dialog [actions]="actions" [title]="title()" (onCustomAction)="onConfirm()">
+        <i-dialog [actions]="actions" (onCustomAction)="onConfirm()">
           <div class="flex flex-col align-center text-center gap-lg">
-            <i-icon class="text-warning" size="3xl" [icon]="iconClass()" />
+            <i-icon class="text-warning" size="xl" [icon]="iconClass()" />
+            <h4 class="font-semibold">{{ title() }}</h4>
             <p class="m-0 text-md leading-normal text-subtle">{{ message() }}</p>
           </div>
         </i-dialog>
