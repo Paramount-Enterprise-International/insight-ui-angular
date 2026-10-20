@@ -60,6 +60,7 @@ import {
   createFavoritesMenu,
   getSidebarMenuKey,
   type MenuExpansionChange,
+  resolveSidebarActiveMenu,
   SidebarMenuState,
 } from './sidebar-menu-state';
 
@@ -208,6 +209,7 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   private readonly baseHref = inject(APP_BASE_HREF, { optional: true }) ??
     new URL(document.baseURI).pathname;
   private readonly menuState = new SidebarMenuState(null);
+  private activeMenu: IMenu | undefined;
   private readonly menuRevision$ = new BehaviorSubject(0);
   private readonly menuStateRevision = signal(0);
   private navigationSubscription?: Subscription;
@@ -502,7 +504,13 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
 
   private restoreActiveMenu(): void {
     const favorites = this.favoriteMode ? createFavoritesMenu(this.favoriteItems()) : [];
-    if (this.menuState.restore(this.fullMenus(), favorites)) this.refreshMenuState();
+    const activeMenu = this.router.navigated
+      ? resolveSidebarActiveMenu(this.fullMenus(), favorites, this.router.url, this.baseHref)
+      : undefined;
+    const activeChanged = this.activeMenu !== activeMenu;
+    this.activeMenu = activeMenu;
+    const restored = this.menuState.restore(this.fullMenus(), favorites);
+    if (restored || activeChanged) this.refreshMenuState();
     else this.scheduleMenuScroll();
   }
 
@@ -682,7 +690,9 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
     );
 
     this.menus$ = combineLatest([this.originalMenus$, filter$, this.menuRevision$]).pipe(
-      map(([menus, term]) => this.filterMenuTree(this.menuState.project(menus), term)),
+      map(([menus, term]) =>
+        this.filterMenuTree(this.menuState.project(menus, 'main', this.activeMenu), term),
+      ),
       tap((filteredMenus) => {
         this.updateNavigableMenus(filteredMenus);
         this.scheduleMenuScroll();
@@ -939,7 +949,11 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
 
     this.favoritesGroupSource = favorites;
     this.favoritesGroupRevision = revision;
-    this.favoritesGroupCache = this.menuState.project(createFavoritesMenu(favorites), 'favorites')[0];
+    this.favoritesGroupCache = this.menuState.project(
+      createFavoritesMenu(favorites),
+      'favorites',
+      this.activeMenu,
+    )[0];
 
     return this.favoritesGroupCache;
   }

@@ -18,7 +18,11 @@ import { IConfirmService } from '../../dialog/dialog';
 import { IHighlightSearchPipe } from '../../highlight-search.pipe';
 import { MENU_ICON_FALLBACK, SIDEBAR_FAVORITES_GROUP_ID } from '../host.constants';
 import { type IMenu, type IMenuFavoriteToggleEvent } from '../host.types';
-import { getSidebarMenuKey, type MenuExpansionChange } from '../sidebar/sidebar-menu-state';
+import {
+  getSidebarMenuKey,
+  isSidebarMenuActive,
+  type MenuExpansionChange,
+} from '../sidebar/sidebar-menu-state';
 import {
   getMenuChildren,
   getMenuKey,
@@ -98,8 +102,10 @@ import {
               class="is-new-tab"
               rel="noopener noreferrer"
               target="_blank"
+              [attr.aria-current]="isActive ? 'page' : null"
               [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
               [attr.data-sidebar-menu-key]="getSidebarMenuKey(menu)"
+              [class.is-active]="isActive"
               [class.is-selected]="isSelected"
               [href]="hrefWithMenuFilter(route)"
             >
@@ -142,8 +148,10 @@ import {
               #menuItem
               class="is-reload"
               target="_self"
+              [attr.aria-current]="isActive ? 'page' : null"
               [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
               [attr.data-sidebar-menu-key]="getSidebarMenuKey(menu)"
+              [class.is-active]="isActive"
               [class.is-selected]="isSelected"
               [href]="hrefWithMenuFilter(route)"
             >
@@ -185,8 +193,10 @@ import {
             <a
               #menuItem
               class="is-spa"
+              [attr.aria-current]="isActive ? 'page' : null"
               [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
               [attr.data-sidebar-menu-key]="getSidebarMenuKey(menu)"
+              [class.is-active]="isActive"
               [class.is-selected]="isSelected"
               [queryParamsHandling]="'merge'"
               [routerLink]="route"
@@ -288,6 +298,10 @@ export class IHMenu implements OnChanges {
 
   get menuRoute(): string | null {
     return getMenuRoute(this.menu);
+  }
+
+  get isActive(): boolean {
+    return isSidebarMenuActive(this.menu);
   }
 
   get isSpa(): boolean {

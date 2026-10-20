@@ -1,9 +1,10 @@
-import { APP_BASE_HREF } from '@angular/common';
+import { APP_BASE_HREF, Location } from '@angular/common';
+import { provideLocationMocks } from '@angular/common/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
-import { BehaviorSubject, of } from 'rxjs';
+import { NavigationEnd, provideRouter, Router } from '@angular/router';
+import { BehaviorSubject, filter, firstValueFrom, of } from 'rxjs';
 import type { IMenu } from '../host.types';
 import { IHSidebar } from './sidebar';
 
@@ -84,6 +85,22 @@ describe('IHSidebar menu persistence and restoration', () => {
     return header(name).parentElement!.querySelector('ul')!.classList.contains('collapsed');
   }
 
+  function activeKeys(): (string | null)[] {
+    return [...host.querySelectorAll('a.is-active[aria-current="page"]')].map((row) =>
+      row.getAttribute('data-sidebar-menu-key'),
+    );
+  }
+
+  async function moveHistory(direction: 'back' | 'forward'): Promise<void> {
+    router.setUpLocationChangeListener();
+    const navigation = firstValueFrom(
+      router.events.pipe(filter((event) => event instanceof NavigationEnd)),
+    );
+    TestBed.inject(Location)[direction]();
+    await navigation;
+    await settle();
+  }
+
   beforeEach(async () => {
     activeRowTop = 900;
     saved = localStorage.getItem(key);
@@ -103,6 +120,7 @@ describe('IHSidebar menu persistence and restoration', () => {
       imports: [IHSidebar],
       providers: [
         provideHttpClient(),
+        provideLocationMocks(),
         { provide: APP_BASE_HREF, useValue: '/-/' },
         provideRouter([
           { path: 'start', redirectTo: 'people', pathMatch: 'full' },
@@ -136,6 +154,7 @@ describe('IHSidebar menu persistence and restoration', () => {
     expect(collapsed('Other')).toBe(true);
     expect(host.querySelector('.ih-sidebar-body')!.scrollTop).toBe(784);
     expect(host.querySelector('.is-selected')).toBeNull();
+    expect(activeKeys()).toEqual(['main:id:active']);
     expect(host.contains(document.activeElement)).toBe(false);
     expect(localStorage.getItem(key)).toBe(before);
     expect(menus[0].visibility).toBeUndefined();
@@ -175,15 +194,20 @@ describe('IHSidebar menu persistence and restoration', () => {
     await router.navigateByUrl('/other');
     await settle();
     expect(collapsed('Other')).toBe(true);
-    await router.navigateByUrl('/people');
-    await settle();
+    expect(activeKeys()).toEqual(['main:id:other-page']);
+    await moveHistory('back');
     expect(collapsed('Root')).toBe(true);
+    expect(activeKeys()).toEqual(['main:id:active']);
+    await moveHistory('forward');
+    expect(activeKeys()).toEqual(['main:id:other-page']);
+    expect(collapsed('Other')).toBe(true);
   });
 
   it('preserves a hiding search filter and waits until it is cleared before scrolling', async () => {
     await mount('/people?menu-filter=Other&tab=edit');
     expect(fixture.componentInstance.menuSearch.value).toBe('Other');
     expect(host.querySelector('a[data-sidebar-menu-key="main:id:active"]')).toBeNull();
+    expect(activeKeys()).toEqual([]);
     expect(host.querySelector('.ih-sidebar-body')!.scrollTop).toBe(0);
     expect(router.url).toContain('menu-filter=Other');
     const search = host.querySelector<HTMLInputElement>('.ih-sidebar-search input')!;
@@ -194,6 +218,24 @@ describe('IHSidebar menu persistence and restoration', () => {
     expect(document.activeElement).toBe(search);
     expect(router.url).toContain('tab=edit');
     expect(collapsed('Root')).toBe(false);
+    expect(activeKeys()).toEqual(['main:id:active']);
+  });
+
+  it('keeps route highlighting independent of keyboard search selection', async () => {
+    await mount();
+    fixture.componentInstance.menuSearch.setValue('page');
+    await settle();
+    const search = host.querySelector<HTMLInputElement>('.ih-sidebar-search input')!;
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await settle();
+    expect(host.querySelector('a.is-active.is-selected')).not.toBeNull();
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await settle();
+    expect(host.querySelector('a.is-selected')?.getAttribute('data-sidebar-menu-key')).toBe(
+      'main:id:other-page',
+    );
+    expect(activeKeys()).toEqual(['main:id:active']);
+    expect(host.querySelector('a.is-selected')?.hasAttribute('aria-current')).toBe(false);
   });
 
   it('defers scrolling until visible and preserves later manual scroll positions', async () => {
@@ -221,12 +263,14 @@ describe('IHSidebar menu persistence and restoration', () => {
     await settle();
     expect(collapsed('Root')).toBe(true);
     expect(collapsed('Other')).toBe(true);
+    expect(activeKeys()).toEqual(['main:id:other-page']);
   });
 
   it('persists Favorites separately, prefers the main tree and supports a favorites-only target', async () => {
     await mount('/people', menus, true, [favorite]);
     expect(collapsed('Root')).toBe(false);
     expect(collapsed('Favorites')).toBe(true);
+    expect(activeKeys()).toEqual(['favorites:id:active', 'main:id:active']);
     header('Favorites').click();
     await settle();
     expect(JSON.parse(localStorage.getItem(key)!).expanded['favorites:group']).toBe(true);
@@ -234,7 +278,42 @@ describe('IHSidebar menu persistence and restoration', () => {
     await mount('/people', [], true, [favorite]);
     expect(collapsed('Favorites')).toBe(false);
     expect(host.querySelector('.ih-sidebar-body')!.scrollTop).toBeGreaterThan(0);
+    expect(activeKeys()).toEqual(['favorites:id:active']);
   });
+
+  it('updates active Favorites as both sources hydrate and clears unmatched routes', async () => {
+    await mount('/people', []);
+    const favorites = new BehaviorSubject<IMenu[]>([]);
+    fixture.componentRef.setInput('favoriteMode', true);
+    fixture.componentRef.setInput('favorites$', favorites);
+    await settle();
+    favorites.next([{ ...favorite, id: 'pin' }]);
+    await settle();
+    expect(activeKeys()).toEqual(['favorites:id:pin']);
+    source.next(menus);
+    await settle();
+    expect(activeKeys()).toEqual(['main:id:active']);
+    favorites.next([{ ...favorite }]);
+    await settle();
+    expect(activeKeys()).toEqual(['favorites:id:active', 'main:id:active']);
+    await router.navigateByUrl('/unknown');
+    await settle();
+    expect(activeKeys()).toEqual([]);
+    expect(host.querySelector('[aria-current]')).toBeNull();
+  });
+
+  for (const [navigation, options] of [
+    ['is-spa', {}],
+    ['is-reload', { reload: true }],
+    ['is-new-tab', { openIn: 'NEW_TAB' }],
+  ] as const) {
+    it(`marks active ${navigation} anchors`, async () => {
+      await mount('/people', [{ ...favorite, ...options }]);
+      const row = host.querySelector(`a.${navigation}`)!;
+      expect(row.classList.contains('is-active')).toBe(true);
+      expect(row.getAttribute('aria-current')).toBe('page');
+    });
+  }
 
   it('applies custom/null keys without changing the default preference', async () => {
     await mount('/unknown');
@@ -257,6 +336,7 @@ describe('IHSidebar menu persistence and restoration', () => {
   it('uses the final route after an initial redirect', async () => {
     await mount('/start');
     expect(router.url).toBe('/people');
+    expect(activeKeys()).toEqual(['main:id:active']);
     expect(collapsed('Root')).toBe(false);
     expect(host.querySelector('.is-selected')).toBeNull();
   });
