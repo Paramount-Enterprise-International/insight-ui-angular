@@ -50,3 +50,5 @@ export * from './environments/environment';
 export * from './environments/environment.interface';
 
 export * from './lib/impersonation';
+
+export * from './lib/notification';
