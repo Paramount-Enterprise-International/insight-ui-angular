@@ -65,11 +65,11 @@ describe('IHSidebar resize integration', () => {
     cancelFrame = window.cancelAnimationFrame;
     frames = new Map();
     let frameId = 0;
-    window.requestAnimationFrame = (callback) => {
+    window.requestAnimationFrame = (callback): number => {
       frames.set(++frameId, callback);
       return frameId;
     };
-    window.cancelAnimationFrame = (id) => {
+    window.cancelAnimationFrame = (id): void => {
       frames.delete(id);
     };
     saved = localStorage.getItem(storageKey);
