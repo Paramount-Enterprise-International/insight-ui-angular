@@ -1,5 +1,10 @@
+import {
+  INotification,
+  type INotificationAction,
+  type INotificationState,
+} from '../../notification';
 import { APP_BASE_HREF, AsyncPipe } from '@angular/common';
-import { Component, effect, EventEmitter, inject, Output, signal } from '@angular/core';
+import { Component, effect, EventEmitter, inject, Input, Output, signal } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { combineLatest, filter, map, Observable, shareReplay, startWith } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
@@ -11,7 +16,7 @@ import { IHTitleBreadcrumbService } from '../shell/title-breadcrumb.service';
 
 @Component({
   selector: 'ih-content',
-  imports: [RouterOutlet, AsyncPipe, RouterLink],
+  imports: [RouterOutlet, AsyncPipe, RouterLink, INotification],
   template: `
     <div class="ih-content-header">
       <a class="i-clickable" (click)="toggleSidebar()">
@@ -26,6 +31,11 @@ import { IHTitleBreadcrumbService } from '../shell/title-breadcrumb.service';
       <h1>
         {{ shell.titleOverride() || shell.remoteTitle() || (pageTitle$ | async) || 'Insight' }}
       </h1>
+      @if (notification) {
+        <div class="ih-content-header-actions">
+          <i-notification [state]="notification" (onAction)="onNotificationAction.emit($event)" />
+        </div>
+      }
     </div>
 
     <div class="ih-content-breadcrumbs">
@@ -107,6 +117,9 @@ import { IHTitleBreadcrumbService } from '../shell/title-breadcrumb.service';
   `,
 })
 export class IHContent {
+  @Input() notification?: INotificationState | null;
+  @Output() readonly onNotificationAction = new EventEmitter<INotificationAction>();
+
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
 
