@@ -26,17 +26,17 @@ describe('Notification presentation', () => {
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('.notification-badge')).toBeNull();
     expect(host.querySelector('i-button')).toBeNull();
-    expect(host.querySelector('button i-icon')).not.toBeNull();
+    expect(host.querySelector('a.i-clickable > i-icon')).not.toBeNull();
     fixture.componentRef.setInput('unreadCount', 99);
     fixture.detectChanges();
     expect(host.querySelector('.notification-badge')?.textContent?.trim()).toBe('99');
     fixture.componentRef.setInput('unreadCount', 100);
     fixture.detectChanges();
     expect(host.querySelector('.notification-badge')?.textContent?.trim()).toBe('99+');
-    expect(host.querySelector('button')?.getAttribute('aria-label')).toContain('100 unread');
+    expect(host.querySelector('a')?.getAttribute('aria-label')).toContain('100 unread');
     const requested = jasmine.createSpy('requested');
     fixture.componentInstance.toggleRequested.subscribe(requested);
-    host.querySelector('button')?.click();
+    host.querySelector('a')?.click();
     expect(requested).toHaveBeenCalled();
   });
 
@@ -123,7 +123,7 @@ describe('Notification presentation', () => {
     expect(host.querySelector('i-notification-item')).toBe(row);
   });
 
-  it('keeps the title and neutral icon actions in one compact header row', () => {
+  it('keeps the title and icon actions above the unread summary', () => {
     const fixture = TestBed.createComponent(INotificationDrawer);
     fixture.detectChanges();
     const header = (fixture.nativeElement as HTMLElement).querySelector('header')!;
@@ -133,8 +133,11 @@ describe('Notification presentation', () => {
       '[aria-label="Open all notifications in a new tab"]',
     )!;
     const close = header.querySelector<HTMLButtonElement>('[aria-label="Close notifications"]')!;
+    const summary = header.querySelector('.notification-header-summary');
+    expect(summary?.textContent).toContain('You have 0 unread notifications');
     expect(title.parentElement?.contains(openAll)).toBeTrue();
-    expect(title.parentElement?.contains(close)).toBeTrue();
+    expect(title.parentElement?.nextElementSibling).toBe(summary);
+    expect(openAll.parentElement).toBe(close.parentElement);
     const openRequested = jasmine.createSpy('open');
     const closeRequested = jasmine.createSpy('close');
     fixture.componentInstance.openAllRequested.subscribe(openRequested);

@@ -7,18 +7,20 @@ import { IIcon } from '../icon';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IIcon],
   template: `
-    <button
+    <a
       aria-haspopup="dialog"
-      class="notification-icon-action flex align-center justify-center p-2xs border-none
-        bg-transparent text-gray-600 radius-sm"
+      class="i-clickable"
+      role="button"
+      tabindex="0"
       title="Notifications"
-      type="button"
       [attr.aria-expanded]="expanded()"
       [attr.aria-label]="'Notifications, ' + unreadCount() + ' unread'"
       (click)="toggleRequested.emit()"
+      (keydown.enter)="toggleRequested.emit()"
+      (keydown.space)="$event.preventDefault(); toggleRequested.emit()"
     >
-      <i-icon aria-hidden="true" icon="fa-solid fa-bell" size="lg" />
-    </button>
+      <i-icon aria-hidden="true" class="text-gray-600" icon="fa-solid fa-bell" size="lg" />
+    </a>
     @if (unreadCount() > 0) {
       <span
         aria-hidden="true"
