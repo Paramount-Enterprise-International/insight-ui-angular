@@ -19,6 +19,7 @@ export * from './lib/loading';
 export * from './lib/pill';
 export * from './lib/section';
 export * from './lib/select';
+export * from './lib/select-company';
 export * from './lib/textarea';
 export * from './lib/toggle';
 export * from './lib/ui';
