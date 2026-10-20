@@ -71,7 +71,7 @@ import {
           >
             @if (indentLevel > 0) {
               @for (i of indent(indentLevel); track i) {
-                <span class="indent-{{ depth }}"></span>
+                <span class="ih-menu-indent indent-{{ depth }}"></span>
               }
             }
 
@@ -111,7 +111,7 @@ import {
             >
               @if (indentLevel > 0) {
                 @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
+                  <span class="ih-menu-indent indent-{{ depth }}"></span>
                 }
               }
 
@@ -157,7 +157,7 @@ import {
             >
               @if (indentLevel > 0) {
                 @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
+                  <span class="ih-menu-indent indent-{{ depth }}"></span>
                 }
               }
 
@@ -203,7 +203,7 @@ import {
             >
               @if (indentLevel > 0) {
                 @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
+                  <span class="ih-menu-indent indent-{{ depth }}"></span>
                 }
               }
 

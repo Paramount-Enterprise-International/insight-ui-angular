@@ -1,5 +1,63 @@
 # InsightUiAngular
 
+## Company selects
+
+`ISelectCompany` (`i-select-company`) and `IFCSelectCompany`
+(`i-fc-select-company`) read company options reactively from `IUserMenuStore`.
+Configure auth and load the store at application level; the components never
+fetch data themselves. See [authorization data](#authorization-codes-and-navigation)
+for the store's company scope contract.
+
+```ts
+import { Component } from '@angular/core';
+import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { IFCSelectCompany, ISelectCompany, type IMenuCompanyDto } from '@insight/ui';
+
+@Component({
+  standalone: true,
+  imports: [ISelectCompany, IFCSelectCompany, ReactiveFormsModule],
+  template: `
+    <i-select-company
+      [value]="selectedCompany"
+      (onChanged)="selectedCompany = $event.value"
+    />
+    <i-select-company
+      menuCode="sales"
+      [value]="selectedCompany"
+      (onChanged)="selectedCompany = $event.value"
+    />
+    <i-fc-select-company label="Company" menuCode="sales" [formControl]="companyControl" />
+  `,
+})
+export class CompanyFilter {
+  selectedCompany: IMenuCompanyDto | null = null;
+  readonly companyControl = new FormControl<IMenuCompanyDto | null>(null, Validators.required);
+}
+```
+
+Omitting `menuCode`, or passing a blank value, shows all `store.companies`.
+A nonblank code is trimmed and restricts options through
+`store.menuCompanies[menuCode]`. An unknown menu shows no options. Store ordering
+and deduplication are preserved.
+
+Values are company objects (`id`, `code`, `name`) or `null`. Labels default to
+`name`; search matches `name` and `code` without case sensitivity. `displayWith`,
+`filterPredicate`, `iSelectOption` templates, dropdown settings, `invalid`,
+`disabled`, and `focus()` follow the regular select. Options are store-owned;
+there are no `options` or `options$` inputs.
+
+Both components support `[value]`, `ngModel`, `formControl`, and `formControlName`.
+Selection emits `onChanged` and `onOptionSelected` with `ISelectChange<IMenuCompanyDto>`;
+Angular form bindings receive the company object directly. No company is selected
+automatically. Refresh matches a selected option by `id` without emitting events
+or replacing the consumer's value. If a menu change, refresh, or reset removes
+the selected company from the options, its value remains until the consumer resets it.
+
+The form-control counterpart adds `label`, required indication, and `errorMessage`
+using the same validation timing as `IFCSelect`: after form submission when inside
+a reactive form group, otherwise after the control is touched or dirty.
+Load matching Insight CSS for both company selectors and their regular counterparts.
+
 ## Datepicker formatting
 
 `i-datepicker` and `i-fc-datepicker` use `format` for numeric date entry and
@@ -303,6 +361,14 @@ reverses the transition. Reduced-motion preferences disable animation. Removing
 state or destroying the component cleans up immediately.
 
 ## Resizable sidebar
+
+When resizing is enabled, a 4px lane inside the sidebar separates the resize
+handle from the menu scrollbar. The total sidebar width stays unchanged; only
+the menu body reserves this space. Disabling resizing removes the lane.
+
+Pointer resizing updates the sidebar and content live, at most once per
+animation frame, without triggering menu change detection on pointer movement.
+Menu indentation stays fixed while long labels truncate with an ellipsis.
 
 `IHSidebar` enables pointer and keyboard resizing by default. Load the matching
 `insight-ui-css` stylesheet before mounting the sidebar; it owns the resize handle

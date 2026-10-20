@@ -23,7 +23,9 @@ describe('INotification drawer lifecycle', () => {
     });
     fixture.componentRef.setInput('state', state);
     fixture.detectChanges();
-    const trigger = (fixture.nativeElement as HTMLElement).querySelector('button')!;
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
+      'i-notification-bell a.i-clickable',
+    )!;
     trigger.focus();
     trigger.click();
     fixture.detectChanges();
@@ -85,7 +87,7 @@ describe('INotification drawer lifecycle', () => {
     const action = jasmine.createSpy('action');
     fixture.componentInstance.onAction.subscribe(action);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('button')).toBeNull();
+    expect(fixture.nativeElement.querySelector('i-notification-bell')).toBeNull();
     fixture.componentRef.setInput('state', { unreadCount: 0, open: true });
     fixture.detectChanges();
     await fixture.whenStable();
@@ -127,7 +129,9 @@ describe('INotification drawer lifecycle', () => {
     const fixture = TestBed.createComponent(INotification);
     fixture.componentRef.setInput('state', { unreadCount: 1 });
     fixture.detectChanges();
-    const bell = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    const bell = fixture.nativeElement.querySelector(
+      'i-notification-bell a.i-clickable',
+    ) as HTMLAnchorElement;
     bell.focus();
     fixture.componentRef.setInput('state', { unreadCount: 1, open: true });
     fixture.detectChanges();

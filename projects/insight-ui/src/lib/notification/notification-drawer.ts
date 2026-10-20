@@ -14,14 +14,13 @@ import { INotificationItem } from './notification-item';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IButton, IIcon, ILoading, NotificationError, INotificationItem],
   template: `
-    <header class="px-lg py-md border-b border-subtle">
-      <div class="flex align-center justify-between gap-sm">
-        <h2 class="text-xl font-semibold m-0">Notifications</h2>
+    <header class="border-b">
+      <div class="notification-header-main flex align-center justify-between gap-sm px-lg">
+        <h2 class="text-xl leading-snug font-semibold m-0 truncate">Notifications</h2>
         <div class="flex align-center gap-xs shrink-0">
           <button
             aria-label="Open all notifications in a new tab"
-            class="notification-icon-action flex align-center justify-center p-2xs border-none
-              bg-transparent text-gray-600 radius-sm"
+            class="i-clickable notification-icon-action border-none text-gray-600"
             title="Open All Notifications"
             type="button"
             (click)="openAllRequested.emit()"
@@ -30,8 +29,7 @@ import { INotificationItem } from './notification-item';
           </button>
           <button
             aria-label="Close notifications"
-            class="notification-icon-action flex align-center justify-center p-2xs border-none
-              bg-transparent text-gray-600 radius-sm"
+            class="i-clickable notification-icon-action border-none text-gray-600"
             title="Close notifications"
             type="button"
             (click)="closeRequested.emit()"
@@ -40,8 +38,10 @@ import { INotificationItem } from './notification-item';
           </button>
         </div>
       </div>
-      <div class="flex align-center gap-sm mt-2xs text-sm text-subtle">
-        <p aria-live="polite" class="m-0">You have {{ unreadCount() }} unread notifications</p>
+      <div class="notification-header-summary flex align-center gap-sm px-lg text-sm">
+        <p aria-live="polite" class="m-0 truncate">
+          You have {{ unreadCount() }} unread notifications
+        </p>
         <div
           aria-atomic="true"
           aria-live="polite"
