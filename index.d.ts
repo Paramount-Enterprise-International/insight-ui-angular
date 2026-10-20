@@ -1,5 +1,5 @@
 import * as i0 from '@angular/core';
-import { EventEmitter, OnInit, OnDestroy, ElementRef, OnChanges, SimpleChanges, AfterContentInit, AfterViewChecked, TemplateRef, AfterViewInit, Type, Injector, InjectionToken, QueryList, PipeTransform, EnvironmentProviders } from '@angular/core';
+import { EventEmitter, OnInit, OnDestroy, ElementRef, OnChanges, SimpleChanges, AfterContentInit, AfterViewChecked, TrackByFunction, TemplateRef, AfterViewInit, Type, Injector, InjectionToken, QueryList, PipeTransform, EnvironmentProviders } from '@angular/core';
 import { AbstractControl, NgControl, ControlValueAccessor, FormBuilder, FormControl, FormGroup, FormGroupDirective } from '@angular/forms';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { Route, CanActivateFn, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
@@ -508,6 +508,7 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, OnChange
     portalToBody: boolean;
     panelOffset: number;
     matchTriggerWidth: boolean;
+    trackBy: TrackByFunction<T>;
     set options(value: T[] | null);
     set options$(value: Observable<T[]> | null);
     private _displayWith;
@@ -592,7 +593,7 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, OnChange
     private ensureGlobalListeners;
     private removeGlobalListeners;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISelect<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISelect<any>, "i-select", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISelect<any>, "i-select", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
 }
 declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     innerSelect: ISelect<T>;
@@ -2092,15 +2093,10 @@ declare class IHMenu implements OnChanges {
     static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "depth": { "alias": "depth"; "required": false; }; "dragEnabled": { "alias": "dragEnabled"; "required": false; }; "showApplication": { "alias": "showApplication"; "required": false; }; "pathByKey": { "alias": "pathByKey"; "required": false; }; }, { "clicked": "clicked"; "favoriteToggle": "favoriteToggle"; "expandedChange": "expandedChange"; }, never, never, true, never>;
 }
 
-type SidebarResizeState = {
-    width: number;
-    minWidth: number;
-    maxWidth: number;
-};
-
 declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private router;
     private hostElement;
+    private readonly zone;
     private readonly sessionService;
     private readonly config;
     private readonly baseHref;
@@ -2113,7 +2109,6 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private destroyed;
     private resizeHandle;
     private resizeController?;
-    readonly resizeState: i0.WritableSignal<SidebarResizeState>;
     /** Sidebar user chip dropdown (Personal Profile / Logout) open state. */
     readonly accountMenuOpen: i0.WritableSignal<boolean>;
     private readonly onDocumentKeydown;
@@ -2177,6 +2172,7 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private navigableMenus;
     private originalMenus$;
     get sidebarVisibility(): boolean;
+    get sidebarResizable(): boolean;
     /** Personal Profile target; falls back to the shared default. */
     get resolvedPersonalProfileUrl(): string;
     toggleAccountMenu(): void;
@@ -2415,6 +2411,199 @@ declare class ISectionModule {
     static ɵfac: i0.ɵɵFactoryDeclaration<ISectionModule, never>;
     static ɵmod: i0.ɵɵNgModuleDeclaration<ISectionModule, never, [typeof ISection, typeof ISectionHeader, typeof ISectionSubHeader, typeof ISectionFilter, typeof ISectionBody, typeof ISectionFooter, typeof ISectionTabs, typeof ISectionTab, typeof ISectionTabHeader, typeof ISectionTabContent], [typeof ISection, typeof ISectionHeader, typeof ISectionSubHeader, typeof ISectionFilter, typeof ISectionBody, typeof ISectionFooter, typeof ISectionTabs, typeof ISectionTab, typeof ISectionTabHeader, typeof ISectionTabContent]>;
     static ɵinj: i0.ɵɵInjectorDeclaration<ISectionModule>;
+}
+
+/**
+ * Types for the current-user navigation, favorites and effective-authorization
+ * data, matched to the iam-user-api user-menu service contract
+ * (`GET {api.user}/me/applications/:applicationId/menus*`,
+ * `GET {api.user}/me/applications/:applicationId/authorizations` and
+ * `GET {api.user}/users/user`). These are the raw backend shapes; the library
+ * maps them onto the UI-facing `IMenu` / `IUser` contracts via `user.mapper.ts`.
+ */
+/** Standard `{ meta, data }` response envelope used by the user-menu endpoints. */
+type IUserMenuEnvelopeDto<T> = {
+    meta: {
+        timestamp: string;
+    };
+    data: T;
+};
+/** Navigation target for a menu node. */
+type IMenuOpenInDto = 'CURRENT_TAB' | 'NEW_TAB' | 'NEW_WINDOW';
+/** Owning application reference for a menu node. */
+type IMenuApplicationDto = {
+    id: string;
+    code: string;
+    name: string;
+    url: string | null;
+    version: string | null;
+};
+/** Effective company access for a menu node. */
+type IMenuCompanyDto = {
+    id: string;
+    code: string;
+    name: string;
+};
+/** Effective menu node returned by the application-scoped menus endpoint. */
+type IMenuNodeDto = {
+    id: string;
+    name: string;
+    type: 'group' | 'item';
+    menuCode: string | null;
+    parentId: string | null;
+    route: string | null;
+    icon: string | null;
+    openIn: IMenuOpenInDto | null;
+    sequence: number;
+    application: IMenuApplicationDto;
+    companies: IMenuCompanyDto[];
+    isFavorite: boolean;
+    children: IMenuNodeDto[];
+};
+/** Favorite item returned by the application-scoped menu favorites endpoint. */
+type IFavoriteMenuItemDto = {
+    id: string;
+    name: string;
+    /** User-controlled display order (1..n). */
+    displayOrder: number;
+    menuCode: string | null;
+    route: string | null;
+    icon: string | null;
+    openIn: IMenuOpenInDto | null;
+    application: IMenuApplicationDto;
+    companies: IMenuCompanyDto[];
+};
+/** One entry of the reorder payload for `PUT {api.user}/me/menus/favorites`. */
+type IFavoriteOrderItemDto = {
+    menuId: string;
+    displayOrder: number;
+};
+/** Current user returned by `GET {api.user}/users/user` (iam-user-api `CurrentUserDto`). */
+type ICurrentUserDto = {
+    userId: string;
+    username: string;
+    fullName: string;
+    employeeCode: string | null;
+    email: string;
+    photoUrl: string | null;
+    userType: 'internal' | 'external';
+    occupationName: string | null;
+    departmentName: string | null;
+    enabled: boolean;
+};
+/**
+ * Kind of effective authorization entry:
+ * - `item` = navigable `MENU_ITEM`
+ * - `function` = feature/action grant (`FUNCTION`)
+ */
+type IEffectiveAuthorizationType = 'item' | 'function';
+/**
+ * One entry returned by the application-scoped authorizations endpoint (iam-user-api
+ * `EffectiveAuthorizationDto`). The backend already applied the full effective
+ * authorization pipeline (active application mapping, roles + additional-menu
+ * grants, company scope, denied menu/company) and returns ONLY entries whose
+ * final decision is `allowed`, restricted to `MENU_ITEM` / `FUNCTION` menus,
+ * sorted by `menuCode`.
+ */
+type IEffectiveAuthorizationDto = {
+    menuCode: string;
+    menuId: string;
+    type: IEffectiveAuthorizationType;
+    /**
+     * Companies the grant is scoped to. Follows the menu's company scope, so a
+     * `function` entry with scope `ALL` carries the full company list; an empty
+     * array means the resolved company pool was empty.
+     */
+    companies: IMenuCompanyDto[];
+};
+/** Authorization data exposed to permission predicates. */
+type IAuthorizationSource = {
+    readonly menuCodes: readonly string[];
+    readonly roles: readonly string[];
+    readonly companyCodes: readonly string[];
+    readonly companies: readonly IMenuCompanyDto[];
+    readonly menuCompanies: Readonly<Record<string, readonly string[]>>;
+};
+
+declare class ISelectCompany implements ControlValueAccessor {
+    private readonly store;
+    private readonly cdr;
+    private readonly menuCodeValue;
+    private readonly modelValue;
+    private innerSelect?;
+    protected optionDef?: ISelectOptionDefDirective<IMenuCompanyDto>;
+    placeholder: string;
+    disabled: boolean;
+    invalid: boolean;
+    filterDelay: number;
+    panelPosition: ISelectPanelPosition;
+    portalToBody: boolean;
+    panelOffset: number;
+    matchTriggerWidth: boolean;
+    displayWith?: ((row: IMenuCompanyDto | null) => string) | string;
+    filterPredicate: (row: IMenuCompanyDto, term: string) => boolean;
+    set menuCode(value: string | null | undefined);
+    get menuCode(): string | null;
+    set value(value: IMenuCompanyDto | null);
+    get value(): IMenuCompanyDto | null;
+    readonly onChanged: EventEmitter<ISelectChange<IMenuCompanyDto>>;
+    readonly onOptionSelected: EventEmitter<ISelectChange<IMenuCompanyDto>>;
+    protected readonly companyOptions: i0.Signal<IMenuCompanyDto[]>;
+    protected readonly selectedCompany: i0.Signal<IMenuCompanyDto | null>;
+    private onChange;
+    private onTouched;
+    protected readonly trackCompany: (_index: number, company: IMenuCompanyDto) => string;
+    writeValue(value: IMenuCompanyDto | null): void;
+    registerOnChange(fn: (value: IMenuCompanyDto | null) => void): void;
+    registerOnTouched(fn: () => void): void;
+    setDisabledState(disabled: boolean): void;
+    focus(): void;
+    protected handleSelectChange(change: ISelectChange<IMenuCompanyDto>): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISelectCompany, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISelectCompany, "i-select-company", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "menuCode": { "alias": "menuCode"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
+}
+
+declare class IFCSelectCompany implements ControlValueAccessor, OnDestroy {
+    private innerSelect?;
+    protected optionDef?: ISelectOptionDefDirective<IMenuCompanyDto>;
+    label: string;
+    placeholder: string;
+    menuCode?: string | null;
+    disabled: boolean;
+    invalid: boolean;
+    displayWith?: ((row: IMenuCompanyDto | null) => string) | string;
+    filterDelay: number;
+    filterPredicate: (row: IMenuCompanyDto, term: string) => boolean;
+    panelPosition: ISelectPanelPosition;
+    panelOffset: number;
+    portalToBody: boolean;
+    matchTriggerWidth: boolean;
+    errorMessage?: IFormControlErrorMessage;
+    set value(value: IMenuCompanyDto | null);
+    get value(): IMenuCompanyDto | null;
+    readonly onChanged: EventEmitter<ISelectChange<IMenuCompanyDto>>;
+    readonly onOptionSelected: EventEmitter<ISelectChange<IMenuCompanyDto>>;
+    protected formDisabled: boolean;
+    private modelValue;
+    private onChange;
+    private onTouched;
+    private readonly ngControl;
+    private readonly formDir;
+    private readonly cdr;
+    private readonly submitSub?;
+    constructor();
+    ngOnDestroy(): void;
+    writeValue(value: IMenuCompanyDto | null): void;
+    registerOnChange(fn: (value: IMenuCompanyDto | null) => void): void;
+    registerOnTouched(fn: () => void): void;
+    setDisabledState(disabled: boolean): void;
+    focus(): void;
+    protected handleSelectChange(change: ISelectChange<IMenuCompanyDto>): void;
+    protected get controlInvalid(): boolean;
+    protected get required(): boolean;
+    protected get resolvedErrorText(): string | null;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IFCSelectCompany, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelectCompany, "i-fc-select-company", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "menuCode": { "alias": "menuCode"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
 }
 
 /**
@@ -3315,118 +3504,6 @@ type IRouteAccessOptions = {
 declare function requireRouteAccess(options?: IRouteAccessOptions): CanActivateFn;
 
 /**
- * Types for the current-user navigation, favorites and effective-authorization
- * data, matched to the iam-user-api user-menu service contract
- * (`GET {api.user}/me/applications/:applicationId/menus*`,
- * `GET {api.user}/me/applications/:applicationId/authorizations` and
- * `GET {api.user}/users/user`). These are the raw backend shapes; the library
- * maps them onto the UI-facing `IMenu` / `IUser` contracts via `user.mapper.ts`.
- */
-/** Standard `{ meta, data }` response envelope used by the user-menu endpoints. */
-type IUserMenuEnvelopeDto<T> = {
-    meta: {
-        timestamp: string;
-    };
-    data: T;
-};
-/** Navigation target for a menu node. */
-type IMenuOpenInDto = 'CURRENT_TAB' | 'NEW_TAB' | 'NEW_WINDOW';
-/** Owning application reference for a menu node. */
-type IMenuApplicationDto = {
-    id: string;
-    code: string;
-    name: string;
-    url: string | null;
-    version: string | null;
-};
-/** Effective company access for a menu node. */
-type IMenuCompanyDto = {
-    id: string;
-    code: string;
-    name: string;
-};
-/** Effective menu node returned by the application-scoped menus endpoint. */
-type IMenuNodeDto = {
-    id: string;
-    name: string;
-    type: 'group' | 'item';
-    menuCode: string | null;
-    parentId: string | null;
-    route: string | null;
-    icon: string | null;
-    openIn: IMenuOpenInDto | null;
-    sequence: number;
-    application: IMenuApplicationDto;
-    companies: IMenuCompanyDto[];
-    isFavorite: boolean;
-    children: IMenuNodeDto[];
-};
-/** Favorite item returned by the application-scoped menu favorites endpoint. */
-type IFavoriteMenuItemDto = {
-    id: string;
-    name: string;
-    /** User-controlled display order (1..n). */
-    displayOrder: number;
-    menuCode: string | null;
-    route: string | null;
-    icon: string | null;
-    openIn: IMenuOpenInDto | null;
-    application: IMenuApplicationDto;
-    companies: IMenuCompanyDto[];
-};
-/** One entry of the reorder payload for `PUT {api.user}/me/menus/favorites`. */
-type IFavoriteOrderItemDto = {
-    menuId: string;
-    displayOrder: number;
-};
-/** Current user returned by `GET {api.user}/users/user` (iam-user-api `CurrentUserDto`). */
-type ICurrentUserDto = {
-    userId: string;
-    username: string;
-    fullName: string;
-    employeeCode: string | null;
-    email: string;
-    photoUrl: string | null;
-    userType: 'internal' | 'external';
-    occupationName: string | null;
-    departmentName: string | null;
-    enabled: boolean;
-};
-/**
- * Kind of effective authorization entry:
- * - `item` = navigable `MENU_ITEM`
- * - `function` = feature/action grant (`FUNCTION`)
- */
-type IEffectiveAuthorizationType = 'item' | 'function';
-/**
- * One entry returned by the application-scoped authorizations endpoint (iam-user-api
- * `EffectiveAuthorizationDto`). The backend already applied the full effective
- * authorization pipeline (active application mapping, roles + additional-menu
- * grants, company scope, denied menu/company) and returns ONLY entries whose
- * final decision is `allowed`, restricted to `MENU_ITEM` / `FUNCTION` menus,
- * sorted by `menuCode`.
- */
-type IEffectiveAuthorizationDto = {
-    menuCode: string;
-    menuId: string;
-    type: IEffectiveAuthorizationType;
-    /**
-     * Companies the grant is scoped to. Follows the menu's company scope, so a
-     * `function` entry with scope `ALL` carries the full company list; an empty
-     * array means the resolved company pool was empty.
-     */
-    companies: IMenuCompanyDto[];
-};
-/** Authorization data exposed to permission predicates. */
-type IAuthorizationSource = {
-    readonly menuCodes: readonly string[];
-    readonly roles: readonly string[];
-    readonly companyCodes: readonly string[];
-    readonly companies: readonly IMenuCompanyDto[];
-    readonly menuCompanies: Readonly<Record<string, readonly string[]>>;
-};
-
-/**
  * Maps the backend current-user DTO to `@insight/ui`'s sidebar `IUser` shape
  * (`employeeCode` / `fullName` / `userImagePath`), falling back to `username`.
  * `userImagePath` is `''` when no photo exists — the sidebar renders it with
@@ -4086,5 +4163,5 @@ declare class IInfoNotice {
     static ɵcmp: i0.ɵɵComponentDeclaration<IInfoNotice, "i-info-notice", never, { "message": { "alias": "message"; "required": false; }; "title": { "alias": "title"; "required": false; }; }, {}, never, never, true, never>;
 }
 
-export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IImpersonationStateService, IInfoNotice, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
+export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IImpersonationStateService, IInfoNotice, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
 export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEndImpersonationResult, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IImpersonationActor, IImpersonationStatus, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, INotificationAction, INotificationEntry, INotificationSnackbarMessage, INotificationState, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };

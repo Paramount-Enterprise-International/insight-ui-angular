@@ -3113,6 +3113,7 @@ class ISelect {
     portalToBody = true;
     panelOffset = 6;
     matchTriggerWidth = false;
+    trackBy = (_index, row) => row;
     set options(value) {
         this._rawOptions = value ?? [];
         this.applyFilter(this.isOpen);
@@ -3884,7 +3885,7 @@ class ISelect {
         }
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISelect, isStandalone: true, selector: "i-select", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", options: "options", options$: "options$", displayWith: "displayWith", filterPredicate: "filterPredicate", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, host: { listeners: { "keydown": "handleKeydown($event)", "input": "onHostInput($event)", "document:click": "onDocumentClick($event)" } }, providers: [
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISelect, isStandalone: true, selector: "i-select", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", trackBy: "trackBy", options: "options", options$: "options$", displayWith: "displayWith", filterPredicate: "filterPredicate", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, host: { listeners: { "keydown": "handleKeydown($event)", "input": "onHostInput($event)", "document:click": "onDocumentClick($event)" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => ISelect),
@@ -3901,7 +3902,7 @@ class ISelect {
 
     @if (hasOptionsList) {
       <i-options #panel class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
-        @for (row of filteredOptions; track row; let idx = $index) {
+        @for (row of filteredOptions; track trackBy($index, row); let idx = $index) {
           <div
             class="i-option"
             [class.active]="highlightIndex === idx"
@@ -3950,7 +3951,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
 
     @if (hasOptionsList) {
       <i-options #panel class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
-        @for (row of filteredOptions; track row; let idx = $index) {
+        @for (row of filteredOptions; track trackBy($index, row); let idx = $index) {
           <div
             class="i-option"
             [class.active]="highlightIndex === idx"
@@ -4005,6 +4006,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             }], panelOffset: [{
                 type: Input
             }], matchTriggerWidth: [{
+                type: Input
+            }], trackBy: [{
                 type: Input
             }], options: [{
                 type: Input
@@ -4177,7 +4180,7 @@ class IFCSelect {
         {{ resolvedErrorText }}
       </div>
     }
-  `, isInline: true, dependencies: [{ kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "trackBy", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCSelect, decorators: [{
             type: Component,
@@ -5055,7 +5058,7 @@ class IDatepicker {
         }
       </div>
     </i-datepicker-panel>
-  `, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask", "autoDefault"] }, { kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask", "autoDefault"] }, { kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "trackBy", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDatepicker, decorators: [{
             type: Component,
@@ -10846,18 +10849,20 @@ class INotificationBell {
     toggleRequested = output();
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotificationBell, deps: [], target: i0.ɵɵFactoryTarget.Component });
     static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: INotificationBell, isStandalone: true, selector: "i-notification-bell", inputs: { unreadCount: { classPropertyName: "unreadCount", publicName: "unreadCount", isSignal: true, isRequired: false, transformFunction: null }, expanded: { classPropertyName: "expanded", publicName: "expanded", isSignal: true, isRequired: false, transformFunction: null } }, outputs: { toggleRequested: "toggleRequested" }, ngImport: i0, template: `
-    <button
+    <a
       aria-haspopup="dialog"
-      class="notification-icon-action flex align-center justify-center p-2xs border-none
-        bg-transparent text-gray-600 radius-sm"
+      class="i-clickable"
+      role="button"
+      tabindex="0"
       title="Notifications"
-      type="button"
       [attr.aria-expanded]="expanded()"
       [attr.aria-label]="'Notifications, ' + unreadCount() + ' unread'"
       (click)="toggleRequested.emit()"
+      (keydown.enter)="toggleRequested.emit()"
+      (keydown.space)="$event.preventDefault(); toggleRequested.emit()"
     >
-      <i-icon aria-hidden="true" icon="fa-solid fa-bell" size="lg" />
-    </button>
+      <i-icon aria-hidden="true" class="text-gray-600" icon="fa-solid fa-bell" size="lg" />
+    </a>
     @if (unreadCount() > 0) {
       <span
         aria-hidden="true"
@@ -10875,18 +10880,20 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                     changeDetection: ChangeDetectionStrategy.OnPush,
                     imports: [IIcon],
                     template: `
-    <button
+    <a
       aria-haspopup="dialog"
-      class="notification-icon-action flex align-center justify-center p-2xs border-none
-        bg-transparent text-gray-600 radius-sm"
+      class="i-clickable"
+      role="button"
+      tabindex="0"
       title="Notifications"
-      type="button"
       [attr.aria-expanded]="expanded()"
       [attr.aria-label]="'Notifications, ' + unreadCount() + ' unread'"
       (click)="toggleRequested.emit()"
+      (keydown.enter)="toggleRequested.emit()"
+      (keydown.space)="$event.preventDefault(); toggleRequested.emit()"
     >
-      <i-icon aria-hidden="true" icon="fa-solid fa-bell" size="lg" />
-    </button>
+      <i-icon aria-hidden="true" class="text-gray-600" icon="fa-solid fa-bell" size="lg" />
+    </a>
     @if (unreadCount() > 0) {
       <span
         aria-hidden="true"
@@ -11110,14 +11117,13 @@ class INotificationDrawer {
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotificationDrawer, deps: [], target: i0.ɵɵFactoryTarget.Component });
     static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: INotificationDrawer, isStandalone: true, selector: "i-notification-drawer", inputs: { items: { classPropertyName: "items", publicName: "items", isSignal: true, isRequired: false, transformFunction: null }, unreadCount: { classPropertyName: "unreadCount", publicName: "unreadCount", isSignal: true, isRequired: false, transformFunction: null }, loading: { classPropertyName: "loading", publicName: "loading", isSignal: true, isRequired: false, transformFunction: null }, hasLoaded: { classPropertyName: "hasLoaded", publicName: "hasLoaded", isSignal: true, isRequired: false, transformFunction: null }, loadingMore: { classPropertyName: "loadingMore", publicName: "loadingMore", isSignal: true, isRequired: false, transformFunction: null }, readingId: { classPropertyName: "readingId", publicName: "readingId", isSignal: true, isRequired: false, transformFunction: null }, hasMore: { classPropertyName: "hasMore", publicName: "hasMore", isSignal: true, isRequired: false, transformFunction: null }, error: { classPropertyName: "error", publicName: "error", isSignal: true, isRequired: false, transformFunction: null }, loadMoreError: { classPropertyName: "loadMoreError", publicName: "loadMoreError", isSignal: true, isRequired: false, transformFunction: null }, actionError: { classPropertyName: "actionError", publicName: "actionError", isSignal: true, isRequired: false, transformFunction: null } }, outputs: { closeRequested: "closeRequested", openAllRequested: "openAllRequested", itemOpened: "itemOpened", moreRequested: "moreRequested", retryRequested: "retryRequested", readRetryRequested: "readRetryRequested" }, ngImport: i0, template: `
-    <header class="px-lg py-md border-b border-subtle">
-      <div class="flex align-center justify-between gap-sm">
-        <h2 class="text-xl font-semibold m-0">Notifications</h2>
+    <header class="border-b">
+      <div class="notification-header-main flex align-center justify-between gap-sm px-lg">
+        <h2 class="text-xl leading-snug font-semibold m-0 truncate">Notifications</h2>
         <div class="flex align-center gap-xs shrink-0">
           <button
             aria-label="Open all notifications in a new tab"
-            class="notification-icon-action flex align-center justify-center p-2xs border-none
-              bg-transparent text-gray-600 radius-sm"
+            class="i-clickable notification-icon-action border-none text-gray-600"
             title="Open All Notifications"
             type="button"
             (click)="openAllRequested.emit()"
@@ -11126,8 +11132,7 @@ class INotificationDrawer {
           </button>
           <button
             aria-label="Close notifications"
-            class="notification-icon-action flex align-center justify-center p-2xs border-none
-              bg-transparent text-gray-600 radius-sm"
+            class="i-clickable notification-icon-action border-none text-gray-600"
             title="Close notifications"
             type="button"
             (click)="closeRequested.emit()"
@@ -11136,8 +11141,10 @@ class INotificationDrawer {
           </button>
         </div>
       </div>
-      <div class="flex align-center gap-sm mt-2xs text-sm text-subtle">
-        <p aria-live="polite" class="m-0">You have {{ unreadCount() }} unread notifications</p>
+      <div class="notification-header-summary flex align-center gap-sm px-lg text-sm">
+        <p aria-live="polite" class="m-0 truncate">
+          You have {{ unreadCount() }} unread notifications
+        </p>
         <div
           aria-atomic="true"
           aria-live="polite"
@@ -11223,14 +11230,13 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                     changeDetection: ChangeDetectionStrategy.OnPush,
                     imports: [IButton, IIcon, ILoading, NotificationError, INotificationItem],
                     template: `
-    <header class="px-lg py-md border-b border-subtle">
-      <div class="flex align-center justify-between gap-sm">
-        <h2 class="text-xl font-semibold m-0">Notifications</h2>
+    <header class="border-b">
+      <div class="notification-header-main flex align-center justify-between gap-sm px-lg">
+        <h2 class="text-xl leading-snug font-semibold m-0 truncate">Notifications</h2>
         <div class="flex align-center gap-xs shrink-0">
           <button
             aria-label="Open all notifications in a new tab"
-            class="notification-icon-action flex align-center justify-center p-2xs border-none
-              bg-transparent text-gray-600 radius-sm"
+            class="i-clickable notification-icon-action border-none text-gray-600"
             title="Open All Notifications"
             type="button"
             (click)="openAllRequested.emit()"
@@ -11239,8 +11245,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
           </button>
           <button
             aria-label="Close notifications"
-            class="notification-icon-action flex align-center justify-center p-2xs border-none
-              bg-transparent text-gray-600 radius-sm"
+            class="i-clickable notification-icon-action border-none text-gray-600"
             title="Close notifications"
             type="button"
             (click)="closeRequested.emit()"
@@ -11249,8 +11254,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
           </button>
         </div>
       </div>
-      <div class="flex align-center gap-sm mt-2xs text-sm text-subtle">
-        <p aria-live="polite" class="m-0">You have {{ unreadCount() }} unread notifications</p>
+      <div class="notification-header-summary flex align-center gap-sm px-lg text-sm">
+        <p aria-live="polite" class="m-0 truncate">
+          You have {{ unreadCount() }} unread notifications
+        </p>
         <div
           aria-atomic="true"
           aria-live="polite"
@@ -13940,12 +13947,17 @@ class IHContent {
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
     static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHContent, isStandalone: true, selector: "ih-content", inputs: { notification: "notification" }, outputs: { onNotificationAction: "onNotificationAction", onSidebarToggled: "onSidebarToggled", loading: "loading" }, ngImport: i0, template: `
     <div class="ih-content-header">
-      <a class="i-clickable" (click)="toggleSidebar()">
-        @if (sidebarVisibility) {
-          <img alt="sidebar-left" src="svgs/sidebar-left.svg" />
-        } @else {
-          <img alt="sidebar-right" src="svgs/sidebar-right.svg" />
-        }
+      <a
+        class="i-clickable"
+        [attr.aria-label]="sidebarVisibility ? 'Collapse sidebar' : 'Expand sidebar'"
+        (click)="toggleSidebar()"
+      >
+        <span
+          aria-hidden="true"
+          class="ih-sidebar-toggle-icon"
+          [class.ih-sidebar-toggle-icon--left]="sidebarVisibility"
+          [class.ih-sidebar-toggle-icon--right]="!sidebarVisibility"
+        ></span>
       </a>
 
       <!-- title override reacts immediately -->
@@ -14044,12 +14056,17 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                     imports: [RouterOutlet, AsyncPipe, RouterLink, INotification],
                     template: `
     <div class="ih-content-header">
-      <a class="i-clickable" (click)="toggleSidebar()">
-        @if (sidebarVisibility) {
-          <img alt="sidebar-left" src="svgs/sidebar-left.svg" />
-        } @else {
-          <img alt="sidebar-right" src="svgs/sidebar-right.svg" />
-        }
+      <a
+        class="i-clickable"
+        [attr.aria-label]="sidebarVisibility ? 'Collapse sidebar' : 'Expand sidebar'"
+        (click)="toggleSidebar()"
+      >
+        <span
+          aria-hidden="true"
+          class="ih-sidebar-toggle-icon"
+          [class.ih-sidebar-toggle-icon--left]="sidebarVisibility"
+          [class.ih-sidebar-toggle-icon--right]="!sidebarVisibility"
+        ></span>
       </a>
 
       <!-- title override reacts immediately -->
@@ -14628,7 +14645,7 @@ class IHMenu {
           >
             @if (indentLevel > 0) {
               @for (i of indent(indentLevel); track i) {
-                <span class="indent-{{ depth }}"></span>
+                <span class="ih-menu-indent indent-{{ depth }}"></span>
               }
             }
 
@@ -14668,7 +14685,7 @@ class IHMenu {
             >
               @if (indentLevel > 0) {
                 @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
+                  <span class="ih-menu-indent indent-{{ depth }}"></span>
                 }
               }
 
@@ -14714,7 +14731,7 @@ class IHMenu {
             >
               @if (indentLevel > 0) {
                 @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
+                  <span class="ih-menu-indent indent-{{ depth }}"></span>
                 }
               }
 
@@ -14760,7 +14777,7 @@ class IHMenu {
             >
               @if (indentLevel > 0) {
                 @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
+                  <span class="ih-menu-indent indent-{{ depth }}"></span>
                 }
               }
 
@@ -14856,7 +14873,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
           >
             @if (indentLevel > 0) {
               @for (i of indent(indentLevel); track i) {
-                <span class="indent-{{ depth }}"></span>
+                <span class="ih-menu-indent indent-{{ depth }}"></span>
               }
             }
 
@@ -14896,7 +14913,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             >
               @if (indentLevel > 0) {
                 @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
+                  <span class="ih-menu-indent indent-{{ depth }}"></span>
                 }
               }
 
@@ -14942,7 +14959,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             >
               @if (indentLevel > 0) {
                 @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
+                  <span class="ih-menu-indent indent-{{ depth }}"></span>
                 }
               }
 
@@ -14988,7 +15005,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             >
               @if (indentLevel > 0) {
                 @for (i of indent(indentLevel); track i) {
-                  <span class="indent-{{ depth }}"></span>
+                  <span class="ih-menu-indent indent-{{ depth }}"></span>
                 }
               }
 
@@ -15268,7 +15285,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
 class SidebarResizeController {
     host;
     handle;
-    changed;
     committed;
     document;
     view;
@@ -15279,11 +15295,13 @@ class SidebarResizeController {
     initialized = false;
     loadedStorageKey;
     width;
+    renderedWidth = null;
+    resizeFrame = null;
+    pendingWidth = null;
     drag = null;
-    constructor(host, handle, options, changed, committed) {
+    constructor(host, handle, options, committed) {
         this.host = host;
         this.handle = handle;
-        this.changed = changed;
         this.committed = committed;
         this.document = host.ownerDocument;
         this.view = this.document.defaultView;
@@ -15372,7 +15390,10 @@ class SidebarResizeController {
         this.width = this.clamp(width);
         if (immediate)
             this.host.classList.add('is-width-initializing');
-        this.host.style.setProperty('--i-sidebar-width', `${this.width}px`);
+        if (this.renderedWidth !== this.width) {
+            this.host.style.setProperty('--i-sidebar-width', `${this.width}px`);
+            this.renderedWidth = this.width;
+        }
         if (immediate) {
             // Resolve the initial width before restoring hide/show transitions.
             this.host.getBoundingClientRect();
@@ -15381,11 +15402,15 @@ class SidebarResizeController {
         this.publish();
     }
     publish() {
-        this.changed({
-            width: this.width,
-            minWidth: this.options.minWidth,
-            maxWidth: this.options.maxWidth,
-        });
+        for (const [name, value] of [
+            ['aria-valuenow', this.width],
+            ['aria-valuemin', this.options.minWidth],
+            ['aria-valuemax', this.options.maxWidth],
+        ]) {
+            const text = String(value);
+            if (this.handle.getAttribute(name) !== text)
+                this.handle.setAttribute(name, text);
+        }
     }
     commit(previousWidth) {
         if (this.width === previousWidth)
@@ -15435,12 +15460,19 @@ class SidebarResizeController {
             Math.abs(width - this.defaultWidth) <= 12) {
             width = this.defaultWidth;
         }
-        this.render(width);
+        this.pendingWidth = width;
+        if (this.resizeFrame === null) {
+            this.resizeFrame = this.view.requestAnimationFrame(() => {
+                this.resizeFrame = null;
+                this.flushPendingWidth();
+            });
+        }
     };
     onPointerUp = (event) => {
         if (!this.drag || this.drag.pointerId !== event.pointerId)
             return;
         const previousWidth = this.drag.width;
+        this.flushPendingWidth(true);
         this.cleanupDrag();
         this.commit(previousWidth);
     };
@@ -15488,9 +15520,13 @@ class SidebarResizeController {
             return;
         const width = this.drag.width;
         this.cleanupDrag();
-        this.render(width);
+        this.render(width, width !== this.width);
     }
     cleanupDrag() {
+        if (this.resizeFrame !== null)
+            this.view.cancelAnimationFrame(this.resizeFrame);
+        this.resizeFrame = null;
+        this.pendingWidth = null;
         const pointerId = this.drag?.pointerId;
         this.drag = null;
         this.document.removeEventListener('pointermove', this.onPointerMove);
@@ -15513,11 +15549,21 @@ class SidebarResizeController {
             }
         }
     }
+    flushPendingWidth(immediate = false) {
+        if (this.resizeFrame !== null)
+            this.view.cancelAnimationFrame(this.resizeFrame);
+        this.resizeFrame = null;
+        const width = this.pendingWidth;
+        this.pendingWidth = null;
+        if (width !== null)
+            this.render(width, immediate && width !== this.width);
+    }
 }
 
 class IHSidebar {
     router = inject(Router);
     hostElement = inject(ElementRef);
+    zone = inject(NgZone);
     sessionService = inject(ISessionService);
     config = inject(I_AUTH_CONFIG);
     baseHref = inject(APP_BASE_HREF, { optional: true }) ??
@@ -15531,7 +15577,6 @@ class IHSidebar {
     destroyed = false;
     resizeHandle;
     resizeController;
-    resizeState = signal({ width: 260, minWidth: 220, maxWidth: 480 }, ...(ngDevMode ? [{ debugName: "resizeState" }] : []));
     /** Sidebar user chip dropdown (Personal Profile / Logout) open state. */
     accountMenuOpen = signal(false, ...(ngDevMode ? [{ debugName: "accountMenuOpen" }] : []));
     onDocumentKeydown = (event) => {
@@ -15637,6 +15682,9 @@ class IHSidebar {
     get sidebarVisibility() {
         return !this.visible;
     }
+    get sidebarResizable() {
+        return this.resizable;
+    }
     /** Personal Profile target; falls back to the shared default. */
     get resolvedPersonalProfileUrl() {
         return (this.personalProfileUrl ?? '').trim() || DEFAULT_PERSONAL_PROFILE_URL;
@@ -15659,7 +15707,7 @@ class IHSidebar {
     }
     ngOnInit() {
         this.menuState.configureStorage(this.menuStateStorageKey);
-        this.resizeController = new SidebarResizeController(this.hostElement.nativeElement, this.resizeHandle.nativeElement, this.resizeOptions(), (state) => this.resizeState.set(state), (width) => this.onWidthChange.emit(width));
+        this.resizeController = this.zone.runOutsideAngular(() => new SidebarResizeController(this.hostElement.nativeElement, this.resizeHandle.nativeElement, this.resizeOptions(), (width) => this.zone.run(() => this.onWidthChange.emit(width))));
         document.addEventListener('keydown', this.onDocumentKeydown);
         document.addEventListener('pointerdown', this.onDocumentPointerDown);
         const searchParams = new URLSearchParams(window.location.search);
@@ -16158,7 +16206,7 @@ class IHSidebar {
         this.queryParams = queryParams;
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHSidebar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", resizable: "resizable", minWidth: "minWidth", maxWidth: "maxWidth", widthStorageKey: "widthStorageKey", menuStateStorageKey: "menuStateStorageKey", impersonating: "impersonating", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible", personalProfileUrl: "personalProfileUrl" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder", onWidthChange: "onWidthChange" }, host: { properties: { "class.hidden": "this.sidebarVisibility" } }, viewQueries: [{ propertyName: "resizeHandle", first: true, predicate: ["resizeHandle"], descendants: true, static: true }], usesOnChanges: true, ngImport: i0, template: `
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", resizable: "resizable", minWidth: "minWidth", maxWidth: "maxWidth", widthStorageKey: "widthStorageKey", menuStateStorageKey: "menuStateStorageKey", impersonating: "impersonating", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible", personalProfileUrl: "personalProfileUrl" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder", onWidthChange: "onWidthChange" }, host: { properties: { "class.hidden": "this.sidebarVisibility", "class.is-resizable": "this.sidebarResizable" } }, viewQueries: [{ propertyName: "resizeHandle", first: true, predicate: ["resizeHandle"], descendants: true, static: true }], usesOnChanges: true, ngImport: i0, template: `
     @let user = user$ | async;
     <div class="ih-sidebar-header">
       @if (user) {
@@ -16284,9 +16332,6 @@ class IHSidebar {
       aria-orientation="vertical"
       class="ih-sidebar-resize-handle"
       role="separator"
-      [attr.aria-valuemax]="resizeState().maxWidth"
-      [attr.aria-valuemin]="resizeState().minWidth"
-      [attr.aria-valuenow]="resizeState().width"
       [attr.tabindex]="resizable && visible ? 0 : -1"
       [hidden]="!resizable || !visible"
     ></div>
@@ -16423,9 +16468,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
       aria-orientation="vertical"
       class="ih-sidebar-resize-handle"
       role="separator"
-      [attr.aria-valuemax]="resizeState().maxWidth"
-      [attr.aria-valuemin]="resizeState().minWidth"
-      [attr.aria-valuenow]="resizeState().width"
       [attr.tabindex]="resizable && visible ? 0 : -1"
       [hidden]="!resizable || !visible"
     ></div>
@@ -16473,6 +16515,9 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             }], sidebarVisibility: [{
                 type: HostBinding,
                 args: ['class.hidden']
+            }], sidebarResizable: [{
+                type: HostBinding,
+                args: ['class.is-resizable']
             }] } });
 
 // export * from './input-addon';
@@ -16615,6 +16660,399 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             }], handleHostClick: [{
                 type: HostListener,
                 args: ['click', ['$event']]
+            }] } });
+
+class ISelectCompany {
+    store = inject(IUserMenuStore);
+    cdr = inject(ChangeDetectorRef);
+    menuCodeValue = signal(null, ...(ngDevMode ? [{ debugName: "menuCodeValue" }] : []));
+    modelValue = signal(null, ...(ngDevMode ? [{ debugName: "modelValue" }] : []));
+    innerSelect;
+    optionDef;
+    placeholder = '';
+    disabled = false;
+    invalid = false;
+    filterDelay = 200;
+    panelPosition = 'bottom left';
+    portalToBody = true;
+    panelOffset = 6;
+    matchTriggerWidth = false;
+    displayWith;
+    filterPredicate = (row, term) => row.name.toLowerCase().includes(term.toLowerCase()) ||
+        row.code.toLowerCase().includes(term.toLowerCase());
+    set menuCode(value) {
+        this.menuCodeValue.set(value?.trim() || null);
+    }
+    get menuCode() {
+        return this.menuCodeValue();
+    }
+    set value(value) {
+        this.writeValue(value);
+    }
+    get value() {
+        return this.modelValue();
+    }
+    onChanged = new EventEmitter();
+    onOptionSelected = new EventEmitter();
+    companyOptions = computed(() => {
+        const companies = this.store.companies();
+        const code = this.menuCodeValue();
+        if (!code)
+            return companies;
+        const allowed = new Set(this.store.menuCompanies()[code] ?? []);
+        return companies.filter((company) => allowed.has(company.code));
+    }, ...(ngDevMode ? [{ debugName: "companyOptions" }] : []));
+    selectedCompany = computed(() => {
+        const value = this.modelValue();
+        if (!value)
+            return null;
+        return this.companyOptions().find((company) => company.id === value.id) ?? value;
+    }, ...(ngDevMode ? [{ debugName: "selectedCompany" }] : []));
+    onChange = () => undefined;
+    onTouched = () => undefined;
+    trackCompany = (_index, company) => company.id;
+    writeValue(value) {
+        this.modelValue.set(value ?? null);
+        this.cdr.markForCheck();
+    }
+    registerOnChange(fn) {
+        this.onChange = fn;
+    }
+    registerOnTouched(fn) {
+        this.onTouched = fn;
+    }
+    setDisabledState(disabled) {
+        this.disabled = disabled;
+        this.cdr.markForCheck();
+    }
+    focus() {
+        if (!this.disabled)
+            this.innerSelect?.focus();
+    }
+    handleSelectChange(change) {
+        this.modelValue.set(change.value);
+        this.onChange(change.value);
+        this.onTouched();
+        this.onChanged.emit(change);
+        this.onOptionSelected.emit(change);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISelectCompany, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISelectCompany, isStandalone: true, selector: "i-select-company", inputs: { placeholder: "placeholder", disabled: "disabled", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", displayWith: "displayWith", filterPredicate: "filterPredicate", menuCode: "menuCode", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, providers: [
+            {
+                provide: NG_VALUE_ACCESSOR,
+                useExisting: forwardRef(() => ISelectCompany),
+                multi: true,
+            },
+        ], queries: [{ propertyName: "optionDef", first: true, predicate: ISelectOptionDefDirective, descendants: true }], viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `
+    <i-select
+      [disabled]="disabled"
+      [displayWith]="displayWith ?? 'name'"
+      [filterDelay]="filterDelay"
+      [filterPredicate]="filterPredicate"
+      [invalid]="invalid"
+      [matchTriggerWidth]="matchTriggerWidth"
+      [options]="companyOptions()"
+      [panelOffset]="panelOffset"
+      [panelPosition]="panelPosition"
+      [placeholder]="placeholder"
+      [portalToBody]="portalToBody"
+      [trackBy]="trackCompany"
+      [value]="selectedCompany()"
+      (onChanged)="handleSelectChange($event)"
+    >
+      @if (optionDef; as option) {
+        <ng-template iSelectOption let-row>
+          <ng-container
+            [ngTemplateOutlet]="option.template"
+            [ngTemplateOutletContext]="{ $implicit: row, row: row }"
+          />
+        </ng-template>
+      }
+    </i-select>
+  `, isInline: true, dependencies: [{ kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "trackBy", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: ISelectOptionDefDirective, selector: "[iSelectOption]", inputs: ["iSelectOption"] }, { kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISelectCompany, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-select-company',
+                    standalone: true,
+                    imports: [ISelect, ISelectOptionDefDirective, NgTemplateOutlet],
+                    template: `
+    <i-select
+      [disabled]="disabled"
+      [displayWith]="displayWith ?? 'name'"
+      [filterDelay]="filterDelay"
+      [filterPredicate]="filterPredicate"
+      [invalid]="invalid"
+      [matchTriggerWidth]="matchTriggerWidth"
+      [options]="companyOptions()"
+      [panelOffset]="panelOffset"
+      [panelPosition]="panelPosition"
+      [placeholder]="placeholder"
+      [portalToBody]="portalToBody"
+      [trackBy]="trackCompany"
+      [value]="selectedCompany()"
+      (onChanged)="handleSelectChange($event)"
+    >
+      @if (optionDef; as option) {
+        <ng-template iSelectOption let-row>
+          <ng-container
+            [ngTemplateOutlet]="option.template"
+            [ngTemplateOutletContext]="{ $implicit: row, row: row }"
+          />
+        </ng-template>
+      }
+    </i-select>
+  `,
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    providers: [
+                        {
+                            provide: NG_VALUE_ACCESSOR,
+                            useExisting: forwardRef(() => ISelectCompany),
+                            multi: true,
+                        },
+                    ],
+                }]
+        }], propDecorators: { innerSelect: [{
+                type: ViewChild,
+                args: [ISelect]
+            }], optionDef: [{
+                type: ContentChild,
+                args: [ISelectOptionDefDirective]
+            }], placeholder: [{
+                type: Input
+            }], disabled: [{
+                type: Input
+            }], invalid: [{
+                type: Input
+            }], filterDelay: [{
+                type: Input
+            }], panelPosition: [{
+                type: Input
+            }], portalToBody: [{
+                type: Input
+            }], panelOffset: [{
+                type: Input
+            }], matchTriggerWidth: [{
+                type: Input
+            }], displayWith: [{
+                type: Input
+            }], filterPredicate: [{
+                type: Input
+            }], menuCode: [{
+                type: Input
+            }], value: [{
+                type: Input
+            }], onChanged: [{
+                type: Output
+            }], onOptionSelected: [{
+                type: Output
+            }] } });
+
+class IFCSelectCompany {
+    innerSelect;
+    optionDef;
+    label = '';
+    placeholder = '';
+    menuCode;
+    disabled = false;
+    invalid = false;
+    displayWith;
+    filterDelay = 200;
+    filterPredicate = (row, term) => row.name.toLowerCase().includes(term.toLowerCase()) ||
+        row.code.toLowerCase().includes(term.toLowerCase());
+    panelPosition = 'bottom left';
+    panelOffset = 6;
+    portalToBody = true;
+    matchTriggerWidth = false;
+    errorMessage;
+    set value(value) {
+        this.writeValue(value);
+    }
+    get value() {
+        return this.modelValue;
+    }
+    onChanged = new EventEmitter();
+    onOptionSelected = new EventEmitter();
+    formDisabled = false;
+    modelValue = null;
+    onChange = () => undefined;
+    onTouched = () => undefined;
+    ngControl = inject(NgControl, { self: true, optional: true });
+    formDir = inject(FormGroupDirective, { optional: true });
+    cdr = inject(ChangeDetectorRef);
+    submitSub;
+    constructor() {
+        if (this.ngControl)
+            this.ngControl.valueAccessor = this;
+        this.submitSub = this.formDir?.ngSubmit.subscribe(() => this.cdr.markForCheck());
+    }
+    ngOnDestroy() {
+        this.submitSub?.unsubscribe();
+    }
+    writeValue(value) {
+        this.modelValue = value ?? null;
+        this.cdr.markForCheck();
+    }
+    registerOnChange(fn) {
+        this.onChange = fn;
+    }
+    registerOnTouched(fn) {
+        this.onTouched = fn;
+    }
+    setDisabledState(disabled) {
+        this.formDisabled = disabled;
+        this.cdr.markForCheck();
+    }
+    focus() {
+        if (!this.disabled && !this.formDisabled)
+            this.innerSelect?.focus();
+    }
+    handleSelectChange(change) {
+        this.modelValue = change.value;
+        this.onChange(change.value);
+        this.onTouched();
+        this.onChanged.emit(change);
+        this.onOptionSelected.emit(change);
+    }
+    get controlInvalid() {
+        const control = this.ngControl?.control;
+        if (!control)
+            return false;
+        return (control.invalid && (this.formDir ? this.formDir.submitted : control.touched || control.dirty));
+    }
+    get required() {
+        return isControlRequired(this.ngControl, this.errorMessage);
+    }
+    get resolvedErrorText() {
+        return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCSelectCompany, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IFCSelectCompany, isStandalone: true, selector: "i-fc-select-company", inputs: { label: "label", placeholder: "placeholder", menuCode: "menuCode", disabled: "disabled", invalid: "invalid", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", panelOffset: "panelOffset", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", errorMessage: "errorMessage", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, queries: [{ propertyName: "optionDef", first: true, predicate: ISelectOptionDefDirective, descendants: true }], viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelectCompany, descendants: true }], ngImport: i0, template: `
+    @if (label) {
+      <label class="i-fc-select__label" (click)="focus()">
+        {{ label }} :
+        @if (required) {
+          <span class="i-fc-select__required">*</span>
+        }
+      </label>
+    }
+
+    <i-select-company
+      [disabled]="disabled || formDisabled"
+      [displayWith]="displayWith"
+      [filterDelay]="filterDelay"
+      [filterPredicate]="filterPredicate"
+      [invalid]="invalid || controlInvalid"
+      [matchTriggerWidth]="matchTriggerWidth"
+      [menuCode]="menuCode"
+      [panelOffset]="panelOffset"
+      [panelPosition]="panelPosition"
+      [placeholder]="placeholder"
+      [portalToBody]="portalToBody"
+      [value]="value"
+      (onChanged)="handleSelectChange($event)"
+    >
+      @if (optionDef; as option) {
+        <ng-template iSelectOption let-row>
+          <ng-container
+            [ngTemplateOutlet]="option.template"
+            [ngTemplateOutletContext]="{ $implicit: row, row: row }"
+          />
+        </ng-template>
+      }
+    </i-select-company>
+
+    @if (controlInvalid && resolvedErrorText) {
+      <div class="i-fc-select__error">{{ resolvedErrorText }}</div>
+    }
+  `, isInline: true, dependencies: [{ kind: "component", type: ISelectCompany, selector: "i-select-company", inputs: ["placeholder", "disabled", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "displayWith", "filterPredicate", "menuCode", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: ISelectOptionDefDirective, selector: "[iSelectOption]", inputs: ["iSelectOption"] }, { kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCSelectCompany, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-fc-select-company',
+                    standalone: true,
+                    imports: [ISelectCompany, ISelectOptionDefDirective, NgTemplateOutlet],
+                    template: `
+    @if (label) {
+      <label class="i-fc-select__label" (click)="focus()">
+        {{ label }} :
+        @if (required) {
+          <span class="i-fc-select__required">*</span>
+        }
+      </label>
+    }
+
+    <i-select-company
+      [disabled]="disabled || formDisabled"
+      [displayWith]="displayWith"
+      [filterDelay]="filterDelay"
+      [filterPredicate]="filterPredicate"
+      [invalid]="invalid || controlInvalid"
+      [matchTriggerWidth]="matchTriggerWidth"
+      [menuCode]="menuCode"
+      [panelOffset]="panelOffset"
+      [panelPosition]="panelPosition"
+      [placeholder]="placeholder"
+      [portalToBody]="portalToBody"
+      [value]="value"
+      (onChanged)="handleSelectChange($event)"
+    >
+      @if (optionDef; as option) {
+        <ng-template iSelectOption let-row>
+          <ng-container
+            [ngTemplateOutlet]="option.template"
+            [ngTemplateOutletContext]="{ $implicit: row, row: row }"
+          />
+        </ng-template>
+      }
+    </i-select-company>
+
+    @if (controlInvalid && resolvedErrorText) {
+      <div class="i-fc-select__error">{{ resolvedErrorText }}</div>
+    }
+  `,
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                }]
+        }], ctorParameters: () => [], propDecorators: { innerSelect: [{
+                type: ViewChild,
+                args: [ISelectCompany]
+            }], optionDef: [{
+                type: ContentChild,
+                args: [ISelectOptionDefDirective]
+            }], label: [{
+                type: Input
+            }], placeholder: [{
+                type: Input
+            }], menuCode: [{
+                type: Input
+            }], disabled: [{
+                type: Input
+            }], invalid: [{
+                type: Input
+            }], displayWith: [{
+                type: Input
+            }], filterDelay: [{
+                type: Input
+            }], filterPredicate: [{
+                type: Input
+            }], panelPosition: [{
+                type: Input
+            }], panelOffset: [{
+                type: Input
+            }], portalToBody: [{
+                type: Input
+            }], matchTriggerWidth: [{
+                type: Input
+            }], errorMessage: [{
+                type: Input
+            }], value: [{
+                type: Input
+            }], onChanged: [{
+                type: Output
+            }], onOptionSelected: [{
+                type: Output
             }] } });
 
 const INTERACTIVE_SELECTOR_PARTS = [
@@ -17612,5 +18050,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IImpersonationStateService, IInfoNotice, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
+export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IImpersonationStateService, IInfoNotice, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
 //# sourceMappingURL=insight-ui.mjs.map
