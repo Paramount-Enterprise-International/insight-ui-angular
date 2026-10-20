@@ -1,7 +1,7 @@
 import * as i0 from '@angular/core';
-import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ContentChildren, ViewContainerRef, signal, computed, effect, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER, DestroyRef, untracked } from '@angular/core';
+import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ContentChildren, ViewContainerRef, input, output, PLATFORM_ID, viewChild, signal, effect, computed, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER, DestroyRef, untracked } from '@angular/core';
 import * as i1$1 from '@angular/common';
-import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, APP_BASE_HREF } from '@angular/common';
+import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, DOCUMENT, isPlatformBrowser, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { firstValueFrom, Subject, BehaviorSubject, map, throwError, from, defer, Observable, forkJoin, of, finalize as finalize$1, timeout, lastValueFrom, filter as filter$1, startWith, combineLatest, shareReplay as shareReplay$1, tap as tap$1, take as take$1, distinctUntilChanged, takeUntil, switchMap as switchMap$1, EMPTY, catchError as catchError$1 } from 'rxjs';
@@ -10600,6 +10600,921 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 }]
         }] });
 
+/** Notification modal behavior shared by the framework-specific overlay views. */
+const panels = [];
+const locks = new WeakMap();
+function lockScroll(doc) {
+    let lock = locks.get(doc);
+    if (!lock) {
+        lock = {
+            count: 0,
+            bodyOverflow: doc.body.style.overflow,
+            rootOverflow: doc.documentElement.style.overflow,
+            paddingRight: doc.body.style.paddingRight,
+        };
+        locks.set(doc, lock);
+        const scrollbar = (doc.defaultView?.innerWidth ?? 0) - doc.documentElement.clientWidth;
+        if (scrollbar > 0)
+            doc.body.style.paddingRight = `${parseFloat(getComputedStyle(doc.body).paddingRight || '0') + scrollbar}px`;
+        doc.body.style.overflow = 'hidden';
+        doc.documentElement.style.overflow = 'hidden';
+    }
+    lock.count++;
+    return () => {
+        if (--lock.count)
+            return;
+        doc.body.style.overflow = lock.bodyOverflow;
+        doc.documentElement.style.overflow = lock.rootOverflow;
+        doc.body.style.paddingRight = lock.paddingRight;
+        locks.delete(doc);
+    };
+}
+function focusables(panel) {
+    return Array.from(panel.querySelectorAll('button, a[href], input, select, textarea, [tabindex]')).filter((element) => element.tabIndex >= 0 &&
+        !element.matches(':disabled') &&
+        !element.closest('[hidden], [inert], [data-notification-focus-guard]') &&
+        getComputedStyle(element).display !== 'none' &&
+        getComputedStyle(element).visibility !== 'hidden');
+}
+/** Mount once per open drawer. Existing Insight dialogs retain their higher layer. */
+function mountNotificationModal(panel) {
+    const doc = panel.ownerDocument;
+    const previous = doc.activeElement;
+    const container = panel.closest('i-dialog-container');
+    const isTop = () => panels.at(-1) === panel &&
+        !Array.from(doc.querySelectorAll('[role="dialog"]')).some((other) => other !== container &&
+            !other.contains(container) &&
+            !other.closest('[hidden], [inert]') &&
+            getComputedStyle(other).display !== 'none' &&
+            getComputedStyle(other).visibility !== 'hidden' &&
+            (Number.parseInt(getComputedStyle(other).zIndex, 10) || 1050) >=
+                (Number.parseInt(getComputedStyle(container).zIndex, 10) || 1000));
+    const focusEdge = (last = false) => {
+        if (!isTop())
+            return;
+        const elements = focusables(panel);
+        (last ? (elements.at(-1) ?? panel) : (elements[0] ?? panel)).focus({ preventScroll: true });
+    };
+    panels.push(panel);
+    const unlock = lockScroll(doc);
+    const keydown = (event) => {
+        if (!isTop() || event.key !== 'Tab')
+            return;
+        const elements = focusables(panel);
+        if (!elements.length) {
+            event.preventDefault();
+            panel.focus();
+            return;
+        }
+        const first = elements[0];
+        const last = elements[elements.length - 1];
+        if (event.shiftKey && (doc.activeElement === first || doc.activeElement === panel)) {
+            event.preventDefault();
+            last.focus();
+        }
+        else if (!event.shiftKey &&
+            (doc.activeElement === last || !panel.contains(doc.activeElement))) {
+            event.preventDefault();
+            first.focus();
+        }
+    };
+    const focusin = (event) => {
+        if (isTop() && !panel.contains(event.target))
+            focusEdge();
+    };
+    doc.addEventListener('keydown', keydown, true);
+    doc.addEventListener('focusin', focusin, true);
+    focusEdge();
+    let destroyed = false;
+    return {
+        isTop,
+        focusEdge,
+        destroy: () => {
+            if (destroyed)
+                return;
+            destroyed = true;
+            const wasTop = isTop();
+            panels.splice(panels.indexOf(panel), 1);
+            doc.removeEventListener('keydown', keydown, true);
+            doc.removeEventListener('focusin', focusin, true);
+            unlock();
+            if (wasTop && previous?.isConnected)
+                previous.focus({ preventScroll: true });
+        },
+    };
+}
+
+/** Retain the modal until its exit transition finishes, with a fallback for interrupted motion. */
+function waitForNotificationExit(panel, exited) {
+    const style = getComputedStyle(panel);
+    const milliseconds = (value) => (parseFloat(value) || 0) * (value.trim().endsWith('ms') ? 1 : 1000);
+    const durations = style.transitionDuration.split(',').map(milliseconds);
+    const delays = style.transitionDelay.split(',').map(milliseconds);
+    const duration = Math.max(0, ...durations.map((value, i) => value + delays[i % delays.length]));
+    let cancelled = false;
+    let timer;
+    const cancel = () => {
+        cancelled = true;
+        clearTimeout(timer);
+        panel.removeEventListener('transitionend', ended);
+    };
+    const finish = () => {
+        if (cancelled)
+            return;
+        cancel();
+        exited();
+    };
+    const ended = (event) => {
+        if (event.target === panel && event.propertyName === 'transform')
+            finish();
+    };
+    panel.addEventListener('transitionend', ended);
+    if (duration > 0)
+        timer = setTimeout(finish, duration + 50);
+    else
+        queueMicrotask(finish);
+    return cancel;
+}
+
+/** Uses the Insight dialog surface with a notification-specific modal lifecycle. */
+class NotificationOverlay {
+    open = input(true, ...(ngDevMode ? [{ debugName: "open" }] : []));
+    closeRequested = output();
+    exited = output();
+    config = { width: 'min(400px, 100vw)', height: '100dvh' };
+    host = inject(ElementRef);
+    document = inject(DOCUMENT);
+    platform = inject(PLATFORM_ID);
+    region = viewChild.required('region');
+    modal;
+    cancelExit;
+    ngOnChanges() {
+        this.cancelExit?.();
+        if (!this.open() && this.modal) {
+            const panel = this.region().nativeElement.closest('.i-dialog-panel');
+            this.cancelExit = waitForNotificationExit(panel, () => this.exited.emit());
+        }
+    }
+    ngAfterViewInit() {
+        if (!isPlatformBrowser(this.platform))
+            return;
+        this.document.body.appendChild(this.host.nativeElement);
+        this.modal = mountNotificationModal(this.region().nativeElement);
+    }
+    requestClose() {
+        if (this.open() && this.modal?.isTop())
+            this.closeRequested.emit();
+    }
+    focusEdge(last = false) {
+        this.modal?.focusEdge(last);
+    }
+    ngOnDestroy() {
+        this.cancelExit?.();
+        this.modal?.destroy();
+        this.host.nativeElement.remove();
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: NotificationOverlay, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.2.0", version: "20.3.34", type: NotificationOverlay, isStandalone: true, selector: "i-notification-overlay", inputs: { open: { classPropertyName: "open", publicName: "open", isSignal: true, isRequired: false, transformFunction: null } }, outputs: { closeRequested: "closeRequested", exited: "exited" }, viewQueries: [{ propertyName: "region", first: true, predicate: ["region"], descendants: true, isSignal: true }], usesOnChanges: true, ngImport: i0, template: `
+    <i-dialog-container
+      ariaLabel="Notifications"
+      class="i-notification-overlay"
+      [class.i-notification-closing]="!open()"
+      [config]="config"
+      [isTopMost]="true"
+      (onClose)="requestClose()"
+    >
+      <div #region class="i-notification-focus-region" tabindex="-1">
+        <span
+          aria-hidden="true"
+          class="i-notification-focus-guard"
+          data-notification-focus-guard="true"
+          tabindex="0"
+          (focus)="focusEdge(true)"
+        ></span>
+        <ng-content />
+        <span
+          aria-hidden="true"
+          class="i-notification-focus-guard"
+          data-notification-focus-guard="true"
+          tabindex="0"
+          (focus)="focusEdge()"
+        ></span>
+      </div>
+    </i-dialog-container>
+  `, isInline: true, dependencies: [{ kind: "component", type: IDialogContainer, selector: "i-dialog-container", inputs: ["instance", "config", "ariaLabel", "isTopMost"], outputs: ["onClose"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: NotificationOverlay, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-notification-overlay',
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    imports: [IDialogContainer],
+                    template: `
+    <i-dialog-container
+      ariaLabel="Notifications"
+      class="i-notification-overlay"
+      [class.i-notification-closing]="!open()"
+      [config]="config"
+      [isTopMost]="true"
+      (onClose)="requestClose()"
+    >
+      <div #region class="i-notification-focus-region" tabindex="-1">
+        <span
+          aria-hidden="true"
+          class="i-notification-focus-guard"
+          data-notification-focus-guard="true"
+          tabindex="0"
+          (focus)="focusEdge(true)"
+        ></span>
+        <ng-content />
+        <span
+          aria-hidden="true"
+          class="i-notification-focus-guard"
+          data-notification-focus-guard="true"
+          tabindex="0"
+          (focus)="focusEdge()"
+        ></span>
+      </div>
+    </i-dialog-container>
+  `,
+                }]
+        }], propDecorators: { open: [{ type: i0.Input, args: [{ isSignal: true, alias: "open", required: false }] }], closeRequested: [{ type: i0.Output, args: ["closeRequested"] }], exited: [{ type: i0.Output, args: ["exited"] }], region: [{ type: i0.ViewChild, args: ['region', { isSignal: true }] }] } });
+
+class INotificationBell {
+    unreadCount = input(0, ...(ngDevMode ? [{ debugName: "unreadCount" }] : []));
+    expanded = input(false, ...(ngDevMode ? [{ debugName: "expanded" }] : []));
+    toggleRequested = output();
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotificationBell, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: INotificationBell, isStandalone: true, selector: "i-notification-bell", inputs: { unreadCount: { classPropertyName: "unreadCount", publicName: "unreadCount", isSignal: true, isRequired: false, transformFunction: null }, expanded: { classPropertyName: "expanded", publicName: "expanded", isSignal: true, isRequired: false, transformFunction: null } }, outputs: { toggleRequested: "toggleRequested" }, ngImport: i0, template: `
+    <button
+      aria-haspopup="dialog"
+      class="notification-icon-action flex align-center justify-center p-2xs border-none
+        bg-transparent text-gray-600 radius-sm"
+      title="Notifications"
+      type="button"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-label]="'Notifications, ' + unreadCount() + ' unread'"
+      (click)="toggleRequested.emit()"
+    >
+      <i-icon aria-hidden="true" icon="fa-solid fa-bell" size="lg" />
+    </button>
+    @if (unreadCount() > 0) {
+      <span
+        aria-hidden="true"
+        class="notification-badge flex align-center justify-center bg-primary text-white radius-full text-xs"
+      >
+        {{ unreadCount() > 99 ? '99+' : unreadCount() }}
+      </span>
+    }
+  `, isInline: true, dependencies: [{ kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotificationBell, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-notification-bell',
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    imports: [IIcon],
+                    template: `
+    <button
+      aria-haspopup="dialog"
+      class="notification-icon-action flex align-center justify-center p-2xs border-none
+        bg-transparent text-gray-600 radius-sm"
+      title="Notifications"
+      type="button"
+      [attr.aria-expanded]="expanded()"
+      [attr.aria-label]="'Notifications, ' + unreadCount() + ' unread'"
+      (click)="toggleRequested.emit()"
+    >
+      <i-icon aria-hidden="true" icon="fa-solid fa-bell" size="lg" />
+    </button>
+    @if (unreadCount() > 0) {
+      <span
+        aria-hidden="true"
+        class="notification-badge flex align-center justify-center bg-primary text-white radius-full text-xs"
+      >
+        {{ unreadCount() > 99 ? '99+' : unreadCount() }}
+      </span>
+    }
+  `,
+                }]
+        }], propDecorators: { unreadCount: [{ type: i0.Input, args: [{ isSignal: true, alias: "unreadCount", required: false }] }], expanded: [{ type: i0.Input, args: [{ isSignal: true, alias: "expanded", required: false }] }], toggleRequested: [{ type: i0.Output, args: ["toggleRequested"] }] } });
+
+/** Internal retry presentation for consumer-resolved notification errors. */
+class NotificationError {
+    message = input(null, ...(ngDevMode ? [{ debugName: "message" }] : []));
+    title = input('', ...(ngDevMode ? [{ debugName: "title" }] : []));
+    retryDisabled = input(false, ...(ngDevMode ? [{ debugName: "retryDisabled" }] : []));
+    retryLoading = input(false, ...(ngDevMode ? [{ debugName: "retryLoading" }] : []));
+    retry = output();
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: NotificationError, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: NotificationError, isStandalone: true, selector: "i-notification-error", inputs: { message: { classPropertyName: "message", publicName: "message", isSignal: true, isRequired: false, transformFunction: null }, title: { classPropertyName: "title", publicName: "title", isSignal: true, isRequired: false, transformFunction: null }, retryDisabled: { classPropertyName: "retryDisabled", publicName: "retryDisabled", isSignal: true, isRequired: false, transformFunction: null }, retryLoading: { classPropertyName: "retryLoading", publicName: "retryLoading", isSignal: true, isRequired: false, transformFunction: null } }, outputs: { retry: "retry" }, ngImport: i0, template: `
+    @if (message()) {
+      <div
+        class="flex flex-col align-center justify-center gap-xs px-md py-lg text-center text-subtle"
+        role="alert"
+      >
+        <i-icon aria-hidden="true" icon="fa-solid fa-circle-exclamation" size="lg" />
+        @if (title()) {
+          <p class="m-0">{{ title() }}</p>
+        }
+        <p class="m-0 text-sm text-danger">{{ message() }}</p>
+        <i-button
+          icon="sync"
+          size="sm"
+          type="button"
+          variant="primary"
+          [disabled]="retryDisabled()"
+          [loading]="retryLoading()"
+          (onClick)="!retryLoading() && !retryDisabled() && retry.emit()"
+          >Retry</i-button
+        >
+      </div>
+    }
+  `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: NotificationError, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-notification-error',
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    imports: [IButton, IIcon],
+                    template: `
+    @if (message()) {
+      <div
+        class="flex flex-col align-center justify-center gap-xs px-md py-lg text-center text-subtle"
+        role="alert"
+      >
+        <i-icon aria-hidden="true" icon="fa-solid fa-circle-exclamation" size="lg" />
+        @if (title()) {
+          <p class="m-0">{{ title() }}</p>
+        }
+        <p class="m-0 text-sm text-danger">{{ message() }}</p>
+        <i-button
+          icon="sync"
+          size="sm"
+          type="button"
+          variant="primary"
+          [disabled]="retryDisabled()"
+          [loading]="retryLoading()"
+          (onClick)="!retryLoading() && !retryDisabled() && retry.emit()"
+          >Retry</i-button
+        >
+      </div>
+    }
+  `,
+                }]
+        }], propDecorators: { message: [{ type: i0.Input, args: [{ isSignal: true, alias: "message", required: false }] }], title: [{ type: i0.Input, args: [{ isSignal: true, alias: "title", required: false }] }], retryDisabled: [{ type: i0.Input, args: [{ isSignal: true, alias: "retryDisabled", required: false }] }], retryLoading: [{ type: i0.Input, args: [{ isSignal: true, alias: "retryLoading", required: false }] }], retry: [{ type: i0.Output, args: ["retry"] }] } });
+
+function truncateNotificationText(value) {
+    return value.length > 50 ? `${value.slice(0, 50)}...` : value;
+}
+function notificationDate(value, now = new Date()) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime()))
+        return '-';
+    const day = (input) => Date.UTC(input.getFullYear(), input.getMonth(), input.getDate());
+    const age = (day(now) - day(date)) / 86_400_000;
+    if (age <= 0)
+        return 'Today';
+    if (age === 1)
+        return 'Yesterday';
+    if (age < 7)
+        return `${age} days ago`;
+    if (age === 7)
+        return 'Last week';
+    const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);
+    return `${date.getDate()} ${month} ${date.getFullYear()}`;
+}
+
+class INotificationItem {
+    item = input.required(...(ngDevMode ? [{ debugName: "item" }] : []));
+    busy = input(false, ...(ngDevMode ? [{ debugName: "busy" }] : []));
+    openRequested = output();
+    date = notificationDate;
+    truncate = truncateNotificationText;
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotificationItem, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: INotificationItem, isStandalone: true, selector: "i-notification-item", inputs: { item: { classPropertyName: "item", publicName: "item", isSignal: true, isRequired: true, transformFunction: null }, busy: { classPropertyName: "busy", publicName: "busy", isSignal: true, isRequired: false, transformFunction: null } }, outputs: { openRequested: "openRequested" }, ngImport: i0, template: `
+    <button
+      class="notification-item flex align-center gap-md w-full p-lg border-none bg-transparent text-left"
+      type="button"
+      [attr.aria-busy]="busy()"
+      [attr.aria-label]="
+        'Read notification: ' + item().title + ', ' + item().groupCount + ' notifications'
+      "
+      [disabled]="busy()"
+      (click)="openRequested.emit(item())"
+    >
+      <span
+        aria-hidden="true"
+        class="group-count flex align-center justify-center shrink-0 bg-primary text-white
+          radius-full text-sm font-semibold"
+      >
+        {{ item().groupCount }}
+      </span>
+      <span class="flex flex-fill align-start justify-between gap-md min-w-0">
+        <span class="notification-copy flex flex-col gap-xs flex-fill min-w-0">
+          <span class="text-md font-semibold text-gray-700" [title]="item().title">{{
+            truncate(item().title)
+          }}</span>
+          <span class="text-sm text-gray-700" [title]="item().description">{{
+            truncate(item().description)
+          }}</span>
+          <span class="text-sm text-subtle">{{ item().moduleName }}</span>
+        </span>
+        <span class="flex flex-col align-end gap-xs shrink-0 text-right">
+          <span class="text-sm text-subtle" [title]="item().latestDate">{{
+            date(item().latestDate)
+          }}</span>
+          @if (!item().isDismissable) {
+            <span class="text-sm text-warning">Important</span>
+          }
+        </span>
+      </span>
+    </button>
+  `, isInline: true, changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotificationItem, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-notification-item',
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    template: `
+    <button
+      class="notification-item flex align-center gap-md w-full p-lg border-none bg-transparent text-left"
+      type="button"
+      [attr.aria-busy]="busy()"
+      [attr.aria-label]="
+        'Read notification: ' + item().title + ', ' + item().groupCount + ' notifications'
+      "
+      [disabled]="busy()"
+      (click)="openRequested.emit(item())"
+    >
+      <span
+        aria-hidden="true"
+        class="group-count flex align-center justify-center shrink-0 bg-primary text-white
+          radius-full text-sm font-semibold"
+      >
+        {{ item().groupCount }}
+      </span>
+      <span class="flex flex-fill align-start justify-between gap-md min-w-0">
+        <span class="notification-copy flex flex-col gap-xs flex-fill min-w-0">
+          <span class="text-md font-semibold text-gray-700" [title]="item().title">{{
+            truncate(item().title)
+          }}</span>
+          <span class="text-sm text-gray-700" [title]="item().description">{{
+            truncate(item().description)
+          }}</span>
+          <span class="text-sm text-subtle">{{ item().moduleName }}</span>
+        </span>
+        <span class="flex flex-col align-end gap-xs shrink-0 text-right">
+          <span class="text-sm text-subtle" [title]="item().latestDate">{{
+            date(item().latestDate)
+          }}</span>
+          @if (!item().isDismissable) {
+            <span class="text-sm text-warning">Important</span>
+          }
+        </span>
+      </span>
+    </button>
+  `,
+                }]
+        }], propDecorators: { item: [{ type: i0.Input, args: [{ isSignal: true, alias: "item", required: true }] }], busy: [{ type: i0.Input, args: [{ isSignal: true, alias: "busy", required: false }] }], openRequested: [{ type: i0.Output, args: ["openRequested"] }] } });
+
+class INotificationDrawer {
+    items = input([], ...(ngDevMode ? [{ debugName: "items" }] : []));
+    unreadCount = input(0, ...(ngDevMode ? [{ debugName: "unreadCount" }] : []));
+    loading = input(false, ...(ngDevMode ? [{ debugName: "loading" }] : []));
+    hasLoaded = input(false, ...(ngDevMode ? [{ debugName: "hasLoaded" }] : []));
+    loadingMore = input(false, ...(ngDevMode ? [{ debugName: "loadingMore" }] : []));
+    readingId = input(null, ...(ngDevMode ? [{ debugName: "readingId" }] : []));
+    hasMore = input(false, ...(ngDevMode ? [{ debugName: "hasMore" }] : []));
+    error = input(null, ...(ngDevMode ? [{ debugName: "error" }] : []));
+    loadMoreError = input(null, ...(ngDevMode ? [{ debugName: "loadMoreError" }] : []));
+    actionError = input(null, ...(ngDevMode ? [{ debugName: "actionError" }] : []));
+    closeRequested = output();
+    openAllRequested = output();
+    itemOpened = output();
+    moreRequested = output();
+    retryRequested = output();
+    readRetryRequested = output();
+    onScroll(event) {
+        const target = event.target;
+        if (!this.loading() &&
+            !this.loadingMore() &&
+            this.readingId() === null &&
+            !this.loadMoreError() &&
+            !this.error() &&
+            this.hasMore() &&
+            target.scrollTop + target.clientHeight >= target.scrollHeight * 0.8)
+            this.moreRequested.emit();
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotificationDrawer, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: INotificationDrawer, isStandalone: true, selector: "i-notification-drawer", inputs: { items: { classPropertyName: "items", publicName: "items", isSignal: true, isRequired: false, transformFunction: null }, unreadCount: { classPropertyName: "unreadCount", publicName: "unreadCount", isSignal: true, isRequired: false, transformFunction: null }, loading: { classPropertyName: "loading", publicName: "loading", isSignal: true, isRequired: false, transformFunction: null }, hasLoaded: { classPropertyName: "hasLoaded", publicName: "hasLoaded", isSignal: true, isRequired: false, transformFunction: null }, loadingMore: { classPropertyName: "loadingMore", publicName: "loadingMore", isSignal: true, isRequired: false, transformFunction: null }, readingId: { classPropertyName: "readingId", publicName: "readingId", isSignal: true, isRequired: false, transformFunction: null }, hasMore: { classPropertyName: "hasMore", publicName: "hasMore", isSignal: true, isRequired: false, transformFunction: null }, error: { classPropertyName: "error", publicName: "error", isSignal: true, isRequired: false, transformFunction: null }, loadMoreError: { classPropertyName: "loadMoreError", publicName: "loadMoreError", isSignal: true, isRequired: false, transformFunction: null }, actionError: { classPropertyName: "actionError", publicName: "actionError", isSignal: true, isRequired: false, transformFunction: null } }, outputs: { closeRequested: "closeRequested", openAllRequested: "openAllRequested", itemOpened: "itemOpened", moreRequested: "moreRequested", retryRequested: "retryRequested", readRetryRequested: "readRetryRequested" }, ngImport: i0, template: `
+    <header class="px-lg py-md border-b border-subtle">
+      <div class="flex align-center justify-between gap-sm">
+        <h2 class="text-xl font-semibold m-0">Notifications</h2>
+        <div class="flex align-center gap-xs shrink-0">
+          <button
+            aria-label="Open all notifications in a new tab"
+            class="notification-icon-action flex align-center justify-center p-2xs border-none
+              bg-transparent text-gray-600 radius-sm"
+            title="Open All Notifications"
+            type="button"
+            (click)="openAllRequested.emit()"
+          >
+            <i-icon aria-hidden="true" icon="fa-solid fa-arrow-up-right-from-square" />
+          </button>
+          <button
+            aria-label="Close notifications"
+            class="notification-icon-action flex align-center justify-center p-2xs border-none
+              bg-transparent text-gray-600 radius-sm"
+            title="Close notifications"
+            type="button"
+            (click)="closeRequested.emit()"
+          >
+            <i-icon aria-hidden="true" icon="fa-solid fa-xmark" />
+          </button>
+        </div>
+      </div>
+      <div class="flex align-center gap-sm mt-2xs text-sm text-subtle">
+        <p aria-live="polite" class="m-0">You have {{ unreadCount() }} unread notifications</p>
+        <div
+          aria-atomic="true"
+          aria-live="polite"
+          class="notification-refresh-status flex align-center justify-center shrink-0"
+          role="status"
+          [attr.title]="
+            loading()
+              ? hasLoaded()
+                ? 'Refreshing notifications...'
+                : 'Loading notifications...'
+              : null
+          "
+        >
+          @if (loading()) {
+            <i-loading aria-hidden="true" label="" />
+            <span class="notification-refresh-label">
+              {{ hasLoaded() ? 'Refreshing notifications...' : 'Loading notifications...' }}
+            </span>
+          }
+        </div>
+      </div>
+    </header>
+    <div class="notification-scroll" [attr.aria-busy]="loading()" (scroll)="onScroll($event)">
+      @if (loading() && !hasLoaded() && items().length === 0) {
+        <div aria-hidden="true" class="notification-initial-space"></div>
+      } @else if (error() && items().length === 0) {
+        <i-notification-error [message]="error()" (retry)="retryRequested.emit()" />
+      } @else if (items().length === 0) {
+        <p class="p-2xl text-center text-subtle" role="status">No new notifications</p>
+      } @else {
+        <ul aria-label="Unread notification groups" class="list-none m-0 p-0">
+          @for (item of items(); track item.notificationId) {
+            <li class="border-b border-subtle">
+              <i-notification-item
+                [busy]="readingId() !== null"
+                [item]="item"
+                (openRequested)="itemOpened.emit($event)"
+              />
+            </li>
+          }
+        </ul>
+      }
+      @if (error() && items().length > 0) {
+        <i-notification-error
+          [message]="error()"
+          [retryLoading]="loading()"
+          (retry)="retryRequested.emit()"
+        />
+      }
+      @if (actionError()) {
+        <i-notification-error
+          title="Failed to mark notification as read."
+          [message]="actionError()"
+          [retryLoading]="readingId() !== null"
+          (retry)="readRetryRequested.emit()"
+        />
+      }
+      @if (loadingMore()) {
+        <div class="flex justify-center p-lg" role="status">
+          <i-loading label="Loading more notifications..." />
+        </div>
+      } @else if (loadMoreError()) {
+        <i-notification-error [message]="loadMoreError()" (retry)="moreRequested.emit()" />
+      } @else if (hasMore()) {
+        <div class="flex justify-center p-md">
+          <i-button
+            size="sm"
+            type="button"
+            [disabled]="loading() || readingId() !== null"
+            (onClick)="moreRequested.emit()"
+          >
+            Load more
+          </i-button>
+        </div>
+      }
+    </div>
+  `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light"] }, { kind: "component", type: NotificationError, selector: "i-notification-error", inputs: ["message", "title", "retryDisabled", "retryLoading"], outputs: ["retry"] }, { kind: "component", type: INotificationItem, selector: "i-notification-item", inputs: ["item", "busy"], outputs: ["openRequested"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotificationDrawer, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-notification-drawer',
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    imports: [IButton, IIcon, ILoading, NotificationError, INotificationItem],
+                    template: `
+    <header class="px-lg py-md border-b border-subtle">
+      <div class="flex align-center justify-between gap-sm">
+        <h2 class="text-xl font-semibold m-0">Notifications</h2>
+        <div class="flex align-center gap-xs shrink-0">
+          <button
+            aria-label="Open all notifications in a new tab"
+            class="notification-icon-action flex align-center justify-center p-2xs border-none
+              bg-transparent text-gray-600 radius-sm"
+            title="Open All Notifications"
+            type="button"
+            (click)="openAllRequested.emit()"
+          >
+            <i-icon aria-hidden="true" icon="fa-solid fa-arrow-up-right-from-square" />
+          </button>
+          <button
+            aria-label="Close notifications"
+            class="notification-icon-action flex align-center justify-center p-2xs border-none
+              bg-transparent text-gray-600 radius-sm"
+            title="Close notifications"
+            type="button"
+            (click)="closeRequested.emit()"
+          >
+            <i-icon aria-hidden="true" icon="fa-solid fa-xmark" />
+          </button>
+        </div>
+      </div>
+      <div class="flex align-center gap-sm mt-2xs text-sm text-subtle">
+        <p aria-live="polite" class="m-0">You have {{ unreadCount() }} unread notifications</p>
+        <div
+          aria-atomic="true"
+          aria-live="polite"
+          class="notification-refresh-status flex align-center justify-center shrink-0"
+          role="status"
+          [attr.title]="
+            loading()
+              ? hasLoaded()
+                ? 'Refreshing notifications...'
+                : 'Loading notifications...'
+              : null
+          "
+        >
+          @if (loading()) {
+            <i-loading aria-hidden="true" label="" />
+            <span class="notification-refresh-label">
+              {{ hasLoaded() ? 'Refreshing notifications...' : 'Loading notifications...' }}
+            </span>
+          }
+        </div>
+      </div>
+    </header>
+    <div class="notification-scroll" [attr.aria-busy]="loading()" (scroll)="onScroll($event)">
+      @if (loading() && !hasLoaded() && items().length === 0) {
+        <div aria-hidden="true" class="notification-initial-space"></div>
+      } @else if (error() && items().length === 0) {
+        <i-notification-error [message]="error()" (retry)="retryRequested.emit()" />
+      } @else if (items().length === 0) {
+        <p class="p-2xl text-center text-subtle" role="status">No new notifications</p>
+      } @else {
+        <ul aria-label="Unread notification groups" class="list-none m-0 p-0">
+          @for (item of items(); track item.notificationId) {
+            <li class="border-b border-subtle">
+              <i-notification-item
+                [busy]="readingId() !== null"
+                [item]="item"
+                (openRequested)="itemOpened.emit($event)"
+              />
+            </li>
+          }
+        </ul>
+      }
+      @if (error() && items().length > 0) {
+        <i-notification-error
+          [message]="error()"
+          [retryLoading]="loading()"
+          (retry)="retryRequested.emit()"
+        />
+      }
+      @if (actionError()) {
+        <i-notification-error
+          title="Failed to mark notification as read."
+          [message]="actionError()"
+          [retryLoading]="readingId() !== null"
+          (retry)="readRetryRequested.emit()"
+        />
+      }
+      @if (loadingMore()) {
+        <div class="flex justify-center p-lg" role="status">
+          <i-loading label="Loading more notifications..." />
+        </div>
+      } @else if (loadMoreError()) {
+        <i-notification-error [message]="loadMoreError()" (retry)="moreRequested.emit()" />
+      } @else if (hasMore()) {
+        <div class="flex justify-center p-md">
+          <i-button
+            size="sm"
+            type="button"
+            [disabled]="loading() || readingId() !== null"
+            (onClick)="moreRequested.emit()"
+          >
+            Load more
+          </i-button>
+        </div>
+      }
+    </div>
+  `,
+                }]
+        }], propDecorators: { items: [{ type: i0.Input, args: [{ isSignal: true, alias: "items", required: false }] }], unreadCount: [{ type: i0.Input, args: [{ isSignal: true, alias: "unreadCount", required: false }] }], loading: [{ type: i0.Input, args: [{ isSignal: true, alias: "loading", required: false }] }], hasLoaded: [{ type: i0.Input, args: [{ isSignal: true, alias: "hasLoaded", required: false }] }], loadingMore: [{ type: i0.Input, args: [{ isSignal: true, alias: "loadingMore", required: false }] }], readingId: [{ type: i0.Input, args: [{ isSignal: true, alias: "readingId", required: false }] }], hasMore: [{ type: i0.Input, args: [{ isSignal: true, alias: "hasMore", required: false }] }], error: [{ type: i0.Input, args: [{ isSignal: true, alias: "error", required: false }] }], loadMoreError: [{ type: i0.Input, args: [{ isSignal: true, alias: "loadMoreError", required: false }] }], actionError: [{ type: i0.Input, args: [{ isSignal: true, alias: "actionError", required: false }] }], closeRequested: [{ type: i0.Output, args: ["closeRequested"] }], openAllRequested: [{ type: i0.Output, args: ["openAllRequested"] }], itemOpened: [{ type: i0.Output, args: ["itemOpened"] }], moreRequested: [{ type: i0.Output, args: ["moreRequested"] }], retryRequested: [{ type: i0.Output, args: ["retryRequested"] }], readRetryRequested: [{ type: i0.Output, args: ["readRetryRequested"] }] } });
+
+class INotificationSnackbar {
+    message = input.required(...(ngDevMode ? [{ debugName: "message" }] : []));
+    dismissRequested = output();
+    openRequested = output();
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotificationSnackbar, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: INotificationSnackbar, isStandalone: true, selector: "i-notification-snackbar", inputs: { message: { classPropertyName: "message", publicName: "message", isSignal: true, isRequired: true, transformFunction: null } }, outputs: { dismissRequested: "dismissRequested", openRequested: "openRequested" }, ngImport: i0, template: `
+    <div
+      aria-live="polite"
+      class="notification-snackbar flex align-center gap-md p-lg radius-md"
+      role="status"
+    >
+      <i-icon aria-hidden="true" [icon]="message().item?.icon ?? 'fa-solid fa-bell'" />
+      @if (message().item) {
+        <button
+          class="snackbar-content text-left border-none bg-transparent p-0 min-w-0 flex-fill"
+          type="button"
+          (click)="openRequested.emit()"
+        >
+          <span class="block font-semibold">{{ message().moduleName }}</span>
+          <span>{{ message().title }}</span>
+        </button>
+      } @else {
+        <span class="flex-fill">{{ message().title }}</span>
+      }
+      <i-button
+        ariaLabel="Dismiss notification"
+        icon="fa-solid fa-xmark"
+        size="xs"
+        type="button"
+        (onClick)="dismissRequested.emit()"
+      />
+    </div>
+  `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotificationSnackbar, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-notification-snackbar',
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    imports: [IButton, IIcon],
+                    template: `
+    <div
+      aria-live="polite"
+      class="notification-snackbar flex align-center gap-md p-lg radius-md"
+      role="status"
+    >
+      <i-icon aria-hidden="true" [icon]="message().item?.icon ?? 'fa-solid fa-bell'" />
+      @if (message().item) {
+        <button
+          class="snackbar-content text-left border-none bg-transparent p-0 min-w-0 flex-fill"
+          type="button"
+          (click)="openRequested.emit()"
+        >
+          <span class="block font-semibold">{{ message().moduleName }}</span>
+          <span>{{ message().title }}</span>
+        </button>
+      } @else {
+        <span class="flex-fill">{{ message().title }}</span>
+      }
+      <i-button
+        ariaLabel="Dismiss notification"
+        icon="fa-solid fa-xmark"
+        size="xs"
+        type="button"
+        (onClick)="dismissRequested.emit()"
+      />
+    </div>
+  `,
+                }]
+        }], propDecorators: { message: [{ type: i0.Input, args: [{ isSignal: true, alias: "message", required: true }] }], dismissRequested: [{ type: i0.Output, args: ["dismissRequested"] }], openRequested: [{ type: i0.Output, args: ["openRequested"] }] } });
+
+/** Controlled notification UI; consumers own data, navigation and timers. */
+class INotification {
+    state = input(...(ngDevMode ? [undefined, { debugName: "state" }] : []));
+    onAction = output();
+    retained = signal(false, ...(ngDevMode ? [{ debugName: "retained" }] : []));
+    constructor() {
+        effect(() => {
+            const state = this.state();
+            if (state?.open)
+                this.retained.set(true);
+            else if (!state)
+                this.retained.set(false);
+        });
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotification, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: INotification, isStandalone: true, selector: "i-notification", inputs: { state: { classPropertyName: "state", publicName: "state", isSignal: true, isRequired: false, transformFunction: null } }, outputs: { onAction: "onAction" }, ngImport: i0, template: `
+    @if (state(); as value) {
+      <i-notification-bell
+        [expanded]="value.open ?? false"
+        [unreadCount]="value.unreadCount"
+        (toggleRequested)="onAction.emit({ type: 'toggle' })"
+      />
+      @if (value.snackbar; as message) {
+        <i-notification-snackbar
+          [message]="message"
+          (dismissRequested)="onAction.emit({ type: 'dismiss-snackbar' })"
+          (openRequested)="message.item && onAction.emit({ type: 'open-item', item: message.item })"
+        />
+      }
+    }
+    @if (state(); as value) {
+      @if (value.open || retained()) {
+        <i-notification-overlay
+          [open]="value.open ?? false"
+          (closeRequested)="onAction.emit({ type: 'close' })"
+          (exited)="retained.set(false)"
+        >
+          <i-notification-drawer
+            [actionError]="value.actionError ?? null"
+            [error]="value.error ?? null"
+            [hasLoaded]="value.hasLoaded ?? false"
+            [hasMore]="value.hasMore ?? false"
+            [items]="value.items ?? []"
+            [loadMoreError]="value.loadMoreError ?? null"
+            [loading]="value.loading ?? false"
+            [loadingMore]="value.loadingMore ?? false"
+            [readingId]="value.readingId ?? null"
+            [unreadCount]="value.unreadCount"
+            (closeRequested)="onAction.emit({ type: 'close' })"
+            (itemOpened)="onAction.emit({ type: 'open-item', item: $event })"
+            (moreRequested)="onAction.emit({ type: 'load-more' })"
+            (openAllRequested)="onAction.emit({ type: 'open-all' })"
+            (readRetryRequested)="onAction.emit({ type: 'retry-read' })"
+            (retryRequested)="onAction.emit({ type: 'retry' })"
+          />
+        </i-notification-overlay>
+      }
+    }
+  `, isInline: true, dependencies: [{ kind: "component", type: NotificationOverlay, selector: "i-notification-overlay", inputs: ["open"], outputs: ["closeRequested", "exited"] }, { kind: "component", type: INotificationBell, selector: "i-notification-bell", inputs: ["unreadCount", "expanded"], outputs: ["toggleRequested"] }, { kind: "component", type: INotificationDrawer, selector: "i-notification-drawer", inputs: ["items", "unreadCount", "loading", "hasLoaded", "loadingMore", "readingId", "hasMore", "error", "loadMoreError", "actionError"], outputs: ["closeRequested", "openAllRequested", "itemOpened", "moreRequested", "retryRequested", "readRetryRequested"] }, { kind: "component", type: INotificationSnackbar, selector: "i-notification-snackbar", inputs: ["message"], outputs: ["dismissRequested", "openRequested"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotification, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-notification',
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    imports: [NotificationOverlay, INotificationBell, INotificationDrawer, INotificationSnackbar],
+                    template: `
+    @if (state(); as value) {
+      <i-notification-bell
+        [expanded]="value.open ?? false"
+        [unreadCount]="value.unreadCount"
+        (toggleRequested)="onAction.emit({ type: 'toggle' })"
+      />
+      @if (value.snackbar; as message) {
+        <i-notification-snackbar
+          [message]="message"
+          (dismissRequested)="onAction.emit({ type: 'dismiss-snackbar' })"
+          (openRequested)="message.item && onAction.emit({ type: 'open-item', item: message.item })"
+        />
+      }
+    }
+    @if (state(); as value) {
+      @if (value.open || retained()) {
+        <i-notification-overlay
+          [open]="value.open ?? false"
+          (closeRequested)="onAction.emit({ type: 'close' })"
+          (exited)="retained.set(false)"
+        >
+          <i-notification-drawer
+            [actionError]="value.actionError ?? null"
+            [error]="value.error ?? null"
+            [hasLoaded]="value.hasLoaded ?? false"
+            [hasMore]="value.hasMore ?? false"
+            [items]="value.items ?? []"
+            [loadMoreError]="value.loadMoreError ?? null"
+            [loading]="value.loading ?? false"
+            [loadingMore]="value.loadingMore ?? false"
+            [readingId]="value.readingId ?? null"
+            [unreadCount]="value.unreadCount"
+            (closeRequested)="onAction.emit({ type: 'close' })"
+            (itemOpened)="onAction.emit({ type: 'open-item', item: $event })"
+            (moreRequested)="onAction.emit({ type: 'load-more' })"
+            (openAllRequested)="onAction.emit({ type: 'open-all' })"
+            (readRetryRequested)="onAction.emit({ type: 'retry-read' })"
+            (retryRequested)="onAction.emit({ type: 'retry' })"
+          />
+        </i-notification-overlay>
+      }
+    }
+  `,
+                }]
+        }], ctorParameters: () => [], propDecorators: { state: [{ type: i0.Input, args: [{ isSignal: true, alias: "state", required: false }] }], onAction: [{ type: i0.Output, args: ["onAction"] }] } });
+
 function getMenuRoute(menu) {
     return menu?.route?.trim() || null;
 }
@@ -12868,6 +13783,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
         }] });
 
 class IHContent {
+    notification;
+    onNotificationAction = new EventEmitter();
     router = inject(Router);
     activatedRoute = inject(ActivatedRoute);
     // IMPORTANT: your app base href is intentionally "/-/"
@@ -13021,7 +13938,7 @@ class IHContent {
         return `${base}${abs.slice(1)}`.replace(/\/{2,}/g, '/');
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHContent, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHContent, isStandalone: true, selector: "ih-content", outputs: { onSidebarToggled: "onSidebarToggled", loading: "loading" }, ngImport: i0, template: `
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHContent, isStandalone: true, selector: "ih-content", inputs: { notification: "notification" }, outputs: { onNotificationAction: "onNotificationAction", onSidebarToggled: "onSidebarToggled", loading: "loading" }, ngImport: i0, template: `
     <div class="ih-content-header">
       <a class="i-clickable" (click)="toggleSidebar()">
         @if (sidebarVisibility) {
@@ -13035,6 +13952,11 @@ class IHContent {
       <h1>
         {{ shell.titleOverride() || shell.remoteTitle() || (pageTitle$ | async) || 'Insight' }}
       </h1>
+      @if (notification) {
+        <div class="ih-content-header-actions">
+          <i-notification [state]="notification" (onAction)="onNotificationAction.emit($event)" />
+        </div>
+      }
     </div>
 
     <div class="ih-content-breadcrumbs">
@@ -13113,13 +14035,13 @@ class IHContent {
     <div class="ih-content-body scroll scroll-y">
       <router-outlet />
     </div>
-  `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
+  `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "component", type: INotification, selector: "i-notification", inputs: ["state"], outputs: ["onAction"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHContent, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-content',
-                    imports: [RouterOutlet, AsyncPipe, RouterLink],
+                    imports: [RouterOutlet, AsyncPipe, RouterLink, INotification],
                     template: `
     <div class="ih-content-header">
       <a class="i-clickable" (click)="toggleSidebar()">
@@ -13134,6 +14056,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
       <h1>
         {{ shell.titleOverride() || shell.remoteTitle() || (pageTitle$ | async) || 'Insight' }}
       </h1>
+      @if (notification) {
+        <div class="ih-content-header-actions">
+          <i-notification [state]="notification" (onAction)="onNotificationAction.emit($event)" />
+        </div>
+      }
     </div>
 
     <div class="ih-content-breadcrumbs">
@@ -13214,7 +14141,11 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
     </div>
   `,
                 }]
-        }], propDecorators: { onSidebarToggled: [{
+        }], propDecorators: { notification: [{
+                type: Input
+            }], onNotificationAction: [{
+                type: Output
+            }], onSidebarToggled: [{
                 type: Output
             }], loading: [{
                 type: Output
@@ -13232,6 +14163,230 @@ const MENU_ICON_FALLBACK = 'fa-brands fa-microsoft';
  * apps override it via the `personalProfileUrl` input (per environment).
  */
 const DEFAULT_PERSONAL_PROFILE_URL = 'https://account-dev.paramountenterprise.co.id/personal-profile';
+
+const STATE_KEY = Symbol('sidebarMenuStateKey');
+const ACTIVE_KEY = Symbol('sidebarMenuActive');
+const ACTIVE_MENU_SCROLL_OFFSET = 16;
+/** Identifies rendered menu rows independently of search selection and drag IDs. */
+function getSidebarMenuKey(menu) {
+    return menu?.[STATE_KEY];
+}
+function isSidebarMenuActive(menu) {
+    return menu?.[ACTIVE_KEY] === true;
+}
+function createFavoritesMenu(favorites) {
+    return favorites.length
+        ? [
+            {
+                id: 'favorites',
+                name: 'Favorites',
+                type: 'group',
+                icon: 'fa-solid fa-star',
+                children: favorites,
+            },
+        ]
+        : [];
+}
+function children(menu) {
+    return menu.children ?? menu.child ?? [];
+}
+function stateKey(menu, scope, path) {
+    if (scope === 'favorites' && path === '0')
+        return 'favorites:group';
+    if (menu.id !== undefined && menu.id !== null)
+        return `${scope}:id:${menu.id}`;
+    if (menu.menuId !== undefined && menu.menuId !== null)
+        return `${scope}:menuId:${menu.menuId}`;
+    return `${scope}:path:${path}`;
+}
+function persistentKey(key) {
+    return key === 'favorites:group' || /^(main|favorites):(id|menuId):.+$/.test(key);
+}
+function normalizePath(value, baseHref) {
+    let path = '/' + value.split(/[?#]/)[0].replace(/^\/+|\/+$/g, '');
+    path = path.replace(/\/{2,}/g, '/');
+    const base = '/' + baseHref.replace(/^\/+|\/+$/g, '');
+    if (base !== '/' && (path === base || path.startsWith(base + '/'))) {
+        path = path.slice(base.length) || '/';
+    }
+    return path;
+}
+function isRouteLeaf(menu) {
+    return (menu.type !== 'group' &&
+        Number(menu.menuTypeId) !== 2 &&
+        (!children(menu).length || menu.visibility === 'no-child'));
+}
+function findRouteChain(nodes, target, baseHref) {
+    let best = [];
+    let length = -1;
+    const visit = (items, ancestors) => {
+        for (const menu of items) {
+            const chain = [...ancestors, menu];
+            const route = menu.route?.trim();
+            if (isRouteLeaf(menu) && route && !/^(?:[a-z][a-z\d+.-]*:|\/\/|[?#])/i.test(route)) {
+                const candidate = normalizePath(route, baseHref);
+                if ((target === candidate || (candidate !== '/' && target.startsWith(candidate + '/'))) &&
+                    candidate.length > length) {
+                    best = chain;
+                    length = candidate.length;
+                }
+            }
+            visit(children(menu), chain);
+        }
+    };
+    visit(nodes, []);
+    return best;
+}
+/** Resolves the current menu independently of one-time expansion and scrolling. */
+function resolveSidebarActiveMenu(menus, favorites, path, baseHref = '/') {
+    const target = normalizePath(path, baseHref);
+    let chain = findRouteChain(menus, target, baseHref);
+    if (!chain.length)
+        chain = findRouteChain(favorites, target, baseHref);
+    return chain[chain.length - 1];
+}
+/** Sidebar-owned expansion preferences and one-time active-route restoration. */
+class SidebarMenuState {
+    storageKey;
+    storage;
+    choices = new Map();
+    forcedExpanded = new Set();
+    initialPath;
+    baseHref = '/';
+    canceled = false;
+    target;
+    scrolled = false;
+    interacted = false;
+    constructor(key, storage = () => window.localStorage) {
+        this.storage = storage;
+        this.configureStorage(key);
+    }
+    configureStorage(key) {
+        if (key === this.storageKey)
+            return false;
+        this.storageKey = key;
+        this.choices = new Map();
+        if (key === null)
+            return true;
+        try {
+            const raw = JSON.parse(this.storage().getItem(key) ?? 'null');
+            if (!raw ||
+                typeof raw !== 'object' ||
+                !('version' in raw) ||
+                raw.version !== 1 ||
+                !('expanded' in raw) ||
+                !raw.expanded ||
+                typeof raw.expanded !== 'object' ||
+                Array.isArray(raw.expanded))
+                return true;
+            for (const [id, expanded] of Object.entries(raw.expanded)) {
+                if (persistentKey(id) && typeof expanded === 'boolean')
+                    this.choices.set(id, expanded);
+            }
+        }
+        catch {
+            // Invalid or inaccessible storage leaves preferences in memory.
+        }
+        return true;
+    }
+    project(menus, scope = 'main', activeMenu) {
+        const activeId = activeMenu?.id ?? activeMenu?.menuId;
+        const visit = (nodes, prefix) => nodes.map((menu, index) => {
+            const path = prefix ? `${prefix}.${index}` : String(index);
+            const key = stateKey(menu, scope, path);
+            const copy = {
+                ...menu,
+                [STATE_KEY]: key,
+                [ACTIVE_KEY]: isRouteLeaf(menu) &&
+                    (menu === activeMenu ||
+                        (activeId !== undefined &&
+                            activeId !== null &&
+                            (menu.id ?? menu.menuId) === activeId)),
+            };
+            if (menu.children !== undefined)
+                copy.children = visit(menu.children, path);
+            if (menu.child !== undefined)
+                copy.child = visit(menu.child, path);
+            const group = menu.type === 'group' || Number(menu.menuTypeId) === 2 || children(menu).length > 0;
+            if (group && menu.visibility !== 'no-child') {
+                const expanded = this.forcedExpanded.has(key) ? true : this.choices.get(key);
+                if (expanded !== undefined)
+                    copy.visibility = expanded ? 'expanded' : 'collapsed';
+            }
+            return copy;
+        });
+        return visit(menus, '');
+    }
+    setExpanded({ menu, expanded }) {
+        const key = getSidebarMenuKey(menu);
+        if (!key || menu.visibility === 'no-child')
+            return;
+        this.interacted = true;
+        this.choices.set(key, expanded);
+        this.forcedExpanded.delete(key);
+        if (!expanded && this.target?.ancestors.includes(key))
+            this.scrolled = true;
+        if (this.storageKey === null || this.storageKey === undefined)
+            return;
+        try {
+            const stored = Object.fromEntries([...this.choices].filter(([id]) => persistentKey(id)));
+            this.storage().setItem(this.storageKey, JSON.stringify({ version: 1, expanded: stored }));
+        }
+        catch {
+            // Keep menu interactions available when storage is blocked or full.
+        }
+    }
+    observeLocation(path, baseHref = '/') {
+        const normalized = normalizePath(path, baseHref);
+        if (this.initialPath !== undefined && this.initialPath !== normalized)
+            this.canceled = true;
+        this.initialPath ??= normalized;
+        this.baseHref = baseHref;
+    }
+    get hasLocation() {
+        return this.initialPath !== undefined;
+    }
+    restore(menus, favorites = []) {
+        if (this.initialPath === undefined ||
+            this.canceled ||
+            (this.target && (this.target.scope === 'main' || this.interacted)))
+            return false;
+        let chain = findRouteChain(this.project(menus), this.initialPath, this.baseHref);
+        let scope = 'main';
+        if (!chain.length) {
+            if (this.target)
+                return false;
+            chain = findRouteChain(this.project(favorites, 'favorites'), this.initialPath, this.baseHref);
+            scope = 'favorites';
+        }
+        if (!chain.length)
+            return false;
+        const key = getSidebarMenuKey(chain[chain.length - 1]);
+        const ancestors = chain.slice(0, -1).map((menu) => getSidebarMenuKey(menu));
+        // Prefer a hydrated main-tree match over a provisional Favorites target.
+        for (const ancestor of this.target?.ancestors ?? [])
+            this.forcedExpanded.delete(ancestor);
+        this.target = { key, ancestors, scope };
+        this.scrolled = false;
+        for (const ancestor of ancestors)
+            this.forcedExpanded.add(ancestor);
+        return true;
+    }
+    scrollToActive(host, visible) {
+        if (!visible || this.canceled || !this.target || this.scrolled)
+            return;
+        const body = host.querySelector('.ih-sidebar-body');
+        const row = [...host.querySelectorAll('a[data-sidebar-menu-key]')].find((element) => element.getAttribute('data-sidebar-menu-key') === this.target.key);
+        if (!body || !row || row.closest('ul.collapsed'))
+            return;
+        const viewport = body.getBoundingClientRect();
+        const bounds = row.getBoundingClientRect();
+        if (!viewport.height || !bounds.height)
+            return;
+        body.scrollTop = Math.max(0, body.scrollTop + bounds.top - viewport.top - ACTIVE_MENU_SCROLL_OFFSET);
+        this.scrolled = true;
+    }
+}
 
 class IHMenu {
     confirmService = inject(IConfirmService);
@@ -13253,14 +14408,19 @@ class IHMenu {
     pathByKey;
     clicked = new EventEmitter();
     favoriteToggle = new EventEmitter();
+    expandedChange = new EventEmitter();
     menus;
     /** Template-bound helper for stable `@for` tracking (UUID-first). */
     getMenuKey = getMenuKey;
+    getSidebarMenuKey = getSidebarMenuKey;
     // the actual clickable DOM element (only on leaf items)
     menuItemRef;
     isHidden = false;
     get menuRoute() {
         return getMenuRoute(this.menu);
+    }
+    get isActive() {
+        return isSidebarMenuActive(this.menu);
     }
     get isSpa() {
         return isSpaMenu(this.menu);
@@ -13389,6 +14549,7 @@ class IHMenu {
             // Treat an unset visibility as expanded so a default (flat) group
             // collapses on the first click (modern nodes have no visibility).
             this.menu.visibility = this.isGroupExpanded ? 'collapsed' : 'expanded';
+            this.expandedChange.emit({ menu: this.menu, expanded: this.isGroupExpanded });
         }
         else {
             this.clicked.emit(this.menu);
@@ -13435,7 +14596,7 @@ class IHMenu {
         }
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHMenu, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter", favoriteMode: "favoriteMode", collapsible: "collapsible", depth: "depth", dragEnabled: "dragEnabled", showApplication: "showApplication", pathByKey: "pathByKey" }, outputs: { clicked: "clicked", favoriteToggle: "favoriteToggle" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHMenu, isStandalone: true, selector: "ih-menu", inputs: { menu: "menu", selectedMenuId: "selectedMenuId", filter: "filter", favoriteMode: "favoriteMode", collapsible: "collapsible", depth: "depth", dragEnabled: "dragEnabled", showApplication: "showApplication", pathByKey: "pathByKey" }, outputs: { clicked: "clicked", favoriteToggle: "favoriteToggle", expandedChange: "expandedChange" }, host: { attributes: { "data-ih-menu": "" }, properties: { "class.hidden": "this.isHidden" } }, viewQueries: [{ propertyName: "menuItemRef", first: true, predicate: ["menuItem"], descendants: true }, { propertyName: "menus", predicate: IHMenu, descendants: true }], usesOnChanges: true, ngImport: i0, template: `
     @if (menu) {
       @let hasChild = menuHasChildren;
       @let route = menuRoute;
@@ -13498,7 +14659,10 @@ class IHMenu {
               class="is-new-tab"
               rel="noopener noreferrer"
               target="_blank"
+              [attr.aria-current]="isActive ? 'page' : null"
               [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [attr.data-sidebar-menu-key]="getSidebarMenuKey(menu)"
+              [class.is-active]="isActive"
               [class.is-selected]="isSelected"
               [href]="hrefWithMenuFilter(route)"
             >
@@ -13541,7 +14705,10 @@ class IHMenu {
               #menuItem
               class="is-reload"
               target="_self"
+              [attr.aria-current]="isActive ? 'page' : null"
               [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [attr.data-sidebar-menu-key]="getSidebarMenuKey(menu)"
+              [class.is-active]="isActive"
               [class.is-selected]="isSelected"
               [href]="hrefWithMenuFilter(route)"
             >
@@ -13583,7 +14750,10 @@ class IHMenu {
             <a
               #menuItem
               class="is-spa"
+              [attr.aria-current]="isActive ? 'page' : null"
               [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [attr.data-sidebar-menu-key]="getSidebarMenuKey(menu)"
+              [class.is-active]="isActive"
               [class.is-selected]="isSelected"
               [queryParamsHandling]="'merge'"
               [routerLink]="route"
@@ -13627,7 +14797,7 @@ class IHMenu {
             [class.collapsed]="(isGroupNode || isModuleNode) && collapsible && !isGroupExpanded"
             [class.expanded]="(isGroupNode || isModuleNode) && collapsible && isGroupExpanded"
           >
-            @for (m of menuChildrenList; track getMenuKey(m)) {
+            @for (m of menuChildrenList; track getSidebarMenuKey(m) ?? getMenuKey(m)) {
               <ih-menu
                 [collapsible]="collapsible"
                 [depth]="depth + 1"
@@ -13638,6 +14808,7 @@ class IHMenu {
                 [pathByKey]="pathByKey"
                 [selectedMenuId]="selectedMenuId"
                 [showApplication]="showApplication"
+                (expandedChange)="expandedChange.emit($event)"
                 (favoriteToggle)="onChildFavoriteToggle($event)"
               />
             }
@@ -13645,7 +14816,7 @@ class IHMenu {
         }
       </li>
     }
-  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
+  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle", "expandedChange"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHMenu, decorators: [{
             type: Component,
@@ -13716,7 +14887,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
               class="is-new-tab"
               rel="noopener noreferrer"
               target="_blank"
+              [attr.aria-current]="isActive ? 'page' : null"
               [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [attr.data-sidebar-menu-key]="getSidebarMenuKey(menu)"
+              [class.is-active]="isActive"
               [class.is-selected]="isSelected"
               [href]="hrefWithMenuFilter(route)"
             >
@@ -13759,7 +14933,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
               #menuItem
               class="is-reload"
               target="_self"
+              [attr.aria-current]="isActive ? 'page' : null"
               [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [attr.data-sidebar-menu-key]="getSidebarMenuKey(menu)"
+              [class.is-active]="isActive"
               [class.is-selected]="isSelected"
               [href]="hrefWithMenuFilter(route)"
             >
@@ -13801,7 +14978,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             <a
               #menuItem
               class="is-spa"
+              [attr.aria-current]="isActive ? 'page' : null"
               [attr.data-menu-id]="dragEnabled ? getMenuKey(menu) : null"
+              [attr.data-sidebar-menu-key]="getSidebarMenuKey(menu)"
+              [class.is-active]="isActive"
               [class.is-selected]="isSelected"
               [queryParamsHandling]="'merge'"
               [routerLink]="route"
@@ -13845,7 +15025,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             [class.collapsed]="(isGroupNode || isModuleNode) && collapsible && !isGroupExpanded"
             [class.expanded]="(isGroupNode || isModuleNode) && collapsible && isGroupExpanded"
           >
-            @for (m of menuChildrenList; track getMenuKey(m)) {
+            @for (m of menuChildrenList; track getSidebarMenuKey(m) ?? getMenuKey(m)) {
               <ih-menu
                 [collapsible]="collapsible"
                 [depth]="depth + 1"
@@ -13856,6 +15036,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 [pathByKey]="pathByKey"
                 [selectedMenuId]="selectedMenuId"
                 [showApplication]="showApplication"
+                (expandedChange)="expandedChange.emit($event)"
                 (favoriteToggle)="onChildFavoriteToggle($event)"
               />
             }
@@ -13886,6 +15067,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             }], clicked: [{
                 type: Output
             }], favoriteToggle: [{
+                type: Output
+            }], expandedChange: [{
                 type: Output
             }], menus: [{
                 type: ViewChildren,
@@ -14081,11 +15264,274 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 }]
         }] });
 
+/** Framework-independent sidebar interaction; kept identical in both libraries. */
+class SidebarResizeController {
+    host;
+    handle;
+    changed;
+    committed;
+    document;
+    view;
+    defaultWidth;
+    originalWidth;
+    originalPriority;
+    options;
+    initialized = false;
+    loadedStorageKey;
+    width;
+    drag = null;
+    constructor(host, handle, options, changed, committed) {
+        this.host = host;
+        this.handle = handle;
+        this.changed = changed;
+        this.committed = committed;
+        this.document = host.ownerDocument;
+        this.view = this.document.defaultView;
+        this.originalWidth = host.style.getPropertyValue('--i-sidebar-width');
+        this.originalPriority = host.style.getPropertyPriority('--i-sidebar-width');
+        this.host.classList.add('is-width-initializing');
+        this.defaultWidth = this.readDefaultWidth();
+        this.width = this.defaultWidth;
+        this.options = this.normalize(options);
+        this.handle.addEventListener('pointerdown', this.onPointerDown);
+        this.handle.addEventListener('keydown', this.onKeyDown);
+        this.configure(options);
+        this.host.classList.remove('is-width-initializing');
+    }
+    configure(options) {
+        const initialWidth = !this.initialized;
+        const next = this.normalize(options);
+        const keyChanged = next.widthStorageKey !== this.options.widthStorageKey;
+        const boundsChanged = next.minWidth !== this.options.minWidth || next.maxWidth !== this.options.maxWidth;
+        if (!next.resizable || !next.visible || keyChanged || boundsChanged)
+            this.cancel();
+        this.options = next;
+        if (next.resizable && (!this.initialized || next.widthStorageKey !== this.loadedStorageKey)) {
+            this.initialized = true;
+            this.loadedStorageKey = next.widthStorageKey;
+            this.width = this.readStoredWidth() ?? this.defaultWidth;
+        }
+        if (this.initialized)
+            this.render(this.width, initialWidth);
+        else
+            this.publish();
+    }
+    destroy() {
+        this.cancel();
+        this.handle.removeEventListener('pointerdown', this.onPointerDown);
+        this.handle.removeEventListener('keydown', this.onKeyDown);
+        if (this.originalWidth) {
+            this.host.style.setProperty('--i-sidebar-width', this.originalWidth, this.originalPriority);
+        }
+        else {
+            this.host.style.removeProperty('--i-sidebar-width');
+        }
+    }
+    normalize(options) {
+        const minWidth = Number.isFinite(options.minWidth) && options.minWidth > 0 ? options.minWidth : 220;
+        const maxWidth = Number.isFinite(options.maxWidth) && options.maxWidth > 0 ? options.maxWidth : 480;
+        return { ...options, minWidth, maxWidth: Math.max(minWidth, maxWidth) };
+    }
+    readDefaultWidth() {
+        const probe = this.document.createElement('div');
+        probe.style.cssText =
+            'position:absolute;visibility:hidden;pointer-events:none;' +
+                'width:var(--i-sidebar-width,260px);height:0;padding:0;border:0;';
+        this.host.appendChild(probe);
+        const resolved = this.view.getComputedStyle(probe).width;
+        const token = this.view
+            .getComputedStyle(this.host)
+            .getPropertyValue('--i-sidebar-width')
+            .trim();
+        probe.remove();
+        const value = /^\d+(\.\d+)?px$/.test(resolved)
+            ? parseFloat(resolved)
+            : /^\d+(\.\d+)?px$/.test(token)
+                ? parseFloat(token)
+                : 260;
+        return value > 0 ? value : 260;
+    }
+    readStoredWidth() {
+        if (this.options.widthStorageKey === null)
+            return null;
+        try {
+            const raw = this.view.localStorage.getItem(this.options.widthStorageKey);
+            if (raw === null || !raw.trim())
+                return null;
+            const width = Number(raw);
+            return Number.isFinite(width) && width > 0 ? width : null;
+        }
+        catch {
+            return null;
+        }
+    }
+    clamp(width) {
+        return Math.min(this.options.maxWidth, Math.max(this.options.minWidth, width));
+    }
+    render(width, immediate = false) {
+        this.width = this.clamp(width);
+        if (immediate)
+            this.host.classList.add('is-width-initializing');
+        this.host.style.setProperty('--i-sidebar-width', `${this.width}px`);
+        if (immediate) {
+            // Resolve the initial width before restoring hide/show transitions.
+            this.host.getBoundingClientRect();
+            this.host.classList.remove('is-width-initializing');
+        }
+        this.publish();
+    }
+    publish() {
+        this.changed({
+            width: this.width,
+            minWidth: this.options.minWidth,
+            maxWidth: this.options.maxWidth,
+        });
+    }
+    commit(previousWidth) {
+        if (this.width === previousWidth)
+            return;
+        if (this.options.widthStorageKey !== null) {
+            try {
+                this.view.localStorage.setItem(this.options.widthStorageKey, String(this.width));
+            }
+            catch {
+                // Keep resizing available when storage is blocked or full.
+            }
+        }
+        this.committed(this.width);
+    }
+    onPointerDown = (event) => {
+        if (!this.options.resizable ||
+            !this.options.visible ||
+            this.drag ||
+            !event.isPrimary ||
+            event.button !== 0)
+            return;
+        event.preventDefault();
+        this.handle.focus();
+        this.drag = { pointerId: event.pointerId, x: event.clientX, width: this.width };
+        this.host.classList.add('is-resizing');
+        this.document.documentElement.classList.add('ih-sidebar-resizing');
+        this.document.addEventListener('pointermove', this.onPointerMove);
+        this.document.addEventListener('pointerup', this.onPointerUp);
+        this.document.addEventListener('pointercancel', this.onPointerCancel);
+        this.document.addEventListener('keydown', this.onDragKeyDown, true);
+        this.handle.addEventListener('lostpointercapture', this.onPointerCancel);
+        this.view.addEventListener('blur', this.onBlur);
+        try {
+            this.handle.setPointerCapture(event.pointerId);
+        }
+        catch {
+            // Document listeners also support environments without pointer capture.
+        }
+    };
+    onPointerMove = (event) => {
+        if (!this.drag || this.drag.pointerId !== event.pointerId)
+            return;
+        event.preventDefault();
+        let width = this.clamp(this.drag.width + event.clientX - this.drag.x);
+        if (this.defaultWidth >= this.options.minWidth &&
+            this.defaultWidth <= this.options.maxWidth &&
+            Math.abs(width - this.defaultWidth) <= 12) {
+            width = this.defaultWidth;
+        }
+        this.render(width);
+    };
+    onPointerUp = (event) => {
+        if (!this.drag || this.drag.pointerId !== event.pointerId)
+            return;
+        const previousWidth = this.drag.width;
+        this.cleanupDrag();
+        this.commit(previousWidth);
+    };
+    onPointerCancel = (event) => {
+        if (this.drag?.pointerId === event.pointerId)
+            this.cancel();
+    };
+    onBlur = () => this.cancel();
+    onDragKeyDown = (event) => {
+        if (event.key !== 'Escape')
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.cancel();
+    };
+    onKeyDown = (event) => {
+        if (!this.options.resizable || !this.options.visible || this.drag)
+            return;
+        let width = this.width;
+        const step = event.shiftKey ? 50 : 10;
+        switch (event.key) {
+            case 'ArrowLeft':
+                width -= step;
+                break;
+            case 'ArrowRight':
+                width += step;
+                break;
+            case 'Home':
+                width = this.options.minWidth;
+                break;
+            case 'End':
+                width = this.options.maxWidth;
+                break;
+            default:
+                return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        const previousWidth = this.width;
+        this.render(width);
+        this.commit(previousWidth);
+    };
+    cancel() {
+        if (!this.drag)
+            return;
+        const width = this.drag.width;
+        this.cleanupDrag();
+        this.render(width);
+    }
+    cleanupDrag() {
+        const pointerId = this.drag?.pointerId;
+        this.drag = null;
+        this.document.removeEventListener('pointermove', this.onPointerMove);
+        this.document.removeEventListener('pointerup', this.onPointerUp);
+        this.document.removeEventListener('pointercancel', this.onPointerCancel);
+        this.document.removeEventListener('keydown', this.onDragKeyDown, true);
+        this.handle.removeEventListener('lostpointercapture', this.onPointerCancel);
+        this.view.removeEventListener('blur', this.onBlur);
+        this.host.classList.remove('is-resizing');
+        if (!this.document.querySelector('ih-sidebar.is-resizing')) {
+            this.document.documentElement.classList.remove('ih-sidebar-resizing');
+        }
+        if (pointerId !== undefined) {
+            try {
+                if (this.handle.hasPointerCapture(pointerId))
+                    this.handle.releasePointerCapture(pointerId);
+            }
+            catch {
+                // The browser may already have released capture after cancellation.
+            }
+        }
+    }
+}
+
 class IHSidebar {
     router = inject(Router);
     hostElement = inject(ElementRef);
     sessionService = inject(ISessionService);
     config = inject(I_AUTH_CONFIG);
+    baseHref = inject(APP_BASE_HREF, { optional: true }) ??
+        new URL(document.baseURI).pathname;
+    menuState = new SidebarMenuState(null);
+    activeMenu;
+    menuRevision$ = new BehaviorSubject(0);
+    menuStateRevision = signal(0, ...(ngDevMode ? [{ debugName: "menuStateRevision" }] : []));
+    navigationSubscription;
+    menuScrollFrame = null;
+    destroyed = false;
+    resizeHandle;
+    resizeController;
+    resizeState = signal({ width: 260, minWidth: 220, maxWidth: 480 }, ...(ngDevMode ? [{ debugName: "resizeState" }] : []));
     /** Sidebar user chip dropdown (Personal Profile / Logout) open state. */
     accountMenuOpen = signal(false, ...(ngDevMode ? [{ debugName: "accountMenuOpen" }] : []));
     onDocumentKeydown = (event) => {
@@ -14128,6 +15574,14 @@ class IHSidebar {
     user$;
     menusInput$;
     visible = true;
+    /** Enable pointer and keyboard resizing with a persistent width preference. */
+    resizable = true;
+    minWidth = 220;
+    maxWidth = 480;
+    /** Set to null to keep the width in memory only. */
+    widthStorageKey = 'insight.sidebar.width';
+    /** Expansion preferences are shared per origin; null disables persistence. */
+    menuStateStorageKey = 'insight.sidebar.menu-state';
     impersonating = false;
     footerText = 'Insight Local';
     /** When true, leaf items render a pin/star toggle and the Favorites section is shown. */
@@ -14150,6 +15604,8 @@ class IHSidebar {
     onFavoriteToggle = new EventEmitter();
     /** Emitted after a favorites drag-drop with the ordered favorite menu ids - the host app persists via the reorder API. */
     onFavoriteReorder = new EventEmitter();
+    /** Emitted after a completed pointer or keyboard width change, in pixels. */
+    onWidthChange = new EventEmitter();
     /* ---------------------------
      * INTERNAL STREAMS / STATE
      * --------------------------- */
@@ -14164,7 +15620,10 @@ class IHSidebar {
     dragOverIndex = signal(null, ...(ngDevMode ? [{ debugName: "dragOverIndex" }] : []));
     /** Template-bound helper for stable `@for` tracking. */
     getMenuKey = getMenuKey;
+    getSidebarMenuKey = getSidebarMenuKey;
     favoritesGroupCache = null;
+    favoritesGroupSource = null;
+    favoritesGroupRevision = -1;
     /** Latest favorites array mirrored from `favorites$` - source of truth for drag reorder. */
     favoriteItems = signal([], ...(ngDevMode ? [{ debugName: "favoriteItems" }] : []));
     /** Full (unfiltered) normalized menu tree - source for favorite ancestor paths. */
@@ -14199,6 +15658,8 @@ class IHSidebar {
         });
     }
     ngOnInit() {
+        this.menuState.configureStorage(this.menuStateStorageKey);
+        this.resizeController = new SidebarResizeController(this.hostElement.nativeElement, this.resizeHandle.nativeElement, this.resizeOptions(), (state) => this.resizeState.set(state), (width) => this.onWidthChange.emit(width));
         document.addEventListener('keydown', this.onDocumentKeydown);
         document.addEventListener('pointerdown', this.onDocumentPointerDown);
         const searchParams = new URLSearchParams(window.location.search);
@@ -14207,6 +15668,10 @@ class IHSidebar {
             initialQueryParams[key] = value;
         });
         this.queryParams = initialQueryParams;
+        if (this.router.navigated) {
+            this.queryParams = { ...this.queryParams, ...this.router.parseUrl(this.router.url).queryParams };
+            this.menuState.observeLocation(this.router.url, this.baseHref);
+        }
         const initialFilter = this.queryParams['menu-filter'] ?? '';
         this.menuFilter.set(initialFilter);
         this.menuSearch.setValue(initialFilter, { emitEvent: false });
@@ -14214,8 +15679,31 @@ class IHSidebar {
         this.buildMenusStream();
         this.subscribeFullMenus();
         this.subscribeFavorites();
+        this.navigationSubscription = this.router.events.subscribe((event) => {
+            if (!(event instanceof NavigationEnd))
+                return;
+            if (!this.menuState.hasLocation) {
+                const params = this.router.parseUrl(event.urlAfterRedirects).queryParams;
+                this.queryParams = { ...this.queryParams, ...params };
+                if (params['menu-filter'] !== undefined && params['menu-filter'] !== this.menuSearch.value) {
+                    this.menuSearch.setValue(params['menu-filter']);
+                }
+            }
+            this.menuState.observeLocation(event.urlAfterRedirects, this.baseHref);
+            this.restoreActiveMenu();
+        });
     }
     ngOnChanges(changes) {
+        if (changes['menuStateStorageKey'] && !changes['menuStateStorageKey'].firstChange) {
+            this.menuState.configureStorage(this.menuStateStorageKey);
+            this.refreshMenuState();
+        }
+        if (changes['visible'] || changes['favoriteMode'])
+            this.restoreActiveMenu();
+        if (changes['visible'] || changes['resizable'] || changes['minWidth'] ||
+            changes['maxWidth'] || changes['widthStorageKey']) {
+            this.resizeController?.configure(this.resizeOptions());
+        }
         if (changes['menusInput$'] && !changes['menusInput$'].firstChange) {
             this.originalMenus$ = this.normalizeMenusStream();
             this.buildMenusStream();
@@ -14226,6 +15714,12 @@ class IHSidebar {
         }
     }
     ngOnDestroy() {
+        this.destroyed = true;
+        this.navigationSubscription?.unsubscribe();
+        if (this.menuScrollFrame !== null)
+            cancelAnimationFrame(this.menuScrollFrame);
+        this.menuRevision$.complete();
+        this.resizeController?.destroy();
         document.removeEventListener('keydown', this.onDocumentKeydown);
         document.removeEventListener('pointerdown', this.onDocumentPointerDown);
         this.favoritesSubscription?.unsubscribe();
@@ -14235,15 +15729,62 @@ class IHSidebar {
             this.cleanupFavoriteDrag();
         }
     }
+    resizeOptions() {
+        return {
+            resizable: this.resizable,
+            visible: this.visible,
+            minWidth: this.minWidth,
+            maxWidth: this.maxWidth,
+            widthStorageKey: this.widthStorageKey,
+        };
+    }
     /** Mirrors the `favorites$` input into the local `favoriteItems` signal. */
     subscribeFavorites() {
         this.favoritesSubscription?.unsubscribe();
-        this.favoritesSubscription = (this.favorites$ ?? of([])).subscribe((favs) => this.favoriteItems.set(favs ?? []));
+        this.favoritesSubscription = (this.favorites$ ?? of([])).subscribe((favs) => {
+            this.favoriteItems.set(favs ?? []);
+            this.restoreActiveMenu();
+        });
     }
     /** Mirrors the full (unfiltered) normalized menu tree into the `fullMenus` signal. */
     subscribeFullMenus() {
         this.fullMenusSubscription?.unsubscribe();
-        this.fullMenusSubscription = this.originalMenus$.subscribe((menus) => this.fullMenus.set(menus));
+        this.fullMenusSubscription = this.originalMenus$.subscribe((menus) => {
+            this.fullMenus.set(menus);
+            this.restoreActiveMenu();
+        });
+    }
+    onMenuExpansion(event) {
+        this.menuState.setExpanded(event);
+        this.refreshMenuState();
+    }
+    refreshMenuState() {
+        this.menuStateRevision.update((revision) => revision + 1);
+        this.menuRevision$.next(this.menuStateRevision());
+        this.scheduleMenuScroll();
+    }
+    restoreActiveMenu() {
+        const favorites = this.favoriteMode ? createFavoritesMenu(this.favoriteItems()) : [];
+        const activeMenu = this.router.navigated
+            ? resolveSidebarActiveMenu(this.fullMenus(), favorites, this.router.url, this.baseHref)
+            : undefined;
+        const activeChanged = this.activeMenu !== activeMenu;
+        this.activeMenu = activeMenu;
+        const restored = this.menuState.restore(this.fullMenus(), favorites);
+        if (restored || activeChanged)
+            this.refreshMenuState();
+        else
+            this.scheduleMenuScroll();
+    }
+    scheduleMenuScroll() {
+        if (this.destroyed)
+            return;
+        if (this.menuScrollFrame !== null)
+            cancelAnimationFrame(this.menuScrollFrame);
+        this.menuScrollFrame = requestAnimationFrame(() => {
+            this.menuScrollFrame = null;
+            this.menuState.scrollToActive(this.hostElement.nativeElement, this.visible);
+        });
     }
     dragState = null;
     /** Document mousemove during an active favorites drag (live reorder preview). */
@@ -14363,7 +15904,7 @@ class IHSidebar {
      * shape on ingestion. Legacy menus pass through untouched.
      */
     normalizeMenusStream() {
-        return (this.menusInput$ ?? new Observable()).pipe(map((menus) => normalizeMenuTree(menus)), shareReplay$1(1));
+        return (this.menusInput$ ?? of([])).pipe(map((menus) => normalizeMenuTree(menus)), shareReplay$1({ bufferSize: 1, refCount: true }));
     }
     buildMenusStream() {
         let firstEmission = true;
@@ -14375,7 +15916,10 @@ class IHSidebar {
             }
             this.updateUrl();
         }));
-        this.menus$ = combineLatest([this.originalMenus$, filter$]).pipe(map(([menus, term]) => this.filterMenuTree(menus, term)), tap$1((filteredMenus) => this.updateNavigableMenus(filteredMenus)), shareReplay$1(1));
+        this.menus$ = combineLatest([this.originalMenus$, filter$, this.menuRevision$]).pipe(map(([menus, term]) => this.filterMenuTree(this.menuState.project(menus, 'main', this.activeMenu), term)), tap$1((filteredMenus) => {
+            this.updateNavigableMenus(filteredMenus);
+            this.scheduleMenuScroll();
+        }), shareReplay$1({ bufferSize: 1, refCount: true }));
     }
     filterMenuTree(menus, rawTerm) {
         const term = (rawTerm ?? '').trim().toLowerCase();
@@ -14568,17 +16112,13 @@ class IHSidebar {
     getFavoritesGroup(favorites) {
         if (!favorites || favorites.length === 0)
             return null;
-        if (this.favoritesGroupCache?.children === favorites) {
+        const revision = this.menuStateRevision();
+        if (this.favoritesGroupSource === favorites && this.favoritesGroupRevision === revision) {
             return this.favoritesGroupCache;
         }
-        this.favoritesGroupCache = {
-            id: SIDEBAR_FAVORITES_GROUP_ID,
-            name: 'Favorites',
-            type: 'group',
-            icon: 'fa-solid fa-star',
-            sequence: 0,
-            children: favorites,
-        };
+        this.favoritesGroupSource = favorites;
+        this.favoritesGroupRevision = revision;
+        this.favoritesGroupCache = this.menuState.project(createFavoritesMenu(favorites), 'favorites', this.activeMenu)[0];
         return this.favoritesGroupCache;
     }
     navigateToMenu(menu) {
@@ -14618,7 +16158,7 @@ class IHSidebar {
         this.queryParams = queryParams;
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHSidebar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", impersonating: "impersonating", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible", personalProfileUrl: "personalProfileUrl" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder" }, host: { properties: { "class.hidden": "this.sidebarVisibility" } }, usesOnChanges: true, ngImport: i0, template: `
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", resizable: "resizable", minWidth: "minWidth", maxWidth: "maxWidth", widthStorageKey: "widthStorageKey", menuStateStorageKey: "menuStateStorageKey", impersonating: "impersonating", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible", personalProfileUrl: "personalProfileUrl" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder", onWidthChange: "onWidthChange" }, host: { properties: { "class.hidden": "this.sidebarVisibility" } }, viewQueries: [{ propertyName: "resizeHandle", first: true, predicate: ["resizeHandle"], descendants: true, static: true }], usesOnChanges: true, ngImport: i0, template: `
     @let user = user$ | async;
     <div class="ih-sidebar-header">
       @if (user) {
@@ -14699,6 +16239,7 @@ class IHSidebar {
               [pathByKey]="favoritePaths()"
               [selectedMenuId]="selectedMenuId()"
               [showApplication]="true"
+              (expandedChange)="onMenuExpansion($event)"
               (favoriteToggle)="onFavoriteToggle.emit($event)"
             />
           </ul>
@@ -14717,7 +16258,7 @@ class IHSidebar {
                 <small>{{ group.label }}</small>
               </li>
             }
-            @for (m of group.roots; track getMenuKey(m)) {
+            @for (m of group.roots; track getSidebarMenuKey(m) ?? getMenuKey(m)) {
               <ih-menu
                 [collapsible]="collapsible"
                 [depth]="0"
@@ -14725,6 +16266,7 @@ class IHSidebar {
                 [filter]="menuFilter()"
                 [menu]="m"
                 [selectedMenuId]="selectedMenuId()"
+                (expandedChange)="onMenuExpansion($event)"
                 (favoriteToggle)="onFavoriteToggle.emit($event)"
               />
             }
@@ -14736,7 +16278,19 @@ class IHSidebar {
     <div class="ih-sidebar-footer">
       <small>{{ footerText }}</small>
     </div>
-  `, isInline: true, dependencies: [{ kind: "component", type: IAvatar, selector: "i-avatar", inputs: ["src", "alt", "size", "shape", "fallbackSrc", "className"] }, { kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.DefaultValueAccessor, selector: "input:not([type=checkbox])[formControlName],textarea[formControlName],input:not([type=checkbox])[formControl],textarea[formControl],input:not([type=checkbox])[ngModel],textarea[ngModel],[ngDefaultControl]" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.FormControlDirective, selector: "[formControl]", inputs: ["formControl", "disabled", "ngModel"], outputs: ["ngModelChange"], exportAs: ["ngForm"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
+    <div
+      #resizeHandle
+      aria-label="Resize sidebar"
+      aria-orientation="vertical"
+      class="ih-sidebar-resize-handle"
+      role="separator"
+      [attr.aria-valuemax]="resizeState().maxWidth"
+      [attr.aria-valuemin]="resizeState().minWidth"
+      [attr.aria-valuenow]="resizeState().width"
+      [attr.tabindex]="resizable && visible ? 0 : -1"
+      [hidden]="!resizable || !visible"
+    ></div>
+  `, isInline: true, dependencies: [{ kind: "component", type: IAvatar, selector: "i-avatar", inputs: ["src", "alt", "size", "shape", "fallbackSrc", "className"] }, { kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle", "expandedChange"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "ngmodule", type: ReactiveFormsModule }, { kind: "directive", type: i1.DefaultValueAccessor, selector: "input:not([type=checkbox])[formControlName],textarea[formControlName],input:not([type=checkbox])[formControl],textarea[formControl],input:not([type=checkbox])[ngModel],textarea[ngModel],[ngDefaultControl]" }, { kind: "directive", type: i1.NgControlStatus, selector: "[formControlName],[ngModel],[formControl]" }, { kind: "directive", type: i1.FormControlDirective, selector: "[formControl]", inputs: ["formControl", "disabled", "ngModel"], outputs: ["ngModelChange"], exportAs: ["ngForm"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHSidebar, decorators: [{
             type: Component,
@@ -14824,6 +16378,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
               [pathByKey]="favoritePaths()"
               [selectedMenuId]="selectedMenuId()"
               [showApplication]="true"
+              (expandedChange)="onMenuExpansion($event)"
               (favoriteToggle)="onFavoriteToggle.emit($event)"
             />
           </ul>
@@ -14842,7 +16397,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 <small>{{ group.label }}</small>
               </li>
             }
-            @for (m of group.roots; track getMenuKey(m)) {
+            @for (m of group.roots; track getSidebarMenuKey(m) ?? getMenuKey(m)) {
               <ih-menu
                 [collapsible]="collapsible"
                 [depth]="0"
@@ -14850,6 +16405,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 [filter]="menuFilter()"
                 [menu]="m"
                 [selectedMenuId]="selectedMenuId()"
+                (expandedChange)="onMenuExpansion($event)"
                 (favoriteToggle)="onFavoriteToggle.emit($event)"
               />
             }
@@ -14861,13 +16417,38 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
     <div class="ih-sidebar-footer">
       <small>{{ footerText }}</small>
     </div>
+    <div
+      #resizeHandle
+      aria-label="Resize sidebar"
+      aria-orientation="vertical"
+      class="ih-sidebar-resize-handle"
+      role="separator"
+      [attr.aria-valuemax]="resizeState().maxWidth"
+      [attr.aria-valuemin]="resizeState().minWidth"
+      [attr.aria-valuenow]="resizeState().width"
+      [attr.tabindex]="resizable && visible ? 0 : -1"
+      [hidden]="!resizable || !visible"
+    ></div>
   `,
                 }]
-        }], propDecorators: { user$: [{
+        }], propDecorators: { resizeHandle: [{
+                type: ViewChild,
+                args: ['resizeHandle', { static: true }]
+            }], user$: [{
                 type: Input
             }], menusInput$: [{
                 type: Input
             }], visible: [{
+                type: Input
+            }], resizable: [{
+                type: Input
+            }], minWidth: [{
+                type: Input
+            }], maxWidth: [{
+                type: Input
+            }], widthStorageKey: [{
+                type: Input
+            }], menuStateStorageKey: [{
                 type: Input
             }], impersonating: [{
                 type: Input
@@ -14886,6 +16467,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             }], onFavoriteToggle: [{
                 type: Output
             }], onFavoriteReorder: [{
+                type: Output
+            }], onWidthChange: [{
                 type: Output
             }], sidebarVisibility: [{
                 type: HostBinding,
@@ -15718,9 +17301,10 @@ class ISessionExpiredDialog {
         [config]="dialogConfig"
         [isTopMost]="true"
       >
-        <i-dialog [actions]="actions" [title]="title()" (onCustomAction)="onConfirm()">
+        <i-dialog [actions]="actions" (onCustomAction)="onConfirm()">
           <div class="flex flex-col align-center text-center gap-lg">
-            <i-icon class="text-warning" size="3xl" [icon]="iconClass()" />
+            <i-icon class="text-warning" size="xl" [icon]="iconClass()" />
+            <h4 class="font-semibold">{{ title() }}</h4>
             <p class="m-0 text-md leading-normal text-subtle">{{ message() }}</p>
           </div>
         </i-dialog>
@@ -15743,9 +17327,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
         [config]="dialogConfig"
         [isTopMost]="true"
       >
-        <i-dialog [actions]="actions" [title]="title()" (onCustomAction)="onConfirm()">
+        <i-dialog [actions]="actions" (onCustomAction)="onConfirm()">
           <div class="flex flex-col align-center text-center gap-lg">
-            <i-icon class="text-warning" size="3xl" [icon]="iconClass()" />
+            <i-icon class="text-warning" size="xl" [icon]="iconClass()" />
+            <h4 class="font-semibold">{{ title() }}</h4>
             <p class="m-0 text-md leading-normal text-subtle">{{ message() }}</p>
           </div>
         </i-dialog>
@@ -16027,5 +17612,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IImpersonationStateService, IInfoNotice, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
+export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IImpersonationStateService, IInfoNotice, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
 //# sourceMappingURL=insight-ui.mjs.map

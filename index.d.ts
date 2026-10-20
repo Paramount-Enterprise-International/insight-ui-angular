@@ -1654,6 +1654,121 @@ declare class IHighlightSearchPipe implements PipeTransform {
     static ɵpipe: i0.ɵɵPipeDeclaration<IHighlightSearchPipe, "highlightSearch", true>;
 }
 
+/** Presentation models shared by the bell, drawer, and snackbar. */
+type INotificationEntry = {
+    notificationId: string;
+    moduleId: string;
+    moduleName: string;
+    title: string;
+    description: string;
+    link: string | null;
+    isDismissable: boolean;
+    groupCount: number;
+    latestDate: string;
+    icon?: string;
+    color?: string;
+};
+type INotificationSnackbarMessage = {
+    key: number;
+    title: string;
+    moduleName?: string;
+    item?: INotificationEntry;
+};
+/** Controlled presentation state. All side effects belong to the consumer. */
+type INotificationState = {
+    unreadCount: number;
+    open?: boolean;
+    items?: readonly INotificationEntry[];
+    loading?: boolean;
+    hasLoaded?: boolean;
+    loadingMore?: boolean;
+    readingId?: string | null;
+    hasMore?: boolean;
+    error?: string | null;
+    loadMoreError?: string | null;
+    actionError?: string | null;
+    snackbar?: INotificationSnackbarMessage | null;
+};
+type INotificationAction = {
+    type: 'toggle';
+} | {
+    type: 'close';
+} | {
+    type: 'open-all';
+} | {
+    type: 'open-item';
+    item: INotificationEntry;
+} | {
+    type: 'load-more';
+} | {
+    type: 'retry';
+} | {
+    type: 'retry-read';
+} | {
+    type: 'dismiss-snackbar';
+};
+
+/** Controlled notification UI; consumers own data, navigation and timers. */
+declare class INotification {
+    readonly state: i0.InputSignal<INotificationState | null | undefined>;
+    readonly onAction: i0.OutputEmitterRef<INotificationAction>;
+    protected readonly retained: i0.WritableSignal<boolean>;
+    constructor();
+    static ɵfac: i0.ɵɵFactoryDeclaration<INotification, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<INotification, "i-notification", never, { "state": { "alias": "state"; "required": false; "isSignal": true; }; }, { "onAction": "onAction"; }, never, never, true, never>;
+}
+
+declare class INotificationBell {
+    readonly unreadCount: i0.InputSignal<number>;
+    readonly expanded: i0.InputSignal<boolean>;
+    readonly toggleRequested: i0.OutputEmitterRef<void>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<INotificationBell, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<INotificationBell, "i-notification-bell", never, { "unreadCount": { "alias": "unreadCount"; "required": false; "isSignal": true; }; "expanded": { "alias": "expanded"; "required": false; "isSignal": true; }; }, { "toggleRequested": "toggleRequested"; }, never, never, true, never>;
+}
+
+declare class INotificationDrawer {
+    readonly items: i0.InputSignal<readonly INotificationEntry[]>;
+    readonly unreadCount: i0.InputSignal<number>;
+    readonly loading: i0.InputSignal<boolean>;
+    readonly hasLoaded: i0.InputSignal<boolean>;
+    readonly loadingMore: i0.InputSignal<boolean>;
+    readonly readingId: i0.InputSignal<string | null>;
+    readonly hasMore: i0.InputSignal<boolean>;
+    readonly error: i0.InputSignal<string | null>;
+    readonly loadMoreError: i0.InputSignal<string | null>;
+    readonly actionError: i0.InputSignal<string | null>;
+    readonly closeRequested: i0.OutputEmitterRef<void>;
+    readonly openAllRequested: i0.OutputEmitterRef<void>;
+    readonly itemOpened: i0.OutputEmitterRef<INotificationEntry>;
+    readonly moreRequested: i0.OutputEmitterRef<void>;
+    readonly retryRequested: i0.OutputEmitterRef<void>;
+    readonly readRetryRequested: i0.OutputEmitterRef<void>;
+    onScroll(event: Event): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<INotificationDrawer, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<INotificationDrawer, "i-notification-drawer", never, { "items": { "alias": "items"; "required": false; "isSignal": true; }; "unreadCount": { "alias": "unreadCount"; "required": false; "isSignal": true; }; "loading": { "alias": "loading"; "required": false; "isSignal": true; }; "hasLoaded": { "alias": "hasLoaded"; "required": false; "isSignal": true; }; "loadingMore": { "alias": "loadingMore"; "required": false; "isSignal": true; }; "readingId": { "alias": "readingId"; "required": false; "isSignal": true; }; "hasMore": { "alias": "hasMore"; "required": false; "isSignal": true; }; "error": { "alias": "error"; "required": false; "isSignal": true; }; "loadMoreError": { "alias": "loadMoreError"; "required": false; "isSignal": true; }; "actionError": { "alias": "actionError"; "required": false; "isSignal": true; }; }, { "closeRequested": "closeRequested"; "openAllRequested": "openAllRequested"; "itemOpened": "itemOpened"; "moreRequested": "moreRequested"; "retryRequested": "retryRequested"; "readRetryRequested": "readRetryRequested"; }, never, never, true, never>;
+}
+
+declare function truncateNotificationText(value: string): string;
+declare function notificationDate(value: string, now?: Date): string;
+
+declare class INotificationItem {
+    readonly item: i0.InputSignal<INotificationEntry>;
+    readonly busy: i0.InputSignal<boolean>;
+    readonly openRequested: i0.OutputEmitterRef<INotificationEntry>;
+    readonly date: typeof notificationDate;
+    readonly truncate: typeof truncateNotificationText;
+    static ɵfac: i0.ɵɵFactoryDeclaration<INotificationItem, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<INotificationItem, "i-notification-item", never, { "item": { "alias": "item"; "required": true; "isSignal": true; }; "busy": { "alias": "busy"; "required": false; "isSignal": true; }; }, { "openRequested": "openRequested"; }, never, never, true, never>;
+}
+
+declare class INotificationSnackbar {
+    readonly message: i0.InputSignal<INotificationSnackbarMessage>;
+    readonly dismissRequested: i0.OutputEmitterRef<void>;
+    readonly openRequested: i0.OutputEmitterRef<void>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<INotificationSnackbar, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<INotificationSnackbar, "i-notification-snackbar", never, { "message": { "alias": "message"; "required": true; "isSignal": true; }; }, { "dismissRequested": "dismissRequested"; "openRequested": "openRequested"; }, never, never, true, never>;
+}
+
 type IRoute = Omit<Route, 'data' | 'children'> & {
     data: {
         title: string;
@@ -1784,6 +1899,8 @@ declare class IHTitleBreadcrumbService {
 }
 
 declare class IHContent {
+    notification?: INotificationState | null;
+    readonly onNotificationAction: EventEmitter<INotificationAction>;
     private readonly router;
     private readonly activatedRoute;
     private readonly baseHref;
@@ -1827,7 +1944,7 @@ declare class IHContent {
      */
     overrideHref(url: string): string;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHContent, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHContent, "ih-content", never, {}, { "onSidebarToggled": "onSidebarToggled"; "loading": "loading"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHContent, "ih-content", never, { "notification": { "alias": "notification"; "required": false; }; }, { "onNotificationAction": "onNotificationAction"; "onSidebarToggled": "onSidebarToggled"; "loading": "loading"; }, never, never, true, never>;
 }
 
 /**
@@ -1835,6 +1952,13 @@ declare class IHContent {
  * apps override it via the `personalProfileUrl` input (per environment).
  */
 declare const DEFAULT_PERSONAL_PROFILE_URL = "https://account-dev.paramountenterprise.co.id/personal-profile";
+
+type MenuExpansionChange = {
+    menu: IMenu;
+    expanded: boolean;
+};
+/** Identifies rendered menu rows independently of search selection and drag IDs. */
+declare function getSidebarMenuKey(menu: IMenu | undefined): string | undefined;
 
 declare function getMenuRoute(menu: IMenu | null | undefined): string | null;
 /**
@@ -1905,12 +2029,15 @@ declare class IHMenu implements OnChanges {
     pathByKey?: Record<string, string | undefined>;
     readonly clicked: EventEmitter<any>;
     readonly favoriteToggle: EventEmitter<IMenuFavoriteToggleEvent>;
+    readonly expandedChange: EventEmitter<MenuExpansionChange>;
     menus: QueryList<IHMenu>;
     /** Template-bound helper for stable `@for` tracking (UUID-first). */
     readonly getMenuKey: typeof getMenuKey;
+    readonly getSidebarMenuKey: typeof getSidebarMenuKey;
     menuItemRef: ElementRef<HTMLElement>;
     isHidden: boolean;
     get menuRoute(): string | null;
+    get isActive(): boolean;
     get isSpa(): boolean;
     get isReload(): boolean;
     get isNewTab(): boolean;
@@ -1962,14 +2089,31 @@ declare class IHMenu implements OnChanges {
     onChildFavoriteToggle(event: IMenuFavoriteToggleEvent): void;
     hrefWithMenuFilter(raw: string): string;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHMenu, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "depth": { "alias": "depth"; "required": false; }; "dragEnabled": { "alias": "dragEnabled"; "required": false; }; "showApplication": { "alias": "showApplication"; "required": false; }; "pathByKey": { "alias": "pathByKey"; "required": false; }; }, { "clicked": "clicked"; "favoriteToggle": "favoriteToggle"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "depth": { "alias": "depth"; "required": false; }; "dragEnabled": { "alias": "dragEnabled"; "required": false; }; "showApplication": { "alias": "showApplication"; "required": false; }; "pathByKey": { "alias": "pathByKey"; "required": false; }; }, { "clicked": "clicked"; "favoriteToggle": "favoriteToggle"; "expandedChange": "expandedChange"; }, never, never, true, never>;
 }
+
+type SidebarResizeState = {
+    width: number;
+    minWidth: number;
+    maxWidth: number;
+};
 
 declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private router;
     private hostElement;
     private readonly sessionService;
     private readonly config;
+    private readonly baseHref;
+    private readonly menuState;
+    private activeMenu;
+    private readonly menuRevision$;
+    private readonly menuStateRevision;
+    private navigationSubscription?;
+    private menuScrollFrame;
+    private destroyed;
+    private resizeHandle;
+    private resizeController?;
+    readonly resizeState: i0.WritableSignal<SidebarResizeState>;
     /** Sidebar user chip dropdown (Personal Profile / Logout) open state. */
     readonly accountMenuOpen: i0.WritableSignal<boolean>;
     private readonly onDocumentKeydown;
@@ -1978,6 +2122,14 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     user$: Observable<IUser>;
     menusInput$: Observable<IMenu[]>;
     visible: boolean;
+    /** Enable pointer and keyboard resizing with a persistent width preference. */
+    resizable: boolean;
+    minWidth: number;
+    maxWidth: number;
+    /** Set to null to keep the width in memory only. */
+    widthStorageKey: string | null;
+    /** Expansion preferences are shared per origin; null disables persistence. */
+    menuStateStorageKey: string | null;
     impersonating: boolean;
     footerText: string;
     /** When true, leaf items render a pin/star toggle and the Favorites section is shown. */
@@ -1997,6 +2149,8 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     readonly onFavoriteToggle: EventEmitter<IMenuFavoriteToggleEvent>;
     /** Emitted after a favorites drag-drop with the ordered favorite menu ids - the host app persists via the reorder API. */
     readonly onFavoriteReorder: EventEmitter<IMenuFavoriteReorderEvent>;
+    /** Emitted after a completed pointer or keyboard width change, in pixels. */
+    readonly onWidthChange: EventEmitter<number>;
     menus$: Observable<IMenu[]>;
     queryParams: any;
     menuSearch: FormControl<string | null>;
@@ -2008,7 +2162,10 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     readonly dragOverIndex: i0.WritableSignal<number | null>;
     /** Template-bound helper for stable `@for` tracking. */
     readonly getMenuKey: typeof getMenuKey;
+    readonly getSidebarMenuKey: typeof getSidebarMenuKey;
     private favoritesGroupCache;
+    private favoritesGroupSource;
+    private favoritesGroupRevision;
     /** Latest favorites array mirrored from `favorites$` - source of truth for drag reorder. */
     readonly favoriteItems: i0.WritableSignal<IMenu[]>;
     /** Full (unfiltered) normalized menu tree - source for favorite ancestor paths. */
@@ -2029,10 +2186,15 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     ngOnInit(): void;
     ngOnChanges(changes: SimpleChanges): void;
     ngOnDestroy(): void;
+    private resizeOptions;
     /** Mirrors the `favorites$` input into the local `favoriteItems` signal. */
     private subscribeFavorites;
     /** Mirrors the full (unfiltered) normalized menu tree into the `fullMenus` signal. */
     private subscribeFullMenus;
+    onMenuExpansion(event: MenuExpansionChange): void;
+    private refreshMenuState;
+    private restoreActiveMenu;
+    private scheduleMenuScroll;
     private dragState;
     /** Document mousemove during an active favorites drag (live reorder preview). */
     private onDocumentMouseMove;
@@ -2079,7 +2241,7 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private navigateToMenu;
     updateUrl(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHSidebar, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "impersonating": { "alias": "impersonating"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "favorites$": { "alias": "favorites$"; "required": false; }; "groupByApplication": { "alias": "groupByApplication"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "personalProfileUrl": { "alias": "personalProfileUrl"; "required": false; }; }, { "onFavoriteToggle": "onFavoriteToggle"; "onFavoriteReorder": "onFavoriteReorder"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "resizable": { "alias": "resizable"; "required": false; }; "minWidth": { "alias": "minWidth"; "required": false; }; "maxWidth": { "alias": "maxWidth"; "required": false; }; "widthStorageKey": { "alias": "widthStorageKey"; "required": false; }; "menuStateStorageKey": { "alias": "menuStateStorageKey"; "required": false; }; "impersonating": { "alias": "impersonating"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "favorites$": { "alias": "favorites$"; "required": false; }; "groupByApplication": { "alias": "groupByApplication"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "personalProfileUrl": { "alias": "personalProfileUrl"; "required": false; }; }, { "onFavoriteToggle": "onFavoriteToggle"; "onFavoriteReorder": "onFavoriteReorder"; "onWidthChange": "onWidthChange"; }, never, never, true, never>;
 }
 
 declare class ILoading {
@@ -3924,5 +4086,5 @@ declare class IInfoNotice {
     static ɵcmp: i0.ɵɵComponentDeclaration<IInfoNotice, "i-info-notice", never, { "message": { "alias": "message"; "required": false; }; "title": { "alias": "title"; "required": false; }; }, {}, never, never, true, never>;
 }
 
-export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IImpersonationStateService, IInfoNotice, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, validateIAuthConfig };
-export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEndImpersonationResult, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IImpersonationActor, IImpersonationStatus, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
+export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IImpersonationStateService, IInfoNotice, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
+export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEndImpersonationResult, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IImpersonationActor, IImpersonationStatus, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, INotificationAction, INotificationEntry, INotificationSnackbarMessage, INotificationState, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
