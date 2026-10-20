@@ -37,6 +37,7 @@ import {
   Output,
   SimpleChanges,
   TemplateRef,
+  TrackByFunction,
   ViewChild,
 } from '@angular/core';
 import {
@@ -103,7 +104,7 @@ export type ISelectPanelPosition =
 
     @if (hasOptionsList) {
       <i-options #panel class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
-        @for (row of filteredOptions; track row; let idx = $index) {
+        @for (row of filteredOptions; track trackBy($index, row); let idx = $index) {
           <div
             class="i-option"
             [class.active]="highlightIndex === idx"
@@ -154,6 +155,7 @@ export class ISelect<T = any>
   @Input() portalToBody = true;
   @Input() panelOffset = 6;
   @Input() matchTriggerWidth = false;
+  @Input() trackBy: TrackByFunction<T> = (_index, row) => row;
 
   @Input()
   set options(value: T[] | null) {

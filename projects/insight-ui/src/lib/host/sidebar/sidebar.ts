@@ -7,6 +7,7 @@ import {
   HostBinding,
   inject,
   Input,
+  NgZone,
   OnChanges,
   OnDestroy,
   OnInit,
@@ -54,7 +55,6 @@ import {
 import {
   SidebarResizeController,
   type SidebarResizeOptions,
-  type SidebarResizeState,
 } from './sidebar-resize';
 import {
   createFavoritesMenu,
@@ -193,9 +193,6 @@ import {
       aria-orientation="vertical"
       class="ih-sidebar-resize-handle"
       role="separator"
-      [attr.aria-valuemax]="resizeState().maxWidth"
-      [attr.aria-valuemin]="resizeState().minWidth"
-      [attr.aria-valuenow]="resizeState().width"
       [attr.tabindex]="resizable && visible ? 0 : -1"
       [hidden]="!resizable || !visible"
     ></div>
@@ -204,6 +201,7 @@ import {
 export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   private router = inject(Router);
   private hostElement = inject(ElementRef);
+  private readonly zone = inject(NgZone);
   private readonly sessionService = inject(ISessionService);
   private readonly config = inject(I_AUTH_CONFIG);
   private readonly baseHref = inject(APP_BASE_HREF, { optional: true }) ??
@@ -218,7 +216,6 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   @ViewChild('resizeHandle', { static: true })
   private resizeHandle!: ElementRef<HTMLElement>;
   private resizeController?: SidebarResizeController;
-  readonly resizeState = signal<SidebarResizeState>({ width: 260, minWidth: 220, maxWidth: 480 });
 
   /** Sidebar user chip dropdown (Personal Profile / Logout) open state. */
   readonly accountMenuOpen = signal(false);
@@ -347,6 +344,11 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
     return !this.visible;
   }
 
+  @HostBinding('class.is-resizable')
+  get sidebarResizable(): boolean {
+    return this.resizable;
+  }
+
   /** Personal Profile target; falls back to the shared default. */
   get resolvedPersonalProfileUrl(): string {
     return (this.personalProfileUrl ?? '').trim() || DEFAULT_PERSONAL_PROFILE_URL;
@@ -373,12 +375,13 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
 
   ngOnInit(): void {
     this.menuState.configureStorage(this.menuStateStorageKey);
-    this.resizeController = new SidebarResizeController(
-      this.hostElement.nativeElement as HTMLElement,
-      this.resizeHandle.nativeElement,
-      this.resizeOptions(),
-      (state) => this.resizeState.set(state),
-      (width) => this.onWidthChange.emit(width),
+    this.resizeController = this.zone.runOutsideAngular(() =>
+      new SidebarResizeController(
+        this.hostElement.nativeElement as HTMLElement,
+        this.resizeHandle.nativeElement,
+        this.resizeOptions(),
+        (width) => this.zone.run(() => this.onWidthChange.emit(width)),
+      ),
     );
     document.addEventListener('keydown', this.onDocumentKeydown);
     document.addEventListener('pointerdown', this.onDocumentPointerDown);

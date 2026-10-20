@@ -19,12 +19,17 @@ import { IHTitleBreadcrumbService } from '../shell/title-breadcrumb.service';
   imports: [RouterOutlet, AsyncPipe, RouterLink, INotification],
   template: `
     <div class="ih-content-header">
-      <a class="i-clickable" (click)="toggleSidebar()">
-        @if (sidebarVisibility) {
-          <img alt="sidebar-left" src="svgs/sidebar-left.svg" />
-        } @else {
-          <img alt="sidebar-right" src="svgs/sidebar-right.svg" />
-        }
+      <a
+        class="i-clickable"
+        [attr.aria-label]="sidebarVisibility ? 'Collapse sidebar' : 'Expand sidebar'"
+        (click)="toggleSidebar()"
+      >
+        <span
+          aria-hidden="true"
+          class="ih-sidebar-toggle-icon"
+          [class.ih-sidebar-toggle-icon--left]="sidebarVisibility"
+          [class.ih-sidebar-toggle-icon--right]="!sidebarVisibility"
+        ></span>
       </a>
 
       <!-- title override reacts immediately -->

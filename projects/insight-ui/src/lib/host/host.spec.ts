@@ -57,7 +57,7 @@ describe('IHContent', () => {
     expect(actions.querySelector('.notification-badge')).toBeNull();
     const action = jasmine.createSpy('action');
     fixture.componentInstance.onNotificationAction.subscribe(action);
-    actions.querySelector<HTMLButtonElement>('button')!.click();
+    actions.querySelector<HTMLAnchorElement>('i-notification-bell a.i-clickable')!.click();
     expect(action).toHaveBeenCalledWith({ type: 'toggle' });
     fixture.componentRef.setInput('notification', { unreadCount: 100 });
     fixture.detectChanges();
