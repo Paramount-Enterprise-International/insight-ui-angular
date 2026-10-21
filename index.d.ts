@@ -3902,6 +3902,7 @@ declare class ISessionService {
     private readonly authService;
     private readonly config;
     private readonly sessionExpiredService;
+    private readonly location;
     private readonly csrf;
     private readonly injector;
     private accessToken;

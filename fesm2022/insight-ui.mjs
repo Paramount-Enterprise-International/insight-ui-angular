@@ -1,7 +1,7 @@
 import * as i0 from '@angular/core';
 import { Input, Component, HostBinding, EventEmitter, booleanAttribute, Output, ChangeDetectionStrategy, isDevMode, NgModule, inject, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Directive, forwardRef, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ContentChildren, ViewContainerRef, input, output, PLATFORM_ID, viewChild, signal, effect, computed, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER, DestroyRef, untracked } from '@angular/core';
 import * as i1$1 from '@angular/common';
-import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, DOCUMENT, isPlatformBrowser, APP_BASE_HREF } from '@angular/common';
+import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, DOCUMENT, isPlatformBrowser, Location, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationEnd, RouterOutlet } from '@angular/router';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { firstValueFrom, Subject, BehaviorSubject, map, throwError, from, defer, Observable, forkJoin, of, finalize as finalize$1, timeout, lastValueFrom, filter as filter$1, startWith, combineLatest, shareReplay as shareReplay$1, tap as tap$1, take as take$1, distinctUntilChanged, takeUntil, switchMap as switchMap$1, EMPTY, catchError as catchError$1 } from 'rxjs';
@@ -12047,6 +12047,23 @@ function buildExternalSigninUrl(config, targetPath) {
     return `${config.signinUrl}?returnUrl=${encodeURIComponent(callbackUrl)}`;
 }
 
+/** Captures the router destination without carrying an access-token handoff into sign-in. */
+function getSessionReturnUrl(location) {
+    let path = location.path(true);
+    const hashIndex = path.indexOf('#');
+    if (hashIndex >= 0) {
+        const fragment = path.slice(hashIndex + 1);
+        if (new URLSearchParams(fragment).has('at')) {
+            const remaining = fragment
+                .split('&')
+                .filter((part) => !new URLSearchParams(part).has('at'))
+                .join('&');
+            path = path.slice(0, hashIndex) + (remaining ? `#${remaining}` : '');
+        }
+    }
+    return path.startsWith('/') ? path : `/${path}`;
+}
+
 const IMPERSONATION_INFORMATION = 'To end only this session (the grant stays active), log out normally from the application. ' +
     'The End Impersonate Session button ends the session and revokes the grant.';
 const IMPERSONATION_CONFIRMATION = 'End this impersonation session and revoke your impersonation grant? You will be signed out and ' +
@@ -12301,6 +12318,7 @@ const authInterceptor = (req, next) => {
     const config = inject(I_AUTH_CONFIG);
     const sessionExpired = inject(ISessionExpiredService);
     const csrf = inject(ICsrfService);
+    const location = inject(Location);
     if (req.headers.has(IH_SKIP_BEARER_HEADER)) {
         return next(req.clone({ headers: req.headers.delete(IH_SKIP_BEARER_HEADER) }));
     }
@@ -12317,10 +12335,10 @@ const authInterceptor = (req, next) => {
             config.onUnauthorized(error);
         else if ((config.unauthorizedHandling ?? 'dialog') === 'dialog') {
             const errorCode = extractProblemDetailsErrorCode(apiError);
-            sessionExpired.show(window.location.pathname + window.location.search, toSessionExpiredReason(errorCode), errorCode, apiError.detail, apiError.message, apiError);
+            sessionExpired.show(getSessionReturnUrl(location), toSessionExpiredReason(errorCode), errorCode, apiError.detail, apiError.message, apiError);
         }
         else {
-            window.location.href = buildExternalSigninUrl(config, window.location.pathname + window.location.search);
+            window.location.href = buildExternalSigninUrl(config, getSessionReturnUrl(location));
         }
         return throwError(() => error);
     };
@@ -12343,7 +12361,9 @@ const authInterceptor = (req, next) => {
             if (csrfToken)
                 retry = retry.clone({ setHeaders: { 'X-CSRF-Token': csrfToken } });
             else
-                retry = retry.clone({ headers: retry.headers.delete('X-CSRF-Token') });
+                retry = retry.clone({
+                    headers: retry.headers.delete('X-CSRF-Token'),
+                });
             return next(retry).pipe(catchError((retryError) => retryError instanceof HttpErrorResponse && retryError.status === 401
                 ? expire(retryError)
                 : throwError(() => retryError)));
@@ -13378,6 +13398,7 @@ class ISessionService {
     authService = inject(IAuthService);
     config = inject(I_AUTH_CONFIG);
     sessionExpiredService = inject(ISessionExpiredService);
+    location = inject(Location);
     csrf = inject(ICsrfService);
     // The user-menu store is resolved lazily at logout time (not in the
     // constructor): the store already depends on this session service, so eager
@@ -13700,6 +13721,7 @@ class ISessionService {
             return this.restoreInFlight;
         }
         const pathname = window.location.pathname ?? '';
+        const returnUrl = getSessionReturnUrl(this.location);
         const isSigninPage = /^\/auth\/signin$|^\/signin$/i.test(pathname);
         const isOtherAuthPage = /^\/auth(\/|$)|^\/forgot-password|^\/reset-password/i.test(pathname) && !isSigninPage;
         if (isOtherAuthPage) {
@@ -13725,7 +13747,7 @@ class ISessionService {
                 // Preserve the current backend message and normalized error alongside
                 // legacy fields so the dialog can apply the shared display precedence.
                 const apiError = normalizeApiError(err);
-                this.sessionExpiredService.show(pathname, code ?? 'TOKEN_EXPIRED', rawErrorCode, apiError.detail, apiError.message, apiError);
+                this.sessionExpiredService.show(returnUrl, code ?? 'TOKEN_EXPIRED', rawErrorCode, apiError.detail, apiError.message, apiError);
             }
             return { reason: code };
         });
