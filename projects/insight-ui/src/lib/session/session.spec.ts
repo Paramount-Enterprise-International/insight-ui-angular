@@ -1,3 +1,5 @@
+import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
+import { MockPlatformLocation } from '@angular/common/testing';
 import { fakeAsync, flushMicrotasks, TestBed, tick } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { IApiService } from '../api/api';
@@ -44,6 +46,15 @@ describe('ISessionService', () => {
     ]);
     TestBed.configureTestingModule({
       providers: [
+        { provide: APP_BASE_HREF, useValue: '/-/' },
+        {
+          provide: PlatformLocation,
+          useFactory: (): MockPlatformLocation =>
+            new MockPlatformLocation({
+              startUrl: 'https://atlas.test/-/reports/42?tab=roles#details',
+              appBaseHref: '/-/',
+            }),
+        },
         { provide: IAuthService, useValue: authSpy },
         {
           provide: ICsrfService,
@@ -205,7 +216,13 @@ describe('ISessionService', () => {
   it('resets sidebar data when a different user establishes a session', () => {
     const store = TestBed.inject(IUserMenuStore);
     spyOn(store, 'reset');
-    const user = { sub: 'user-a', email: '', name: '', roles: [], userType: 'internal' as const };
+    const user = {
+      sub: 'user-a',
+      email: '',
+      name: '',
+      roles: [],
+      userType: 'internal' as const,
+    };
     service.setSession('token-a', 3600, user);
     service.setSession('token-b', 3600, { ...user, sub: 'user-b' });
 
@@ -232,7 +249,7 @@ describe('ISessionService', () => {
 
     expect(result.reason).toBe('SESSION_REVOKED');
     const call = sessionExpiredSpy.show.calls.mostRecent().args;
-    expect(call[0]).toBe(window.location.pathname);
+    expect(call[0]).toBe('/reports/42?tab=roles#details');
     expect(call[1]).toBe('SESSION_REVOKED');
     expect(call[2]).toBe('AUTH_SESSION_REVOKED');
     expect(call[3]).toBeUndefined();
@@ -273,7 +290,10 @@ describe('ISessionService impersonation', () => {
         { provide: ICsrfService, useValue: csrf },
         { provide: ISessionExpiredService, useValue: {} },
         { provide: IUserMenuStore, useValue: store },
-        { provide: IStorageService, useValue: { clear: jasmine.createSpy('clear') } },
+        {
+          provide: IStorageService,
+          useValue: { clear: jasmine.createSpy('clear') },
+        },
       ],
     });
     service = TestBed.inject(ISessionService);

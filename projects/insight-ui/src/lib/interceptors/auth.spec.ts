@@ -1,5 +1,7 @@
+import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { MockPlatformLocation } from '@angular/common/testing';
 import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { Subject, throwError } from 'rxjs';
 import { IApiService } from '../api/api';
@@ -37,6 +39,15 @@ describe('auth refresh retry contracts', () => {
     expired = jasmine.createSpyObj('expired', ['show']);
     TestBed.configureTestingModule({
       providers: [
+        { provide: APP_BASE_HREF, useValue: '/-/' },
+        {
+          provide: PlatformLocation,
+          useFactory: (): MockPlatformLocation =>
+            new MockPlatformLocation({
+              startUrl: 'https://atlas.test/-/reports/42?tab=roles#details',
+              appBaseHref: '/-/',
+            }),
+        },
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
         { provide: I_AUTH_CONFIG, useValue: config },
@@ -64,7 +75,7 @@ describe('auth refresh retry contracts', () => {
     expect(session.refreshToken).not.toHaveBeenCalled();
     expect(session.clearSession).toHaveBeenCalledTimes(1);
     expect(expired.show).toHaveBeenCalledWith(
-      jasmine.any(String),
+      '/reports/42?tab=roles#details',
       'SESSION_REVOKED',
       'IMPERSONATION_SESSION_INVALID',
       undefined,
@@ -152,9 +163,9 @@ describe('auth refresh retry contracts', () => {
 
   it('cancels one refresh waiter while another can retry', () => {
     const controller = new AbortController();
-    api
-      .get('/a', undefined, { signal: controller.signal })
-      .subscribe({ error: (error) => expect(error.errorCode).toBe('REQUEST_ABORTED') });
+    api.get('/a', undefined, { signal: controller.signal }).subscribe({
+      error: (error) => expect(error.errorCode).toBe('REQUEST_ABORTED'),
+    });
     api.get('/b').subscribe();
     http
       .expectOne(config.api.identity + '/a')
