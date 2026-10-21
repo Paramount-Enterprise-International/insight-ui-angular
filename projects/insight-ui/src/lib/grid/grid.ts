@@ -129,6 +129,7 @@ export type IGridPaginatorInput =
  * When provided on IGridDataSource, local sort/filter/paginate are skipped.
  * Data must be pushed via setData() after each server response.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Retain the row type parameter for public API compatibility.
 export type IGridServerSideConfig<T = any> = {
   /** Total row count on the server (drives paginator length). */
   totalRowCount: number;

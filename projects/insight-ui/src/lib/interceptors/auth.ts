@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { HttpErrorResponse, HttpEvent, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
@@ -5,6 +6,7 @@ import { catchError, switchMap } from 'rxjs/operators';
 import { normalizeApiError } from '../api/api-error';
 import { getAuthEndpointUrl, I_AUTH_CONFIG, IAuthConfig } from '../auth/auth-config';
 import { buildExternalSigninUrl } from '../auth/build-signin-redirect-url';
+import { getSessionReturnUrl } from '../auth/session-return-url';
 import { ICsrfService } from '../csrf/csrf';
 import { impersonationContextKey } from '../impersonation/impersonation-utils';
 import {
@@ -30,6 +32,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEv
   const config = inject(I_AUTH_CONFIG);
   const sessionExpired = inject(ISessionExpiredService);
   const csrf = inject(ICsrfService);
+  const location = inject(Location);
   if (req.headers.has(IH_SKIP_BEARER_HEADER)) {
     return next(req.clone({ headers: req.headers.delete(IH_SKIP_BEARER_HEADER) }));
   }
@@ -46,7 +49,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEv
     else if ((config.unauthorizedHandling ?? 'dialog') === 'dialog') {
       const errorCode = extractProblemDetailsErrorCode(apiError);
       sessionExpired.show(
-        window.location.pathname + window.location.search,
+        getSessionReturnUrl(location),
         toSessionExpiredReason(errorCode),
         errorCode,
         apiError.detail,
@@ -54,10 +57,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEv
         apiError,
       );
     } else {
-      window.location.href = buildExternalSigninUrl(
-        config,
-        window.location.pathname + window.location.search,
-      );
+      window.location.href = buildExternalSigninUrl(config, getSessionReturnUrl(location));
     }
     return throwError(() => error);
   };
@@ -85,7 +85,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEv
           let retry = addAuthHeader(req, newToken);
           const csrfToken = csrf.getToken();
           if (csrfToken) retry = retry.clone({ setHeaders: { 'X-CSRF-Token': csrfToken } });
-          else retry = retry.clone({ headers: retry.headers.delete('X-CSRF-Token') });
+          else
+            retry = retry.clone({
+              headers: retry.headers.delete('X-CSRF-Token'),
+            });
           return next(retry).pipe(
             catchError((retryError: unknown) =>
               retryError instanceof HttpErrorResponse && retryError.status === 401

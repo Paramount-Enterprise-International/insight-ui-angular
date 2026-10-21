@@ -1,9 +1,11 @@
+import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, Injector, signal } from '@angular/core';
 import { defer, finalize, lastValueFrom, Observable, of, throwError, timeout } from 'rxjs';
 import { catchError, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 import { IApiService } from '../api/api';
 import { getAuthEndpointPath, requireIdentityHost } from '../auth/auth-config';
+import { getSessionReturnUrl } from '../auth/session-return-url';
 import {
   type IEndImpersonationResult,
   type IImpersonationActor,
@@ -97,6 +99,7 @@ export class ISessionService {
   private readonly authService = inject(IAuthService);
   private readonly config = inject(I_AUTH_CONFIG);
   private readonly sessionExpiredService = inject(ISessionExpiredService);
+  private readonly location = inject(Location);
   private readonly csrf = inject(ICsrfService);
   // The user-menu store is resolved lazily at logout time (not in the
   // constructor): the store already depends on this session service, so eager
@@ -486,6 +489,7 @@ export class ISessionService {
     }
 
     const pathname = window.location.pathname ?? '';
+    const returnUrl = getSessionReturnUrl(this.location);
     const isSigninPage = /^\/auth\/signin$|^\/signin$/i.test(pathname);
     const isOtherAuthPage =
       /^\/auth(\/|$)|^\/forgot-password|^\/reset-password/i.test(pathname) && !isSigninPage;
@@ -518,7 +522,7 @@ export class ISessionService {
         // legacy fields so the dialog can apply the shared display precedence.
         const apiError = normalizeApiError(err);
         this.sessionExpiredService.show(
-          pathname,
+          returnUrl,
           code ?? 'TOKEN_EXPIRED',
           rawErrorCode,
           apiError.detail,
