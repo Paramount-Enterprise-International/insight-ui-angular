@@ -1,8 +1,8 @@
 import { APP_BASE_HREF } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import { Component, signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { fakeAsync, TestBed, tick } from '@angular/core/testing';
+import { provideRouter, Router, type Routes } from '@angular/router';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { IUserMenuStore } from '../../store/user-menu';
 import { ISessionService } from '../../session/session';
@@ -123,4 +123,89 @@ describe('host and remote breadcrumb composition', () => {
     expect(text).toContain('Remote page');
     expect(text).not.toContain('Backend label');
   });
+});
+
+describe('page bundle loading', () => {
+  function setup(routes: Routes) {
+    TestBed.configureTestingModule({
+      imports: [IHContent],
+      providers: [
+        provideHttpClient(),
+        { provide: APP_BASE_HREF, useValue: '/-/' },
+        provideRouter(routes),
+        { provide: ISessionService, useValue: { initializing: signal(false) } },
+        {
+          provide: IUserMenuStore,
+          useFactory: () => ({
+            initializing: signal(false),
+            menus$: toObservable(signal<IMenu[]>([])),
+          }),
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(IHContent);
+    fixture.detectChanges();
+    return { fixture, router: TestBed.inject(Router), host: fixture.nativeElement as HTMLElement };
+  }
+
+  it('blocks only the page body until the lazy route resolves', fakeAsync(() => {
+    let resolve!: (page: typeof Page) => void;
+    const pending = new Promise<typeof Page>((done) => {
+      resolve = done;
+    });
+    const { fixture, router, host } = setup([{ path: 'slow', loadComponent: () => pending }]);
+    void router.navigateByUrl('/slow');
+    tick();
+    fixture.detectChanges();
+    expect(host.querySelector('.ih-content-page-loading[mode="container"]')).not.toBeNull();
+    expect(host.querySelector('.ih-content-body')?.hasAttribute('inert')).toBeTrue();
+    expect(host.querySelector('.ih-content-header')?.closest('[inert]')).toBeNull();
+    resolve(Page);
+    tick();
+    fixture.detectChanges();
+    expect(host.querySelector('.ih-content-page-loading')).toBeNull();
+    expect(host.querySelector('.ih-content-body')?.hasAttribute('inert')).toBeFalse();
+  }));
+
+  it('clears the spinner after a failed lazy import', fakeAsync(() => {
+    let reject!: (reason: Error) => void;
+    const pending = new Promise<typeof Page>((_, fail) => {
+      reject = fail;
+    });
+    const { fixture, router, host } = setup([{ path: 'slow', loadComponent: () => pending }]);
+    void router.navigateByUrl('/slow').catch(() => undefined);
+    tick();
+    fixture.detectChanges();
+    expect(host.querySelector('.ih-content-page-loading')).not.toBeNull();
+    reject(new Error('Bundle unavailable'));
+    tick();
+    fixture.detectChanges();
+    expect(host.querySelector('.ih-content-page-loading')).toBeNull();
+    expect(host.querySelector('.ih-content-body')?.hasAttribute('inert')).toBeFalse();
+  }));
+
+  it('clears a cancelled navigation and ignores its late bundle completion', fakeAsync(() => {
+    let resolve!: (page: typeof Page) => void;
+    const pending = new Promise<typeof Page>((done) => {
+      resolve = done;
+    });
+    const { fixture, router, host } = setup([
+      { path: 'slow', loadComponent: () => pending },
+      { path: 'open', component: Page },
+    ]);
+    void router.navigateByUrl('/slow');
+    tick();
+    fixture.detectChanges();
+    expect(host.querySelector('.ih-content-page-loading')).not.toBeNull();
+    void router.navigateByUrl('/open');
+    tick();
+    fixture.detectChanges();
+    expect(router.url).toBe('/open');
+    expect(host.querySelector('.ih-content-page-loading')).toBeNull();
+    resolve(Page);
+    tick();
+    fixture.detectChanges();
+    expect(router.url).toBe('/open');
+    expect(host.querySelector('.ih-content-page-loading')).toBeNull();
+  }));
 });

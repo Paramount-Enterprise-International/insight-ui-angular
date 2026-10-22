@@ -26,7 +26,7 @@ import { IUserMenuStore } from '../store/user-menu';
   imports: [RouterOutlet, IErrorPage, ILoading],
   template: `
     @if (!ready()) {
-      <i-loading aria-live="polite" label="Loading access..." />
+      <i-loading mode="container" label="Loading access..." />
     } @else if (!allowed()) {
       <i-error-page kind="forbidden" role="alert" />
     } @else {

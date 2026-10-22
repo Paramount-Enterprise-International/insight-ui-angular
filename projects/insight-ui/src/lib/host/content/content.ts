@@ -1,13 +1,28 @@
+import { APP_BASE_HREF, AsyncPipe } from '@angular/common';
+import { Component, effect, EventEmitter, inject, Input, Output, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import {
+  ActivatedRoute,
+  NavigationCancel,
+  NavigationEnd,
+  NavigationError,
+  NavigationSkipped,
+  NavigationStart,
+  RouteConfigLoadEnd,
+  RouteConfigLoadStart,
+  Router,
+  RouterLink,
+  RouterOutlet,
+  type Route,
+} from '@angular/router';
+import { combineLatest, filter, map, Observable, shareReplay, startWith } from 'rxjs';
+
+import { ILoading } from '../../loading';
 import {
   INotification,
   type INotificationAction,
   type INotificationState,
 } from '../../notification';
-import { APP_BASE_HREF, AsyncPipe } from '@angular/common';
-import { Component, effect, EventEmitter, inject, Input, Output, signal } from '@angular/core';
-import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { combineLatest, filter, map, Observable, shareReplay, startWith } from 'rxjs';
-import { toObservable } from '@angular/core/rxjs-interop';
 import { findBreadcrumbMenuChain, getMenuLabel, getMenuRoute } from '../menu/menu.utils';
 import { ISessionService } from '../../session/session';
 import { IUserMenuStore } from '../../store/user-menu';
@@ -16,7 +31,7 @@ import { IHTitleBreadcrumbService } from '../shell/title-breadcrumb.service';
 
 @Component({
   selector: 'ih-content',
-  imports: [RouterOutlet, AsyncPipe, RouterLink, INotification],
+  imports: [RouterOutlet, AsyncPipe, RouterLink, INotification, ILoading],
   template: `
     <div class="ih-content-header">
       <a
@@ -116,8 +131,17 @@ import { IHTitleBreadcrumbService } from '../shell/title-breadcrumb.service';
       }
     </div>
 
-    <div class="ih-content-body scroll scroll-y">
-      <router-outlet />
+    <div class="ih-content-page">
+      <div
+        class="ih-content-body scroll scroll-y"
+        [attr.inert]="pageLoading() ? '' : null"
+        [attr.aria-busy]="pageLoading()"
+      >
+        <router-outlet />
+      </div>
+      @if (pageLoading()) {
+        <i-loading class="ih-content-page-loading" mode="container" label="Loading page..." />
+      }
     </div>
   `,
 })
@@ -127,6 +151,33 @@ export class IHContent {
 
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
+
+  readonly pageLoading = signal(false);
+  private readonly pendingRouteLoads = new Set<Route>();
+  private navigationId = this.router.getCurrentNavigation()?.id ?? null;
+
+  constructor() {
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        this.navigationId = event.id;
+        this.pendingRouteLoads.clear();
+      } else if (event instanceof RouteConfigLoadStart && this.navigationId !== null) {
+        this.pendingRouteLoads.add(event.route);
+      } else if (event instanceof RouteConfigLoadEnd) {
+        this.pendingRouteLoads.delete(event.route);
+      } else if (
+        (event instanceof NavigationEnd ||
+          event instanceof NavigationCancel ||
+          event instanceof NavigationError ||
+          event instanceof NavigationSkipped) &&
+        event.id === this.navigationId
+      ) {
+        this.navigationId = null;
+        this.pendingRouteLoads.clear();
+      }
+      this.pageLoading.set(this.navigationId !== null && this.pendingRouteLoads.size > 0);
+    });
+  }
 
   // IMPORTANT: your app base href is intentionally "/-/"
   private readonly baseHref = inject(APP_BASE_HREF);
