@@ -15,7 +15,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IConfirmService } from '../../dialog/dialog';
-import { IHighlightSearchPipe } from '../../highlight-search.pipe';
+import { IHighlightSearchPipe } from '../../highlight-search';
 import { MENU_ICON_FALLBACK, SIDEBAR_FAVORITES_GROUP_ID } from '../host.constants';
 import { type IMenu, type IMenuFavoriteToggleEvent } from '../host.types';
 import {

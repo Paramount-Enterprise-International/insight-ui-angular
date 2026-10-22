@@ -48,7 +48,7 @@ import {
 } from '@angular/forms';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
-import { IHighlightSearchPipe } from './../highlight-search.pipe';
+import { IHighlightSearchPipe } from '../highlight-search';
 import { IIcon } from '../icon/icon';
 import { IInput, IInputAddonButton, IInputAddonLoading } from '../input/input';
 import {

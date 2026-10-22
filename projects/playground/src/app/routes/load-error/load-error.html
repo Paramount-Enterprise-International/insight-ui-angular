@@ -1,0 +1,21 @@
+<div class="flex flex-col gap-lg p-lg">
+  <h1>Load Error</h1>
+  <label
+    ><input type="checkbox" [checked]="disabled" (change)="disabled = !disabled" /> Disable
+    Retry</label
+  ><label
+    ><input type="checkbox" [checked]="loading" (change)="loading = !loading" /> Retry
+    Loading</label
+  >
+  <p>Retry requests: {{ attempts }}</p>
+  @for (density of densities; track density) {
+    <i-load-error
+      message="The service is temporarily unavailable."
+      title="Unable to load records"
+      [density]="density"
+      [retryDisabled]="disabled"
+      [retryLoading]="loading"
+      (onRetry)="attempts = attempts + 1"
+    />
+  }
+</div>
