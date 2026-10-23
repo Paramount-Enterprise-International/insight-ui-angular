@@ -9,6 +9,7 @@ import {
   Output,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { IActionPlaceholder } from '../action-placeholder';
 import { IIcon, IIconName } from '../icon/icon';
 import { IUISize, IUIVariant } from '../interfaces';
 import { ILoading } from '../loading/loading';
@@ -24,54 +25,62 @@ export type IButtonVariant = Extract<
   selector: 'i-button',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgTemplateOutlet, RouterLink, ILoading, IIcon],
+  host: {
+    '[attr.data-placeholder]': 'placeholder ? "" : null',
+    '[attr.aria-hidden]': 'placeholder ? "true" : null',
+    '[attr.inert]': 'placeholder ? "" : null',
+  },
+  imports: [IActionPlaceholder, NgTemplateOutlet, RouterLink, ILoading, IIcon],
   template: `
-    <!-- ROUTER LINK -->
-    @if (routerLink) {
-      <a
-        class="i-button-inner"
-        [attr.aria-disabled]="isDisabled ? 'true' : null"
-        [attr.aria-label]="ariaLabel"
-        [attr.rel]="computedRel"
-        [attr.target]="target"
-        [fragment]="fragment"
-        [queryParams]="queryParams"
-        [routerLink]="routerLink"
-        [state]="state"
-        (click)="handleClick($event)"
-      >
-        <ng-container *ngTemplateOutlet="content" />
-      </a>
-    }
+    @if (placeholder) {
+      <i-action-placeholder [size]="size" />
+    } @else {
+      <!-- ROUTER LINK -->
+      @if (routerLink) {
+        <a
+          class="i-button-inner"
+          [attr.aria-disabled]="isDisabled ? 'true' : null"
+          [attr.aria-label]="ariaLabel"
+          [attr.rel]="computedRel"
+          [attr.target]="target"
+          [fragment]="fragment"
+          [queryParams]="queryParams"
+          [routerLink]="routerLink"
+          [state]="state"
+          (click)="handleClick($event)"
+        >
+          <ng-container *ngTemplateOutlet="content" />
+        </a>
+      }
 
-    <!-- HREF -->
-    @else if (href) {
-      <a
-        class="i-button-inner"
-        [attr.aria-disabled]="isDisabled ? 'true' : null"
-        [attr.aria-label]="ariaLabel"
-        [attr.href]="isDisabled ? null : href"
-        [attr.rel]="computedRel"
-        [attr.target]="target"
-        (click)="handleClick($event)"
-      >
-        <ng-container *ngTemplateOutlet="content" />
-      </a>
-    }
+      <!-- HREF -->
+      @else if (href) {
+        <a
+          class="i-button-inner"
+          [attr.aria-disabled]="isDisabled ? 'true' : null"
+          [attr.aria-label]="ariaLabel"
+          [attr.href]="isDisabled ? null : href"
+          [attr.rel]="computedRel"
+          [attr.target]="target"
+          (click)="handleClick($event)"
+        >
+          <ng-container *ngTemplateOutlet="content" />
+        </a>
+      }
 
-    <!-- BUTTON -->
-    @else {
-      <button
-        class="i-button-inner"
-        [attr.aria-label]="ariaLabel"
-        [disabled]="isDisabled"
-        [type]="type"
-        (click)="handleClick($event)"
-      >
-        <ng-container *ngTemplateOutlet="content" />
-      </button>
+      <!-- BUTTON -->
+      @else {
+        <button
+          class="i-button-inner"
+          [attr.aria-label]="ariaLabel"
+          [disabled]="isDisabled"
+          [type]="type"
+          (click)="handleClick($event)"
+        >
+          <ng-container *ngTemplateOutlet="content" />
+        </button>
+      }
     }
-
     <!-- SHARED CONTENT -->
     <ng-template #content>
       @if (loading) {
@@ -86,6 +95,7 @@ export type IButtonVariant = Extract<
   `,
 })
 export class IButton {
+  @Input({ transform: booleanAttribute }) placeholder = false;
   /* ---------- BASE INPUTS ---------- */
 
   @Input({ transform: booleanAttribute }) disabled = false;
@@ -161,7 +171,7 @@ export class IButton {
   /* ---------- CLICK ---------- */
 
   handleClick(event: MouseEvent): void {
-    if (this.isDisabled) {
+    if (this.placeholder || this.isDisabled) {
       event.preventDefault();
       event.stopImmediatePropagation();
       return;

@@ -1,0 +1,41 @@
+<div class="flex flex-col gap-lg p-lg">
+  <h1>Empty State</h1>
+  <h2>Stable initial loading and empty height</h2>
+  <i-button (onClick)="loading = !loading">Toggle Loading</i-button>
+  <i-section
+    ><i-section-header>Initially empty</i-section-header
+    ><i-section-body
+      ><i-loading-region #region [loading]="loading">
+        @if (!loading || region.hasLoaded) {
+          <i-grid [dataSource]="emptyData"><i-grid-column fieldName="name" title="Name" /></i-grid>
+        }</i-loading-region></i-section-body
+  ></i-section>
+  <h2>Search and pagination</h2>
+  <i-section
+    ><i-section-filter
+      ><label
+        >Search <input [value]="search" (input)="searchInput($event)" /></label></i-section-filter
+    ><i-section-body
+      ><i-grid [dataSource]="searchData"
+        ><i-grid-column fieldName="name" title="Name"
+          ><i-grid-cell *iCellDef="let row"
+            ><i-highlight-search
+              [search]="search"
+              [value]="row.name" /></i-grid-cell></i-grid-column></i-grid></i-section-body
+  ></i-section>
+  <h2>Standalone states</h2>
+  <label
+    >Kind
+    <select [value]="kind" (change)="changeKind($event)">
+      @for (value of kinds; track value) {
+        <option [value]="value">{{ value }}</option>
+      }
+    </select></label
+  >
+  <i-empty-state [kind]="kind"
+    ><i-button size="xs" (onClick)="actions = actions + 1"
+      >Example CTA {{ actions }}</i-button
+    ></i-empty-state
+  >
+  <i-empty-state density="compact" [kind]="kind" />
+</div>

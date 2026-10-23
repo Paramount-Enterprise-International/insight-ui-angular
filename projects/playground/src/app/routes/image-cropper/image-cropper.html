@@ -1,0 +1,26 @@
+<div class="flex flex-col gap-lg p-lg">
+  <h1>Image Cropper</h1>
+  <p>
+    Drag to pan, use arrow keys to reposition, and adjust zoom. The circle is a preview mask;
+    exports remain square.
+  </p>
+  <label
+    ><input type="checkbox" [checked]="disabled" (change)="disabled = !disabled" /> Disable
+    Interaction</label
+  >
+  <i-image-cropper
+    shape="circle"
+    [disabled]="disabled"
+    [src]="image"
+    (onError)="error = 'Unable to load image.'"
+    (onReady)="ready = true"
+  />
+  <div class="flex gap-md">
+    <i-button [disabled]="!ready" (onClick)="exportImage('image/png')">Export PNG</i-button
+    ><i-button [disabled]="!ready" (onClick)="exportImage('image/jpeg')">Export JPEG</i-button>
+  </div>
+  <i-banner variant="danger" [message]="error" />
+  @if (exported) {
+    <img alt="Exported crop" width="160" [src]="exported" />
+  }
+</div>

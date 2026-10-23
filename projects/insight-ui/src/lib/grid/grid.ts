@@ -73,11 +73,12 @@ import {
   ViewContainerRef,
 } from '@angular/core';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
-import { IPaginator } from './paginator';
-import { IIcon } from '../icon/icon';
 import { IButton } from '../button/button';
-import { IHighlightSearchPipe } from '../highlight-search.pipe';
+import { IEmptyState, type IEmptyStateConfig } from '../empty-state';
+import { IHighlightSearchPipe } from '../highlight-search';
+import { IIcon } from '../icon/icon';
 import { ITruncatedTooltipDirective } from '../truncated-tooltip.directive';
+import { IPaginator } from './paginator';
 
 /* ----------------------------------------------------
  * SORT TYPES
@@ -153,7 +154,6 @@ export type IGridServerSideConfig<T = any> = {
   onFilterChange?: (filter: string) => void;
 };
 
-
 export type IGridDataSourceConfig<T = any> = {
   sort?: ISortConfig;
   filter?: IGridFilter;
@@ -226,6 +226,7 @@ export class IGridDataSource<T = any> {
   private readonly _renderedData$ = new BehaviorSubject<T[]>([]);
 
   private _rawData: T[] = [];
+  private _filteredLength = 0;
 
   // filter internal state
   private _filter = '';
@@ -371,10 +372,7 @@ export class IGridDataSource<T = any> {
    * @param options.pageIndex  — current page index (syncs paginator indicator)
    * @param options.pageSize   — current page size (syncs paginator indicator)
    */
-  setData(
-    rows: T[],
-    options?: { total?: number; pageIndex?: number; pageSize?: number },
-  ): void {
+  setData(rows: T[], options?: { total?: number; pageIndex?: number; pageSize?: number }): void {
     this._rawData = rows || [];
 
     if (this._serverSide) {
@@ -489,6 +487,10 @@ export class IGridDataSource<T = any> {
     }
 
     this._update();
+  }
+
+  get filteredLength(): number {
+    return this._serverSide?.onPageChange ? this._serverSide.totalRowCount : this._filteredLength;
   }
 
   get length(): number {
@@ -609,6 +611,8 @@ export class IGridDataSource<T = any> {
       }
     }
 
+    this._filteredLength = data.length;
+
     // SORT — skip if server handles sorting
     if (!ss?.onSortChange && this._sort && this._sort.length > 0) {
       const sorts = [...this._sort];
@@ -645,6 +649,10 @@ export class IGridDataSource<T = any> {
 
     // PAGINATION — skip if server handles pagination
     if (this._paginatorEnabled && !ss?.onPageChange) {
+      this._pageIndex = Math.min(
+        this._pageIndex,
+        Math.max(0, Math.ceil(data.length / this._pageSize) - 1),
+      );
       const start = this._pageIndex * this._pageSize;
       data = data.slice(start, start + this._pageSize);
     }
@@ -1135,6 +1143,11 @@ export class IGridViewport {}
  * GRID COMPONENT
  * ---------------------------------------------------- */
 
+@Directive({ selector: '[iGridEmptyDef]', standalone: true })
+export class IGridEmptyDef {
+  readonly template = inject(TemplateRef);
+}
+
 @Component({
   selector: 'i-grid',
   standalone: true,
@@ -1151,10 +1164,11 @@ export class IGridViewport {}
     IGridHeaderCellGroup,
     IGridHeaderCellGroupColumns,
     IGridViewport,
+    IEmptyState,
   ],
   template: `<i-grid-viewport>
       <!-- HEADER -->
-      @if (headerItems.length) {
+      @if (headerItems.length && showGridChrome) {
         <i-grid-header-row>
           <!-- FLAT MODE: Expand-all for detail rows (if expandableRow present and not single) -->
           @if (!treeEnabled && hasExpandableRow && !expandableRowDef?.iRowDefExpandSingle) {
@@ -1361,7 +1375,7 @@ export class IGridViewport {}
           @for (col of columns; track getColumnTrack(col, colIndex); let colIndex = $index) {
             @if (treeEnabled && isTreeHostColumn(col)) {
               <!-- TREE MODE: tree UI is inside this cell -->
-                  <!-- NOTE: no cell-level (click) stopPropagation here on purpose —
+              <!-- NOTE: no cell-level (click) stopPropagation here on purpose —
                     clicks must bubble to <i-grid-row> so onRowClick fires.
                     Interactive controls below each stop their own click. -->
               <i-grid-cell [class.i-grid-cell--auto]="col.isAuto" [column]="col">
@@ -1467,9 +1481,39 @@ export class IGridViewport {}
           />
         }
       }
+      @if (!renderedData.length) {
+        <div
+          class="i-grid-empty"
+          [attr.data-empty-density]="emptyState.density || 'default'"
+          [attr.data-page-sized]="hasPagination && showGridChrome ? '' : null"
+          [attr.role]="showGridChrome ? 'row' : null"
+          [style.--i-grid-empty-rows]="hasPagination && showGridChrome ? pageSize : 0"
+        >
+          <div
+            class="i-grid-empty__cell"
+            [attr.aria-colspan]="showGridChrome ? emptyColumnSpan : null"
+            [attr.role]="showGridChrome ? 'cell' : null"
+          >
+            @if (emptyDef) {
+              <ng-container
+                [ngTemplateOutlet]="emptyDef.template"
+                [ngTemplateOutletContext]="{ $implicit: resolvedEmptyState }"
+              />
+            } @else {
+              <i-empty-state
+                [density]="emptyState.density || 'default'"
+                [description]="emptyState.description || ''"
+                [icon]="emptyState.icon || ''"
+                [kind]="resolvedEmptyState.kind"
+                [title]="emptyState.title || ''"
+              />
+            }
+          </div>
+        </div>
+      }
     </i-grid-viewport>
 
-    @if (hasPagination) {
+    @if (hasPagination && showGridChrome) {
       <div class="i-grid-footer">
         <i-paginator
           [length]="totalLength"
@@ -1483,11 +1527,35 @@ export class IGridViewport {}
   exportAs: 'iGrid',
   host: {
     class: 'i-grid',
-    role: 'table',
+    'data-i-surface': 'flush',
+    '[attr.role]': 'showGridChrome ? "table" : null',
   },
 })
 export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   @Input() dataSource!: IGridDataSource<T> | T[];
+  @Input() emptyState: IEmptyStateConfig = {};
+  @ContentChild(IGridEmptyDef) emptyDef?: IGridEmptyDef;
+  get resolvedEmptyState(): IEmptyStateConfig & { kind: NonNullable<IEmptyStateConfig['kind']> } {
+    return {
+      ...this.emptyState,
+      kind: this.emptyState.kind ?? (this.currentFilterText ? 'search' : 'empty'),
+    };
+  }
+  get emptyColumnSpan(): number {
+    return Math.max(
+      1,
+      this.columns.length +
+        (this.showNumberColumnEffective ? 1 : 0) +
+        (!this.treeEnabled && this.selectionMode ? 1 : 0) +
+        (!this.treeEnabled && this.hasExpandableRow ? 1 : 0),
+    );
+  }
+  get showGridChrome(): boolean {
+    return (
+      this.renderedData.length > 0 ||
+      ['search', 'filter', 'search-filter'].includes(this.resolvedEmptyState.kind)
+    );
+  }
 
   /** Row selection mode */
   @Input() selectionMode: IGridSelectionMode = false;
@@ -2613,7 +2681,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   get totalLength(): number {
     if (this.dataSource instanceof IGridDataSource) {
-      return this.dataSource.length;
+      return this.dataSource.filteredLength;
     }
     return this.renderedData.length;
   }
@@ -2972,6 +3040,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
  * ---------------------------------------------------- */
 
 export const I_GRID_DECLARATIONS = [
+  IGridEmptyDef,
   IGrid,
   IGridViewport,
   IGridColumn,

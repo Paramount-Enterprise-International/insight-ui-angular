@@ -1,0 +1,19 @@
+<div class="flex flex-col gap-lg p-lg">
+  <h1>Banner</h1>
+  <p>
+    Neutral is unaccented. Primary follows the theme accent. Info follows the informational color.
+    The default variant is info.
+  </p>
+  @for (variant of variants; track variant) {
+    <i-banner prefixIcon="info" [message]="variant + ' message'" [variant]="variant" />
+  }
+  <i-banner closable prefixIcon="info" suffixIcon="sync" (onClose)="closed = closed + 1">
+    <strong>Children-only content.</strong>
+    <p>Rich HTML and interactive components are supported.</p>
+    <i-button size="xs" (onClick)="count = count + 1">Action {{ count }}</i-button>
+  </i-banner>
+  <p>Close interactions: {{ closed }}</p>
+  <i-banner closable message="Controlled visibility" [(open)]="open" />
+  <i-button (onClick)="open = true">Open Controlled Banner</i-button>
+  <i-banner message="Text-only message" /><i-banner />
+</div>

@@ -98,7 +98,7 @@ describe('Notification presentation', () => {
     fixture.detectChanges();
     expect(host.querySelector('i-notification-item')).toBe(row);
     expect(host.querySelector('[inert]')).toBeNull();
-    expect(host.querySelector('iam-loading-region')).toBeNull();
+    expect(host.querySelector('i-loading-region')).toBeNull();
     expect(status.textContent).toContain('Refreshing notifications...');
     expect(scroll.contains(status)).toBeFalse();
     expect(scroll.scrollTop).toBe(scrollTop);

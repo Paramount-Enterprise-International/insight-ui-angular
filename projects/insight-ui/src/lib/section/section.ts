@@ -1,3 +1,4 @@
+import type { ISurfaceLayout } from '../loading-region';
 // section.ts
 /**
  * ISection
@@ -11,7 +12,7 @@
  * </i-section>
  */
 
-import { Component, NgModule } from '@angular/core';
+import { Component, Input, NgModule } from '@angular/core';
 import { ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs } from './section-tabs';
 
 @Component({
@@ -44,10 +45,13 @@ export class ISectionFilter {}
 
 @Component({
   selector: 'i-section-body',
+  host: { class: 'i-surface-content', '[attr.data-layout]': 'layout' },
   imports: [],
   template: `<ng-content />`,
 })
-export class ISectionBody {}
+export class ISectionBody {
+  @Input() layout: ISurfaceLayout = 'auto';
+}
 
 @Component({
   selector: 'i-section-footer',

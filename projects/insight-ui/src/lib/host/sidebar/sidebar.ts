@@ -269,7 +269,7 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   @Input() maxWidth = 480;
   /** Set to null to keep the width in memory only. */
   @Input() widthStorageKey: string | null = 'insight.sidebar.width';
-  /** Expansion preferences are shared per origin; null disables persistence. */
+  /** Root expansion preferences are shared per origin; null disables persistence. */
   @Input() menuStateStorageKey: string | null = 'insight.sidebar.menu-state';
   @Input() impersonating = false;
   @Input() footerText = 'Insight Local';
@@ -722,16 +722,16 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
     return filtered;
   }
 
-  private filterMenuBranch(menu: IMenu, term: string): IMenu | null {
+  private filterMenuBranch(menu: IMenu, term: string, includeBranch = false): IMenu | null {
     const name = getMenuLabel(menu).toLowerCase();
-    const selfMatches = name.includes(term);
+    const selfMatches = includeBranch || name.includes(term);
 
     const originalChildren = getMenuChildren(menu);
 
     const filteredChildren: IMenu[] = [];
 
     for (const child of originalChildren) {
-      const childResult = this.filterMenuBranch(child, term);
+      const childResult = this.filterMenuBranch(child, term, selfMatches);
 
       if (childResult) {
         filteredChildren.push(childResult);
@@ -744,14 +744,12 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
       return null;
     }
 
-    const childrenToUse = selfMatches ? originalChildren : filteredChildren;
-
     const cloned: IMenu = {
       ...menu,
-      child: childrenToUse,
+      child: filteredChildren,
     };
 
-    if (Number(cloned.menuTypeId) === 3 && (selfMatches || childMatches)) {
+    if (originalChildren.length && menu.visibility !== 'no-child') {
       cloned.visibility = 'expanded';
     }
 

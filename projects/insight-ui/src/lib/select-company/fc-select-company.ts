@@ -47,14 +47,17 @@ import { ISelectCompany } from './select-company';
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="invalid || controlInvalid"
+      [loading]="loading"
       [matchTriggerWidth]="matchTriggerWidth"
       [menuCode]="menuCode"
       [panelOffset]="panelOffset"
       [panelPosition]="panelPosition"
       [placeholder]="placeholder"
       [portalToBody]="portalToBody"
+      [stateScope]="stateScope"
       [value]="value"
       (onChanged)="handleSelectChange($event)"
+      (onOptionSelected)="handleOptionSelected($event)"
     >
       @if (optionDef; as option) {
         <ng-template iSelectOption let-row>
@@ -81,6 +84,8 @@ export class IFCSelectCompany implements ControlValueAccessor, OnDestroy {
   @Input() placeholder = '';
   @Input() menuCode?: string | null;
   @Input() disabled = false;
+  @Input() loading = false;
+  @Input() stateScope: 'auto' | 'local' = 'auto';
   @Input() invalid = false;
   @Input() displayWith?: ((row: IMenuCompanyDto | null) => string) | string;
   @Input() filterDelay = 200;
@@ -148,8 +153,11 @@ export class IFCSelectCompany implements ControlValueAccessor, OnDestroy {
   protected handleSelectChange(change: ISelectChange<IMenuCompanyDto>): void {
     this.modelValue = change.value;
     this.onChange(change.value);
-    this.onTouched();
     this.onChanged.emit(change);
+  }
+
+  protected handleOptionSelected(change: ISelectChange<IMenuCompanyDto>): void {
+    this.onTouched();
     this.onOptionSelected.emit(change);
   }
 

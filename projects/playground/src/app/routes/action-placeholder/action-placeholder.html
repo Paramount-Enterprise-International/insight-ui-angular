@@ -1,0 +1,26 @@
+<div class="flex flex-col gap-lg p-lg">
+  <h1>Action Placeholder</h1>
+  <label
+    >Size
+    <select [value]="size" (change)="changeSize($event)">
+      @for (value of sizes; track value) {
+        <option [value]="value">{{ value }}</option>
+      }
+    </select></label
+  >
+  <i-button (onClick)="placeholder = !placeholder">Toggle Placeholder</i-button>
+  <div class="flex align-center gap-md">
+    <i-button
+      icon="edit"
+      [placeholder]="placeholder"
+      [size]="size"
+      (onClick)="clicks = clicks + 1"
+    /><i-action-placeholder [size]="size" /><span>Clicks: {{ clicks }}</span>
+  </div>
+  @for (value of sizes; track value) {
+    <div class="flex align-center gap-md">
+      <span>{{ value }}</span
+      ><i-button icon="edit" [size]="value" /><i-action-placeholder [size]="value" />
+    </div>
+  }
+</div>

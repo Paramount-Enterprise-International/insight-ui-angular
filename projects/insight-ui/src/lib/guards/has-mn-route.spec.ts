@@ -119,7 +119,9 @@ describe('hasMn Angular routes', () => {
     await settle();
     expect(harness.routeNativeElement?.textContent).toContain('Unauthorized Access');
     expect(harness.routeNativeElement?.querySelector('i-error-page i-section')).not.toBeNull();
-    expect(harness.routeNativeElement?.querySelector('.i-error-page__code')?.textContent?.trim()).toBe('403');
+    expect(
+      harness.routeNativeElement?.querySelector('.i-error-page__code')?.textContent?.trim(),
+    ).toBe('403');
     expect(TestBed.inject(Router).url).toBe('/reports/42?tab=info');
     expect(mounts).toBe(0);
     expect(shell.titleOverride()).toBe('Unauthorized Access');
@@ -149,6 +151,9 @@ describe('hasMn Angular routes', () => {
     await settle();
     expect(store.load).toHaveBeenCalledTimes(1);
     expect(harness.routeNativeElement?.textContent).toContain('Loading access...');
+    expect(
+      harness.routeNativeElement?.querySelector('i-loading[mode="container"][role="status"]'),
+    ).not.toBeNull();
     expect(harness.routeNativeElement?.querySelector('i-error-page')).toBeNull();
     expect(harness.routeNativeElement?.textContent).not.toContain('Unauthorized Access');
     store.initialized.set(true);
