@@ -8,12 +8,12 @@ import {
   NavigationError,
   NavigationSkipped,
   NavigationStart,
+  type Route,
   RouteConfigLoadEnd,
   RouteConfigLoadStart,
   Router,
   RouterLink,
   RouterOutlet,
-  type Route,
 } from '@angular/router';
 import { combineLatest, filter, map, Observable, shareReplay, startWith } from 'rxjs';
 
@@ -134,13 +134,13 @@ import { IHTitleBreadcrumbService } from '../shell/title-breadcrumb.service';
     <div class="ih-content-page">
       <div
         class="ih-content-body scroll scroll-y"
-        [attr.inert]="pageLoading() ? '' : null"
         [attr.aria-busy]="pageLoading()"
+        [attr.inert]="pageLoading() ? '' : null"
       >
         <router-outlet />
       </div>
       @if (pageLoading()) {
-        <i-loading class="ih-content-page-loading" mode="container" label="Loading page..." />
+        <i-loading class="ih-content-page-loading" label="Loading page..." mode="container" />
       }
     </div>
   `,

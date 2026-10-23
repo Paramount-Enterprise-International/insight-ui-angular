@@ -244,7 +244,7 @@ describe('IHSidebar menu persistence and restoration', () => {
       ];
       const before = localStorage.getItem(key);
       await mount('/unknown', nodes);
-      const module = () =>
+      const module = (): HTMLUListElement =>
         host.querySelector('.ih-menu-module')!.parentElement!.querySelector('ul')!;
       expect(module().classList.contains('collapsed')).toBe(true);
       fixture.componentInstance.menuSearch.setValue(term);

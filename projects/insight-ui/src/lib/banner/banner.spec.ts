@@ -33,11 +33,28 @@ class Host {
   clicked = 0;
 }
 describe('IBanner', () => {
-  function setup(): ComponentFixture<Host> {
+  function setup(options: Partial<Pick<Host, 'message' | 'children'>> = {}): ComponentFixture<Host> {
     TestBed.configureTestingModule({ imports: [Host] });
     const fixture = TestBed.createComponent(Host);
+    Object.assign(fixture.componentInstance, options);
     fixture.detectChanges();
     return fixture;
+  }
+
+  async function updateChildren(fixture: ComponentFixture<Host>, children: boolean): Promise<void> {
+    const content = fixture.nativeElement.querySelector('.i-banner__content') as HTMLElement;
+    const mutation = new Promise<void>((resolve) => {
+      const observer = new MutationObserver(() => {
+        observer.disconnect();
+        resolve();
+      });
+      observer.observe(content, { childList: true });
+    });
+    fixture.componentInstance.children = children;
+    fixture.detectChanges();
+    await mutation;
+    await fixture.whenStable();
+    fixture.detectChanges();
   }
 
   it('hides empty messages and preserves literal text', () => {
@@ -55,13 +72,27 @@ describe('IBanner', () => {
   it('renders interactive children without a message', async () => {
     const f = setup();
     f.componentInstance.message = null;
-    f.componentInstance.children = true;
-    f.detectChanges();
+    await updateChildren(f, true);
+    expect(f.nativeElement.querySelector('i-banner').style.display).not.toBe('none');
+    f.nativeElement.querySelector('button').click();
+    expect(f.componentInstance.clicked).toBe(1);
+  });
+  it('renders children present on the initial render without a message', async () => {
+    const f = setup({ message: null, children: true });
     await f.whenStable();
     f.detectChanges();
     expect(f.nativeElement.querySelector('i-banner').style.display).not.toBe('none');
     f.nativeElement.querySelector('button').click();
     expect(f.componentInstance.clicked).toBe(1);
+  });
+  it('hides again when projected children are removed', async () => {
+    const f = setup({ message: null, children: true });
+    await f.whenStable();
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('i-banner').style.display).not.toBe('none');
+    await updateChildren(f, false);
+    expect(f.nativeElement.querySelector('i-banner').style.display).toBe('none');
+    expect(f.nativeElement.querySelector('button')).toBeNull();
   });
   for (const variant of ['neutral', 'primary', 'success', 'info', 'warning', 'danger'] as const)
     it(`exposes ${variant} semantics`, () => {

@@ -21,7 +21,9 @@ export class ImageCropperDemo {
   readonly image =
     'data:image/svg+xml,' +
     encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320"><rect width="480" height="320" fill="#e0f2fe"/><circle cx="240" cy="160" r="100" fill="#2563eb"/></svg>',
+      '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320">' +
+        '<rect width="480" height="320" fill="#e0f2fe"/>' +
+        '<circle cx="240" cy="160" r="100" fill="#2563eb"/></svg>',
     );
   async exportImage(mimeType: 'image/png' | 'image/jpeg'): Promise<void> {
     try {

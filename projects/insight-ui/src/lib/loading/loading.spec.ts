@@ -5,7 +5,7 @@ import { ILoading, type ILoadingMode } from './loading';
 @Component({
   standalone: true,
   imports: [ILoading],
-  template: `<i-loading [mode]="mode" [label]="label" [light]="light" />`,
+  template: `<i-loading [label]="label" [light]="light" [mode]="mode" />`,
 })
 class LoadingHost {
   mode: ILoadingMode = 'inline';

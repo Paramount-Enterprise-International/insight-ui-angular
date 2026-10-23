@@ -88,8 +88,9 @@ export class IBanner implements AfterViewInit {
         this.cdr.markForCheck();
       }
     };
-    update();
-    this.cdr.detectChanges();
+    queueMicrotask(() => {
+      if (!this.destroyRef.destroyed) update();
+    });
     const Observer = this.projected.nativeElement.ownerDocument.defaultView?.MutationObserver;
     if (Observer) {
       const observer = new Observer(update);

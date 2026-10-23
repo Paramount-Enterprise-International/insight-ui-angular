@@ -6,7 +6,7 @@ import { ILoadingRegion } from './loading-region';
   template: `<i-loading-region #region [contextKey]="context" [error]="error" [loading]="loading">
     @if (loading && !region.hasLoaded) {
     } @else if (error) {
-      <button (click)="retry()">Retry</button>
+      <button type="button" (click)="retry()">Retry</button>
     } @else {
       <input value="Original" />
     }

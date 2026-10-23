@@ -1,7 +1,7 @@
 import { APP_BASE_HREF } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import { Component, signal } from '@angular/core';
-import { fakeAsync, TestBed, tick } from '@angular/core/testing';
+import { type ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { provideRouter, Router, type Routes } from '@angular/router';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { IUserMenuStore } from '../../store/user-menu';
@@ -126,7 +126,11 @@ describe('host and remote breadcrumb composition', () => {
 });
 
 describe('page bundle loading', () => {
-  function setup(routes: Routes) {
+  function setup(routes: Routes): {
+    fixture: ComponentFixture<IHContent>;
+    router: Router;
+    host: HTMLElement;
+  } {
     TestBed.configureTestingModule({
       imports: [IHContent],
       providers: [
@@ -136,7 +140,7 @@ describe('page bundle loading', () => {
         { provide: ISessionService, useValue: { initializing: signal(false) } },
         {
           provide: IUserMenuStore,
-          useFactory: () => ({
+          useFactory: (): Pick<IUserMenuStore, 'initializing' | 'menus$'> => ({
             initializing: signal(false),
             menus$: toObservable(signal<IMenu[]>([])),
           }),
@@ -153,7 +157,7 @@ describe('page bundle loading', () => {
     const pending = new Promise<typeof Page>((done) => {
       resolve = done;
     });
-    const { fixture, router, host } = setup([{ path: 'slow', loadComponent: () => pending }]);
+    const { fixture, router, host } = setup([{ path: 'slow', loadComponent: (): Promise<typeof Page> => pending }]);
     void router.navigateByUrl('/slow');
     tick();
     fixture.detectChanges();
@@ -172,7 +176,7 @@ describe('page bundle loading', () => {
     const pending = new Promise<typeof Page>((_, fail) => {
       reject = fail;
     });
-    const { fixture, router, host } = setup([{ path: 'slow', loadComponent: () => pending }]);
+    const { fixture, router, host } = setup([{ path: 'slow', loadComponent: (): Promise<typeof Page> => pending }]);
     void router.navigateByUrl('/slow').catch(() => undefined);
     tick();
     fixture.detectChanges();
@@ -190,7 +194,7 @@ describe('page bundle loading', () => {
       resolve = done;
     });
     const { fixture, router, host } = setup([
-      { path: 'slow', loadComponent: () => pending },
+      { path: 'slow', loadComponent: (): Promise<typeof Page> => pending },
       { path: 'open', component: Page },
     ]);
     void router.navigateByUrl('/slow');
