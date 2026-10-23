@@ -1,0 +1,11 @@
+<div class="flex flex-col gap-lg p-lg">
+  <h1>Highlight Search</h1>
+  <label>Value <input [value]="value" (input)="changeValue($event)" /></label
+  ><label>Search <input [value]="search" (input)="changeSearch($event)" /></label>
+  <p><i-highlight-search [search]="search" [value]="value" /></p>
+  <p>Numeric value: <i-highlight-search [search]="search" [value]="12345" /></p>
+  <p>Null: <i-highlight-search [search]="search" [value]="null" /></p>
+  <p class="truncate" style="max-width: 320px">
+    <i-highlight-search [search]="search" [value]="value" />
+  </p>
+</div>

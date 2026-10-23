@@ -5,6 +5,8 @@ import {
   Component,
   computed,
   ContentChild,
+  DestroyRef,
+  effect,
   EventEmitter,
   forwardRef,
   inject,
@@ -22,6 +24,7 @@ import {
   type ISelectPanelPosition,
 } from '../select';
 import { IUserMenuStore } from '../store';
+import { IH_STATE, type IHSelectionSnapshot } from '../state';
 import type { IMenuCompanyDto } from '../user/user.types';
 
 @Component({
@@ -30,11 +33,12 @@ import type { IMenuCompanyDto } from '../user/user.types';
   imports: [ISelect, ISelectOptionDefDirective, NgTemplateOutlet],
   template: `
     <i-select
-      [disabled]="disabled"
+      [disabled]="disabled || (hosted() && companyLoading())"
       [displayWith]="displayWith ?? 'name'"
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="invalid"
+      [loading]="companyLoading()"
       [matchTriggerWidth]="matchTriggerWidth"
       [options]="companyOptions()"
       [panelOffset]="panelOffset"
@@ -65,6 +69,12 @@ import type { IMenuCompanyDto } from '../user/user.types';
   ],
 })
 export class ISelectCompany implements ControlValueAccessor {
+  private readonly hostState = inject(IH_STATE, { optional: true });
+  private readonly scopeValue = signal<'auto' | 'local'>('auto');
+  private readonly loadingValue = signal(false);
+  private readonly selectionValue = signal<IHSelectionSnapshot | null>(this.hostState?.selection.getSnapshot() ?? null);
+  private readonly selectionRevision = computed(() => this.selectionValue()?.revision);
+  private syncedValue: IMenuCompanyDto | null | undefined;
   private readonly store = inject(IUserMenuStore);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly menuCodeValue = signal<string | null>(null);
@@ -76,6 +86,10 @@ export class ISelectCompany implements ControlValueAccessor {
 
   @Input() placeholder = '';
   @Input() disabled = false;
+  @Input() set loading(value: boolean) { this.loadingValue.set(value); }
+  get loading(): boolean { return this.loadingValue(); }
+  @Input() set stateScope(value: 'auto' | 'local') { this.scopeValue.set(value); }
+  get stateScope(): 'auto' | 'local' { return this.scopeValue(); }
   @Input() invalid = false;
   @Input() filterDelay = 200;
   @Input() panelPosition: ISelectPanelPosition = 'bottom left';
@@ -102,15 +116,47 @@ export class ISelectCompany implements ControlValueAccessor {
   }
 
   get value(): IMenuCompanyDto | null {
-    return this.modelValue();
+    return this.hosted() ? this.selectedCompany() : this.modelValue();
   }
 
   @Output() readonly onChanged = new EventEmitter<ISelectChange<IMenuCompanyDto>>();
   @Output() readonly onOptionSelected = new EventEmitter<ISelectChange<IMenuCompanyDto>>();
 
+  protected readonly hosted = computed(() => !!this.hostState && this.scopeValue() !== 'local');
+  private readonly effectiveMenuCode = computed(() => this.menuCodeValue() ??
+    (this.hosted() ? this.selectionValue()?.menuCode ?? null : null));
+  protected readonly companyLoading = computed(() => this.loadingValue() || (this.hosted() &&
+    (!this.store.initialized() || this.store.initializing() || !this.effectiveMenuCode())));
+
+  constructor() {
+    const selection = this.hostState?.selection;
+    if (selection) {
+      const unsubscribe = selection.subscribe(() => this.selectionValue.set(selection.getSnapshot()));
+      inject(DestroyRef).onDestroy(unsubscribe);
+    }
+    effect(() => {
+      if (!this.hosted() || !selection) return;
+      this.selectionRevision();
+      const code = this.effectiveMenuCode();
+      const error = this.store.loadErrors().authorizations;
+      const status = this.companyLoading() ? 'loading' : error ? 'error' : 'ready';
+      selection.validateCompanies(code, this.companyOptions().map((company) => company.id), status,
+        error ? 'Unable to load company access.' : null);
+    });
+    effect(() => {
+      if (!this.hosted()) return;
+      const value = this.selectedCompany();
+      if (value === this.syncedValue) return;
+      this.syncedValue = value;
+      this.onChange(value);
+      this.onChanged.emit({ value, label: value?.name ?? '' });
+    });
+  }
+
   protected readonly companyOptions = computed(() => {
     const companies = this.store.companies();
-    const code = this.menuCodeValue();
+    const code = this.effectiveMenuCode();
+    if (this.hosted() && !code) return [];
     if (!code) return companies;
 
     const allowed = new Set(this.store.menuCompanies()[code] ?? []);
@@ -118,6 +164,9 @@ export class ISelectCompany implements ControlValueAccessor {
   });
 
   protected readonly selectedCompany = computed(() => {
+    if (this.hosted()) {
+      return this.companyOptions().find((company) => company.id === this.selectionValue()?.companyId) ?? null;
+    }
     const value = this.modelValue();
     if (!value) return null;
 
@@ -153,6 +202,8 @@ export class ISelectCompany implements ControlValueAccessor {
   }
 
   protected handleSelectChange(change: ISelectChange<IMenuCompanyDto>): void {
+    if (this.hosted() && !this.hostState?.selection.setCompany(change.value?.id ?? null)) return;
+    this.syncedValue = change.value;
     this.modelValue.set(change.value);
     this.onChange(change.value);
     this.onTouched();

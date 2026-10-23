@@ -166,12 +166,23 @@ describe('IHSidebar menu persistence and restoration', () => {
     expect(host.querySelector('.ih-sidebar-body')!.scrollTop).toBe(64);
   });
 
-  it('persists nested choices through remount, new references and empty hydration', async () => {
+  it('keeps nested choices during navigation and hydration but resets them on remount', async () => {
     await mount('/unknown');
     header('Root').click();
     await settle();
     header('Nested').click();
     await settle();
+    expect(collapsed('Nested')).toBe(false);
+    expect(JSON.parse(localStorage.getItem(key)!).expanded['main:id:nested']).toBeUndefined();
+    fixture.componentInstance.menuSearch.setValue('Root');
+    await settle();
+    fixture.componentInstance.menuSearch.setValue('');
+    await settle();
+    expect(collapsed('Nested')).toBe(false);
+    await router.navigateByUrl('/other');
+    await settle();
+    await moveHistory('back');
+    expect(router.url).toBe('/unknown');
     expect(collapsed('Nested')).toBe(false);
     source.next([]);
     await settle();
@@ -181,7 +192,84 @@ describe('IHSidebar menu persistence and restoration', () => {
     fixture.destroy();
     await mount('/unknown');
     expect(collapsed('Root')).toBe(false);
-    expect(collapsed('Nested')).toBe(false);
+    expect(collapsed('Nested')).toBe(true);
+  });
+
+  it('opens root headers by default and ignores old nested expansion on initial load', async () => {
+    localStorage.setItem(key, JSON.stringify({ version: 1, expanded: { 'main:id:nested': true } }));
+    const nodes = structuredClone(menus);
+    nodes[0].children![0].visibility = 'expanded';
+    await mount('/unknown', nodes);
+    expect(collapsed('Root')).toBe(false);
+    expect(collapsed('Other')).toBe(false);
+    expect(collapsed('Nested')).toBe(true);
+  });
+
+  for (const term of ['Active page', 'Root']) {
+    it(`temporarily opens the complete search branch for ${term}`, async () => {
+      const before = localStorage.getItem(key);
+      await mount('/unknown');
+      fixture.componentInstance.menuSearch.setValue(term);
+      await settle();
+      expect(collapsed('Root')).toBe(false);
+      expect(collapsed('Nested')).toBe(false);
+      const row = host.querySelector('a[data-sidebar-menu-key="main:id:active"]')!;
+      expect(row.closest('ul.collapsed')).toBeNull();
+      expect(localStorage.getItem(key)).toBe(before);
+      fixture.componentInstance.menuSearch.setValue('');
+      await settle();
+      expect(collapsed('Root')).toBe(true);
+      expect(collapsed('Nested')).toBe(true);
+      expect(localStorage.getItem(key)).toBe(before);
+    });
+  }
+
+  for (const term of ['Legacy page', 'Legacy module']) {
+    it(`opens a saved collapsed legacy module and its descendants for ${term}`, async () => {
+      const nodes: IMenu[] = [
+        {
+          menuId: 1,
+          menuName: 'Legacy module',
+          menuTypeId: 2,
+          visibility: 'collapsed',
+          child: [
+            {
+              menuId: 2,
+              menuName: 'Legacy group',
+              menuTypeId: 3,
+              child: [{ menuId: 3, menuName: 'Legacy page', menuTypeId: 3, route: '/legacy' }],
+            },
+          ],
+        },
+      ];
+      const before = localStorage.getItem(key);
+      await mount('/unknown', nodes);
+      const module = (): HTMLUListElement =>
+        host.querySelector('.ih-menu-module')!.parentElement!.querySelector('ul')!;
+      expect(module().classList.contains('collapsed')).toBe(true);
+      fixture.componentInstance.menuSearch.setValue(term);
+      await settle();
+      expect(module().classList.contains('expanded')).toBe(true);
+      expect(collapsed('Legacy group')).toBe(false);
+      const row = host.querySelector('a[data-sidebar-menu-key="main:menuId:3"]')!;
+      expect(row.closest('ul.collapsed')).toBeNull();
+      fixture.componentInstance.menuSearch.setValue('');
+      await settle();
+      expect(module().classList.contains('collapsed')).toBe(true);
+      expect(collapsed('Legacy group')).toBe(true);
+      expect(localStorage.getItem(key)).toBe(before);
+      expect(nodes[0].visibility).toBe('collapsed');
+      expect(nodes[0].child![0].visibility).toBeUndefined();
+    });
+  }
+
+  it('renders every level expanded in flat mode despite collapsed preferences', async () => {
+    await mount('/unknown');
+    fixture.componentRef.setInput('collapsible', false);
+    await settle();
+    expect(host.querySelector('ul.collapsed')).toBeNull();
+    expect(host.querySelector('.ih-menu-chevron')).toBeNull();
+    expect(host.querySelector('a[data-sidebar-menu-key="main:id:active"]')).not.toBeNull();
   });
 
   it('keeps manual collapse after restore and does not reopen on subsequent navigation', async () => {

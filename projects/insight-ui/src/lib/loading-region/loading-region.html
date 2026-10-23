@@ -1,0 +1,26 @@
+<div
+  data-i-loading-container
+  [attr.aria-busy]="loading"
+  [attr.data-layout]="layout"
+  [class]="'i-loading-region__container ' + containerClass"
+  [style.height]="height"
+  [style.min-height]="minHeight"
+>
+  <div
+    #content
+    data-i-loading-content
+    style="min-width: 0"
+    [attr.data-layout]="layout"
+    [attr.inert]="loading ? '' : null"
+    [class]="'i-loading-region__content i-surface-content ' + contentClass"
+    [style.opacity]="loading ? 0.45 : null"
+    [style.visibility]="hidePreviousContext ? 'hidden' : null"
+  >
+    <ng-content />
+  </div>
+  @if (loading) {
+    <div class="i-loading-region__overlay">
+      <i-loading class="i-loading-region__indicator" [label]="label" />
+    </div>
+  }
+</div>

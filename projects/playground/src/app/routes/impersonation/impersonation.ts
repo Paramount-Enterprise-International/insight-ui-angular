@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import {
   getDefaultIAuthConfig,
   I_AUTH_CONFIG,
+  IBanner,
   IHImpersonationBanner,
   IImpersonationStateService,
-  IInfoNotice,
   ISessionService,
   IUserMenuStore,
 } from '@insight-ui';
@@ -20,7 +20,7 @@ const token = 'e30.' + btoa(JSON.stringify({ sub: 'b', act: { sub: 'a' } })) + '
 @Component({
   selector: 'app-impersonation-demo',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IHImpersonationBanner, IInfoNotice],
+  imports: [IHImpersonationBanner, IBanner],
   providers: [
     {
       provide: I_AUTH_CONFIG,
@@ -57,10 +57,10 @@ const token = 'e30.' + btoa(JSON.stringify({ sub: 'b', act: { sub: 'a' } })) + '
     <h1>Impersonation</h1>
     <p>Local fixture. End Session demonstrates the retryable error state.</p>
     <ih-impersonation-banner />
-    <i-info-notice
-      message="This action cannot be performed during an impersonation session."
-      title="Not available."
-    />
+    <i-banner prefixIcon="info" variant="info"
+      ><strong>Not available.</strong> This action cannot be performed during an impersonation
+      session.</i-banner
+    >
   </div>`,
 })
 export class Impersonation {}

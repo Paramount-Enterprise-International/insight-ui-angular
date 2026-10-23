@@ -48,7 +48,7 @@ import {
 } from '@angular/forms';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
-import { IHighlightSearchPipe } from './../highlight-search.pipe';
+import { IHighlightSearchPipe } from '../highlight-search';
 import { IIcon } from '../icon/icon';
 import { IInput, IInputAddonButton, IInputAddonLoading } from '../input/input';
 import {
@@ -149,6 +149,7 @@ export class ISelect<T = any>
 {
   @Input() placeholder = '';
   @Input() disabled = false;
+  @Input() loading = false;
   @Input() invalid = false;
   @Input() filterDelay = 200;
   @Input() panelPosition: ISelectPanelPosition = 'bottom left';
@@ -770,7 +771,7 @@ export class ISelect<T = any>
   }
 
   get appendAddon(): IInputAddonButton | IInputAddonLoading {
-    if (this.isLoading) {
+    if (this.loading || this.isLoading) {
       return {
         type: 'loading',
         visible: true,
@@ -1119,11 +1120,12 @@ export class ISelect<T = any>
     }
 
     <i-select
-      [disabled]="isDisabled"
+      [disabled]="disabled || isDisabled"
       [displayWith]="displayWith"
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="controlInvalid"
+      [loading]="loading"
       [matchTriggerWidth]="matchTriggerWidth"
       [options]="options"
       [options$]="options$"
@@ -1149,9 +1151,11 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   @ViewChild(ISelect) innerSelect!: ISelect<T>;
 
   @Input() label = '';
+  @Input() disabled = false;
   @Input() placeholder = '';
   @Input() options: T[] | null = null;
   @Input() options$: Observable<T[]> | null = null;
+  @Input() loading = false;
 
   @Input() displayWith?: ((row: T | null) => string) | string;
   @Input() filterDelay = 200;
@@ -1265,7 +1269,7 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   }
 
   focusInnerSelect(): void {
-    if (!this.isDisabled && this.innerSelect) {
+    if (!this.disabled && !this.isDisabled && this.innerSelect) {
       this.innerSelect.focus();
     }
   }

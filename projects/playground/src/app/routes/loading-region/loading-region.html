@@ -1,0 +1,30 @@
+<div class="flex flex-col gap-lg p-lg">
+  <h1>Loading Region</h1>
+  <i-button (onClick)="loading = !loading">Toggle Refresh</i-button>
+  <i-section
+    ><i-section-header>Retained grid</i-section-header
+    ><i-section-body
+      ><i-loading-region [loading]="loading"
+        ><i-grid [dataSource]="data"
+          ><i-grid-column
+            fieldName="name"
+            title="Name" /></i-grid></i-loading-region></i-section-body
+  ></i-section>
+  <i-section
+    ><i-section-header>Nested form regions</i-section-header
+    ><i-section-body
+      ><i-loading-region [loading]="loading"
+        ><i-loading-region
+          ><label
+            >Unsaved form value
+            <input
+              value="Edit and toggle refresh" /></label></i-loading-region></i-loading-region></i-section-body
+  ></i-section>
+  <i-section
+    ><i-section-header>Mixed content</i-section-header
+    ><i-section-body
+      ><i-loading-region [loading]="loading"
+        ><p>Content retains its normal padding.</p>
+        <label>Another value <input value="Editable" /></label></i-loading-region></i-section-body
+  ></i-section>
+</div>

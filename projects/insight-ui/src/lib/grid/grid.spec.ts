@@ -1,6 +1,7 @@
 import { Component, ViewChild } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { IGrid, IGridColumn } from './grid';
+import { IEmptyState } from '../empty-state';
+import { IGrid, IGridColumn, IGridDataSource, IGridEmptyDef } from './grid';
 
 @Component({
   standalone: true,
@@ -190,3 +191,137 @@ describe('IGrid — tree mode row click + conditional selection', () => {
   });
 });
 
+@Component({
+  imports: [IGrid, IGridColumn],
+  template: `<i-grid [dataSource]="data"><i-grid-column fieldName="name" title="Name" /></i-grid>`,
+})
+class EmptyGridHost {
+  data = new IGridDataSource([{ name: 'Alpha' }, { name: 'Beta' }, { name: 'Alphabet' }], {
+    paginator: { pageSize: 2 },
+  });
+}
+describe('IGrid empty states', () => {
+  it('retains grid identity across no-result cycles and uses filtered pagination', () => {
+    TestBed.configureTestingModule({ imports: [EmptyGridHost] });
+    const f = TestBed.createComponent(EmptyGridHost);
+    f.detectChanges();
+    const grid = f.nativeElement.querySelector('i-grid');
+    const data = f.componentInstance.data;
+    data.filter = 'alpha';
+    f.detectChanges();
+    expect(data.length).toBe(3);
+    expect(data.filteredLength).toBe(2);
+    expect(f.nativeElement.querySelectorAll('i-grid-row').length).toBe(2);
+    for (let cycle = 0; cycle < 2; cycle++) {
+      data.filter = 'absent';
+      f.detectChanges();
+      expect(f.nativeElement.querySelector('i-grid')).toBe(grid);
+      expect(f.nativeElement.querySelector('i-grid-header-row')).not.toBeNull();
+      expect(
+        f.nativeElement.querySelector('i-empty-state').getAttribute('data-empty-state-kind'),
+      ).toBe('search');
+      expect(
+        f.nativeElement
+          .querySelector('.i-grid-empty')
+          .style.getPropertyValue('--i-grid-empty-rows'),
+      ).toBe('2');
+      data.filter = '';
+      f.detectChanges();
+      expect(f.nativeElement.querySelectorAll('i-grid-row').length).toBe(2);
+      expect(f.nativeElement.querySelector('i-empty-state')).toBeNull();
+    }
+  });
+  for (const size of [10, 50, 100])
+    it(`uses page size ${size} for no-result height`, () => {
+      TestBed.configureTestingModule({ imports: [EmptyGridHost] });
+      const f = TestBed.createComponent(EmptyGridHost);
+      f.componentInstance.data = new IGridDataSource([{ name: 'Alpha' }], {
+        paginator: { pageSize: size },
+      });
+      f.componentInstance.data.filter = 'absent';
+      f.detectChanges();
+      expect(
+        f.nativeElement
+          .querySelector('.i-grid-empty')
+          .style.getPropertyValue('--i-grid-empty-rows'),
+      ).toBe(String(size));
+      expect(f.nativeElement.querySelector('i-paginator')).not.toBeNull();
+    });
+  it('hides chrome for true empty data', () => {
+    TestBed.configureTestingModule({ imports: [EmptyGridHost] });
+    const f = TestBed.createComponent(EmptyGridHost);
+    f.componentInstance.data.data = [];
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('i-empty-state')).not.toBeNull();
+    expect(f.nativeElement.querySelector('i-grid-header-row,i-paginator')).toBeNull();
+  });
+});
+
+@Component({
+  imports: [IGrid, IGridColumn],
+  template: `<i-grid
+    treeColumn="name"
+    [dataSource]="data"
+    [tree]="true"
+    [treeInitialExpandLevel]="99"
+    ><i-grid-column fieldName="name" title="Name"
+  /></i-grid>`,
+})
+class EmptyTreeHost {
+  data = new IGridDataSource<TreeNode>(
+    [{ id: 1, name: 'Group', children: [{ id: 2, name: 'Leaf' }] }],
+    { paginator: false },
+  );
+}
+describe('IGrid recursive empty recovery', () => {
+  it('retains matching ancestors and avoids paginated empty height', () => {
+    TestBed.configureTestingModule({ imports: [EmptyTreeHost] });
+    const f = TestBed.createComponent(EmptyTreeHost);
+    f.detectChanges();
+    const grid = f.nativeElement.querySelector('i-grid');
+    f.componentInstance.data.filter = { recursive: true, text: 'absent' };
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('i-empty-state')).not.toBeNull();
+    expect(
+      f.nativeElement.querySelector('.i-grid-empty').style.getPropertyValue('--i-grid-empty-rows'),
+    ).toBe('0');
+    expect(f.nativeElement.querySelector('i-paginator')).toBeNull();
+    f.componentInstance.data.filter = { recursive: true, text: 'leaf' };
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('i-grid')).toBe(grid);
+    expect(f.nativeElement.querySelectorAll('i-grid-row').length).toBe(2);
+    expect(f.nativeElement.textContent).toContain('Group');
+    expect(f.nativeElement.textContent).toContain('Leaf');
+  });
+});
+
+@Component({
+  imports: [IGrid, IGridColumn, IGridEmptyDef, IEmptyState],
+  template: `<i-grid
+    [dataSource]="data"
+    [emptyState]="{ kind: 'search', title: 'No matching users.' }"
+    ><i-grid-column fieldName="name" title="Name" /><ng-template iGridEmptyDef let-state
+      ><i-empty-state [kind]="state.kind" [title]="state.title"
+        ><button type="button" (click)="retries = retries + 1">Search again</button></i-empty-state
+      ></ng-template
+    ></i-grid
+  >`,
+})
+class EmptySlotHost {
+  data = new IGridDataSource<{ name: string }>([], {
+    paginator: { pageSize: 50 },
+    serverSide: { totalRowCount: 0, onPageChange: (): void => undefined },
+  });
+  retries = 0;
+}
+describe('IGrid custom empty slot', () => {
+  it('passes the resolved config and supports an interactive CTA', () => {
+    TestBed.configureTestingModule({ imports: [EmptySlotHost] });
+    const f = TestBed.createComponent(EmptySlotHost);
+    f.detectChanges();
+    expect(f.nativeElement.textContent).toContain('No matching users.');
+    expect(f.nativeElement.querySelector('i-grid-header-row')).not.toBeNull();
+    f.nativeElement.querySelector('button').click();
+    expect(f.componentInstance.retries).toBe(1);
+  });
+});
