@@ -1,5 +1,67 @@
 # InsightUiAngular
 
+## Host shared state
+
+`IHStateOwner` is created once by the host. Namespaces use `session` by default;
+`temporary` survives navigation until refresh, and `local` explicitly uses
+persistent browser storage. Additional adapters implement synchronous `getItem`,
+`setItem`, and `removeItem`; register them in the owner constructor.
+
+Register namespace configuration before first use; conflicting storage settings
+throw. State values are detached, frozen JSON-compatible snapshots. Update through
+the API instead of mutating returned objects. `get` fallbacks are not persisted.
+Read/write/remove failures are exposed by `getError(namespace)` without changing
+storage. No asynchronous adapters or live cross-tab broadcasting are included.
+
+Scope the owner prefix to the application, synchronize `setIdentity` after session
+restoration, and clear it with `setIdentity(null)` on logout. The identity must
+include the subject and impersonation context, and stay stable during token refresh.
+Identity changes discard the previous and replacement contexts. Hosted remotes
+reuse the owner; standalone selectors do not create a persistent owner implicitly.
+
+Provide `I_H_STATE` once in the host with the owner as its value/factory. Federated
+Angular routes inherit it through the shared injector and library singleton.
+
+```ts
+readonly state = inject(IHState);
+readonly count = this.state.select('shared.filters', 'count', 0);
+
+increment(): void {
+  this.state.update('shared.filters', 'count', 0, count => count + 1);
+}
+```
+
+`IHState` exposes `registerNamespace`, `get`, `set`, `update`, `remove`,
+`clearNamespace`, `getError`, `subscribe`, and `selection`. `select` returns a
+signal and uses the calling injection context's DestroyRef; pass one explicitly
+outside that context. Manual subscriptions return an unsubscribe function.
+
+Hosted company selectors automatically use the shared company/project context.
+Initial consumer values do not replace host candidates. Add `stateScope="local"`
+for independent record fields. Company options are scoped to the active menu;
+missing mapping/loading does not expand access to all companies. A successful
+validation that excludes the company resets both company and project. Pages
+without selectors retain candidates. Restore/reset synchronizes value-change
+callbacks; `onOptionSelected` remains user-only.
+
+`selection` stores only company ID/project key in the reserved `shared.selection`
+session namespace. Use `setCompany`/`setProject` for changes. On company/menu
+changes, call `beginProjects`, load authoritative options in the remote, and call
+`resolveProjects(token, canonicalKeys)` or `rejectProjects(token, message)`.
+Check the returned boolean before accepting rows; stale responses are rejected.
+Cancel page-owned requests or ignore their results on cleanup. Candidate project
+keys survive a company change if still available. Do not validate absence using
+only a search result page. Require both selected IDs and ready statuses before
+business requests.
+
+`loading` is supported by selects and form-control variants and combines with
+`options$` loading. Company selectors derive authorization loading automatically;
+remote-owned project selects receive explicit loading/disabled states.
+
+See the [platform integration guide](../docs-sso-web/public/docs/sso/iam-sso-integration-guide_v2.md#ihstate-shared-state-and-companyproject-selection)
+and both atlas-remote Host Integration examples. New exports require an updated
+library dependency before consumer compilation; no version is implied by this source change.
+
 ## Company selects
 
 `ISelectCompany` (`i-select-company`) and `IFCSelectCompany`
@@ -32,7 +94,7 @@ export class CompanyFilter {
 }
 ```
 
-Omitting `menuCode`, or passing a blank value, shows all `store.companies`.
+In local mode, omitting `menuCode`, or passing a blank value, shows all `store.companies`.
 A nonblank code is trimmed and restricts options through
 `store.menuCompanies[menuCode]`. An unknown menu shows no options. Store ordering
 and deduplication are preserved.
@@ -46,8 +108,8 @@ there are no `options` or `options$` inputs.
 Both components support `[value]`, `ngModel`, `formControl`, and `formControlName`.
 Selection emits `onChanged` and `onOptionSelected` with `ISelectChange<IMenuCompanyDto>`;
 Angular form bindings receive the company object directly. No company is selected
-automatically. Refresh matches a selected option by `id` without emitting events
-or replacing the consumer's value. If a menu change, refresh, or reset removes
+automatically. In local mode, refresh matches a selected option by `id` without emitting events
+or replacing the consumer's value. In local mode, if a menu change, refresh, or reset removes
 the selected company from the options, its value remains until the consumer resets it.
 
 The form-control counterpart adds `label`, required indication, and `errorMessage`

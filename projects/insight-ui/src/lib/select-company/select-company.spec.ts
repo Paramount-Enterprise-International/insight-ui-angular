@@ -15,6 +15,7 @@ import { collectAuthorizationScope } from '../user/user.mapper';
 import type { IEffectiveAuthorizationDto, IMenuCompanyDto } from '../user/user.types';
 import { ISelectCompany } from './select-company';
 import { IFCSelectCompany } from './fc-select-company';
+import { I_H_STATE, IHStateOwner } from '../state';
 
 const jakarta: IMenuCompanyDto = { id: 'c1', code: 'JKT', name: 'Jakarta' };
 const bandung: IMenuCompanyDto = { id: 'c2', code: 'BDG', name: 'Bandung' };
@@ -27,6 +28,9 @@ function authorizations(company = jakarta): IEffectiveAuthorizationDto[] {
 }
 
 class CompanyStoreStub {
+  readonly initialized = signal(true);
+  readonly initializing = signal(false);
+  readonly loadErrors = signal({ authorizations: null });
   readonly authorizations = signal<IEffectiveAuthorizationDto[]>([]);
   private readonly scope = computed(() => collectAuthorizationScope(this.authorizations()));
   readonly companies = computed(() => this.scope().companies);
@@ -362,5 +366,65 @@ describe('ISelectCompany', () => {
     open(fixture);
     expect(focus).toHaveBeenCalledTimes(1);
     expect(labels(fixture)).toEqual([]);
+  });
+});
+
+
+describe('hosted company selection', () => {
+  let state: IHStateOwner;
+  let fixture: ComponentFixture<ISelectCompany>;
+  let store: CompanyStoreStub;
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    state = new IHStateOwner('angular-hosted-select');
+    state.setIdentity('user');
+    state.selection.activateMenu('report');
+    state.selection.validateCompanies('report', ['c1', 'c2'], 'ready');
+    state.selection.setCompany('c2');
+    store = new CompanyStoreStub();
+    store.authorizations.set(authorizations());
+    TestBed.configureTestingModule({ imports: [ISelectCompany], providers: [
+      { provide: I_H_STATE, useValue: state }, { provide: IUserMenuStore, useValue: store },
+    ] });
+    fixture = TestBed.createComponent(ISelectCompany);
+    fixture.componentRef.setInput('portalToBody', false);
+  });
+
+  it('uses host state over initial bindings and synchronizes invalidation without selection events', () => {
+    const changes = jasmine.createSpy('changes');
+    const selected = jasmine.createSpy('selected');
+    fixture.componentInstance.registerOnChange(changes);
+    fixture.componentInstance.onOptionSelected.subscribe(selected);
+    fixture.componentRef.setInput('value', jakarta);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.value?.id).toBe('c2');
+    expect(changes).toHaveBeenCalledWith(bandung);
+    state.selection.activateMenu('sales');
+    fixture.detectChanges();
+    expect(state.selection.getSnapshot().companyId).toBeNull();
+    expect(fixture.componentInstance.value).toBeNull();
+    expect(selected).not.toHaveBeenCalled();
+  });
+
+  it('keeps explicit local controls independent and forwards loading', () => {
+    fixture.componentRef.setInput('stateScope', 'local');
+    fixture.componentRef.setInput('value', jakarta);
+    fixture.componentRef.setInput('loading', true);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.value?.id).toBe('c1');
+    expect(state.selection.getSnapshot().companyId).toBe('c2');
+    const inner = fixture.debugElement.query(By.directive(ISelect)).componentInstance as ISelect;
+    expect(inner.loading).toBeTrue();
+    expect(inner.appendAddon.type).toBe('loading');
+  });
+
+  it('revalidates when navigation changes context within the same menu', () => {
+    fixture.detectChanges();
+    state.selection.activateMenu('report');
+    expect(state.selection.getSnapshot().companyStatus).toBe('loading');
+    fixture.detectChanges();
+    expect(state.selection.getSnapshot().companyStatus).toBe('ready');
+    expect(state.selection.getSnapshot().companyId).toBe('c2');
   });
 });

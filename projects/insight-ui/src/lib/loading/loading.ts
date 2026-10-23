@@ -14,8 +14,8 @@ export type ILoadingMode = 'inline' | 'container' | 'fullpage';
   imports: [],
   template: `<div
       class="spinner-border spinner-border-sm"
-      [attr.role]="mode === 'inline' ? 'status' : null"
       [attr.aria-hidden]="mode === 'inline' ? null : 'true'"
+      [attr.role]="mode === 'inline' ? 'status' : null"
       [class.light]="light"
     ></div>
     {{ label }}
