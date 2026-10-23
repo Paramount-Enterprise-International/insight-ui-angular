@@ -1,5 +1,5 @@
 import * as i0 from '@angular/core';
-import { EventEmitter, OnInit, OnDestroy, ElementRef, OnChanges, SimpleChanges, AfterContentInit, AfterViewChecked, TrackByFunction, TemplateRef, AfterViewInit, Type, Injector, InjectionToken, QueryList, PipeTransform, EnvironmentProviders } from '@angular/core';
+import { EventEmitter, AfterViewInit, OnInit, OnDestroy, ElementRef, OnChanges, SimpleChanges, AfterContentInit, AfterViewChecked, TrackByFunction, TemplateRef, Type, Injector, InjectionToken, QueryList, PipeTransform, EnvironmentProviders, DestroyRef, Signal } from '@angular/core';
 import { AbstractControl, NgControl, ControlValueAccessor, FormBuilder, FormControl, FormGroup, FormGroupDirective } from '@angular/forms';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { Route, CanActivateFn, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
@@ -73,6 +73,72 @@ declare class IIcon {
     static ɵcmp: i0.ɵɵComponentDeclaration<IIcon, "i-icon", never, { "icon": { "alias": "icon"; "required": false; }; "size": { "alias": "size"; "required": false; }; }, {}, never, never, true, never>;
 }
 
+type IFormControlErrorMessage = {
+    required?: string;
+    requiredTrue?: string;
+    minlength?: string;
+    maxlength?: string;
+    pattern?: string;
+    email?: string;
+    min?: string;
+    max?: string;
+    [key: string]: string | undefined;
+};
+type IUISize = '3xs' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+type IUIVariant = 'primary' | 'info' | 'warning' | 'danger' | 'success' | 'outline';
+
+type IErrorContext = {
+    label: string;
+    error: any;
+    control: AbstractControl | null;
+};
+declare function resolveControlErrorMessage(ngControl: NgControl | null, label: string | undefined, errorMessage?: IFormControlErrorMessage, extraFactories?: Record<string, (ctx: IErrorContext) => string>): string | null;
+declare function isControlRequired(ngControl: NgControl | null, errorMessage?: IFormControlErrorMessage): boolean;
+
+type IButtonType = 'button' | 'submit' | 'reset';
+type IButtonSize = Extract<IUISize, '3xs' | '2xs' | 'xs' | 'sm' | 'md' | 'lg'>;
+type IButtonVariant = Extract<IUIVariant, 'primary' | 'warning' | 'danger' | 'success' | 'outline'>;
+declare class IButton {
+    placeholder: boolean;
+    disabled: boolean;
+    loading: boolean;
+    type: IButtonType;
+    ariaLabel: string | undefined;
+    loadingText: string;
+    variant: IButtonVariant;
+    size: IButtonSize;
+    icon: IIconName | (string & {}) | undefined;
+    routerLink?: any[] | string;
+    queryParams?: Record<string, any>;
+    fragment?: string;
+    state?: any;
+    href?: string;
+    target?: '_blank' | '_self' | '_parent' | '_top';
+    rel?: string;
+    readonly onClick: EventEmitter<MouseEvent>;
+    get isDisabled(): boolean;
+    get computedRel(): string | null;
+    get hostVariant(): string;
+    get hostSize(): string;
+    get ariaDisabled(): string | null;
+    get ariaBusy(): string | null;
+    get mode(): string;
+    handleClick(event: MouseEvent): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IButton, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IButton, "i-button", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "type": { "alias": "type"; "required": false; }; "ariaLabel": { "alias": "ariaLabel"; "required": false; }; "loadingText": { "alias": "loadingText"; "required": false; }; "variant": { "alias": "variant"; "required": false; }; "size": { "alias": "size"; "required": false; }; "icon": { "alias": "icon"; "required": false; }; "routerLink": { "alias": "routerLink"; "required": false; }; "queryParams": { "alias": "queryParams"; "required": false; }; "fragment": { "alias": "fragment"; "required": false; }; "state": { "alias": "state"; "required": false; }; "href": { "alias": "href"; "required": false; }; "target": { "alias": "target"; "required": false; }; "rel": { "alias": "rel"; "required": false; }; }, { "onClick": "onClick"; }, never, ["*"], true, never>;
+    static ngAcceptInputType_placeholder: unknown;
+    static ngAcceptInputType_disabled: unknown;
+    static ngAcceptInputType_loading: unknown;
+}
+
+declare class IActionPlaceholder {
+    size: IButtonSize;
+    get width(): string;
+    get height(): string;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IActionPlaceholder, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IActionPlaceholder, "i-action-placeholder", never, { "size": { "alias": "size"; "required": false; }; }, {}, never, never, true, never>;
+}
+
 declare class IAvatar {
     /** Image URL. When empty or on error, falls back to fallbackSrc or icon. */
     src?: string | null;
@@ -110,60 +176,32 @@ declare class IAvatar {
     static ɵcmp: i0.ɵɵComponentDeclaration<IAvatar, "i-avatar", never, { "src": { "alias": "src"; "required": false; }; "alt": { "alias": "alt"; "required": false; }; "size": { "alias": "size"; "required": false; }; "shape": { "alias": "shape"; "required": false; }; "fallbackSrc": { "alias": "fallbackSrc"; "required": false; }; "className": { "alias": "className"; "required": false; }; }, {}, never, never, true, never>;
 }
 
-type IFormControlErrorMessage = {
-    required?: string;
-    requiredTrue?: string;
-    minlength?: string;
-    maxlength?: string;
-    pattern?: string;
-    email?: string;
-    min?: string;
-    max?: string;
-    [key: string]: string | undefined;
-};
-type IUISize = '3xs' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-type IUIVariant = 'primary' | 'info' | 'warning' | 'danger' | 'success' | 'outline';
-
-type IErrorContext = {
-    label: string;
-    error: any;
-    control: AbstractControl | null;
-};
-declare function resolveControlErrorMessage(ngControl: NgControl | null, label: string | undefined, errorMessage?: IFormControlErrorMessage, extraFactories?: Record<string, (ctx: IErrorContext) => string>): string | null;
-declare function isControlRequired(ngControl: NgControl | null, errorMessage?: IFormControlErrorMessage): boolean;
-
-type IButtonType = 'button' | 'submit' | 'reset';
-type IButtonSize = Extract<IUISize, '3xs' | '2xs' | 'xs' | 'sm' | 'md' | 'lg'>;
-type IButtonVariant = Extract<IUIVariant, 'primary' | 'warning' | 'danger' | 'success' | 'outline'>;
-declare class IButton {
-    disabled: boolean;
-    loading: boolean;
-    type: IButtonType;
-    ariaLabel: string | undefined;
-    loadingText: string;
-    variant: IButtonVariant;
-    size: IButtonSize;
-    icon: IIconName | (string & {}) | undefined;
-    routerLink?: any[] | string;
-    queryParams?: Record<string, any>;
-    fragment?: string;
-    state?: any;
-    href?: string;
-    target?: '_blank' | '_self' | '_parent' | '_top';
-    rel?: string;
-    readonly onClick: EventEmitter<MouseEvent>;
-    get isDisabled(): boolean;
-    get computedRel(): string | null;
-    get hostVariant(): string;
-    get hostSize(): string;
-    get ariaDisabled(): string | null;
-    get ariaBusy(): string | null;
-    get mode(): string;
-    handleClick(event: MouseEvent): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IButton, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IButton, "i-button", never, { "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "type": { "alias": "type"; "required": false; }; "ariaLabel": { "alias": "ariaLabel"; "required": false; }; "loadingText": { "alias": "loadingText"; "required": false; }; "variant": { "alias": "variant"; "required": false; }; "size": { "alias": "size"; "required": false; }; "icon": { "alias": "icon"; "required": false; }; "routerLink": { "alias": "routerLink"; "required": false; }; "queryParams": { "alias": "queryParams"; "required": false; }; "fragment": { "alias": "fragment"; "required": false; }; "state": { "alias": "state"; "required": false; }; "href": { "alias": "href"; "required": false; }; "target": { "alias": "target"; "required": false; }; "rel": { "alias": "rel"; "required": false; }; }, { "onClick": "onClick"; }, never, ["*"], true, never>;
-    static ngAcceptInputType_disabled: unknown;
-    static ngAcceptInputType_loading: unknown;
+type IBannerVariant = 'neutral' | 'primary' | 'success' | 'info' | 'warning' | 'danger';
+declare class IBanner implements AfterViewInit {
+    message: string | null | undefined;
+    variant: IBannerVariant;
+    prefixIcon: string;
+    suffixIcon: string;
+    closable: boolean;
+    closeLabel: string;
+    open: boolean | undefined;
+    defaultOpen: boolean;
+    readonly openChange: EventEmitter<boolean>;
+    readonly onClose: EventEmitter<MouseEvent>;
+    private projected;
+    private readonly cdr;
+    private readonly destroyRef;
+    private dismissed;
+    private initialOpen;
+    private hasChildren;
+    get visible(): boolean;
+    ngAfterViewInit(): void;
+    close(event: MouseEvent): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IBanner, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IBanner, "i-banner", never, { "message": { "alias": "message"; "required": false; }; "variant": { "alias": "variant"; "required": false; }; "prefixIcon": { "alias": "prefixIcon"; "required": false; }; "suffixIcon": { "alias": "suffixIcon"; "required": false; }; "closable": { "alias": "closable"; "required": false; }; "closeLabel": { "alias": "closeLabel"; "required": false; }; "open": { "alias": "open"; "required": false; }; "defaultOpen": { "alias": "defaultOpen"; "required": false; }; }, { "openChange": "openChange"; "onClose": "onClose"; }, never, ["*"], true, never>;
+    static ngAcceptInputType_closable: unknown;
+    static ngAcceptInputType_open: unknown;
+    static ngAcceptInputType_defaultOpen: unknown;
 }
 
 type RouterLinkInput = string | any[] | undefined;
@@ -502,6 +540,7 @@ type ISelectPanelPosition = 'top' | 'bottom' | 'left' | 'right' | 'top left' | '
 declare class ISelect<T = any> implements ControlValueAccessor, OnInit, OnChanges, AfterContentInit, AfterViewChecked, OnDestroy {
     placeholder: string;
     disabled: boolean;
+    loading: boolean;
     invalid: boolean;
     filterDelay: number;
     panelPosition: ISelectPanelPosition;
@@ -593,14 +632,16 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, OnChange
     private ensureGlobalListeners;
     private removeGlobalListeners;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISelect<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISelect<any>, "i-select", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISelect<any>, "i-select", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
 }
 declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     innerSelect: ISelect<T>;
     label: string;
+    disabled: boolean;
     placeholder: string;
     options: T[] | null;
     options$: Observable<T[]> | null;
+    loading: boolean;
     displayWith?: ((row: T | null) => string) | string;
     filterDelay: number;
     filterPredicate: (row: T, term: string) => boolean;
@@ -633,7 +674,7 @@ declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     get required(): boolean;
     get resolvedErrorText(): string | null;
     static ɵfac: i0.ɵɵFactoryDeclaration<IFCSelect<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelect<any>, "i-fc-select", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, never, ["*"], true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelect<any>, "i-fc-select", never, { "label": { "alias": "label"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, never, ["*"], true, never>;
 }
 
 type IDatepickerDay = {
@@ -1013,6 +1054,35 @@ declare class IDialogModule {
     static ɵinj: i0.ɵɵInjectorDeclaration<IDialogModule>;
 }
 
+type IEmptyStateKind = 'empty' | 'search' | 'filter' | 'search-filter' | 'prerequisite';
+type IEmptyStateDensity = 'default' | 'compact';
+type IEmptyStateConfig = {
+    kind?: IEmptyStateKind;
+    title?: string;
+    description?: string;
+    icon?: string;
+    density?: IEmptyStateDensity;
+};
+declare const I_EMPTY_STATE_PRESETS: Record<IEmptyStateKind, {
+    title: string;
+    description: string;
+    icon: string;
+}>;
+declare class IEmptyState {
+    kind: IEmptyStateKind;
+    title: string;
+    description: string;
+    icon: string;
+    density: IEmptyStateDensity;
+    get resolved(): {
+        title: string;
+        description: string;
+        icon: string;
+    };
+    static ɵfac: i0.ɵɵFactoryDeclaration<IEmptyState, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IEmptyState, "i-empty-state", never, { "kind": { "alias": "kind"; "required": false; }; "title": { "alias": "title"; "required": false; }; "description": { "alias": "description"; "required": false; }; "icon": { "alias": "icon"; "required": false; }; "density": { "alias": "density"; "required": false; }; }, {}, never, ["*"], true, never>;
+}
+
 /** Built-in error presentations available to consumers. */
 type IErrorPageKind = 'not-found' | 'unauthorized' | 'forbidden' | 'server-error' | 'service-unavailable' | 'application-access-denied' | 'timeout' | 'custom';
 /** Controls whether the error is contained by a section or fills the viewport. */
@@ -1232,6 +1302,7 @@ type IGridHeaderItem<T = any> = {
 declare class IGridDataSource<T = any> {
     private readonly _renderedData$;
     private _rawData;
+    private _filteredLength;
     private _filter;
     private _recursive;
     private _childrenKey;
@@ -1295,6 +1366,7 @@ declare class IGridDataSource<T = any> {
     get filter(): string;
     get sort(): ISortState[] | null;
     set sort(value: ISortConfig);
+    get filteredLength(): number;
     get length(): number;
     filterPredicate: (data: T, filter: string) => boolean;
     sortAccessor: (data: T, columnId: string) => string | number | null | undefined;
@@ -1441,8 +1513,20 @@ declare class IGridViewport {
     static ɵfac: i0.ɵɵFactoryDeclaration<IGridViewport, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<IGridViewport, "i-grid-viewport", never, {}, {}, never, ["*"], true, never>;
 }
+declare class IGridEmptyDef {
+    readonly template: TemplateRef<any>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IGridEmptyDef, never>;
+    static ɵdir: i0.ɵɵDirectiveDeclaration<IGridEmptyDef, "[iGridEmptyDef]", never, {}, {}, never, never, true, never>;
+}
 declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     dataSource: IGridDataSource<T> | T[];
+    emptyState: IEmptyStateConfig;
+    emptyDef?: IGridEmptyDef;
+    get resolvedEmptyState(): IEmptyStateConfig & {
+        kind: NonNullable<IEmptyStateConfig['kind']>;
+    };
+    get emptyColumnSpan(): number;
+    get showGridChrome(): boolean;
     /** Row selection mode */
     selectionMode: IGridSelectionMode;
     /**
@@ -1639,14 +1723,27 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     getRowTrack(row: T, index: number): any;
     private _hasExplicitColumns;
     static ɵfac: i0.ɵɵFactoryDeclaration<IGrid<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IGrid<any>, "i-grid", ["iGrid"], { "dataSource": { "alias": "dataSource"; "required": false; }; "selectionMode": { "alias": "selectionMode"; "required": false; }; "selectionRowHidden": { "alias": "selectionRowHidden"; "required": false; }; "selectionRowDisabled": { "alias": "selectionRowDisabled"; "required": false; }; "tree": { "alias": "tree"; "required": false; }; "treeIndent": { "alias": "treeIndent"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "treeColumn": { "alias": "treeColumn"; "required": false; }; "treeInitialExpandLevel": { "alias": "treeInitialExpandLevel"; "required": false; }; "showNumberColumn": { "alias": "showNumberColumn"; "required": false; }; "sortMode": { "alias": "sortMode"; "required": false; }; }, { "onSelectionChange": "onSelectionChange"; "onRowClick": "onRowClick"; "onRowExpandChange": "onRowExpandChange"; "onExpandedRowsChange": "onExpandedRowsChange"; "onServerSortChange": "onServerSortChange"; "onServerPageChange": "onServerPageChange"; "onServerFilterChange": "onServerFilterChange"; }, ["expandableRowDef", "columnDefs", "customColumnDefs", "columnGroupDefs"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IGrid<any>, "i-grid", ["iGrid"], { "dataSource": { "alias": "dataSource"; "required": false; }; "emptyState": { "alias": "emptyState"; "required": false; }; "selectionMode": { "alias": "selectionMode"; "required": false; }; "selectionRowHidden": { "alias": "selectionRowHidden"; "required": false; }; "selectionRowDisabled": { "alias": "selectionRowDisabled"; "required": false; }; "tree": { "alias": "tree"; "required": false; }; "treeIndent": { "alias": "treeIndent"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "treeColumn": { "alias": "treeColumn"; "required": false; }; "treeInitialExpandLevel": { "alias": "treeInitialExpandLevel"; "required": false; }; "showNumberColumn": { "alias": "showNumberColumn"; "required": false; }; "sortMode": { "alias": "sortMode"; "required": false; }; }, { "onSelectionChange": "onSelectionChange"; "onRowClick": "onRowClick"; "onRowExpandChange": "onRowExpandChange"; "onExpandedRowsChange": "onExpandedRowsChange"; "onServerSortChange": "onServerSortChange"; "onServerPageChange": "onServerPageChange"; "onServerFilterChange": "onServerFilterChange"; }, ["emptyDef", "expandableRowDef", "columnDefs", "customColumnDefs", "columnGroupDefs"], never, true, never>;
     static ngAcceptInputType_showNumberColumn: unknown;
 }
 declare const I_GRID_DECLARATIONS: (typeof IGridExpandableRow)[];
 declare class IGridModule {
     static ɵfac: i0.ɵɵFactoryDeclaration<IGridModule, never>;
-    static ɵmod: i0.ɵɵNgModuleDeclaration<IGridModule, never, [typeof IGrid, typeof IGridViewport, typeof IGridColumn, typeof IGridCustomColumn, typeof IGridColumnGroup, typeof IGridHeaderCellDefDirective, typeof IGridCellDefDirective, typeof IGridRowDefDirective, typeof IGridExpandableRow, typeof IGridHeaderCell, typeof IGridCell, typeof IGridHeaderRowDirective, typeof IGridRowDirective, typeof IGridHeaderCellGroup, typeof IGridHeaderCellGroupColumns, typeof IPaginator], [typeof IGrid, typeof IGridViewport, typeof IGridColumn, typeof IGridCustomColumn, typeof IGridColumnGroup, typeof IGridHeaderCellDefDirective, typeof IGridCellDefDirective, typeof IGridRowDefDirective, typeof IGridExpandableRow, typeof IGridHeaderCell, typeof IGridCell, typeof IGridHeaderRowDirective, typeof IGridRowDirective, typeof IGridHeaderCellGroup, typeof IGridHeaderCellGroupColumns, typeof IPaginator]>;
+    static ɵmod: i0.ɵɵNgModuleDeclaration<IGridModule, never, [typeof IGridEmptyDef, typeof IGrid, typeof IGridViewport, typeof IGridColumn, typeof IGridCustomColumn, typeof IGridColumnGroup, typeof IGridHeaderCellDefDirective, typeof IGridCellDefDirective, typeof IGridRowDefDirective, typeof IGridExpandableRow, typeof IGridHeaderCell, typeof IGridCell, typeof IGridHeaderRowDirective, typeof IGridRowDirective, typeof IGridHeaderCellGroup, typeof IGridHeaderCellGroupColumns, typeof IPaginator], [typeof IGridEmptyDef, typeof IGrid, typeof IGridViewport, typeof IGridColumn, typeof IGridCustomColumn, typeof IGridColumnGroup, typeof IGridHeaderCellDefDirective, typeof IGridCellDefDirective, typeof IGridRowDefDirective, typeof IGridExpandableRow, typeof IGridHeaderCell, typeof IGridCell, typeof IGridHeaderRowDirective, typeof IGridRowDirective, typeof IGridHeaderCellGroup, typeof IGridHeaderCellGroupColumns, typeof IPaginator]>;
     static ɵinj: i0.ɵɵInjectorDeclaration<IGridModule>;
+}
+
+type IHighlightSearchPart = {
+    text: string;
+    matched: boolean;
+};
+declare function highlightSearchParts(value: string | number | null | undefined, search: string): IHighlightSearchPart[];
+declare class IHighlightSearch {
+    readonly value: i0.InputSignal<string | number | null | undefined>;
+    readonly search: i0.InputSignal<string>;
+    readonly parts: i0.Signal<IHighlightSearchPart[]>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHighlightSearch, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHighlightSearch, "i-highlight-search", never, { "value": { "alias": "value"; "required": false; "isSignal": true; }; "search": { "alias": "search"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;
 }
 
 declare class IHighlightSearchPipe implements PipeTransform {
@@ -1904,6 +2001,10 @@ declare class IHContent {
     readonly onNotificationAction: EventEmitter<INotificationAction>;
     private readonly router;
     private readonly activatedRoute;
+    readonly pageLoading: i0.WritableSignal<boolean>;
+    private readonly pendingRouteLoads;
+    private navigationId;
+    constructor();
     private readonly baseHref;
     readonly shell: IHTitleBreadcrumbService;
     sidebarVisibility: boolean;
@@ -2123,7 +2224,7 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     maxWidth: number;
     /** Set to null to keep the width in memory only. */
     widthStorageKey: string | null;
-    /** Expansion preferences are shared per origin; null disables persistence. */
+    /** Root expansion preferences are shared per origin; null disables persistence. */
     menuStateStorageKey: string | null;
     impersonating: boolean;
     footerText: string;
@@ -2240,12 +2341,127 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     static ɵcmp: i0.ɵɵComponentDeclaration<IHSidebar, "ih-sidebar", never, { "user$": { "alias": "user$"; "required": false; }; "menusInput$": { "alias": "menusInput$"; "required": false; }; "visible": { "alias": "visible"; "required": false; }; "resizable": { "alias": "resizable"; "required": false; }; "minWidth": { "alias": "minWidth"; "required": false; }; "maxWidth": { "alias": "maxWidth"; "required": false; }; "widthStorageKey": { "alias": "widthStorageKey"; "required": false; }; "menuStateStorageKey": { "alias": "menuStateStorageKey"; "required": false; }; "impersonating": { "alias": "impersonating"; "required": false; }; "footerText": { "alias": "footerText"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "favorites$": { "alias": "favorites$"; "required": false; }; "groupByApplication": { "alias": "groupByApplication"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "personalProfileUrl": { "alias": "personalProfileUrl"; "required": false; }; }, { "onFavoriteToggle": "onFavoriteToggle"; "onFavoriteReorder": "onFavoriteReorder"; "onWidthChange": "onWidthChange"; }, never, never, true, never>;
 }
 
+type IImageCropperExportOptions = {
+    mimeType?: 'image/png' | 'image/jpeg';
+    quality?: number;
+};
+type IImageCropperResult = {
+    blob: Blob;
+    dataUrl: string;
+    mimeType: string;
+    width: number;
+    height: number;
+};
+type IImageCropRect = {
+    srcX: number;
+    srcY: number;
+    srcW: number;
+    srcH: number;
+};
+declare class ImageCropperEngine {
+    image: HTMLImageElement | null;
+    zoom: number;
+    panX: number;
+    panY: number;
+    size: number;
+    minZoom: number;
+    maxZoom: number;
+    private version;
+    load(src: string | null | undefined): Promise<boolean>;
+    configure(size: number, minZoom: number, maxZoom: number): void;
+    setZoom(value: number): void;
+    panBy(x: number, y: number): void;
+    private clampPan;
+    get imageStyle(): {
+        width: string;
+        height: string;
+        left: string;
+        top: string;
+    } | null;
+    exportImage(options?: IImageCropperExportOptions): Promise<IImageCropperResult>;
+    dispose(): void;
+}
+
+declare class IImageCropper implements OnChanges, OnDestroy {
+    src: string | null | undefined;
+    disabled: boolean;
+    viewportSize: number;
+    shape: 'square' | 'circle';
+    minZoom: number;
+    maxZoom: number;
+    alt: string;
+    zoomLabel: string;
+    panLabel: string;
+    readonly onReady: EventEmitter<void>;
+    readonly onError: EventEmitter<Error>;
+    readonly engine: ImageCropperEngine;
+    ready: boolean;
+    loading: boolean;
+    private requestVersion;
+    private pointer;
+    private readonly cdr;
+    ngOnChanges(changes: SimpleChanges): void;
+    private load;
+    zoomInput(event: Event): void;
+    panStart(event: PointerEvent): void;
+    panMove(event: PointerEvent): void;
+    panEnd(): void;
+    keydown(event: KeyboardEvent): void;
+    exportImage(options?: IImageCropperExportOptions): Promise<IImageCropperResult>;
+    ngOnDestroy(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IImageCropper, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IImageCropper, "i-image-cropper", never, { "src": { "alias": "src"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "viewportSize": { "alias": "viewportSize"; "required": false; }; "shape": { "alias": "shape"; "required": false; }; "minZoom": { "alias": "minZoom"; "required": false; }; "maxZoom": { "alias": "maxZoom"; "required": false; }; "alt": { "alias": "alt"; "required": false; }; "zoomLabel": { "alias": "zoomLabel"; "required": false; }; "panLabel": { "alias": "panLabel"; "required": false; }; }, { "onReady": "onReady"; "onError": "onError"; }, never, never, true, never>;
+}
+
+type ILoadErrorDensity = 'default' | 'compact' | 'inline';
+declare class ILoadError {
+    message: string | null | undefined;
+    title: string;
+    density: ILoadErrorDensity;
+    retryDisabled: boolean;
+    retryLoading: boolean;
+    readonly onRetry: EventEmitter<void>;
+    retry(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ILoadError, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ILoadError, "i-load-error", never, { "message": { "alias": "message"; "required": false; }; "title": { "alias": "title"; "required": false; }; "density": { "alias": "density"; "required": false; }; "retryDisabled": { "alias": "retryDisabled"; "required": false; }; "retryLoading": { "alias": "retryLoading"; "required": false; }; }, { "onRetry": "onRetry"; }, never, never, true, never>;
+}
+
+type ILoadingMode = 'inline' | 'container' | 'fullpage';
 declare class ILoading {
     label: string;
     light: boolean;
+    mode: ILoadingMode;
+    get statusRole(): string | null;
+    get live(): string | null;
     get isLight(): boolean;
     static ɵfac: i0.ɵɵFactoryDeclaration<ILoading, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ILoading, "i-loading", never, { "label": { "alias": "label"; "required": false; }; "light": { "alias": "light"; "required": false; }; }, {}, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ILoading, "i-loading", never, { "label": { "alias": "label"; "required": false; }; "light": { "alias": "light"; "required": false; }; "mode": { "alias": "mode"; "required": false; }; }, {}, never, never, true, never>;
+}
+
+type ISurfaceLayout = 'auto' | 'padded' | 'flush';
+declare class ILoadingRegion implements OnChanges, AfterViewInit {
+    loading: boolean;
+    error: unknown;
+    label: string;
+    containerClass: string;
+    contentClass: string;
+    initialMinHeight: string;
+    height: string | null;
+    contextKey: unknown;
+    layout: ISurfaceLayout;
+    private content?;
+    hasLoaded: boolean;
+    private completedContext;
+    private contentHeight;
+    private readonly cdr;
+    private readonly document;
+    private readonly destroyRef;
+    get minHeight(): string | null;
+    get hidePreviousContext(): boolean;
+    ngOnChanges(): void;
+    ngAfterViewInit(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ILoadingRegion, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ILoadingRegion, "i-loading-region", never, { "loading": { "alias": "loading"; "required": false; }; "error": { "alias": "error"; "required": false; }; "label": { "alias": "label"; "required": false; }; "containerClass": { "alias": "containerClass"; "required": false; }; "contentClass": { "alias": "contentClass"; "required": false; }; "initialMinHeight": { "alias": "initialMinHeight"; "required": false; }; "height": { "alias": "height"; "required": false; }; "contextKey": { "alias": "contextKey"; "required": false; }; "layout": { "alias": "layout"; "required": false; }; }, {}, never, ["*"], true, never>;
 }
 
 type IPillSize = '2xs' | 'xs' | 'sm' | 'md' | 'lg';
@@ -2400,8 +2616,9 @@ declare class ISectionFilter {
     static ɵcmp: i0.ɵɵComponentDeclaration<ISectionFilter, "i-section-filter", never, {}, {}, never, ["*"], true, never>;
 }
 declare class ISectionBody {
+    layout: ISurfaceLayout;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISectionBody, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionBody, "i-section-body", never, {}, {}, never, ["*"], true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISectionBody, "i-section-body", never, { "layout": { "alias": "layout"; "required": false; }; }, {}, never, ["*"], true, never>;
 }
 declare class ISectionFooter {
     static ɵfac: i0.ɵɵFactoryDeclaration<ISectionFooter, never>;
@@ -2526,6 +2743,12 @@ type IAuthorizationSource = {
 };
 
 declare class ISelectCompany implements ControlValueAccessor {
+    private readonly hostState;
+    private readonly scopeValue;
+    private readonly loadingValue;
+    private readonly selectionValue;
+    private readonly selectionRevision;
+    private syncedValue;
     private readonly store;
     private readonly cdr;
     private readonly menuCodeValue;
@@ -2534,6 +2757,10 @@ declare class ISelectCompany implements ControlValueAccessor {
     protected optionDef?: ISelectOptionDefDirective<IMenuCompanyDto>;
     placeholder: string;
     disabled: boolean;
+    set loading(value: boolean);
+    get loading(): boolean;
+    set stateScope(value: 'auto' | 'local');
+    get stateScope(): 'auto' | 'local';
     invalid: boolean;
     filterDelay: number;
     panelPosition: ISelectPanelPosition;
@@ -2548,6 +2775,10 @@ declare class ISelectCompany implements ControlValueAccessor {
     get value(): IMenuCompanyDto | null;
     readonly onChanged: EventEmitter<ISelectChange<IMenuCompanyDto>>;
     readonly onOptionSelected: EventEmitter<ISelectChange<IMenuCompanyDto>>;
+    protected readonly hosted: i0.Signal<boolean>;
+    private readonly effectiveMenuCode;
+    protected readonly companyLoading: i0.Signal<boolean>;
+    constructor();
     protected readonly companyOptions: i0.Signal<IMenuCompanyDto[]>;
     protected readonly selectedCompany: i0.Signal<IMenuCompanyDto | null>;
     private onChange;
@@ -2560,7 +2791,7 @@ declare class ISelectCompany implements ControlValueAccessor {
     focus(): void;
     protected handleSelectChange(change: ISelectChange<IMenuCompanyDto>): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISelectCompany, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISelectCompany, "i-select-company", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "menuCode": { "alias": "menuCode"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISelectCompany, "i-select-company", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "stateScope": { "alias": "stateScope"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "menuCode": { "alias": "menuCode"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
 }
 
 declare class IFCSelectCompany implements ControlValueAccessor, OnDestroy {
@@ -2570,6 +2801,8 @@ declare class IFCSelectCompany implements ControlValueAccessor, OnDestroy {
     placeholder: string;
     menuCode?: string | null;
     disabled: boolean;
+    loading: boolean;
+    stateScope: 'auto' | 'local';
     invalid: boolean;
     displayWith?: ((row: IMenuCompanyDto | null) => string) | string;
     filterDelay: number;
@@ -2599,11 +2832,12 @@ declare class IFCSelectCompany implements ControlValueAccessor, OnDestroy {
     setDisabledState(disabled: boolean): void;
     focus(): void;
     protected handleSelectChange(change: ISelectChange<IMenuCompanyDto>): void;
+    protected handleOptionSelected(change: ISelectChange<IMenuCompanyDto>): void;
     protected get controlInvalid(): boolean;
     protected get required(): boolean;
     protected get resolvedErrorText(): string | null;
     static ɵfac: i0.ɵɵFactoryDeclaration<IFCSelectCompany, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelectCompany, "i-fc-select-company", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "menuCode": { "alias": "menuCode"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelectCompany, "i-fc-select-company", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "menuCode": { "alias": "menuCode"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "stateScope": { "alias": "stateScope"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
 }
 
 /**
@@ -2710,7 +2944,7 @@ declare class IToggle implements ControlValueAccessor {
 
 declare class IUI {
     static ɵfac: i0.ɵɵFactoryDeclaration<IUI, never>;
-    static ɵmod: i0.ɵɵNgModuleDeclaration<IUI, never, [typeof IAvatar, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IFCDatepicker, typeof IDialogModule, typeof IErrorPage, typeof IGridModule, typeof IHContent, typeof IHSidebar, typeof IIcon, typeof IInputModule, typeof ILoading, typeof ISectionModule, typeof ISelect, typeof IFCSelect, typeof ITextArea, typeof IFCTextArea, typeof IToggle, typeof IPill], [typeof IAvatar, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IFCDatepicker, typeof IDialogModule, typeof IErrorPage, typeof IGridModule, typeof IHContent, typeof IHSidebar, typeof IIcon, typeof IInputModule, typeof ILoading, typeof ISectionModule, typeof ISelect, typeof IFCSelect, typeof ITextArea, typeof IFCTextArea, typeof IToggle, typeof IPill]>;
+    static ɵmod: i0.ɵɵNgModuleDeclaration<IUI, never, [typeof IActionPlaceholder, typeof IAvatar, typeof IBanner, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IDialogModule, typeof IEmptyState, typeof IErrorPage, typeof IFCDatepicker, typeof IFCSelect, typeof IFCTextArea, typeof IGridModule, typeof IHContent, typeof IHighlightSearch, typeof IHSidebar, typeof IIcon, typeof IImageCropper, typeof IInputModule, typeof ILoadError, typeof ILoading, typeof ILoadingRegion, typeof IPill, typeof ISectionModule, typeof ISelect, typeof ITextArea, typeof IToggle], [typeof IActionPlaceholder, typeof IAvatar, typeof IBanner, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IDialogModule, typeof IEmptyState, typeof IErrorPage, typeof IFCDatepicker, typeof IFCSelect, typeof IFCTextArea, typeof IGridModule, typeof IHContent, typeof IHighlightSearch, typeof IHSidebar, typeof IIcon, typeof IImageCropper, typeof IInputModule, typeof ILoadError, typeof ILoading, typeof ILoadingRegion, typeof IPill, typeof ISectionModule, typeof ISelect, typeof ITextArea, typeof IToggle]>;
     static ɵinj: i0.ɵɵInjectorDeclaration<IUI>;
 }
 
@@ -3446,64 +3680,6 @@ declare class ICsrfService {
 }
 
 /**
- * Cross-domain auth guard for @insight/ui consumer apps.
- *
- * Unlike an identity-owner app's internal Router-based guard, this performs a
- * FULL PAGE redirect to the configured signinUrl when unauthenticated, since
- * the consumer app and its auth/BFF host are separate applications/domains -
- * not routes within the same Angular router. The redirect is routed through
- * this app's OWN callback route (not the page the user was trying to visit) -
- * see `buildExternalSigninUrl()` for why that's required to avoid a redirect
- * loop.
- */
-declare const authGuard: CanActivateFn;
-
-/** Route that renders the "account lacks the required access/role" (403) page. */
-declare const UNAUTHORIZED_ACCESS_PATH = "/unauthorized-access";
-/** Sources a route access requirement can be checked against. */
-type IAccessCheckSource = 'menuCode' | 'role';
-/**
- * Route access requirement — deny navigation unless the current user holds it.
- * `value` is a single code or a list of codes (ANY match).
- * - `menuCode` checks effective item/function authorizations.
- * - `role` checks access-token roles.
- */
-type IAccessCheck = {
-    source: IAccessCheckSource;
-    value: string | string[];
-};
-/**
- * Route guard factory that denies navigation to users who lack a required
- * menu code/role, redirecting them to {@link UNAUTHORIZED_ACCESS_PATH}.
- *
- * Compose AFTER `authGuard` in the `canActivate` array — this guard only
- * handles the authenticated-but-not-allowed branch and returns `true` while the
- * session is still restoring (or no valid session exists) so `authGuard` /
- * the session-expired overlay own sign-in redirects:
- *
- * ```ts
- * const routes = [{
- *   path: 'admin',
- *   canActivate: [authGuard, requireAccess({ source: 'menuCode', value: 'admin-iam' })],
- *   ...
- * }];
- * ```
- */
-declare function requireAccess(check: IAccessCheck): CanActivateFn;
-
-/** Resolves the menu code that protects a router navigation. */
-type IRouteMenuCodeResolver = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => string | null | undefined;
-/** Controls access when a route has no resolved menu code. */
-type IMissingMenuCodePolicy = 'allow' | 'deny';
-/** Options for menu-code route authorization. */
-type IRouteAccessOptions = {
-    resolveMenuCode?: IRouteMenuCodeResolver;
-    missingMenuCode?: IMissingMenuCodePolicy;
-};
-/** Authorizes a route by its resolved menu code instead of comparing backend routes. */
-declare function requireRouteAccess(options?: IRouteAccessOptions): CanActivateFn;
-
-/**
  * Maps the backend current-user DTO to `@insight/ui`'s sidebar `IUser` shape
  * (`employeeCode` / `fullName` / `userImagePath`), falling back to `username`.
  * `userImagePath` is `''` when no photo exists — the sidebar renders it with
@@ -3784,6 +3960,72 @@ declare class IHasMnDirective extends IMenuGateDirective {
     static ɵdir: i0.ɵɵDirectiveDeclaration<IHasMnDirective, "[iHasMn]", never, { "iHasMn": { "alias": "iHasMn"; "required": false; }; }, {}, never, never, true, never>;
 }
 
+/** Renders the template when a menu shorthand or authorization predicate denies it. */
+declare class INotHasMnDirective extends IMenuGateDirective {
+    protected readonly invert = true;
+    set iNotHasMn(value: IPermissionInput);
+    static ɵfac: i0.ɵɵFactoryDeclaration<INotHasMnDirective, never>;
+    static ɵdir: i0.ɵɵDirectiveDeclaration<INotHasMnDirective, "[iNotHasMn]", never, { "iNotHasMn": { "alias": "iNotHasMn"; "required": false; }; }, {}, never, never, true, never>;
+}
+
+/**
+ * Cross-domain auth guard for @insight/ui consumer apps.
+ *
+ * Unlike an identity-owner app's internal Router-based guard, this performs a
+ * FULL PAGE redirect to the configured signinUrl when unauthenticated, since
+ * the consumer app and its auth/BFF host are separate applications/domains -
+ * not routes within the same Angular router. The redirect is routed through
+ * this app's OWN callback route (not the page the user was trying to visit) -
+ * see `buildExternalSigninUrl()` for why that's required to avoid a redirect
+ * loop.
+ */
+declare const authGuard: CanActivateFn;
+
+/** Route that renders the "account lacks the required access/role" (403) page. */
+declare const UNAUTHORIZED_ACCESS_PATH = "/unauthorized-access";
+/** Sources a route access requirement can be checked against. */
+type IAccessCheckSource = 'menuCode' | 'role';
+/**
+ * Route access requirement — deny navigation unless the current user holds it.
+ * `value` is a single code or a list of codes (ANY match).
+ * - `menuCode` checks effective item/function authorizations.
+ * - `role` checks access-token roles.
+ */
+type IAccessCheck = {
+    source: IAccessCheckSource;
+    value: string | string[];
+};
+/**
+ * Route guard factory that denies navigation to users who lack a required
+ * menu code/role, redirecting them to {@link UNAUTHORIZED_ACCESS_PATH}.
+ *
+ * Compose AFTER `authGuard` in the `canActivate` array — this guard only
+ * handles the authenticated-but-not-allowed branch and returns `true` while the
+ * session is still restoring (or no valid session exists) so `authGuard` /
+ * the session-expired overlay own sign-in redirects:
+ *
+ * ```ts
+ * const routes = [{
+ *   path: 'admin',
+ *   canActivate: [authGuard, requireAccess({ source: 'menuCode', value: 'admin-iam' })],
+ *   ...
+ * }];
+ * ```
+ */
+declare function requireAccess(check: IAccessCheck): CanActivateFn;
+
+/** Resolves the menu code that protects a router navigation. */
+type IRouteMenuCodeResolver = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => string | null | undefined;
+/** Controls access when a route has no resolved menu code. */
+type IMissingMenuCodePolicy = 'allow' | 'deny';
+/** Options for menu-code route authorization. */
+type IRouteAccessOptions = {
+    resolveMenuCode?: IRouteMenuCodeResolver;
+    missingMenuCode?: IMissingMenuCodePolicy;
+};
+/** Authorizes a route by its resolved menu code instead of comparing backend routes. */
+declare function requireRouteAccess(options?: IRouteAccessOptions): CanActivateFn;
+
 /** Library-owned outlet boundary for declarative route permission checks. */
 declare class IHasMnRoute {
     private readonly route;
@@ -3801,10 +4043,6 @@ declare class IHasMnRoute {
 /** Preserves route recognition and resolvers while gating component activation. */
 declare function hasMn(value: IPermissionInput, route: IRoute): IRoute;
 declare function hasMn(value: IPermissionInput, route: Route): Route;
-
-declare const IH_SKIP_BEARER_HEADER = "X-IH-Skip-Bearer";
-/** Attach the application token and retry unauthorized requests once after shared refresh. */
-declare const authInterceptor: HttpInterceptorFn;
 
 type IImpersonationActor = {
     sub: string;
@@ -3836,6 +4074,34 @@ declare function grantEndLabel(status: IImpersonationStatus | null): string;
 declare function formatCountdown(remainingMs: number): string;
 declare function resolveImpersonationRedirect(result: IEndImpersonationResult | null | undefined, identity: string, signinUrl: string): string;
 declare function isImpersonationCsrfError(error: unknown): boolean;
+
+declare const I_IMPERSONATION_ERROR_RESOLVER: InjectionToken<(error: unknown, fallback: string) => string>;
+declare class IHImpersonationBanner {
+    private readonly resolveError;
+    private readonly state;
+    private readonly session;
+    private readonly store;
+    private readonly config;
+    private readonly confirm;
+    private readonly alerts;
+    private readonly destroyRef;
+    protected readonly ending: i0.WritableSignal<boolean>;
+    private readonly infoOpen;
+    protected readonly confirming: i0.WritableSignal<boolean>;
+    protected readonly errorMessage: i0.WritableSignal<string>;
+    protected readonly countdown: i0.WritableSignal<string | null>;
+    protected readonly visible: i0.Signal<boolean>;
+    protected readonly actorName: i0.Signal<string>;
+    protected readonly subjectName: i0.Signal<string>;
+    protected readonly occupation: i0.Signal<string | null>;
+    protected readonly endDateLabel: i0.Signal<string>;
+    constructor();
+    protected redirect(result: IEndImpersonationResult): void;
+    protected onShowInfo(): void;
+    protected onEndSession(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHImpersonationBanner, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IHImpersonationBanner, "ih-impersonation-banner", never, {}, {}, never, never, true, never>;
+}
 
 type ISessionExpiredReason = 'TOKEN_EXPIRED' | 'SESSION_REVOKED' | 'SESSION_REPLACED';
 /** Supports normalized Problem Details errors and raw legacy HTTP error bodies. */
@@ -4013,6 +4279,31 @@ declare class ISessionService {
     static ɵprov: i0.ɵɵInjectableDeclaration<ISessionService>;
 }
 
+declare class IImpersonationStateService {
+    private readonly session;
+    private readonly api;
+    private readonly config;
+    private key;
+    private version;
+    private inFlight;
+    private readonly value;
+    private readonly cancelled;
+    readonly status: i0.Signal<IImpersonationStatus | null>;
+    readonly context: i0.Signal<string>;
+    constructor();
+    actor(): ReturnType<ISessionService['actor']>;
+    isImpersonating(): boolean;
+    clear(): void;
+    private syncContext;
+    loadStatus(): Observable<IImpersonationStatus>;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IImpersonationStateService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IImpersonationStateService>;
+}
+
+declare const IH_SKIP_BEARER_HEADER = "X-IH-Skip-Bearer";
+/** Attach the application token and retry unauthorized requests once after shared refresh. */
+declare const authInterceptor: HttpInterceptorFn;
+
 /** Binds session-expiry state to a non-dismissible Insight dialog and SSO handoff. */
 declare class ISessionExpiredDialog {
     private readonly sessionExpired;
@@ -4052,12 +4343,120 @@ declare class IStorageService {
     static ɵprov: i0.ɵɵInjectableDeclaration<IStorageService>;
 }
 
-/** Renders the template when a menu shorthand or authorization predicate denies it. */
-declare class INotHasMnDirective extends IMenuGateDirective {
-    protected readonly invert = true;
-    set iNotHasMn(value: IPermissionInput);
-    static ɵfac: i0.ɵɵFactoryDeclaration<INotHasMnDirective, never>;
-    static ɵdir: i0.ɵɵDirectiveDeclaration<INotHasMnDirective, "[iNotHasMn]", never, { "iNotHasMn": { "alias": "iNotHasMn"; "required": false; }; }, {}, never, never, true, never>;
+type IHStateAdapter = {
+    getItem(key: string): string | null;
+    setItem(key: string, value: string): void;
+    removeItem(key: string): void;
+};
+type IHStateStorage = 'temporary' | 'session' | 'local' | (string & {});
+type IHStateNamespaceOptions = {
+    storage?: IHStateStorage;
+};
+type IHStateError = {
+    namespace: string;
+    operation: 'read' | 'write' | 'remove';
+    message: string;
+};
+type IHStateApi = {
+    registerNamespace(namespace: string, options?: IHStateNamespaceOptions): void;
+    get<T>(namespace: string, key: string, fallback: T): T;
+    set<T>(namespace: string, key: string, value: T): void;
+    update<T>(namespace: string, key: string, fallback: T, update: (value: T) => T): void;
+    remove(namespace: string, key: string): void;
+    clearNamespace(namespace: string): void;
+    getError(namespace: string): IHStateError | null;
+    subscribe(listener: () => void): () => void;
+    getVersion(): number;
+    readonly selection: IHSelectionApi;
+};
+/** One synchronous state owner per host application. */
+declare class IHStateOwner implements IHStateApi {
+    private readonly namespaces;
+    private readonly adapters;
+    private readonly listeners;
+    private version;
+    private identity;
+    private identified;
+    readonly selection: IHSelection;
+    private readonly prefix;
+    constructor(prefix?: string, adapters?: Record<string, IHStateAdapter>);
+    readonly subscribe: (listener: () => void) => (() => void);
+    readonly getVersion: () => number;
+    registerNamespace(namespace: string, options?: IHStateNamespaceOptions): void;
+    private entry;
+    get<T>(namespace: string, key: string, fallback: T): T;
+    set<T>(namespace: string, key: string, value: T): void;
+    update<T>(namespace: string, key: string, fallback: T, update: (value: T) => T): void;
+    remove(namespace: string, key: string): void;
+    clearNamespace(namespace: string): void;
+    getError(namespace: string): IHStateError | null;
+    /** Cold starts restore the same identity; identity transitions discard both contexts. */
+    setIdentity(identity: string | null): void;
+    private storageKey;
+    private indexKey;
+    private persist;
+    private readIndex;
+    private purge;
+    private recordError;
+    private emit;
+}
+type IHSelectionStatus = 'idle' | 'loading' | 'ready' | 'error';
+type IHSelectionSnapshot = {
+    companyId: string | null;
+    projectKey: string | null;
+    menuCode: string | null;
+    companyStatus: IHSelectionStatus;
+    projectStatus: IHSelectionStatus;
+    error: string | null;
+    revision: number;
+};
+type IHProjectValidation = {
+    revision: number;
+    request: number;
+    companyId: string | null;
+};
+/** Coordinates candidate selections and rejects results from previous contexts. */
+declare class IHSelection {
+    private value;
+    private readonly listeners;
+    private request;
+    private companies;
+    private projects;
+    private readonly state;
+    constructor(state: IHStateApi);
+    readonly subscribe: (listener: () => void) => (() => void);
+    readonly getSnapshot: () => IHSelectionSnapshot;
+    private sync;
+    activateMenu(menuCode: string | null): void;
+    validateCompanies(menuCode: string | null, ids: readonly string[], status: IHSelectionStatus, error?: string | null): void;
+    setCompany(companyId: string | null): boolean;
+    beginProjects(): IHProjectValidation;
+    resolveProjects(token: IHProjectValidation, keys: readonly string[]): boolean;
+    rejectProjects(token: IHProjectValidation, message: string): boolean;
+    setProject(projectKey: string | null): boolean;
+    private current;
+    private write;
+    private publish;
+}
+type IHSelectionApi = Pick<IHSelection, 'subscribe' | 'getSnapshot' | 'activateMenu' | 'validateCompanies' | 'setCompany' | 'beginProjects' | 'resolveProjects' | 'rejectProjects' | 'setProject'>;
+
+/** Only the host provides this token. Federated Angular routes inherit it. */
+declare const IH_STATE: InjectionToken<IHStateApi>;
+declare class IHState {
+    readonly api: IHStateApi | null;
+    registerNamespace(namespace: string, options?: IHStateNamespaceOptions): void;
+    get selection(): IHSelectionApi;
+    getError(namespace: string): IHStateError | null;
+    subscribe(listener: () => void): () => void;
+    select<T>(namespace: string, key: string, fallback: T, destroyRef?: DestroyRef): Signal<T>;
+    get<T>(namespace: string, key: string, fallback: T): T;
+    set<T>(namespace: string, key: string, value: T): void;
+    update<T>(namespace: string, key: string, fallback: T, update: (value: T) => T): void;
+    remove(namespace: string, key: string): void;
+    clearNamespace(namespace: string): void;
+    private requireApi;
+    static ɵfac: i0.ɵɵFactoryDeclaration<IHState, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<IHState>;
 }
 
 /**
@@ -4108,61 +4507,5 @@ type IEnvironment = {
  */
 declare const environment: IEnvironment;
 
-declare const I_IMPERSONATION_ERROR_RESOLVER: InjectionToken<(error: unknown, fallback: string) => string>;
-declare class IHImpersonationBanner {
-    private readonly resolveError;
-    private readonly state;
-    private readonly session;
-    private readonly store;
-    private readonly config;
-    private readonly confirm;
-    private readonly alerts;
-    private readonly destroyRef;
-    protected readonly ending: i0.WritableSignal<boolean>;
-    private readonly infoOpen;
-    protected readonly confirming: i0.WritableSignal<boolean>;
-    protected readonly errorMessage: i0.WritableSignal<string>;
-    protected readonly countdown: i0.WritableSignal<string | null>;
-    protected readonly visible: i0.Signal<boolean>;
-    protected readonly actorName: i0.Signal<string>;
-    protected readonly subjectName: i0.Signal<string>;
-    protected readonly occupation: i0.Signal<string | null>;
-    protected readonly endDateLabel: i0.Signal<string>;
-    constructor();
-    protected redirect(result: IEndImpersonationResult): void;
-    protected onShowInfo(): void;
-    protected onEndSession(): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IHImpersonationBanner, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IHImpersonationBanner, "ih-impersonation-banner", never, {}, {}, never, never, true, never>;
-}
-
-declare class IImpersonationStateService {
-    private readonly session;
-    private readonly api;
-    private readonly config;
-    private key;
-    private version;
-    private inFlight;
-    private readonly value;
-    private readonly cancelled;
-    readonly status: i0.Signal<IImpersonationStatus | null>;
-    readonly context: i0.Signal<string>;
-    constructor();
-    actor(): ReturnType<ISessionService['actor']>;
-    isImpersonating(): boolean;
-    clear(): void;
-    private syncContext;
-    loadStatus(): Observable<IImpersonationStatus>;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IImpersonationStateService, never>;
-    static ɵprov: i0.ɵɵInjectableDeclaration<IImpersonationStateService>;
-}
-
-declare class IInfoNotice {
-    message: string | null | undefined;
-    title: string;
-    static ɵfac: i0.ɵɵFactoryDeclaration<IInfoNotice, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IInfoNotice, "i-info-notice", never, { "message": { "alias": "message"; "required": false; }; "title": { "alias": "title"; "required": false; }; }, {}, never, never, true, never>;
-}
-
-export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSidebar, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IHasMnDirective, IHasMnRoute, IHighlightSearchPipe, IIcon, IImpersonationStateService, IInfoNotice, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoading, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
-export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEndImpersonationResult, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IIconName, IIconSize, IImpersonationActor, IImpersonationStatus, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, INotificationAction, INotificationEntry, INotificationSnackbarMessage, INotificationState, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
+export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IActionPlaceholder, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IBanner, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IEmptyState, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridEmptyDef, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSelection, IHSidebar, IHState, IHStateOwner, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IH_STATE, IHasMnDirective, IHasMnRoute, IHighlightSearch, IHighlightSearchPipe, IIcon, IImageCropper, IImpersonationStateService, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoadError, ILoading, ILoadingRegion, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_EMPTY_STATE_PRESETS, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, highlightSearchParts, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
+export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBannerVariant, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEmptyStateConfig, IEmptyStateDensity, IEmptyStateKind, IEndImpersonationResult, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IHProjectValidation, IHSelectionApi, IHSelectionSnapshot, IHSelectionStatus, IHStateAdapter, IHStateApi, IHStateError, IHStateNamespaceOptions, IHStateStorage, IHighlightSearchPart, IIconName, IIconSize, IImageCropRect, IImageCropperExportOptions, IImageCropperResult, IImpersonationActor, IImpersonationStatus, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoadErrorDensity, ILoadingMode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, INotificationAction, INotificationEntry, INotificationSnackbarMessage, INotificationState, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, ISurfaceLayout, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
