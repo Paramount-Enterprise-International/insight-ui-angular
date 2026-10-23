@@ -24,7 +24,7 @@ import {
   type ISelectPanelPosition,
 } from '../select';
 import { IUserMenuStore } from '../store';
-import { I_H_STATE, type IHSelectionSnapshot } from '../state';
+import { IH_STATE, type IHSelectionSnapshot } from '../state';
 import type { IMenuCompanyDto } from '../user/user.types';
 
 @Component({
@@ -69,7 +69,7 @@ import type { IMenuCompanyDto } from '../user/user.types';
   ],
 })
 export class ISelectCompany implements ControlValueAccessor {
-  private readonly hostState = inject(I_H_STATE, { optional: true });
+  private readonly hostState = inject(IH_STATE, { optional: true });
   private readonly scopeValue = signal<'auto' | 'local'>('auto');
   private readonly loadingValue = signal(false);
   private readonly selectionValue = signal<IHSelectionSnapshot | null>(this.hostState?.selection.getSnapshot() ?? null);

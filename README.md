@@ -19,7 +19,7 @@ include the subject and impersonation context, and stay stable during token refr
 Identity changes discard the previous and replacement contexts. Hosted remotes
 reuse the owner; standalone selectors do not create a persistent owner implicitly.
 
-Provide `I_H_STATE` once in the host with the owner as its value/factory. Federated
+Provide `IH_STATE` once in the host with the owner as its value/factory. Federated
 Angular routes inherit it through the shared injector and library singleton.
 
 ```ts

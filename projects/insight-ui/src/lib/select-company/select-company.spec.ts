@@ -15,7 +15,7 @@ import { collectAuthorizationScope } from '../user/user.mapper';
 import type { IEffectiveAuthorizationDto, IMenuCompanyDto } from '../user/user.types';
 import { ISelectCompany } from './select-company';
 import { IFCSelectCompany } from './fc-select-company';
-import { I_H_STATE, IHStateOwner } from '../state';
+import { IH_STATE, IHStateOwner } from '../state';
 
 const jakarta: IMenuCompanyDto = { id: 'c1', code: 'JKT', name: 'Jakarta' };
 const bandung: IMenuCompanyDto = { id: 'c2', code: 'BDG', name: 'Bandung' };
@@ -385,7 +385,7 @@ describe('hosted company selection', () => {
     store = new CompanyStoreStub();
     store.authorizations.set(authorizations());
     TestBed.configureTestingModule({ imports: [ISelectCompany], providers: [
-      { provide: I_H_STATE, useValue: state }, { provide: IUserMenuStore, useValue: store },
+      { provide: IH_STATE, useValue: state }, { provide: IUserMenuStore, useValue: store },
     ] });
     fixture = TestBed.createComponent(ISelectCompany);
     fixture.componentRef.setInput('portalToBody', false);

@@ -8,11 +8,11 @@ import {
 } from './state-core';
 
 /** Only the host provides this token. Federated Angular routes inherit it. */
-export const I_H_STATE = new InjectionToken<IHStateApi>('I_H_STATE');
+export const IH_STATE = new InjectionToken<IHStateApi>('IH_STATE');
 
 @Injectable({ providedIn: 'root' })
 export class IHState {
-  readonly api = inject(I_H_STATE, { optional: true });
+  readonly api = inject(IH_STATE, { optional: true });
 
   registerNamespace(namespace: string, options?: IHStateNamespaceOptions): void {
     this.requireApi().registerNamespace(namespace, options);
@@ -57,7 +57,7 @@ export class IHState {
   }
 
   private requireApi(): IHStateApi {
-    if (!this.api) throw new Error('IHState requires the host I_H_STATE provider.');
+    if (!this.api) throw new Error('IHState requires the host IH_STATE provider.');
     return this.api;
   }
 }
