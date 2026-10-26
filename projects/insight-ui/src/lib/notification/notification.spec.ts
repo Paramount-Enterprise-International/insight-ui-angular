@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { fakeAsync, flushMicrotasks, TestBed, tick } from '@angular/core/testing';
 
 import type { INotificationEntry } from './notification.types';
 import { INotificationBell } from './notification-bell';
@@ -6,6 +6,7 @@ import { INotificationDrawer } from './notification-drawer';
 import { INotificationItem } from './notification-item';
 import { notificationDate, truncateNotificationText } from './notification-presentation';
 import { INotificationSnackbar } from './notification-snackbar';
+import { INotification } from './notification';
 
 const item: INotificationEntry = {
   notificationId: 'one',
@@ -20,6 +21,26 @@ const item: INotificationEntry = {
 };
 
 describe('Notification presentation', () => {
+  it('opens a drawer from the snackbar instead of requesting a group read', fakeAsync(() => {
+    const fixture = TestBed.createComponent(INotification);
+    fixture.componentRef.setInput('state', {
+      unreadCount: 8,
+      snackbar: { key: 1, title: item.title, item },
+      snackbarOptions: { durationMs: 0 },
+    });
+    const action = jasmine.createSpy('action');
+    fixture.componentInstance.onAction.subscribe(action);
+    fixture.detectChanges();
+    flushMicrotasks();
+    fixture.detectChanges();
+    document
+      .querySelector<HTMLButtonElement>(
+        '[data-snackbar-id="notification-summary"] .snackbar-content',
+      )!
+      .click();
+    expect(action).toHaveBeenCalledOnceWith({ type: 'open-drawer' });
+    fixture.destroy();
+  }));
   it('hides zero badge, shows 99 and caps 100 with accessible actual counts', () => {
     const fixture = TestBed.createComponent(INotificationBell);
     fixture.detectChanges();
@@ -182,25 +203,46 @@ describe('Notification presentation', () => {
     expect(host.textContent).toContain('No new notifications');
   });
 
-  it('renders snackbar data as text and delegates open/dismiss actions', () => {
+  it('renders info summaries as text and delegates drawer/dismiss actions', fakeAsync(() => {
     const fixture = TestBed.createComponent(INotificationSnackbar);
     fixture.componentRef.setInput('message', {
       key: 1,
       title: '<b>Action</b>',
       moduleName: 'Account',
       item,
+      newCount: 4,
+    });
+    fixture.componentRef.setInput('options', {
+      id: 'summary-test',
+      durationMs: 0,
+      position: 'top-left',
     });
     fixture.detectChanges();
-    const host = fixture.nativeElement as HTMLElement;
+    flushMicrotasks();
+    fixture.detectChanges();
+    const host = document.querySelector<HTMLElement>('[data-snackbar-id="summary-test"]')!;
     expect(host.querySelector('b')).toBeNull();
     expect(host.textContent).toContain('<b>Action</b>');
+    expect(host.textContent).toContain('and 3 other new notifications');
+    expect(host.querySelector('i-banner')?.getAttribute('variant')).toBe('info');
+    expect(host.parentElement?.getAttribute('data-i-snackbar-viewport')).toBe('top-left');
     const open = jasmine.createSpy('open');
     const dismiss = jasmine.createSpy('dismiss');
     fixture.componentInstance.openRequested.subscribe(open);
     fixture.componentInstance.dismissRequested.subscribe(dismiss);
-    host.querySelector<HTMLButtonElement>('.snackbar-content')?.click();
-    host.querySelector<HTMLButtonElement>('i-button button')?.click();
-    expect(open).toHaveBeenCalled();
-    expect(dismiss).toHaveBeenCalled();
-  });
+    host.querySelector<HTMLButtonElement>('.snackbar-content')!.click();
+    expect(open).toHaveBeenCalledTimes(1);
+    host.querySelector<HTMLButtonElement>('.i-banner__close')!.click();
+    tick(180);
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    fixture.componentRef.setInput('message', { key: 2, title: 'New notifications', newCount: 2 });
+    fixture.detectChanges();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const generic = document.querySelector<HTMLElement>('[data-snackbar-id="summary-test"]')!;
+    expect(generic.textContent).toContain('and 1 other new notification');
+    generic.querySelector<HTMLButtonElement>('.snackbar-content')!.click();
+    expect(open).toHaveBeenCalledTimes(2);
+    fixture.destroy();
+  }));
 });
