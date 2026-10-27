@@ -74,6 +74,11 @@ export class ISelectOptionDefDirective<T = any> {
   }
 }
 
+export type ISelectEmptyState = string | {
+  empty?: string;
+  notFound?: string;
+};
+
 export type ISelectChange<T = any> = {
   value: T | null;
   label: string;
@@ -102,8 +107,11 @@ export type ISelectPanelPosition =
       [value]="displayText"
     />
 
-    @if (hasOptionsList) {
+    @if (hasPanel) {
       <i-options #panel class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
+        @if (!hasOptions) {
+          <div class="i-options__empty" role="status">{{ emptyStateText }}</div>
+        }
         @for (row of filteredOptions; track trackBy($index, row); let idx = $index) {
           <div
             class="i-option"
@@ -148,6 +156,7 @@ export class ISelect<T = any>
   implements ControlValueAccessor, OnInit, OnChanges, AfterContentInit, AfterViewChecked, OnDestroy
 {
   @Input() placeholder = '';
+  @Input() emptyState: ISelectEmptyState = {};
   @Input() disabled = false;
   @Input() loading = false;
   @Input() invalid = false;
@@ -295,6 +304,9 @@ export class ISelect<T = any>
   private panelOriginalParent: Node | null = null;
   private panelOriginalNextSibling: Node | null = null;
 
+  private lastPanel: HTMLElement | null = null;
+  private lastPanelOptions: T[] | null = null;
+  private lastPanelMessage = '';
   private repositionRaf = 0;
   private listeningGlobal = false;
 
@@ -334,10 +346,21 @@ export class ISelect<T = any>
   }
 
   ngAfterViewChecked(): void {
-    if (this.isOpen && this.portalToBody && this.panelRef?.nativeElement) {
+    const panel = this.getPanelElement();
+    if (this.isOpen && panel) {
       this.ensurePanelPortaled();
       this.ensureGlobalListeners();
+      if (
+        panel !== this.lastPanel ||
+        this.filteredOptions !== this.lastPanelOptions ||
+        this.emptyStateText !== this.lastPanelMessage
+      ) {
+        this.scheduleReposition();
+      }
     }
+    this.lastPanel = panel;
+    this.lastPanelOptions = this.filteredOptions;
+    this.lastPanelMessage = this.emptyStateText;
   }
 
   ngOnDestroy(): void {
@@ -787,8 +810,20 @@ export class ISelect<T = any>
     };
   }
 
+  get emptyStateText(): string {
+    const config: Exclude<ISelectEmptyState, string> =
+      typeof this.emptyState === 'string' ? { empty: this.emptyState } : this.emptyState;
+    return this._rawOptions.length === 0
+      ? config.empty ?? 'No options available'
+      : config.notFound ?? 'No results found';
+  }
+
   get hasOptionsList(): boolean {
     return this.isOpen && this.hasOptions;
+  }
+
+  get hasPanel(): boolean {
+    return this.isOpen && (this.hasOptions || !(this.loading || this.isLoading));
   }
 
   setActiveIndex(idx: number): void {
@@ -1122,6 +1157,7 @@ export class ISelect<T = any>
     <i-select
       [disabled]="disabled || isDisabled"
       [displayWith]="displayWith"
+      [emptyState]="emptyState"
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="controlInvalid"
@@ -1153,6 +1189,7 @@ export class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
   @Input() label = '';
   @Input() disabled = false;
   @Input() placeholder = '';
+  @Input() emptyState: ISelectEmptyState = {};
   @Input() options: T[] | null = null;
   @Input() options$: Observable<T[]> | null = null;
   @Input() loading = false;

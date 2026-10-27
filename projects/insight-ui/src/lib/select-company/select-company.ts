@@ -20,6 +20,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import {
   ISelect,
   type ISelectChange,
+  type ISelectEmptyState,
   ISelectOptionDefDirective,
   type ISelectPanelPosition,
 } from '../select';
@@ -35,6 +36,7 @@ import type { IMenuCompanyDto } from '../user/user.types';
     <i-select
       [disabled]="disabled || (hosted() && companyLoading())"
       [displayWith]="displayWith ?? 'name'"
+      [emptyState]="emptyState"
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="invalid"
@@ -85,6 +87,7 @@ export class ISelectCompany implements ControlValueAccessor {
   protected optionDef?: ISelectOptionDefDirective<IMenuCompanyDto>;
 
   @Input() placeholder = '';
+  @Input() emptyState: ISelectEmptyState = {};
   @Input() disabled = false;
   @Input() set loading(value: boolean) { this.loadingValue.set(value); }
   get loading(): boolean { return this.loadingValue(); }

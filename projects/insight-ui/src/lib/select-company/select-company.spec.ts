@@ -428,3 +428,46 @@ describe('hosted company selection', () => {
     expect(state.selection.getSnapshot().companyId).toBe('c2');
   });
 });
+
+for (const Select of [ISelectCompany, IFCSelectCompany]) {
+  describe(`${Select.name} empty state forwarding`, () => {
+    it('forwards string and object messages through company wrappers', fakeAsync(() => {
+      const store = new CompanyStoreStub();
+      TestBed.configureTestingModule({
+        imports: [Select],
+        providers: [{ provide: IUserMenuStore, useValue: store }],
+      });
+      const fixture = TestBed.createComponent<ISelectCompany | IFCSelectCompany>(Select);
+      fixture.componentRef.setInput('portalToBody', false);
+      fixture.componentRef.setInput('filterDelay', 0);
+      fixture.componentRef.setInput('emptyState', 'No companies');
+      fixture.detectChanges();
+      open(fixture);
+      const message = (): string | undefined => fixture.nativeElement.querySelector('.i-options__empty')?.textContent;
+      expect(message()).toBe('No companies');
+      fixture.componentRef.setInput('emptyState', { empty: 'Empty companies', notFound: 'Company not found' });
+      fixture.detectChanges();
+      expect(message()).toBe('Empty companies');
+      store.authorizations.set(authorizations());
+      fixture.detectChanges();
+      expect(message()).toBeUndefined();
+      const input = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+      input.value = 'missing';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      tick();
+      fixture.detectChanges();
+      expect(message()).toBe('Company not found');
+      fixture.componentRef.setInput('loading', true);
+      fixture.detectChanges();
+      expect(message()).toBeUndefined();
+      fixture.componentRef.setInput('loading', false);
+      fixture.detectChanges();
+      expect(message()).toBe('Company not found');
+      store.authorizations.set([]);
+      fixture.detectChanges();
+      expect(message()).toBe('Empty companies');
+      fixture.destroy();
+      tick(50);
+    }));
+  });
+}
