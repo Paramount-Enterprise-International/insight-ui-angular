@@ -1,4 +1,4 @@
-import { Component, PLATFORM_ID } from '@angular/core';
+import { Component, NgZone, PLATFORM_ID } from '@angular/core';
 import {
   ComponentFixture,
   fakeAsync,
@@ -207,7 +207,12 @@ describe('ISnackbar', () => {
 describe('ISnackbarService', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it('rechecks the bottom after repeated six-theme bursts finish rendering', fakeAsync(() => {
+  function animationTest(assertions: () => void): () => void {
+    // Keep Angular change detection in its zone so global frame spies track snackbar work.
+    return fakeAsync(() => TestBed.inject(NgZone).run(assertions));
+  }
+
+  it('rechecks the bottom after repeated six-theme bursts finish rendering', animationTest(() => {
     let frame: FrameRequestCallback | undefined;
     const schedule = spyOn(window, 'requestAnimationFrame').and.callFake((callback) => {
       frame = callback;
@@ -256,7 +261,7 @@ describe('ISnackbarService', () => {
   }));
 
   for (const position of positions)
-    it(`reveals the latest rendered content at ${position} without changing focus`, fakeAsync(() => {
+    it(`reveals the latest rendered content at ${position} without changing focus`, animationTest(() => {
       let frame: FrameRequestCallback | undefined;
       const schedule = spyOn(window, 'requestAnimationFrame').and.callFake((callback) => {
         frame = callback;
@@ -294,7 +299,7 @@ describe('ISnackbarService', () => {
       flush();
     }));
 
-  it('only scrolls queued content when admitted and cancels pending scroll work on destroy', fakeAsync(() => {
+  it('only scrolls queued content when admitted and cancels pending scroll work on destroy', animationTest(() => {
     let frame: FrameRequestCallback | undefined;
     const schedule = spyOn(window, 'requestAnimationFrame').and.callFake((callback) => {
       frame = callback;

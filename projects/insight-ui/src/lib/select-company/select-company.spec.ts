@@ -54,8 +54,8 @@ class CompanyStoreStub {
         @case ('control') {
           <i-fc-select-company
             label="Company"
-            [formControl]="control"
             menuCode="report"
+            [formControl]="control"
             [portalToBody]="false"
             (onChanged)="changes.push($event)"
             (onOptionSelected)="selected.push($event)"
@@ -94,8 +94,8 @@ class CompanyStoreStub {
       @switch (mode) {
         @case ('control') {
           <i-select-company
-            [formControl]="control"
             menuCode="report"
+            [formControl]="control"
             [portalToBody]="false"
             (onChanged)="changes.push($event)"
             (onOptionSelected)="selected.push($event)"

@@ -102,10 +102,10 @@ export type ISelectPanelPosition =
   template: `
     <i-input
       [append]="appendAddon"
+      [disabled]="disabled"
       [invalid]="invalid || hasNoResults"
       [placeholder]="placeholder"
       [readonly]="disabled"
-      [disabled]="disabled"
       [value]="displayText"
     />
 
@@ -935,6 +935,9 @@ export class ISelect<T = any>
 
   private scheduleReposition(after?: () => void, doubleRaf = false): void {
     if (!this.isOpen) return;
+
+    // Preserve initial measurement frames until the panel is ready to reveal.
+    if (this.repositionRaf && !doubleRaf && this.getPanelElement()?.style.visibility === 'hidden') return;
 
     if (this.repositionRaf) {
       cancelAnimationFrame(this.repositionRaf);

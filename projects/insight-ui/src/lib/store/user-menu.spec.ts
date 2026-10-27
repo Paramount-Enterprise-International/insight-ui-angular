@@ -434,7 +434,9 @@ describe('IUserMenuStore', () => {
     menuSpy.getAuthorizations.and.returnValue(
       of([{ menuCode: 'example', menuId: 'example', type: 'function', companies: [] }]),
     );
-    menuSpy.getEffectiveMenus.and.returnValue(of([{ ...nodes[0], companies: [{ id: 'only-menu', code: 'NAV', name: 'Navigation only' }] }]));
+    menuSpy.getEffectiveMenus.and.returnValue(
+      of([{ ...nodes[0], companies: [{ id: 'only-menu', code: 'NAV', name: 'Navigation only' }] }]),
+    );
     store.load();
     expect(store.hasNavigableMenu('dashboard')).toBeTrue();
     expect(store.hasMenuCode('dashboard')).toBeFalse();

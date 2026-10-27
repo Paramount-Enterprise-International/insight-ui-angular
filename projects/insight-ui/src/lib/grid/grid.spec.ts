@@ -5,10 +5,10 @@ import {
   IGrid,
   IGridColumn,
   IGridColumnGroup,
+  type IGridColumnWidth,
   IGridCustomColumn,
   IGridDataSource,
   IGridEmptyDef,
-  type IGridColumnWidth,
 } from './grid';
 
 @Component({
@@ -31,15 +31,15 @@ class GridHostComponent {
     <i-grid [dataSource]="data" [showNumberColumn]="false">
       <i-grid-column
         fieldName="name"
-        title="Name"
-        [width]="width"
-        [minWidth]="minWidth"
         freeze
+        title="Name"
+        [minWidth]="minWidth"
+        [width]="width"
       />
       <i-grid-column-group title="Identity">
-        <i-grid-column fieldName="status" title="Status" [width]="80" [minWidth]="90" freeze />
+        <i-grid-column fieldName="status" freeze title="Status" [minWidth]="90" [width]="80" />
       </i-grid-column-group>
-      <i-grid-custom-column title="Actions" [width]="45" [minWidth]="actionMinWidth" freeze />
+      <i-grid-custom-column freeze title="Actions" [minWidth]="actionMinWidth" [width]="45" />
     </i-grid>
   `,
 })
@@ -72,7 +72,7 @@ describe('IGrid column minimum widths', () => {
   function header(title = 'Name'): HTMLElement {
     return Array.from(
       fixture.nativeElement.querySelectorAll('i-grid-header-cell') as NodeListOf<HTMLElement>,
-    ).find((cell) => cell.textContent?.trim() === title)!;
+    ).find((headerCell) => headerCell.textContent?.trim() === title)!;
   }
 
   function cell(index = 0): HTMLElement {

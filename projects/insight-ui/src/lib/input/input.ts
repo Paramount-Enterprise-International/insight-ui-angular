@@ -101,8 +101,8 @@ export type IInputAddons =
       <i-button
         size="xs"
         type="button"
-        [icon]="addon.icon"
         [disabled]="addon.disabled ?? false"
+        [icon]="addon.icon"
         [variant]="addon.variant ?? 'primary'"
         (onClick)="addon.onClick ? addon.onClick() : null"
       />
