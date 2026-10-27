@@ -312,7 +312,7 @@ export class IUserMenuStore {
   loadAuthorizations(applicationId?: string): Observable<IEffectiveAuthorizationDto[]> {
     const generation = this.generation;
     const request = ++this.authorizationRequest;
-    const current = () => generation === this.generation && request === this.authorizationRequest;
+    const current = (): boolean => generation === this.generation && request === this.authorizationRequest;
     this.authorizationsLoading.set(true);
     this.loadErrors.update((errors) => ({ ...errors, authorizations: null }));
     this.clearAuthorizationData();

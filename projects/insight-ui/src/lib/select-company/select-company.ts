@@ -130,8 +130,9 @@ export class ISelectCompany implements ControlValueAccessor {
     (this.hosted() ? this.selectionValue()?.menuCode ?? null : null));
   private readonly menuActive = computed(() => !this.hosted() ||
     (!!this.selectionValue()?.menuCode && this.effectiveMenuCode() === this.selectionValue()?.menuCode));
-  protected readonly companyLoading = computed(() => this.loadingValue() || this.store.authorizationsLoading() || (this.hosted() &&
-    (!this.store.initialized() || this.store.initializing() || !this.menuActive())));
+  protected readonly companyLoading = computed(() =>
+    this.loadingValue() || this.store.authorizationsLoading() || (this.hosted() &&
+      (!this.store.initialized() || this.store.initializing() || !this.menuActive())));
 
   constructor() {
     const selection = this.hostState?.selection;

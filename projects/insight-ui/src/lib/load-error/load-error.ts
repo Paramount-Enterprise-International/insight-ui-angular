@@ -14,7 +14,7 @@ export type ILoadErrorDensity = 'default' | 'compact' | 'inline';
     '[style.display]': 'message?.trim() ? null : "none"',
   },
   template: `@if (message?.trim()) {
-    <div class="i-load-error__content" [class]="contentClass" [ngStyle]="contentStyle" role="alert">
+    <div class="i-load-error__content" role="alert" [class]="contentClass" [ngStyle]="contentStyle">
       <i-icon
         aria-hidden="true"
         icon="fa-solid fa-circle-exclamation"
