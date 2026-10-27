@@ -1,5 +1,6 @@
 import { IMenu } from '../host';
 import {
+  collectAuthorizationScope,
   collectMenuCodes,
   findFirstLeafRoute,
   hasAnyMenuCode,
@@ -8,7 +9,7 @@ import {
   toIMenuFavorite,
   toIMenus,
 } from './user.mapper';
-import type { ICurrentUserDto, IFavoriteMenuItemDto, IMenuNodeDto } from './user.types';
+import type { ICurrentUserDto, IEffectiveAuthorizationDto, IFavoriteMenuItemDto, IMenuNodeDto } from './user.types';
 
 const app = { id: 'a1', code: 'APP', name: 'App', url: null, version: null };
 
@@ -179,5 +180,31 @@ describe('findFirstLeafRoute', () => {
   it('returns null when there are no navigable routes', () => {
     expect(findFirstLeafRoute([])).toBeNull();
     expect(findFirstLeafRoute([makeMenu({ id: 'g', type: 'group', route: null, children: [] })])).toBeNull();
+  });
+});
+
+
+describe('collectAuthorizationScope', () => {
+  it('sorts detached companies by name, code and id while preserving authorization mappings', () => {
+    const companies = [
+      { id: 'z', code: 'Z', name: 'beta' },
+      { id: 'b', code: 'A', name: 'ALPHA' },
+      { id: 'a', code: 'A', name: 'alpha' },
+      { id: 'c', code: 'B', name: 'Alpha' },
+    ];
+    const items: IEffectiveAuthorizationDto[] = [
+      { menuId: 'm1', menuCode: 'sales', type: 'item', companies },
+      { menuId: 'm2', menuCode: 'sales', type: 'function', companies: [companies[0]] },
+      { menuId: 'm3', menuCode: 'empty', type: 'item', companies: [] },
+    ];
+    const before = JSON.stringify(items);
+    const scope = collectAuthorizationScope(items);
+    expect(scope.companies.map((company) => company.id)).toEqual(['a', 'b', 'c', 'z']);
+    expect(scope.companyCodes).toEqual(['Z', 'A', 'B']);
+    expect(scope.menuCompanies).toEqual({ sales: ['Z', 'A', 'B'], empty: [] });
+    expect(JSON.stringify(items)).toBe(before);
+    scope.companies[0].name = 'Changed';
+    expect(JSON.stringify(items)).toBe(before);
+    expect(collectAuthorizationScope([]).companies).toEqual([]);
   });
 });

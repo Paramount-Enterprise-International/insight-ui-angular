@@ -30,7 +30,8 @@ function authorizations(company = jakarta): IEffectiveAuthorizationDto[] {
 class CompanyStoreStub {
   readonly initialized = signal(true);
   readonly initializing = signal(false);
-  readonly loadErrors = signal({ authorizations: null });
+  readonly authorizationsLoading = signal(false);
+  readonly loadErrors = signal<{ authorizations: { status: number } | null }>({ authorizations: null });
   readonly authorizations = signal<IEffectiveAuthorizationDto[]>([]);
   private readonly scope = computed(() => collectAuthorizationScope(this.authorizations()));
   readonly companies = computed(() => this.scope().companies);
@@ -54,6 +55,7 @@ class CompanyStoreStub {
           <i-fc-select-company
             label="Company"
             [formControl]="control"
+            menuCode="report"
             [portalToBody]="false"
             (onChanged)="changes.push($event)"
             (onOptionSelected)="selected.push($event)"
@@ -64,6 +66,7 @@ class CompanyStoreStub {
             <i-fc-select-company
               formControlName="company"
               label="Company"
+              menuCode="report"
               [portalToBody]="false"
               (onChanged)="changes.push($event)"
               (onOptionSelected)="selected.push($event)"
@@ -73,6 +76,7 @@ class CompanyStoreStub {
         @default {
           <i-fc-select-company
             label="Company"
+            menuCode="report"
             [portalToBody]="false"
             [(ngModel)]="model"
             (onChanged)="changes.push($event)"
@@ -91,6 +95,7 @@ class CompanyStoreStub {
         @case ('control') {
           <i-select-company
             [formControl]="control"
+            menuCode="report"
             [portalToBody]="false"
             (onChanged)="changes.push($event)"
             (onOptionSelected)="selected.push($event)"
@@ -100,6 +105,7 @@ class CompanyStoreStub {
           <form [formGroup]="form">
             <i-select-company
               formControlName="company"
+              menuCode="report"
               [portalToBody]="false"
               (onChanged)="changes.push($event)"
               (onOptionSelected)="selected.push($event)"
@@ -108,6 +114,7 @@ class CompanyStoreStub {
         }
         @default {
           <i-select-company
+            menuCode="report"
             [portalToBody]="false"
             [(ngModel)]="model"
             (onChanged)="changes.push($event)"
@@ -159,6 +166,7 @@ describe('ISelectCompany', () => {
     });
     fixture = TestBed.createComponent(ISelectCompany);
     fixture.componentRef.setInput('portalToBody', false);
+    fixture.componentRef.setInput('menuCode', 'report');
     fixture.detectChanges();
   });
 
@@ -168,7 +176,7 @@ describe('ISelectCompany', () => {
 
     store.authorizations.set(authorizations());
     fixture.detectChanges();
-    expect(labels(fixture)).toEqual(['Jakarta', 'Bandung']);
+    expect(labels(fixture)).toEqual(['Bandung', 'Jakarta']);
     expect(fixture.componentInstance.value).toBeNull();
     expect(store.load).not.toHaveBeenCalled();
 
@@ -181,11 +189,11 @@ describe('ISelectCompany', () => {
     store.authorizations.set(authorizations());
     open(fixture);
     for (const [menuCode, expected] of [
-      [null, ['Jakarta', 'Bandung']],
-      ['   ', ['Jakarta', 'Bandung']],
+      [null, []],
+      ['   ', []],
       [' sales ', ['Jakarta']],
       ['unknown', []],
-      ['report', ['Jakarta', 'Bandung']],
+      ['report', ['Bandung', 'Jakarta']],
     ] as const) {
       fixture.componentRef.setInput('menuCode', menuCode);
       fixture.detectChanges();
@@ -259,22 +267,22 @@ describe('ISelectCompany', () => {
       host.detectChanges();
       open(host);
 
-      const firstOption = host.nativeElement.querySelector('.i-option');
-      const firstCode = host.nativeElement.querySelector('.company-code');
-      expect(labels(host)).toEqual(['JKT', 'BDG']);
+      const firstOption = host.nativeElement.querySelectorAll('.i-option')[1];
+      const firstCode = host.nativeElement.querySelectorAll('.company-code')[1];
+      expect(labels(host)).toEqual(['BDG', 'JKT']);
       expect(firstCode?.getAttribute('data-company-name')).toBe('Jakarta');
 
       const updated = { ...jakarta, name: 'Jakarta Updated' };
       store.authorizations.set(authorizations(updated));
       host.detectChanges();
-      expect(host.nativeElement.querySelector('.i-option')).toBe(firstOption);
-      expect(host.nativeElement.querySelector('.company-code')).toBe(firstCode);
+      expect(host.nativeElement.querySelectorAll('.i-option')[1]).toBe(firstOption);
+      expect(host.nativeElement.querySelectorAll('.company-code')[1]).toBe(firstCode);
       expect(firstCode?.getAttribute('data-company-name')).toBe('Jakarta Updated');
-      expect(labels(host)).toEqual(['JKT', 'BDG']);
+      expect(labels(host)).toEqual(['BDG', 'JKT']);
       expect(host.componentInstance.changes).toEqual([]);
 
       host.nativeElement
-        .querySelector('.i-option')
+        .querySelectorAll('.i-option')[1]
         .dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
       host.detectChanges();
       tick();
@@ -298,10 +306,10 @@ describe('ISelectCompany', () => {
         host.detectChanges();
         open(host);
         if (mode === 'model') {
-          expect(host.nativeElement.querySelector('.company-code')?.textContent).toBe('JKT');
+          expect(host.nativeElement.querySelectorAll('.company-code')[1]?.textContent).toBe('JKT');
         }
         host.nativeElement
-          .querySelector('.i-option')
+          .querySelectorAll('.i-option')[1]
           .dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
         host.detectChanges();
         tick();
@@ -439,6 +447,7 @@ for (const Select of [ISelectCompany, IFCSelectCompany]) {
       });
       const fixture = TestBed.createComponent<ISelectCompany | IFCSelectCompany>(Select);
       fixture.componentRef.setInput('portalToBody', false);
+      fixture.componentRef.setInput('menuCode', 'report');
       fixture.componentRef.setInput('filterDelay', 0);
       fixture.componentRef.setInput('emptyState', 'No companies');
       fixture.detectChanges();
@@ -469,5 +478,65 @@ for (const Select of [ISelectCompany, IFCSelectCompany]) {
       fixture.destroy();
       tick(50);
     }));
+  });
+}
+
+
+for (const Select of [ISelectCompany, IFCSelectCompany]) {
+  describe(`${Select.name} menu transitions`, () => {
+    it('blocks stale explicit menus and preserves candidates during loading and errors', () => {
+      sessionStorage.clear();
+      const state = new IHStateOwner('angular-menu-transition');
+      state.setIdentity('user');
+      state.selection.activateMenu('report');
+      state.selection.validateCompanies('report', ['c2'], 'ready');
+      state.selection.setCompany('c2');
+      state.selection.resolveProjects(state.selection.beginProjects(), ['p']);
+      state.selection.setProject('p');
+      const store = new CompanyStoreStub();
+      store.authorizations.set(authorizations());
+      TestBed.configureTestingModule({ imports: [Select], providers: [
+        { provide: IH_STATE, useValue: state }, { provide: IUserMenuStore, useValue: store },
+      ] });
+      const fixture = TestBed.createComponent<ISelectCompany | IFCSelectCompany>(Select);
+      fixture.componentRef.setInput('portalToBody', false);
+      fixture.componentRef.setInput('menuCode', 'report');
+      fixture.detectChanges();
+      state.selection.activateMenu(null);
+      fixture.detectChanges();
+      open(fixture);
+      expect(labels(fixture)).toEqual([]);
+      expect(state.selection.getSnapshot().companyStatus).toBe('loading');
+      state.selection.activateMenu('sales');
+      fixture.detectChanges();
+      open(fixture);
+      expect(labels(fixture)).toEqual([]);
+      expect(state.selection.getSnapshot().companyStatus).toBe('loading');
+      expect(state.selection.getSnapshot().companyId).toBe('c2');
+      store.authorizationsLoading.set(true);
+      store.authorizations.set([]);
+      fixture.componentRef.setInput('menuCode', 'sales');
+      fixture.detectChanges();
+      expect(state.selection.getSnapshot().companyId).toBe('c2');
+      expect(state.selection.getSnapshot().projectKey).toBe('p');
+      store.loadErrors.set({ authorizations: { status: 500 } });
+      store.authorizationsLoading.set(false);
+      fixture.detectChanges();
+      expect(state.selection.getSnapshot().companyStatus).toBe('error');
+      expect(state.selection.getSnapshot().companyId).toBe('c2');
+      store.loadErrors.set({ authorizations: null });
+      store.authorizations.set(authorizations());
+      fixture.componentRef.setInput('menuCode', 'report');
+      state.selection.activateMenu('report');
+      fixture.detectChanges();
+      expect(state.selection.getSnapshot().companyId).toBe('c2');
+      expect(state.selection.getSnapshot().projectKey).toBe('p');
+      fixture.componentRef.setInput('menuCode', 'sales');
+      state.selection.activateMenu('sales');
+      fixture.detectChanges();
+      expect(state.selection.getSnapshot().companyStatus).toBe('ready');
+      expect(state.selection.getSnapshot().companyId).toBeNull();
+      expect(state.selection.getSnapshot().projectKey).toBeNull();
+    });
   });
 }

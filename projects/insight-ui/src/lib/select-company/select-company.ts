@@ -128,8 +128,10 @@ export class ISelectCompany implements ControlValueAccessor {
   protected readonly hosted = computed(() => !!this.hostState && this.scopeValue() !== 'local');
   private readonly effectiveMenuCode = computed(() => this.menuCodeValue() ??
     (this.hosted() ? this.selectionValue()?.menuCode ?? null : null));
-  protected readonly companyLoading = computed(() => this.loadingValue() || (this.hosted() &&
-    (!this.store.initialized() || this.store.initializing() || !this.effectiveMenuCode())));
+  private readonly menuActive = computed(() => !this.hosted() ||
+    (!!this.selectionValue()?.menuCode && this.effectiveMenuCode() === this.selectionValue()?.menuCode));
+  protected readonly companyLoading = computed(() => this.loadingValue() || this.store.authorizationsLoading() || (this.hosted() &&
+    (!this.store.initialized() || this.store.initializing() || !this.menuActive())));
 
   constructor() {
     const selection = this.hostState?.selection;
@@ -138,7 +140,7 @@ export class ISelectCompany implements ControlValueAccessor {
       inject(DestroyRef).onDestroy(unsubscribe);
     }
     effect(() => {
-      if (!this.hosted() || !selection) return;
+      if (!this.hosted() || !selection || !this.menuActive()) return;
       this.selectionRevision();
       const code = this.effectiveMenuCode();
       const error = this.store.loadErrors().authorizations;
@@ -159,8 +161,7 @@ export class ISelectCompany implements ControlValueAccessor {
   protected readonly companyOptions = computed(() => {
     const companies = this.store.companies();
     const code = this.effectiveMenuCode();
-    if (this.hosted() && !code) return [];
-    if (!code) return companies;
+    if (!code || !this.menuActive()) return [];
 
     const allowed = new Set(this.store.menuCompanies()[code] ?? []);
     return companies.filter((company) => allowed.has(company.code));
@@ -205,7 +206,8 @@ export class ISelectCompany implements ControlValueAccessor {
   }
 
   protected handleSelectChange(change: ISelectChange<IMenuCompanyDto>): void {
-    if (this.hosted() && !this.hostState?.selection.setCompany(change.value?.id ?? null)) return;
+    if (this.hosted() && (this.companyLoading() || !this.menuActive() ||
+      !this.hostState?.selection.setCompany(change.value?.id ?? null))) return;
     this.syncedValue = change.value;
     this.modelValue.set(change.value);
     this.onChange(change.value);

@@ -96,6 +96,7 @@ export type ISelectPanelPosition =
 
 @Component({
   selector: 'i-select',
+  host: { '[attr.aria-disabled]': "disabled ? 'true' : null" },
   standalone: true,
   imports: [IIcon, NgTemplateOutlet, IHighlightSearchPipe, IInput, NgClass],
   template: `
@@ -104,6 +105,7 @@ export type ISelectPanelPosition =
       [invalid]="invalid || hasNoResults"
       [placeholder]="placeholder"
       [readonly]="disabled"
+      [disabled]="disabled"
       [value]="displayText"
     />
 
@@ -315,7 +317,7 @@ export class ISelect<T = any>
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['disabled'] && this.disabled) this.cancelPendingFilter();
+    if (changes['disabled'] && this.disabled) this.closeDropdown();
     if (changes['filterDelay'] && this.filterInputSub) this.subscribeFilterInput();
     if (changes['filterPredicate']) this.applyFilter(this.isOpen);
   }
@@ -402,7 +404,7 @@ export class ISelect<T = any>
   }
 
   setDisabledState(isDisabled: boolean): void {
-    if (isDisabled) this.cancelPendingFilter();
+    if (isDisabled) this.closeDropdown();
     this.disabled = isDisabled;
     this.cdr.markForCheck();
   }
@@ -803,6 +805,7 @@ export class ISelect<T = any>
 
     return {
       type: 'button',
+      disabled: this.disabled,
       icon: this.isOpen ? 'angle-up' : 'angle-down',
       onClick: () => this.toggleDropdown(),
       variant: 'primary',
@@ -823,7 +826,7 @@ export class ISelect<T = any>
   }
 
   get hasPanel(): boolean {
-    return this.isOpen && (this.hasOptions || !(this.loading || this.isLoading));
+    return this.isOpen && !this.disabled && (this.hasOptions || !(this.loading || this.isLoading));
   }
 
   setActiveIndex(idx: number): void {

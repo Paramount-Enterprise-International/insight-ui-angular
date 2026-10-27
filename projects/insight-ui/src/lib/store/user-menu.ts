@@ -55,6 +55,7 @@ export class IUserMenuStore {
   private loadedUserSub: string | null = null;
   private loadedApplicationId: string | null = null;
   private generation = 0;
+  private authorizationRequest = 0;
 
   /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
   readonly currentUser = signal<IUser | null>(null);
@@ -66,6 +67,8 @@ export class IUserMenuStore {
   readonly favorites = signal<IMenu[]>([]);
   /** Roles decoded from the access token (for `source: 'role'` permission checks). */
   readonly roles = signal<string[]>([]);
+  /** True while the authorization branch is being refreshed. */
+  readonly authorizationsLoading = signal(false);
   /** Raw effective authorization entries returned by iam-user-api. */
   readonly authorizations = signal<IEffectiveAuthorizationDto[]>([]);
   private readonly authorizationScope = computed(() => collectAuthorizationScope(this.authorizations()));
@@ -308,15 +311,25 @@ export class IUserMenuStore {
   /** Loads effective item/function authorizations and their company scope. */
   loadAuthorizations(applicationId?: string): Observable<IEffectiveAuthorizationDto[]> {
     const generation = this.generation;
+    const request = ++this.authorizationRequest;
+    const current = () => generation === this.generation && request === this.authorizationRequest;
+    this.authorizationsLoading.set(true);
+    this.loadErrors.update((errors) => ({ ...errors, authorizations: null }));
     this.clearAuthorizationData();
     return this.menuService.getAuthorizations<IEffectiveAuthorizationDto[]>(applicationId).pipe(
       tap((items) => {
-        if (generation === this.generation) this.applyAuthorizations(items);
+        if (current()) this.applyAuthorizations(items);
       }),
       map(() => this.authorizations()),
       catchError((error) => {
-        if (generation === this.generation) this.clearAuthorizationData();
+        if (current()) {
+          this.clearAuthorizationData();
+          this.loadErrors.update((errors) => ({ ...errors, authorizations: normalizeApiError(error) }));
+        }
         return throwError(() => error);
+      }),
+      finalize(() => {
+        if (current()) this.authorizationsLoading.set(false);
       }),
     );
   }
@@ -391,6 +404,8 @@ export class IUserMenuStore {
 
   private clearData(): void {
     this.generation++;
+    this.authorizationRequest++;
+    this.authorizationsLoading.set(false);
     this.currentUser.set(null);
     this.rawCurrentUser.set(null);
     this.menus.set([]);
