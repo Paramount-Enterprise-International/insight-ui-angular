@@ -21,6 +21,7 @@ import {
 } from '../interfaces';
 import {
   type ISelectChange,
+  type ISelectEmptyState,
   ISelectOptionDefDirective,
   type ISelectPanelPosition,
 } from '../select';
@@ -44,6 +45,7 @@ import { ISelectCompany } from './select-company';
     <i-select-company
       [disabled]="disabled || formDisabled"
       [displayWith]="displayWith"
+      [emptyState]="emptyState"
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="invalid || controlInvalid"
@@ -82,6 +84,7 @@ export class IFCSelectCompany implements ControlValueAccessor, OnDestroy {
 
   @Input() label = '';
   @Input() placeholder = '';
+  @Input() emptyState: ISelectEmptyState = {};
   @Input() menuCode?: string | null;
   @Input() disabled = false;
   @Input() loading = false;

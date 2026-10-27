@@ -67,6 +67,7 @@ export type IInputAddonText = {
 
 export type IInputAddonButton = {
   type: 'button';
+  disabled?: boolean;
   icon: string;
   onClick?: () => void;
   visible?: boolean;
@@ -100,6 +101,7 @@ export type IInputAddons =
       <i-button
         size="xs"
         type="button"
+        [disabled]="addon.disabled ?? false"
         [icon]="addon.icon"
         [variant]="addon.variant ?? 'primary'"
         (onClick)="addon.onClick ? addon.onClick() : null"

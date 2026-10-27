@@ -434,10 +434,15 @@ describe('IUserMenuStore', () => {
     menuSpy.getAuthorizations.and.returnValue(
       of([{ menuCode: 'example', menuId: 'example', type: 'function', companies: [] }]),
     );
+    menuSpy.getEffectiveMenus.and.returnValue(
+      of([{ ...nodes[0], companies: [{ id: 'only-menu', code: 'NAV', name: 'Navigation only' }] }]),
+    );
     store.load();
     expect(store.hasNavigableMenu('dashboard')).toBeTrue();
     expect(store.hasMenuCode('dashboard')).toBeFalse();
     expect(store.hasMenuCode('example')).toBeTrue();
+    expect(store.companies()).toEqual([]);
+    expect(store.menuCompanies()).toEqual({ example: [] });
     store.loadAuthorizations().subscribe((items) => expect(items[0].type).toBe('function'));
   });
 
@@ -603,4 +608,25 @@ describe('IUserMenuStore', () => {
     expect(store.authorizations()).toEqual([]);
     expect(store.initialized()).toBeFalse();
   });
+
+  it('tracks authorization refresh errors and ignores an older request settling during retry', () => {
+    const older = new Subject<IEffectiveAuthorizationDto[]>();
+    const retry = new Subject<IEffectiveAuthorizationDto[]>();
+    menuSpy.getAuthorizations.and.returnValues(older, retry, of(authorizations));
+    store.loadAuthorizations().subscribe();
+    expect(store.authorizationsLoading()).toBeTrue();
+    store.loadAuthorizations().subscribe({ error: () => undefined });
+    older.next(authorizations);
+    older.complete();
+    expect(store.authorizationsLoading()).toBeTrue();
+    expect(store.authorizations()).toEqual([]);
+    retry.error({ status: 500 });
+    expect(store.authorizationsLoading()).toBeFalse();
+    expect(store.loadErrors().authorizations?.status).toBe(500);
+    store.loadAuthorizations().subscribe();
+    expect(store.authorizationsLoading()).toBeFalse();
+    expect(store.loadErrors().authorizations).toBeNull();
+    expect(store.authorizations()).toEqual(authorizations);
+  });
+
 });

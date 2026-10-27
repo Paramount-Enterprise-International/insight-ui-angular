@@ -3,7 +3,7 @@ import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testin
 import { By } from '@angular/platform-browser';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
-import { IFCSelect, ISelect, ISelectChange } from './select';
+import { IFCSelect, ISelect, ISelectChange, type ISelectEmptyState } from './select';
 
 @Component({
   standalone: true,
@@ -583,6 +583,137 @@ for (const binding of ['name', 'control', 'value']) {
         expect(input().value).toBe('Passport');
         expect(host.changes).toEqual([]);
       });
+    }
+  });
+}
+
+for (const Select of [ISelect, IFCSelect]) {
+  describe(`${Select.name} empty state`, () => {
+    let fixture: ComponentFixture<ISelect | IFCSelect>;
+    const message = (): HTMLElement | null => document.querySelector('.i-options__empty');
+    const input = (): HTMLInputElement => fixture.nativeElement.querySelector('input');
+    const type = (text: string): void => {
+      input().value = text;
+      input().dispatchEvent(new Event('input', { bubbles: true }));
+      tick(20);
+      fixture.detectChanges();
+    };
+    const open = (): void => {
+      input().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      fixture.detectChanges();
+    };
+
+    beforeEach(() => {
+      TestBed.configureTestingModule({ imports: [Select] });
+      fixture = TestBed.createComponent<ISelect | IFCSelect>(Select);
+      fixture.componentRef.setInput('portalToBody', false);
+      fixture.componentRef.setInput('filterDelay', 20);
+      fixture.componentRef.setInput('options', []);
+      fixture.detectChanges();
+    });
+
+    afterEach(() => fixture.destroy());
+
+    for (const [config, empty, notFound] of [
+      [{}, 'No options available', 'No results found'],
+      ['Nothing here', 'Nothing here', 'No results found'],
+      [{ empty: 'Empty' }, 'Empty', 'No results found'],
+      [{ notFound: 'No match' }, 'No options available', 'No match'],
+      [{ empty: 'Empty', notFound: 'No match' }, 'Empty', 'No match'],
+    ] as [ISelectEmptyState, string, string][]) {
+      it(`resolves ${JSON.stringify(config)} and prioritizes an empty source`, fakeAsync(() => {
+        fixture.componentRef.setInput('emptyState', config);
+        fixture.detectChanges();
+        open();
+        expect(message()?.textContent).toBe(empty);
+        expect(message()?.getAttribute('role')).toBe('status');
+        type('missing');
+        expect(message()?.textContent).toBe(empty);
+        fixture.componentRef.setInput('options', ['Jakarta']);
+        fixture.detectChanges();
+        expect(message()?.textContent).toBe(notFound);
+        type('');
+        expect(message()).toBeNull();
+        expect(fixture.nativeElement.querySelectorAll('.i-option').length).toBe(1);
+        fixture.destroy();
+        tick(50);
+      }));
+    }
+
+    it('waits for debounce and never selects the message', fakeAsync(() => {
+      fixture.componentRef.setInput('options', ['Jakarta']);
+      fixture.detectChanges();
+      open();
+      input().value = 'missing';
+      input().dispatchEvent(new Event('input', { bubbles: true }));
+      tick(19);
+      fixture.detectChanges();
+      expect(message()).toBeNull();
+      tick(1);
+      fixture.detectChanges();
+      expect(message()?.textContent).toBe('No results found');
+      const select = fixture.componentInstance instanceof ISelect
+        ? fixture.componentInstance : fixture.componentInstance.innerSelect;
+      const changed = jasmine.createSpy('changed');
+      select.onChanged.subscribe(changed);
+      message()!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      for (const key of ['ArrowDown', 'ArrowUp', 'Enter']) {
+        input().dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      }
+      fixture.detectChanges();
+      expect(select.highlightIndex).toBe(-1);
+      expect(changed).not.toHaveBeenCalled();
+      expect(message()).not.toBeNull();
+      fixture.destroy();
+      tick(50);
+    }));
+
+    it('suppresses messages during loading and handles asynchronous options', fakeAsync(() => {
+      const source = new Subject<string[]>();
+      fixture.componentRef.setInput('options$', source);
+      fixture.detectChanges();
+      open();
+      expect(message()).toBeNull();
+      fixture.componentRef.setInput('loading', true);
+      source.next([]);
+      fixture.detectChanges();
+      expect(message()).toBeNull();
+      fixture.componentRef.setInput('loading', false);
+      fixture.detectChanges();
+      expect(message()?.textContent).toBe('No options available');
+      source.next(['Jakarta']);
+      fixture.detectChanges();
+      expect(message()).toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('.i-option').length).toBe(1);
+      source.next([]);
+      fixture.detectChanges();
+      expect(message()?.textContent).toBe('No options available');
+      fixture.destroy();
+      tick(50);
+    }));
+
+    for (const portalToBody of [false, true]) {
+      it(`positions messages and updates their text with portal=${portalToBody}`, fakeAsync(() => {
+        fixture.componentRef.setInput('portalToBody', portalToBody);
+        fixture.detectChanges();
+        open();
+        tick(50);
+        const panel = document.querySelector('i-options') as HTMLElement;
+        expect(panel.style.position).toBe('fixed');
+        expect(panel.style.visibility).toBe('visible');
+        expect(panel.parentElement === document.body).toBe(portalToBody);
+        const measured = spyOn(panel, 'getBoundingClientRect').and.callThrough();
+        fixture.componentRef.setInput('emptyState', 'Updated message');
+        fixture.detectChanges();
+        tick(50);
+        expect(message()?.textContent).toBe('Updated message');
+        expect(measured).toHaveBeenCalled();
+        input().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        fixture.detectChanges();
+        expect(document.querySelector('i-options')).toBeNull();
+        fixture.destroy();
+        tick(50);
+      }));
     }
   });
 }

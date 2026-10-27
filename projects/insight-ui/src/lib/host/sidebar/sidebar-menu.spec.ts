@@ -2,11 +2,13 @@ import { APP_BASE_HREF, Location } from '@angular/common';
 import { provideLocationMocks } from '@angular/common/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { Component } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { NavigationEnd, provideRouter, Router } from '@angular/router';
 import { BehaviorSubject, filter, firstValueFrom, of } from 'rxjs';
 import type { IMenu } from '../host.types';
 import { IHSidebar } from './sidebar';
+import { SidebarMenuState } from './sidebar-menu-state';
+import { SidebarSearchState } from './sidebar.utils';
 
 @Component({ template: '' })
 class EmptyPage {}
@@ -72,6 +74,12 @@ describe('IHSidebar menu persistence and restoration', () => {
       value: 0,
       writable: true,
     });
+    await settle();
+  }
+
+  async function searchFor(term: string): Promise<void> {
+    fixture.componentInstance.menuSearch.setValue(term);
+    await new Promise<void>((resolve) => setTimeout(resolve, 210));
     await settle();
   }
 
@@ -174,10 +182,8 @@ describe('IHSidebar menu persistence and restoration', () => {
     await settle();
     expect(collapsed('Nested')).toBe(false);
     expect(JSON.parse(localStorage.getItem(key)!).expanded['main:id:nested']).toBeUndefined();
-    fixture.componentInstance.menuSearch.setValue('Root');
-    await settle();
-    fixture.componentInstance.menuSearch.setValue('');
-    await settle();
+    await searchFor('Root');
+    await searchFor('');
     expect(collapsed('Nested')).toBe(false);
     await router.navigateByUrl('/other');
     await settle();
@@ -209,15 +215,13 @@ describe('IHSidebar menu persistence and restoration', () => {
     it(`temporarily opens the complete search branch for ${term}`, async () => {
       const before = localStorage.getItem(key);
       await mount('/unknown');
-      fixture.componentInstance.menuSearch.setValue(term);
-      await settle();
+      await searchFor(term);
       expect(collapsed('Root')).toBe(false);
       expect(collapsed('Nested')).toBe(false);
       const row = host.querySelector('a[data-sidebar-menu-key="main:id:active"]')!;
       expect(row.closest('ul.collapsed')).toBeNull();
       expect(localStorage.getItem(key)).toBe(before);
-      fixture.componentInstance.menuSearch.setValue('');
-      await settle();
+      await searchFor('');
       expect(collapsed('Root')).toBe(true);
       expect(collapsed('Nested')).toBe(true);
       expect(localStorage.getItem(key)).toBe(before);
@@ -247,14 +251,19 @@ describe('IHSidebar menu persistence and restoration', () => {
       const module = (): HTMLUListElement =>
         host.querySelector('.ih-menu-module')!.parentElement!.querySelector('ul')!;
       expect(module().classList.contains('collapsed')).toBe(true);
-      fixture.componentInstance.menuSearch.setValue(term);
-      await settle();
+      await searchFor(term);
       expect(module().classList.contains('expanded')).toBe(true);
       expect(collapsed('Legacy group')).toBe(false);
       const row = host.querySelector('a[data-sidebar-menu-key="main:menuId:3"]')!;
       expect(row.closest('ul.collapsed')).toBeNull();
-      fixture.componentInstance.menuSearch.setValue('');
+      host.querySelector<HTMLElement>('.ih-menu-module')!.click();
       await settle();
+      expect(module().classList.contains('collapsed')).toBe(true);
+      host.querySelector<HTMLElement>('.ih-menu-module')!.click();
+      await settle();
+      expect(module().classList.contains('expanded')).toBe(true);
+      expect(localStorage.getItem(key)).toBe(before);
+      await searchFor('');
       expect(module().classList.contains('collapsed')).toBe(true);
       expect(collapsed('Legacy group')).toBe(true);
       expect(localStorage.getItem(key)).toBe(before);
@@ -300,8 +309,7 @@ describe('IHSidebar menu persistence and restoration', () => {
     expect(router.url).toContain('menu-filter=Other');
     const search = host.querySelector<HTMLInputElement>('.ih-sidebar-search input')!;
     search.focus();
-    fixture.componentInstance.menuSearch.setValue('');
-    await settle();
+    await searchFor('');
     expect(host.querySelector('.ih-sidebar-body')!.scrollTop).toBeGreaterThan(0);
     expect(document.activeElement).toBe(search);
     expect(router.url).toContain('tab=edit');
@@ -311,8 +319,7 @@ describe('IHSidebar menu persistence and restoration', () => {
 
   it('keeps route highlighting independent of keyboard search selection', async () => {
     await mount();
-    fixture.componentInstance.menuSearch.setValue('page');
-    await settle();
+    await searchFor('page');
     const search = host.querySelector<HTMLInputElement>('.ih-sidebar-search input')!;
     search.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     await settle();
@@ -437,5 +444,120 @@ describe('IHSidebar menu persistence and restoration', () => {
     source.next(menus);
     expect(source.observed).toBe(false);
     expect(frames).not.toHaveBeenCalled();
+  });
+
+  describe('search input', () => {
+    beforeEach(async () => {
+      await mount('/unknown?tab=edit#details');
+      spyOn(HTMLElement.prototype, 'scrollIntoView').and.stub();
+    });
+
+    it('debounces filtering and router updates without projecting menus per keystroke', fakeAsync(() => {
+      const filtered = spyOn(SidebarSearchState.prototype, 'filter').and.callThrough();
+      const projected = spyOn(SidebarMenuState.prototype, 'project').and.callThrough();
+      const navigate = spyOn(router, 'navigate').and.callThrough();
+      const input = host.querySelector<HTMLInputElement>('.ih-sidebar-search input')!;
+      for (const value of ['p', 'pa', 'page']) {
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      expect(input.value).toBe('page');
+      fixture.detectChanges();
+      tick(199);
+      expect(filtered).not.toHaveBeenCalled();
+      expect(projected).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+      tick(1);
+      fixture.detectChanges();
+      expect(filtered).toHaveBeenCalledTimes(1);
+      expect(projected).not.toHaveBeenCalled();
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(navigate.calls.mostRecent().args[1]?.replaceUrl).toBe(true);
+      expect(router.url).toBe('/unknown?tab=edit&menu-filter=page#details');
+      fixture.componentInstance.menuSearch.setValue(' page ');
+      tick(200);
+      expect(filtered).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledTimes(1);
+      tick(16);
+    }));
+
+    it('preserves temporary collapse through hydration and restores state on clear', fakeAsync(() => {
+      const before = localStorage.getItem(key);
+      const original = structuredClone(menus);
+      const sidebar = fixture.componentInstance;
+      sidebar.menuSearch.setValue('page');
+      tick(200);
+      fixture.detectChanges();
+      expect(collapsed('Root')).toBe(false);
+      expect(collapsed('Nested')).toBe(false);
+      header('Nested').click();
+      fixture.detectChanges();
+      expect(collapsed('Nested')).toBe(true);
+      source.next(structuredClone(menus));
+      fixture.detectChanges();
+      expect(collapsed('Nested')).toBe(true);
+      sidebar.onSearchKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      fixture.detectChanges();
+      expect(sidebar.selectedMenuId()).toBe('other-page');
+      header('Other').click();
+      fixture.detectChanges();
+      expect(sidebar.selectedMenuId()).toBeNull();
+      header('Root').click();
+      fixture.detectChanges();
+      expect(collapsed('Root')).toBe(true);
+      sidebar.menuSearch.setValue('Root');
+      tick(200);
+      fixture.detectChanges();
+      expect(collapsed('Root')).toBe(false);
+      expect(collapsed('Nested')).toBe(false);
+      sidebar.menuSearch.setValue('');
+      tick(200);
+      fixture.detectChanges();
+      expect(collapsed('Root')).toBe(true);
+      expect(collapsed('Nested')).toBe(true);
+      expect(localStorage.getItem(key)).toBe(before);
+      expect(menus).toEqual(original);
+      expect(router.url).toBe('/unknown?tab=edit#details');
+      tick(16);
+    }));
+
+    it('flushes the current term for keyboard navigation without activating an old selection', fakeAsync(() => {
+      const sidebar = fixture.componentInstance;
+      sidebar.menuSearch.setValue('page');
+      sidebar.onSearchKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      tick();
+      fixture.detectChanges();
+      expect(sidebar.selectedMenuId()).toBe('active');
+      sidebar.menuSearch.setValue('Other');
+      expect(sidebar.selectedMenuId()).toBeNull();
+      sidebar.onSearchKeyDown(new KeyboardEvent('keydown', { key: 'Enter' }));
+      tick();
+      fixture.detectChanges();
+      expect(router.url.split('?')[0]).toBe('/unknown');
+      expect(sidebar.selectedMenuId()).toBeNull();
+      sidebar.onSearchKeyDown(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+      sidebar.onSearchKeyDown(new KeyboardEvent('keydown', { key: 'Enter' }));
+      tick();
+      expect(router.url).toContain('/other?');
+      expect(router.url).toContain('menu-filter=Other');
+      tick(16);
+    }));
+
+    it('cancels pending work on page navigation and destroy', fakeAsync(() => {
+      const sidebar = fixture.componentInstance;
+      sidebar.menuSearch.setValue('page');
+      void router.navigateByUrl('/other');
+      tick();
+      fixture.detectChanges();
+      const filtered = spyOn(SidebarSearchState.prototype, 'filter').and.callThrough();
+      tick(200);
+      expect(sidebar.menuSearch.value).toBe('');
+      expect(router.url).toBe('/other');
+      expect(filtered).not.toHaveBeenCalled();
+      sidebar.menuSearch.setValue('page');
+      fixture.destroy();
+      tick(200);
+      expect(filtered).not.toHaveBeenCalled();
+    }));
   });
 });

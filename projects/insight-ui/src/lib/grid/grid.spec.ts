@@ -1,7 +1,15 @@
 import { Component, ViewChild } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { IEmptyState } from '../empty-state';
-import { IGrid, IGridColumn, IGridDataSource, IGridEmptyDef } from './grid';
+import {
+  IGrid,
+  IGridColumn,
+  IGridColumnGroup,
+  type IGridColumnWidth,
+  IGridCustomColumn,
+  IGridDataSource,
+  IGridEmptyDef,
+} from './grid';
 
 @Component({
   standalone: true,
@@ -15,6 +23,170 @@ import { IGrid, IGridColumn, IGridDataSource, IGridEmptyDef } from './grid';
 class GridHostComponent {
   data = [{ name: 'Alice' }];
 }
+
+@Component({
+  standalone: true,
+  imports: [IGrid, IGridColumn, IGridCustomColumn, IGridColumnGroup],
+  template: `
+    <i-grid [dataSource]="data" [showNumberColumn]="false">
+      <i-grid-column
+        fieldName="name"
+        freeze
+        title="Name"
+        [minWidth]="minWidth"
+        [width]="width"
+      />
+      <i-grid-column-group title="Identity">
+        <i-grid-column fieldName="status" freeze title="Status" [minWidth]="90" [width]="80" />
+      </i-grid-column-group>
+      <i-grid-custom-column freeze title="Actions" [minWidth]="actionMinWidth" [width]="45" />
+    </i-grid>
+  `,
+})
+class GridWidthHostComponent {
+  data = [{ name: 'Alice', status: 'Active' }];
+  width?: IGridColumnWidth;
+  minWidth?: number;
+  actionMinWidth?: number;
+}
+
+@Component({
+  standalone: true,
+  imports: [IGrid],
+  template: `<i-grid [dataSource]="data" [showNumberColumn]="false" />`,
+})
+class AutoGridWidthHostComponent {
+  data = [{ name: 'Alice' }];
+}
+
+describe('IGrid column minimum widths', () => {
+  let fixture: ComponentFixture<GridWidthHostComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [GridWidthHostComponent, AutoGridWidthHostComponent],
+    }).compileComponents();
+    fixture = TestBed.createComponent(GridWidthHostComponent);
+  });
+
+  function header(title = 'Name'): HTMLElement {
+    return Array.from(
+      fixture.nativeElement.querySelectorAll('i-grid-header-cell') as NodeListOf<HTMLElement>,
+    ).find((headerCell) => headerCell.textContent?.trim() === title)!;
+  }
+
+  function cell(index = 0): HTMLElement {
+    return fixture.nativeElement.querySelectorAll('i-grid-row i-grid-cell')[index];
+  }
+
+  function expectWidth(width: number, title = 'Name', index = 0): void {
+    expect(header(title).style.flex).toBe(`0 0 ${width}px`);
+    expect(cell(index).style.flex).toBe(`0 0 ${width}px`);
+  }
+
+  function resize(delta: number, title = 'Name'): void {
+    header(title)
+      .querySelector('.i-grid-header-cell__resize-handle')!
+      .dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 200 }));
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 200 + delta }));
+    document.dispatchEvent(new MouseEvent('mouseup'));
+    fixture.detectChanges();
+  }
+
+  it('clamps a resize to the explicit minimum and can grow again', () => {
+    Object.assign(fixture.componentInstance, { width: 200, minWidth: 120 });
+    fixture.detectChanges();
+    resize(-300);
+    expectWidth(120);
+    resize(60);
+    expectWidth(180);
+  });
+
+  it('accepts an explicit minimum below 50', () => {
+    Object.assign(fixture.componentInstance, { width: 200, minWidth: 30 });
+    fixture.detectChanges();
+    resize(-300);
+    expectWidth(30);
+    expect(header().style.minWidth).toBe('30px');
+    expect(cell().style.minWidth).toBe('30px');
+  });
+
+  for (const minWidth of [undefined, 120]) {
+    it(`keeps fill flexible with a ${minWidth ?? 150}px minimum`, () => {
+      Object.assign(fixture.componentInstance, { width: 'fill', minWidth });
+      fixture.detectChanges();
+      const expected = minWidth ?? 150;
+      expect(header().style.flex).toBe('1 1 0%');
+      expect(cell().style.flex).toBe('1 1 0%');
+      expect(header().style.minWidth).toBe(`${expected}px`);
+      expect(cell().style.minWidth).toBe(`${expected}px`);
+      Object.defineProperty(header(), 'offsetWidth', { configurable: true, value: 240 });
+      resize(-300);
+      expectWidth(expected);
+    });
+  }
+
+  it('gives auto-generated fill columns the same 150px minimum', () => {
+    const autoFixture = TestBed.createComponent(AutoGridWidthHostComponent);
+    autoFixture.detectChanges();
+    const autoHeader = autoFixture.nativeElement.querySelector('i-grid-header-cell') as HTMLElement;
+    const autoCell = autoFixture.nativeElement.querySelector('i-grid-cell') as HTMLElement;
+    expect(autoHeader.style.minWidth).toBe('150px');
+    expect(autoCell.style.minWidth).toBe('150px');
+    expect(autoHeader.style.flex).toBe('1 1 0%');
+    expect(autoCell.style.flex).toBe('1 1 0%');
+  });
+
+  it('clamps the initial numeric width and keeps grouped and custom cells aligned', () => {
+    Object.assign(fixture.componentInstance, { width: 80, minWidth: 120, actionMinWidth: 60 });
+    fixture.detectChanges();
+    expectWidth(120);
+    expectWidth(90, 'Status', 1);
+    expectWidth(60, 'Actions', 2);
+    expect(header('Status').style.minWidth).toBe('90px');
+    expect(cell(1).style.minWidth).toBe('90px');
+    expect(header('Actions').style.minWidth).toBe('60px');
+    expect(cell(2).style.minWidth).toBe('60px');
+    expect(header('Status').style.left).toBe('120px');
+    expect(cell(1).style.left).toBe('120px');
+    expect(header('Actions').style.left).toBe('210px');
+    expect(cell(2).style.left).toBe('210px');
+    resize(-100, 'Actions');
+    expectWidth(60, 'Actions', 2);
+  });
+
+  it('clamps a default width to an explicit minimum', () => {
+    fixture.componentInstance.minWidth = 250;
+    fixture.detectChanges();
+    expectWidth(250);
+  });
+
+  it('updates resized widths and frozen offsets when the minimum increases', () => {
+    Object.assign(fixture.componentInstance, { width: 300, minWidth: 100 });
+    fixture.detectChanges();
+    resize(-160);
+    expectWidth(140);
+    fixture.componentInstance.minWidth = 220;
+    fixture.detectChanges();
+    expectWidth(220);
+    expect(header('Status').style.left).toBe('220px');
+    expect(cell(1).style.left).toBe('220px');
+    expect(header('Actions').style.left).toBe('310px');
+    expect(cell(2).style.left).toBe('310px');
+  });
+
+  it('preserves default and 45px action widths without adding a minimum', () => {
+    fixture.detectChanges();
+    expectWidth(200);
+    expectWidth(45, 'Actions', 2);
+    expect(header().style.minWidth).toBe('');
+    expect(cell().style.minWidth).toBe('');
+    expect(header('Actions').style.minWidth).toBe('');
+    expect(cell(2).style.minWidth).toBe('');
+    resize(-15, 'Actions');
+    expectWidth(30, 'Actions', 2);
+  });
+});
 
 type TreeNode = {
   id: number;
