@@ -1,5 +1,6 @@
 import { NgClass } from '@angular/common';
 import {
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
   EventEmitter,
@@ -37,6 +38,7 @@ import {
 
 @Component({
   selector: 'ih-menu',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [NgClass, RouterLink, IHighlightSearchPipe],
   host: { 'data-ih-menu': '' },
   template: `
@@ -452,7 +454,7 @@ export class IHMenu implements OnChanges {
     if (this.menu.visibility !== 'no-child') {
       // Treat an unset visibility as expanded so a default (flat) group
       // collapses on the first click (modern nodes have no visibility).
-      this.menu.visibility = this.isGroupExpanded ? 'collapsed' : 'expanded';
+      this.menu = { ...this.menu, visibility: this.isGroupExpanded ? 'collapsed' : 'expanded' };
       this.expandedChange.emit({ menu: this.menu, expanded: this.isGroupExpanded });
     } else {
       this.clicked.emit(this.menu);
