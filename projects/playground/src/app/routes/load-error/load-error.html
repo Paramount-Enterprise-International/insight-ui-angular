@@ -18,4 +18,12 @@
       (onRetry)="attempts = attempts + 1"
     />
   }
+  <h2>Custom styling</h2>
+  <i-load-error
+    message="The service is temporarily unavailable."
+    style="--i-load-error-min-height: 280px"
+    contentClass="rounded-lg"
+    [contentStyle]="{ gap: '16px', padding: '24px' }"
+    (onRetry)="attempts = attempts + 1"
+  />
 </div>
