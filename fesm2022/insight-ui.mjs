@@ -1,10 +1,10 @@
 import * as i0 from '@angular/core';
-import { Input, ChangeDetectionStrategy, Component, HostBinding, EventEmitter, inject, ChangeDetectorRef, DestroyRef, booleanAttribute, ViewChild, Output, isDevMode, NgModule, ElementRef, HostListener, Directive, forwardRef, input, computed, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ContentChildren, ViewContainerRef, output, PLATFORM_ID, viewChild, signal, effect, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER, untracked } from '@angular/core';
+import { Input, ChangeDetectionStrategy, Component, HostBinding, EventEmitter, inject, ChangeDetectorRef, DestroyRef, booleanAttribute, ViewChild, Output, InjectionToken, signal, Injectable, ElementRef, PLATFORM_ID, effect, ApplicationRef, EnvironmentInjector, createComponent, isDevMode, NgModule, HostListener, Directive, forwardRef, input, computed, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, Injector, ContentChildren, ViewContainerRef, output, viewChild, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER, untracked } from '@angular/core';
 import * as i1$1 from '@angular/common';
-import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, DOCUMENT, isPlatformBrowser, Location, APP_BASE_HREF } from '@angular/common';
+import { NgClass, NgTemplateOutlet, isPlatformBrowser, DOCUMENT, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, Location, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationStart, RouteConfigLoadStart, RouteConfigLoadEnd, NavigationEnd, NavigationCancel, NavigationError, NavigationSkipped, RouterOutlet } from '@angular/router';
+import { ReplaySubject, firstValueFrom, Subject, BehaviorSubject, map, throwError, from, defer, Observable, forkJoin, of, finalize as finalize$1, timeout, lastValueFrom, filter as filter$1, startWith, combineLatest, shareReplay as shareReplay$1, distinctUntilChanged, tap as tap$1, take as take$1, takeUntil, switchMap as switchMap$1, EMPTY, catchError as catchError$1 } from 'rxjs';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { firstValueFrom, Subject, BehaviorSubject, map, throwError, from, defer, Observable, forkJoin, of, finalize as finalize$1, timeout, lastValueFrom, filter as filter$1, startWith, combineLatest, shareReplay as shareReplay$1, tap as tap$1, distinctUntilChanged, take as take$1, takeUntil, switchMap as switchMap$1, EMPTY, catchError as catchError$1 } from 'rxjs';
 import * as i1 from '@angular/forms';
 import { Validators, NG_VALUE_ACCESSOR, NgControl, FormGroupDirective, FormBuilder, FormControl, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { debounceTime, tap, map as map$1, catchError, switchMap, filter, take, finalize, shareReplay } from 'rxjs/operators';
@@ -756,6 +756,667 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 type: HostBinding,
                 args: ['attr.data-mode']
             }] } });
+
+const regions = new WeakMap();
+const limits = new WeakMap();
+let sequence = 0;
+function nextSnackbarId() {
+    return `i-snackbar-${++sequence}`;
+}
+function position(options) {
+    return options.position ?? 'bottom-right';
+}
+function acquireRegion(doc, value) {
+    let map = regions.get(doc);
+    if (!map)
+        regions.set(doc, (map = new Map()));
+    let region = map.get(value);
+    if (!region) {
+        const selector = `[data-i-snackbar-viewport="${value}"]`;
+        const element = doc.querySelector(selector) ?? doc.createElement('div');
+        element.classList.add('i-snackbar-viewport');
+        element.setAttribute('data-i-snackbar-viewport', value);
+        if (!element.isConnected)
+            doc.body.appendChild(element);
+        region = { element, entries: [], position: value };
+        map.set(value, region);
+    }
+    return region;
+}
+function arrange(region) {
+    const counts = new Map();
+    for (const entry of region.entries) {
+        const scope = entry.options.scope;
+        const count = counts.get(scope) ?? 0;
+        const visible = count < (limits.get(scope) ?? Infinity);
+        if (visible)
+            counts.set(scope, count + 1);
+        entry.setVisible(visible);
+    }
+}
+function place(region, element) {
+    if (region.position.startsWith('top-')) {
+        region.element.prepend(element);
+    }
+    else {
+        region.element.appendChild(element);
+    }
+}
+function revealNewest(region) {
+    const scroll = () => {
+        if (!region.element.isConnected || !region.entries.some((entry) => entry.interactive))
+            return;
+        region.element.scrollTop = region.position.startsWith('top-') ? 0 : region.element.scrollHeight;
+    };
+    const view = region.element.ownerDocument.defaultView;
+    const schedule = () => {
+        if (!view?.requestAnimationFrame) {
+            scroll();
+            return;
+        }
+        if (region.scrollFrame !== undefined)
+            return;
+        region.scrollFrame = view.requestAnimationFrame(() => {
+            region.scrollFrame = undefined;
+            scroll();
+        });
+    };
+    schedule();
+    clearTimeout(region.scrollTimer);
+    // Recheck the edge after the entrance animation and the latest burst settle.
+    region.scrollTimer = setTimeout(() => {
+        region.scrollTimer = undefined;
+        schedule();
+    }, 200);
+}
+/** Owns one portal's queue admission, remaining duration, and dismiss transition. */
+class SnackbarMount {
+    element;
+    options;
+    doc;
+    request;
+    dismissed;
+    region;
+    timer;
+    exitTimer;
+    remaining = 0;
+    duration = 5000;
+    started = 0;
+    visible = false;
+    hovering = false;
+    focused = false;
+    requested = false;
+    closing = false;
+    destroyed = false;
+    constructor(element, options, request, dismissed) {
+        this.element = element;
+        this.doc = element.ownerDocument;
+        this.options = options;
+        this.request = request;
+        this.dismissed = dismissed;
+        this.region = acquireRegion(this.doc, position(options));
+        this.element.classList.add('i-snackbar');
+        this.element.addEventListener('mouseenter', this.enter);
+        this.element.addEventListener('mouseleave', this.leave);
+        this.element.addEventListener('focusin', this.focusIn);
+        this.element.addEventListener('focusout', this.focusOut);
+        this.element.addEventListener('keydown', this.keydown);
+        this.doc.addEventListener('visibilitychange', this.visibility);
+        this.region.entries.push(this);
+        place(this.region, element);
+        this.update(options, true);
+    }
+    update(options, reset = false) {
+        if (this.destroyed)
+            return;
+        this.pauseClock();
+        const oldPosition = position(this.options);
+        this.options = options;
+        const limit = options.maxVisible;
+        limits.set(options.scope, Number.isInteger(limit) && limit > 0 ? limit : Infinity);
+        this.element.dataset['snackbarId'] = options.id;
+        this.element.style.setProperty('--i-snackbar-max-width', options.maxWidth ?? '400px');
+        if (oldPosition !== position(options)) {
+            const focused = this.element.contains(this.doc.activeElement)
+                ? this.doc.activeElement
+                : null;
+            this.detach();
+            this.region = acquireRegion(this.doc, position(options));
+            this.region.entries.push(this);
+            place(this.region, this.element);
+            focused?.focus({ preventScroll: true });
+        }
+        if (reset) {
+            clearTimeout(this.exitTimer);
+            this.exitTimer = undefined;
+            this.element.classList.remove('i-snackbar--closing');
+            this.closing = false;
+            this.requested = false;
+            const duration = options.durationMs ?? 5000;
+            this.duration = Number.isFinite(duration) && duration > 0 ? duration : 0;
+            this.remaining = this.duration;
+        }
+        arrange(this.region);
+        if (this.visible && (reset || oldPosition !== position(options)))
+            revealNewest(this.region);
+        this.resumeClock();
+    }
+    setVisible(value) {
+        this.pauseClock();
+        const appeared = value && !this.visible;
+        this.visible = value;
+        this.element.hidden = !value;
+        if (appeared)
+            revealNewest(this.region);
+        this.resumeClock();
+    }
+    requestDismiss(reason) {
+        if (this.destroyed || this.closing || this.requested)
+            return;
+        this.pauseClock();
+        this.requested = true;
+        this.request(reason);
+    }
+    get interactive() {
+        return this.visible && !this.destroyed && !this.closing && !this.requested;
+    }
+    close(reason) {
+        if (this.destroyed || this.closing)
+            return;
+        this.closing = true;
+        this.pauseClock();
+        this.element.classList.add('i-snackbar--closing');
+        const reduceMotion = this.doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        this.exitTimer = setTimeout(() => {
+            this.destroy();
+            this.dismissed(reason);
+        }, this.visible && !reduceMotion ? 180 : 0);
+    }
+    destroy() {
+        if (this.destroyed)
+            return;
+        this.destroyed = true;
+        clearTimeout(this.timer);
+        clearTimeout(this.exitTimer);
+        this.element.removeEventListener('mouseenter', this.enter);
+        this.element.removeEventListener('mouseleave', this.leave);
+        this.element.removeEventListener('focusin', this.focusIn);
+        this.element.removeEventListener('focusout', this.focusOut);
+        this.element.removeEventListener('keydown', this.keydown);
+        this.doc.removeEventListener('visibilitychange', this.visibility);
+        this.element.remove();
+        this.detach();
+    }
+    detach() {
+        this.region.entries = this.region.entries.filter((entry) => entry !== this);
+        arrange(this.region);
+        if (!this.region.entries.length) {
+            clearTimeout(this.region.scrollTimer);
+            this.region.scrollTimer = undefined;
+            if (this.region.scrollFrame !== undefined) {
+                this.doc.defaultView?.cancelAnimationFrame?.(this.region.scrollFrame);
+                this.region.scrollFrame = undefined;
+            }
+            if (!this.region.element.childElementCount)
+                this.region.element.remove();
+            regions.get(this.doc)?.delete(this.region.position);
+        }
+    }
+    pauseClock() {
+        if (this.timer !== undefined) {
+            clearTimeout(this.timer);
+            this.timer = undefined;
+            this.remaining = Math.max(0, this.remaining - (Date.now() - this.started));
+        }
+    }
+    resumeClock() {
+        if (this.destroyed ||
+            this.closing ||
+            this.requested ||
+            !this.visible ||
+            (this.hovering && this.options.pauseOnHover !== false) ||
+            (this.focused && this.options.pauseOnFocus !== false) ||
+            (this.doc.visibilityState === 'hidden' && this.options.pauseOnHidden !== false) ||
+            this.duration <= 0 ||
+            this.timer !== undefined)
+            return;
+        this.started = Date.now();
+        this.timer = setTimeout(() => {
+            this.timer = undefined;
+            this.remaining = 0;
+            this.requestDismiss('timeout');
+        }, this.remaining);
+    }
+    enter = () => {
+        this.pauseClock();
+        this.hovering = true;
+        this.resumeClock();
+    };
+    leave = () => {
+        this.pauseClock();
+        this.hovering = false;
+        this.resumeClock();
+    };
+    focusIn = () => {
+        this.pauseClock();
+        this.focused = true;
+        this.resumeClock();
+    };
+    focusOut = (event) => {
+        if (event.relatedTarget && this.element.contains(event.relatedTarget))
+            return;
+        this.pauseClock();
+        this.focused = false;
+        this.resumeClock();
+    };
+    visibility = () => {
+        this.pauseClock();
+        this.resumeClock();
+    };
+    keydown = (event) => {
+        if (event.key !== 'Escape' ||
+            event.defaultPrevented ||
+            this.options.dismissOnEscape === false ||
+            !this.element.contains(this.doc.activeElement))
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.requestDismiss('escape');
+    };
+}
+
+const I_SNACKBAR_DEFAULTS = new InjectionToken('I_SNACKBAR_DEFAULTS', {
+    providedIn: 'root',
+    factory: () => ({}),
+});
+class SnackbarSettings {
+    defaults = signal(inject(I_SNACKBAR_DEFAULTS), ...(ngDevMode ? [{ debugName: "defaults" }] : []));
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: SnackbarSettings, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: SnackbarSettings, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: SnackbarSettings, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+class ISnackbar {
+    id = nextSnackbarId();
+    message = '';
+    title;
+    variant = 'neutral';
+    position = 'bottom-right';
+    durationMs = 5000;
+    prefixIcon = '';
+    suffixIcon = '';
+    closable = true;
+    closeLabel = 'Close';
+    actionLabel = '';
+    actionDisabled = false;
+    actionLoading = false;
+    dismissOnAction = true;
+    dismissOnEscape = true;
+    pauseOnHover = true;
+    pauseOnFocus = true;
+    pauseOnHidden = true;
+    maxWidth = '400px';
+    resetKey;
+    open;
+    defaultOpen = true;
+    openChange = new EventEmitter();
+    onAction = new EventEmitter();
+    afterDismissed = new EventEmitter();
+    projected;
+    host = inject(ElementRef).nativeElement;
+    platform = inject(PLATFORM_ID);
+    settings = inject(SnackbarSettings);
+    destroyRef = inject(DestroyRef);
+    mount;
+    observer;
+    initialized = false;
+    internalOpen = true;
+    pendingReason = 'programmatic';
+    constructor() {
+        this.host.hidden = true;
+        effect(() => {
+            this.settings.defaults();
+            if (this.initialized)
+                this.sync();
+        });
+    }
+    ngAfterViewInit() {
+        this.internalOpen = this.defaultOpen;
+        this.initialized = true;
+        if (!isPlatformBrowser(this.platform))
+            return;
+        const Observer = this.host.ownerDocument.defaultView?.MutationObserver;
+        if (Observer) {
+            this.observer = new Observer(() => this.sync());
+            this.observer.observe(this.projected.nativeElement, {
+                childList: true,
+                characterData: true,
+                subtree: true,
+            });
+        }
+        this.sync();
+    }
+    ngOnChanges(changes) {
+        if (changes['resetKey'] || (changes['open'] && this.open))
+            this.pendingReason = 'programmatic';
+        if (changes['resetKey'] && this.initialized && this.open === undefined)
+            this.internalOpen = true;
+        const reset = ['message', 'title', 'durationMs', 'resetKey'].some((key) => !!changes[key]) ||
+            (!!changes['open'] && this.open === true);
+        this.sync(reset);
+    }
+    requestClose(reason) {
+        this.mount?.requestDismiss(reason);
+    }
+    activateAction() {
+        if (this.actionDisabled || this.actionLoading || !this.mount?.interactive)
+            return;
+        this.onAction.emit();
+        if (this.dismissOnAction)
+            this.requestClose('action');
+    }
+    ngOnDestroy() {
+        this.observer?.disconnect();
+        this.mount?.destroy();
+    }
+    sync(reset = false) {
+        if (!this.initialized || this.destroyRef.destroyed || !isPlatformBrowser(this.platform))
+            return;
+        const hasChildren = [...this.projected.nativeElement.childNodes].some((node) => node.nodeType === 1 || (node.nodeType === 3 && !!node.textContent?.trim()));
+        if (!(this.open ?? this.internalOpen) ||
+            (!this.message?.trim() && !this.title?.trim() && !hasChildren)) {
+            this.mount?.close(this.pendingReason);
+            return;
+        }
+        const options = {
+            id: this.id,
+            position: this.position,
+            durationMs: this.durationMs,
+            closable: this.closable,
+            dismissOnEscape: this.dismissOnEscape,
+            pauseOnHover: this.pauseOnHover,
+            pauseOnFocus: this.pauseOnFocus,
+            pauseOnHidden: this.pauseOnHidden,
+            maxWidth: this.maxWidth,
+        };
+        const runtime = {
+            ...options,
+            id: this.id,
+            scope: this.settings,
+            maxVisible: this.settings.defaults().maxVisible,
+        };
+        if (this.mount) {
+            this.mount.update(runtime, reset);
+            return;
+        }
+        this.mount = new SnackbarMount(this.host, runtime, (reason) => {
+            this.pendingReason = reason;
+            if (this.open === undefined)
+                this.internalOpen = false;
+            this.openChange.emit(false);
+            this.sync();
+        }, (reason) => {
+            this.mount = undefined;
+            this.afterDismissed.emit(reason);
+        });
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbar, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISnackbar, isStandalone: true, selector: "i-snackbar", inputs: { id: "id", message: "message", title: "title", variant: "variant", position: "position", durationMs: "durationMs", prefixIcon: "prefixIcon", suffixIcon: "suffixIcon", closable: ["closable", "closable", booleanAttribute], closeLabel: "closeLabel", actionLabel: "actionLabel", actionDisabled: ["actionDisabled", "actionDisabled", booleanAttribute], actionLoading: ["actionLoading", "actionLoading", booleanAttribute], dismissOnAction: ["dismissOnAction", "dismissOnAction", booleanAttribute], dismissOnEscape: ["dismissOnEscape", "dismissOnEscape", booleanAttribute], pauseOnHover: ["pauseOnHover", "pauseOnHover", booleanAttribute], pauseOnFocus: ["pauseOnFocus", "pauseOnFocus", booleanAttribute], pauseOnHidden: ["pauseOnHidden", "pauseOnHidden", booleanAttribute], maxWidth: "maxWidth", resetKey: "resetKey", open: ["open", "open", (value) => value === null || value === undefined ? undefined : booleanAttribute(value)], defaultOpen: ["defaultOpen", "defaultOpen", booleanAttribute] }, outputs: { openChange: "openChange", onAction: "onAction", afterDismissed: "afterDismissed" }, host: { classAttribute: "i-snackbar" }, viewQueries: [{ propertyName: "projected", first: true, predicate: ["projected"], descendants: true, static: true }], usesOnChanges: true, ngImport: i0, template: `
+    <i-banner
+      aria-atomic="true"
+      [attr.aria-live]="variant === 'danger' ? 'assertive' : 'polite'"
+      [closable]="closable"
+      [closeLabel]="closeLabel"
+      [open]="true"
+      [prefixIcon]="prefixIcon"
+      [suffixIcon]="suffixIcon"
+      [variant]="variant"
+      (onClose)="requestClose('close')"
+    >
+      <div class="i-snackbar__layout">
+        <div class="i-snackbar__copy">
+          @if (title?.trim()) {
+            <div class="i-snackbar__title">{{ title }}</div>
+          }
+          @if (message?.trim()) {
+            <div class="i-snackbar__message">{{ message }}</div>
+          }
+          <div #projected class="i-snackbar__content"><ng-content /></div>
+        </div>
+        @if (actionLabel) {
+          <i-button
+            size="sm"
+            type="button"
+            [disabled]="actionDisabled"
+            [loading]="actionLoading"
+            (onClick)="activateAction()"
+            >{{ actionLabel }}</i-button
+          >
+        }
+      </div>
+    </i-banner>
+  `, isInline: true, dependencies: [{ kind: "component", type: IBanner, selector: "i-banner", inputs: ["message", "variant", "prefixIcon", "suffixIcon", "closable", "closeLabel", "open", "defaultOpen"], outputs: ["openChange", "onClose"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["placeholder", "disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbar, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-snackbar',
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    imports: [IBanner, IButton],
+                    host: { class: 'i-snackbar' },
+                    template: `
+    <i-banner
+      aria-atomic="true"
+      [attr.aria-live]="variant === 'danger' ? 'assertive' : 'polite'"
+      [closable]="closable"
+      [closeLabel]="closeLabel"
+      [open]="true"
+      [prefixIcon]="prefixIcon"
+      [suffixIcon]="suffixIcon"
+      [variant]="variant"
+      (onClose)="requestClose('close')"
+    >
+      <div class="i-snackbar__layout">
+        <div class="i-snackbar__copy">
+          @if (title?.trim()) {
+            <div class="i-snackbar__title">{{ title }}</div>
+          }
+          @if (message?.trim()) {
+            <div class="i-snackbar__message">{{ message }}</div>
+          }
+          <div #projected class="i-snackbar__content"><ng-content /></div>
+        </div>
+        @if (actionLabel) {
+          <i-button
+            size="sm"
+            type="button"
+            [disabled]="actionDisabled"
+            [loading]="actionLoading"
+            (onClick)="activateAction()"
+            >{{ actionLabel }}</i-button
+          >
+        }
+      </div>
+    </i-banner>
+  `,
+                }]
+        }], ctorParameters: () => [], propDecorators: { id: [{
+                type: Input
+            }], message: [{
+                type: Input
+            }], title: [{
+                type: Input
+            }], variant: [{
+                type: Input
+            }], position: [{
+                type: Input
+            }], durationMs: [{
+                type: Input
+            }], prefixIcon: [{
+                type: Input
+            }], suffixIcon: [{
+                type: Input
+            }], closable: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], closeLabel: [{
+                type: Input
+            }], actionLabel: [{
+                type: Input
+            }], actionDisabled: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], actionLoading: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], dismissOnAction: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], dismissOnEscape: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], pauseOnHover: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], pauseOnFocus: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], pauseOnHidden: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], maxWidth: [{
+                type: Input
+            }], resetKey: [{
+                type: Input
+            }], open: [{
+                type: Input,
+                args: [{
+                        transform: (value) => value === null || value === undefined ? undefined : booleanAttribute(value),
+                    }]
+            }], defaultOpen: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], openChange: [{
+                type: Output
+            }], onAction: [{
+                type: Output
+            }], afterDismissed: [{
+                type: Output
+            }], projected: [{
+                type: ViewChild,
+                args: ['projected', { static: true }]
+            }] } });
+
+class ISnackbarRef {
+    id;
+    closed = new ReplaySubject(1);
+    close;
+    finished = false;
+    constructor(id, close) {
+        this.id = id;
+        this.close = close;
+    }
+    dismiss() {
+        this.close();
+    }
+    afterDismissed() {
+        return this.closed.asObservable();
+    }
+    complete(reason) {
+        if (this.finished)
+            return;
+        this.finished = true;
+        this.closed.next(reason);
+        this.closed.complete();
+    }
+}
+class ISnackbarService {
+    doc = inject(DOCUMENT);
+    app = inject(ApplicationRef);
+    injector = inject(EnvironmentInjector);
+    platform = inject(PLATFORM_ID);
+    settings = inject(SnackbarSettings);
+    instances = new Map();
+    constructor() {
+        inject(DestroyRef).onDestroy(() => {
+            for (const instance of this.instances.values()) {
+                if (!instance.component.hostView.destroyed) {
+                    this.app.detachView(instance.component.hostView);
+                    instance.component.destroy();
+                }
+                instance.ref.complete('programmatic');
+            }
+            this.instances.clear();
+        });
+    }
+    configure(defaults) {
+        this.settings.defaults.set({ ...defaults });
+    }
+    show(message, options = {}) {
+        const id = options.id ?? nextSnackbarId();
+        const existing = this.instances.get(id);
+        if (existing) {
+            this.update(id, { ...options, message });
+            return existing.ref;
+        }
+        const ref = new ISnackbarRef(id, () => this.dismiss(id));
+        if (!isPlatformBrowser(this.platform) || (!message.trim() && !options.title?.trim())) {
+            ref.complete('programmatic');
+            return ref;
+        }
+        const host = this.doc.createElement('i-snackbar');
+        const component = createComponent(ISnackbar, {
+            hostElement: host,
+            environmentInjector: this.injector,
+        });
+        const instance = { ref, component, options: { ...options, id }, revision: 0 };
+        this.instances.set(id, instance);
+        component.instance.onAction.subscribe(() => instance.options.onAction?.());
+        component.instance.afterDismissed.subscribe((reason) => {
+            if (this.instances.get(id) !== instance)
+                return;
+            this.instances.delete(id);
+            this.app.detachView(component.hostView);
+            component.destroy();
+            ref.complete(reason);
+        });
+        for (const [key, value] of Object.entries(instance.options))
+            if (key !== 'onAction')
+                component.setInput(key, value);
+        component.setInput('message', message);
+        component.setInput('resetKey', 0);
+        this.app.attachView(component.hostView);
+        component.changeDetectorRef.detectChanges();
+        return ref;
+    }
+    update(id, changes) {
+        const instance = this.instances.get(id);
+        if (!instance)
+            return;
+        instance.options = { ...instance.options, ...changes };
+        for (const [key, value] of Object.entries(changes))
+            if (key !== 'onAction')
+                instance.component.setInput(key, value);
+        instance.component.setInput('resetKey', ++instance.revision);
+        instance.component.changeDetectorRef.detectChanges();
+    }
+    dismiss(id) {
+        this.instances.get(id)?.component.instance.requestClose('programmatic');
+    }
+    dismissAll() {
+        for (const id of this.instances.keys())
+            this.dismiss(id);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbarService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbarService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbarService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }], ctorParameters: () => [] });
 
 /**
  * ICard
@@ -1636,6 +2297,7 @@ class IInputAddon {
       <i-button
         size="xs"
         type="button"
+        [disabled]="addon.disabled ?? false"
         [icon]="addon.icon"
         [variant]="addon.variant ?? 'primary'"
         (onClick)="addon.onClick ? addon.onClick() : null"
@@ -1673,6 +2335,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
       <i-button
         size="xs"
         type="button"
+        [disabled]="addon.disabled ?? false"
         [icon]="addon.icon"
         [variant]="addon.variant ?? 'primary'"
         (onClick)="addon.onClick ? addon.onClick() : null"
@@ -3375,6 +4038,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             }] } });
 class ISelect {
     placeholder = '';
+    emptyState = {};
     disabled = false;
     loading = false;
     invalid = false;
@@ -3490,6 +4154,9 @@ class ISelect {
     panelPortaled = false;
     panelOriginalParent = null;
     panelOriginalNextSibling = null;
+    lastPanel = null;
+    lastPanelOptions = null;
+    lastPanelMessage = '';
     repositionRaf = 0;
     listeningGlobal = false;
     ngOnInit() {
@@ -3497,7 +4164,7 @@ class ISelect {
     }
     ngOnChanges(changes) {
         if (changes['disabled'] && this.disabled)
-            this.cancelPendingFilter();
+            this.closeDropdown();
         if (changes['filterDelay'] && this.filterInputSub)
             this.subscribeFilterInput();
         if (changes['filterPredicate'])
@@ -3528,10 +4195,19 @@ class ISelect {
         this.syncModelToView();
     }
     ngAfterViewChecked() {
-        if (this.isOpen && this.portalToBody && this.panelRef?.nativeElement) {
+        const panel = this.getPanelElement();
+        if (this.isOpen && panel) {
             this.ensurePanelPortaled();
             this.ensureGlobalListeners();
+            if (panel !== this.lastPanel ||
+                this.filteredOptions !== this.lastPanelOptions ||
+                this.emptyStateText !== this.lastPanelMessage) {
+                this.scheduleReposition();
+            }
         }
+        this.lastPanel = panel;
+        this.lastPanelOptions = this.filteredOptions;
+        this.lastPanelMessage = this.emptyStateText;
     }
     ngOnDestroy() {
         this.cleanupOptionsSub();
@@ -3566,7 +4242,7 @@ class ISelect {
     }
     setDisabledState(isDisabled) {
         if (isDisabled)
-            this.cancelPendingFilter();
+            this.closeDropdown();
         this.disabled = isDisabled;
         this.cdr.markForCheck();
     }
@@ -3892,14 +4568,24 @@ class ISelect {
         }
         return {
             type: 'button',
+            disabled: this.disabled,
             icon: this.isOpen ? 'angle-up' : 'angle-down',
             onClick: () => this.toggleDropdown(),
             variant: 'primary',
             visible: true,
         };
     }
+    get emptyStateText() {
+        const config = typeof this.emptyState === 'string' ? { empty: this.emptyState } : this.emptyState;
+        return this._rawOptions.length === 0
+            ? config.empty ?? 'No options available'
+            : config.notFound ?? 'No results found';
+    }
     get hasOptionsList() {
         return this.isOpen && this.hasOptions;
+    }
+    get hasPanel() {
+        return this.isOpen && !this.disabled && (this.hasOptions || !(this.loading || this.isLoading));
     }
     setActiveIndex(idx) {
         if (idx < 0 || idx >= this.filteredOptions.length) {
@@ -3992,6 +4678,9 @@ class ISelect {
     }
     scheduleReposition(after, doubleRaf = false) {
         if (!this.isOpen)
+            return;
+        // Preserve initial measurement frames until the panel is ready to reveal.
+        if (this.repositionRaf && !doubleRaf && this.getPanelElement()?.style.visibility === 'hidden')
             return;
         if (this.repositionRaf) {
             cancelAnimationFrame(this.repositionRaf);
@@ -4155,7 +4844,7 @@ class ISelect {
         }
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISelect, isStandalone: true, selector: "i-select", inputs: { placeholder: "placeholder", disabled: "disabled", loading: "loading", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", trackBy: "trackBy", options: "options", options$: "options$", displayWith: "displayWith", filterPredicate: "filterPredicate", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, host: { listeners: { "keydown": "handleKeydown($event)", "input": "onHostInput($event)", "document:click": "onDocumentClick($event)" } }, providers: [
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISelect, isStandalone: true, selector: "i-select", inputs: { placeholder: "placeholder", emptyState: "emptyState", disabled: "disabled", loading: "loading", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", trackBy: "trackBy", options: "options", options$: "options$", displayWith: "displayWith", filterPredicate: "filterPredicate", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, host: { listeners: { "keydown": "handleKeydown($event)", "input": "onHostInput($event)", "document:click": "onDocumentClick($event)" }, properties: { "attr.aria-disabled": "disabled ? 'true' : null" } }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => ISelect),
@@ -4164,14 +4853,18 @@ class ISelect {
         ], queries: [{ propertyName: "optionDef", first: true, predicate: ISelectOptionDefDirective, descendants: true }], viewQueries: [{ propertyName: "panelRef", first: true, predicate: ["panel"], descendants: true }], usesOnChanges: true, ngImport: i0, template: `
     <i-input
       [append]="appendAddon"
+      [disabled]="disabled"
       [invalid]="invalid || hasNoResults"
       [placeholder]="placeholder"
       [readonly]="disabled"
       [value]="displayText"
     />
 
-    @if (hasOptionsList) {
+    @if (hasPanel) {
       <i-options #panel class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
+        @if (!hasOptions) {
+          <div class="i-options__empty" role="status">{{ emptyStateText }}</div>
+        }
         @for (row of filteredOptions; track trackBy($index, row); let idx = $index) {
           <div
             class="i-option"
@@ -4208,19 +4901,24 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             type: Component,
             args: [{
                     selector: 'i-select',
+                    host: { '[attr.aria-disabled]': "disabled ? 'true' : null" },
                     standalone: true,
                     imports: [IIcon, NgTemplateOutlet, IHighlightSearchPipe, IInput, NgClass],
                     template: `
     <i-input
       [append]="appendAddon"
+      [disabled]="disabled"
       [invalid]="invalid || hasNoResults"
       [placeholder]="placeholder"
       [readonly]="disabled"
       [value]="displayText"
     />
 
-    @if (hasOptionsList) {
+    @if (hasPanel) {
       <i-options #panel class="i-options scroll scroll-y" [ngClass]="panelPositionClass">
+        @if (!hasOptions) {
+          <div class="i-options__empty" role="status">{{ emptyStateText }}</div>
+        }
         @for (row of filteredOptions; track trackBy($index, row); let idx = $index) {
           <div
             class="i-option"
@@ -4262,6 +4960,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                     ],
                 }]
         }], propDecorators: { placeholder: [{
+                type: Input
+            }], emptyState: [{
                 type: Input
             }], disabled: [{
                 type: Input
@@ -4316,6 +5016,7 @@ class IFCSelect {
     label = '';
     disabled = false;
     placeholder = '';
+    emptyState = {};
     options = null;
     options$ = null;
     loading = false;
@@ -4420,7 +5121,7 @@ class IFCSelect {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCSelect, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IFCSelect, isStandalone: true, selector: "i-fc-select", inputs: { label: "label", disabled: "disabled", placeholder: "placeholder", options: "options", options$: "options$", loading: "loading", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", panelOffset: "panelOffset", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", errorMessage: "errorMessage", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IFCSelect, isStandalone: true, selector: "i-fc-select", inputs: { label: "label", disabled: "disabled", placeholder: "placeholder", emptyState: "emptyState", options: "options", options$: "options$", loading: "loading", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", panelOffset: "panelOffset", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", errorMessage: "errorMessage", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelect, descendants: true }], ngImport: i0, template: `
     @if (label) {
       <label class="i-fc-select__label" (click)="focusInnerSelect()">
         {{ label }} :
@@ -4433,6 +5134,7 @@ class IFCSelect {
     <i-select
       [disabled]="disabled || isDisabled"
       [displayWith]="displayWith"
+      [emptyState]="emptyState"
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="controlInvalid"
@@ -4455,7 +5157,7 @@ class IFCSelect {
         {{ resolvedErrorText }}
       </div>
     }
-  `, isInline: true, dependencies: [{ kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "loading", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "trackBy", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "emptyState", "disabled", "loading", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "trackBy", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCSelect, decorators: [{
             type: Component,
@@ -4476,6 +5178,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
     <i-select
       [disabled]="disabled || isDisabled"
       [displayWith]="displayWith"
+      [emptyState]="emptyState"
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="controlInvalid"
@@ -4509,6 +5212,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             }], disabled: [{
                 type: Input
             }], placeholder: [{
+                type: Input
+            }], emptyState: [{
                 type: Input
             }], options: [{
                 type: Input
@@ -5338,7 +6043,7 @@ class IDatepicker {
         }
       </div>
     </i-datepicker-panel>
-  `, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["placeholder", "disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask", "autoDefault"] }, { kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "loading", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "trackBy", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "component", type: IInput, selector: "i-input", inputs: ["type", "placeholder", "autocomplete", "readonly", "invalid", "mask", "value", "prepend", "append", "disabled"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["placeholder", "disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "directive", type: IInputMaskDirective, selector: "[iInputMask]", inputs: ["iInputMask", "autoDefault"] }, { kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "emptyState", "disabled", "loading", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "trackBy", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IDatepicker, decorators: [{
             type: Component,
@@ -8568,12 +9273,13 @@ class IGridColumn {
     sortable = true;
     resizable = true;
     width;
+    minWidth;
     freeze = false;
     headerDef;
     cellDef;
     isAuto;
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.34", type: IGridColumn, isStandalone: true, selector: "i-grid-column", inputs: { fieldName: "fieldName", title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.34", type: IGridColumn, isStandalone: true, selector: "i-grid-column", inputs: { fieldName: "fieldName", title: "title", sortable: "sortable", resizable: "resizable", width: "width", minWidth: "minWidth", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridColumn, decorators: [{
             type: Component,
@@ -8593,6 +9299,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 type: Input
             }], width: [{
                 type: Input
+            }], minWidth: [{
+                type: Input
             }], freeze: [{
                 type: Input,
                 args: [{ transform: booleanAttribute }]
@@ -8611,13 +9319,14 @@ class IGridCustomColumn {
     sortable = false;
     resizable = true;
     width;
+    minWidth;
     freeze = false;
     fieldName;
     headerDef;
     cellDef;
     isAuto;
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridCustomColumn, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.34", type: IGridCustomColumn, isStandalone: true, selector: "i-grid-custom-column", inputs: { title: "title", sortable: "sortable", resizable: "resizable", width: "width", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "16.1.0", version: "20.3.34", type: IGridCustomColumn, isStandalone: true, selector: "i-grid-custom-column", inputs: { title: "title", sortable: "sortable", resizable: "resizable", width: "width", minWidth: "minWidth", freeze: ["freeze", "freeze", booleanAttribute] }, queries: [{ propertyName: "headerDef", first: true, predicate: IGridHeaderCellDefDirective, descendants: true, read: TemplateRef }, { propertyName: "cellDef", first: true, predicate: IGridCellDefDirective, descendants: true, read: TemplateRef }], ngImport: i0, template: '', isInline: true });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridCustomColumn, decorators: [{
             type: Component,
@@ -8633,6 +9342,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             }], resizable: [{
                 type: Input
             }], width: [{
+                type: Input
+            }], minWidth: [{
                 type: Input
             }], freeze: [{
                 type: Input,
@@ -8688,6 +9399,13 @@ class IGridCell {
     get _column() {
         return this.column ?? this.hostDataColumn ?? this.hostCustomColumn ?? null;
     }
+    get minWidth() {
+        if (typeof this.fixedWidth === 'number') {
+            return this.fixedWidth;
+        }
+        const col = this._column;
+        return this.grid && col ? this.grid.getColumnMinWidth(col) : null;
+    }
     get flex() {
         if (typeof this.fixedWidth === 'number') {
             return `0 0 ${this.fixedWidth}px`;
@@ -8717,7 +9435,7 @@ class IGridCell {
         return this._isFrozen ? 2 : null;
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: IGridCell, isStandalone: true, selector: "i-grid-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "cell" }, properties: { "style.flex": "this.flex", "class.i-grid-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-cell" }, ngImport: i0, template: ` <ng-content /> `, isInline: true });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "14.0.0", version: "20.3.34", type: IGridCell, isStandalone: true, selector: "i-grid-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "cell" }, properties: { "style.min-width.px": "this.minWidth", "style.flex": "this.flex", "class.i-grid-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-cell" }, ngImport: i0, template: ` <ng-content /> `, isInline: true });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridCell, decorators: [{
             type: Component,
@@ -8734,6 +9452,9 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 type: Input
             }], fixedWidth: [{
                 type: Input
+            }], minWidth: [{
+                type: HostBinding,
+                args: ['style.min-width.px']
             }], flex: [{
                 type: HostBinding,
                 args: ['style.flex']
@@ -8759,7 +9480,6 @@ class IGridHeaderCell {
     _isResizing = false;
     _startX = 0;
     _startWidth = 0;
-    _minWidth = 50;
     el = inject(ElementRef);
     grid = inject(forwardRef(() => IGrid), {
         optional: true,
@@ -8795,6 +9515,13 @@ class IGridHeaderCell {
             return false;
         }
         return col.resizable !== false;
+    }
+    get minWidth() {
+        if (typeof this.fixedWidth === 'number') {
+            return this.fixedWidth;
+        }
+        const col = this._column;
+        return this.grid && col ? this.grid.getColumnMinWidth(col) : null;
     }
     get flex() {
         if (typeof this.fixedWidth === 'number') {
@@ -8876,11 +9603,7 @@ class IGridHeaderCell {
             return;
         }
         const delta = event.clientX - this._startX;
-        let newWidth = this._startWidth + delta;
-        if (newWidth < this._minWidth) {
-            newWidth = this._minWidth;
-        }
-        this.grid.setColumnWidth(col, newWidth);
+        this.grid.setColumnWidth(col, this._startWidth + delta);
     }
     onDocumentMouseUp() {
         if (!this._isResizing) {
@@ -8891,7 +9614,7 @@ class IGridHeaderCell {
         }, 0);
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGridHeaderCell, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IGridHeaderCell, isStandalone: true, selector: "i-grid-header-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "columnheader" }, listeners: { "click": "onClick()", "document:mousemove": "onDocumentMouseMove($event)", "document:mouseup": "onDocumentMouseUp()" }, properties: { "style.flex": "this.flex", "class.i-grid-header-cell--sortable": "this.sortable", "class.i-grid-header-cell--sorted": "this.isSorted", "class.i-grid-header-cell--sorted-asc": "this.isSortedAsc", "class.i-grid-header-cell--sorted-desc": "this.isSortedDesc", "class.i-grid-header-cell--resizable": "this.isResizableClass", "class.i-grid-header-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-header-cell" }, ngImport: i0, template: `
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IGridHeaderCell, isStandalone: true, selector: "i-grid-header-cell", inputs: { column: "column", fixedWidth: "fixedWidth" }, host: { attributes: { "role": "columnheader" }, listeners: { "click": "onClick()", "document:mousemove": "onDocumentMouseMove($event)", "document:mouseup": "onDocumentMouseUp()" }, properties: { "style.min-width.px": "this.minWidth", "style.flex": "this.flex", "class.i-grid-header-cell--sortable": "this.sortable", "class.i-grid-header-cell--sorted": "this.isSorted", "class.i-grid-header-cell--sorted-asc": "this.isSortedAsc", "class.i-grid-header-cell--sorted-desc": "this.isSortedDesc", "class.i-grid-header-cell--resizable": "this.isResizableClass", "class.i-grid-header-cell--frozen": "this.frozenClass", "style.position": "this.stickyPosition", "style.left.px": "this.stickyLeft", "style.zIndex": "this.stickyZ" }, classAttribute: "i-grid-header-cell" }, ngImport: i0, template: `
     <span class="i-grid-header-cell__content" truncatedTooltip>
       <ng-content />
     </span>
@@ -8933,6 +9656,9 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 type: Input
             }], fixedWidth: [{
                 type: Input
+            }], minWidth: [{
+                type: HostBinding,
+                args: ['style.min-width.px']
             }], flex: [{
                 type: HostBinding,
                 args: ['style.flex']
@@ -9822,18 +10548,22 @@ class IGrid {
         this.onServerSortChange.emit([...this.sortStates]);
     }
     /* ------- column width / flex API ------- */
+    getColumnMinWidth(column) {
+        return column.minWidth ?? (column.width === 'fill' ? 150 : null);
+    }
     getColumnWidth(column) {
+        const minWidth = this.getColumnMinWidth(column) ?? 0;
         const override = this._columnWidths.get(column);
         if (typeof override === 'number') {
-            return override;
+            return Math.max(override, minWidth);
         }
         if (typeof column.width === 'number') {
-            return column.width;
+            return Math.max(column.width, minWidth);
         }
         if (column.width === 'fill') {
             return null;
         }
-        return this._defaultColumnWidth;
+        return Math.max(this._defaultColumnWidth, minWidth);
     }
     getColumnFlex(column) {
         const px = this.getColumnWidth(column);
@@ -9846,7 +10576,7 @@ class IGrid {
         if (!column) {
             return;
         }
-        this._columnWidths.set(column, width);
+        this._columnWidths.set(column, Math.max(width, this.getColumnMinWidth(column) ?? 0));
     }
     /* ------- frozen column helpers ------- */
     _getFrozenEndIndex() {
@@ -11803,76 +12533,93 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
 
 class INotificationSnackbar {
     message = input.required(...(ngDevMode ? [{ debugName: "message" }] : []));
+    options = input(...(ngDevMode ? [undefined, { debugName: "options" }] : []));
     dismissRequested = output();
     openRequested = output();
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotificationSnackbar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: INotificationSnackbar, isStandalone: true, selector: "i-notification-snackbar", inputs: { message: { classPropertyName: "message", publicName: "message", isSignal: true, isRequired: true, transformFunction: null } }, outputs: { dismissRequested: "dismissRequested", openRequested: "openRequested" }, ngImport: i0, template: `
-    <div
-      aria-live="polite"
-      class="notification-snackbar flex align-center gap-md p-lg radius-md"
-      role="status"
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: INotificationSnackbar, isStandalone: true, selector: "i-notification-snackbar", inputs: { message: { classPropertyName: "message", publicName: "message", isSignal: true, isRequired: true, transformFunction: null }, options: { classPropertyName: "options", publicName: "options", isSignal: true, isRequired: false, transformFunction: null } }, outputs: { dismissRequested: "dismissRequested", openRequested: "openRequested" }, ngImport: i0, template: `
+    <i-snackbar
+      variant="info"
+      [closable]="options()?.closable ?? true"
+      [closeLabel]="options()?.closeLabel ?? 'Dismiss notification'"
+      [dismissOnEscape]="options()?.dismissOnEscape ?? true"
+      [durationMs]="options()?.durationMs ?? 5000"
+      [id]="options()?.id ?? 'notification-summary'"
+      [maxWidth]="options()?.maxWidth ?? '400px'"
+      [pauseOnFocus]="options()?.pauseOnFocus ?? true"
+      [pauseOnHidden]="options()?.pauseOnHidden ?? true"
+      [pauseOnHover]="options()?.pauseOnHover ?? true"
+      [position]="options()?.position ?? 'bottom-right'"
+      [prefixIcon]="options()?.prefixIcon ?? message().item?.icon ?? 'fa-solid fa-bell'"
+      [resetKey]="message().key"
+      [suffixIcon]="options()?.suffixIcon ?? ''"
+      (afterDismissed)="dismissRequested.emit()"
     >
-      <i-icon aria-hidden="true" [icon]="message().item?.icon ?? 'fa-solid fa-bell'" />
-      @if (message().item) {
-        <button
-          class="snackbar-content text-left border-none bg-transparent p-0 min-w-0 flex-fill"
-          type="button"
-          (click)="openRequested.emit()"
-        >
-          <span class="block font-semibold">{{ message().moduleName }}</span>
-          <span>{{ message().title }}</span>
-        </button>
-      } @else {
-        <span class="flex-fill">{{ message().title }}</span>
-      }
-      <i-button
-        ariaLabel="Dismiss notification"
-        icon="fa-solid fa-xmark"
-        size="xs"
+      <button
+        class="i-snackbar__content-action snackbar-content"
         type="button"
-        (onClick)="dismissRequested.emit()"
-      />
-    </div>
-  `, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["placeholder", "disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+        (click)="openRequested.emit()"
+      >
+        @if (message().moduleName) {
+          <span class="block font-semibold">{{ message().moduleName }}</span>
+        }
+        <span>{{ message().title }}</span>
+        @if ((message().newCount ?? 0) > 1) {
+          <span class="block"
+            >and {{ message().newCount! - 1 }} other new
+            {{ message().newCount === 2 ? 'notification' : 'notifications' }}</span
+          >
+        }
+      </button>
+    </i-snackbar>
+  `, isInline: true, dependencies: [{ kind: "component", type: ISnackbar, selector: "i-snackbar", inputs: ["id", "message", "title", "variant", "position", "durationMs", "prefixIcon", "suffixIcon", "closable", "closeLabel", "actionLabel", "actionDisabled", "actionLoading", "dismissOnAction", "dismissOnEscape", "pauseOnHover", "pauseOnFocus", "pauseOnHidden", "maxWidth", "resetKey", "open", "defaultOpen"], outputs: ["openChange", "onAction", "afterDismissed"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotificationSnackbar, decorators: [{
             type: Component,
             args: [{
                     selector: 'i-notification-snackbar',
                     changeDetection: ChangeDetectionStrategy.OnPush,
-                    imports: [IButton, IIcon],
+                    imports: [ISnackbar],
                     template: `
-    <div
-      aria-live="polite"
-      class="notification-snackbar flex align-center gap-md p-lg radius-md"
-      role="status"
+    <i-snackbar
+      variant="info"
+      [closable]="options()?.closable ?? true"
+      [closeLabel]="options()?.closeLabel ?? 'Dismiss notification'"
+      [dismissOnEscape]="options()?.dismissOnEscape ?? true"
+      [durationMs]="options()?.durationMs ?? 5000"
+      [id]="options()?.id ?? 'notification-summary'"
+      [maxWidth]="options()?.maxWidth ?? '400px'"
+      [pauseOnFocus]="options()?.pauseOnFocus ?? true"
+      [pauseOnHidden]="options()?.pauseOnHidden ?? true"
+      [pauseOnHover]="options()?.pauseOnHover ?? true"
+      [position]="options()?.position ?? 'bottom-right'"
+      [prefixIcon]="options()?.prefixIcon ?? message().item?.icon ?? 'fa-solid fa-bell'"
+      [resetKey]="message().key"
+      [suffixIcon]="options()?.suffixIcon ?? ''"
+      (afterDismissed)="dismissRequested.emit()"
     >
-      <i-icon aria-hidden="true" [icon]="message().item?.icon ?? 'fa-solid fa-bell'" />
-      @if (message().item) {
-        <button
-          class="snackbar-content text-left border-none bg-transparent p-0 min-w-0 flex-fill"
-          type="button"
-          (click)="openRequested.emit()"
-        >
-          <span class="block font-semibold">{{ message().moduleName }}</span>
-          <span>{{ message().title }}</span>
-        </button>
-      } @else {
-        <span class="flex-fill">{{ message().title }}</span>
-      }
-      <i-button
-        ariaLabel="Dismiss notification"
-        icon="fa-solid fa-xmark"
-        size="xs"
+      <button
+        class="i-snackbar__content-action snackbar-content"
         type="button"
-        (onClick)="dismissRequested.emit()"
-      />
-    </div>
+        (click)="openRequested.emit()"
+      >
+        @if (message().moduleName) {
+          <span class="block font-semibold">{{ message().moduleName }}</span>
+        }
+        <span>{{ message().title }}</span>
+        @if ((message().newCount ?? 0) > 1) {
+          <span class="block"
+            >and {{ message().newCount! - 1 }} other new
+            {{ message().newCount === 2 ? 'notification' : 'notifications' }}</span
+          >
+        }
+      </button>
+    </i-snackbar>
   `,
                 }]
-        }], propDecorators: { message: [{ type: i0.Input, args: [{ isSignal: true, alias: "message", required: true }] }], dismissRequested: [{ type: i0.Output, args: ["dismissRequested"] }], openRequested: [{ type: i0.Output, args: ["openRequested"] }] } });
+        }], propDecorators: { message: [{ type: i0.Input, args: [{ isSignal: true, alias: "message", required: true }] }], options: [{ type: i0.Input, args: [{ isSignal: true, alias: "options", required: false }] }], dismissRequested: [{ type: i0.Output, args: ["dismissRequested"] }], openRequested: [{ type: i0.Output, args: ["openRequested"] }] } });
 
-/** Controlled notification UI; consumers own data, navigation and timers. */
+/** Controlled notification UI; consumers own data and navigation. */
 class INotification {
     state = input(...(ngDevMode ? [undefined, { debugName: "state" }] : []));
     onAction = output();
@@ -11897,8 +12644,9 @@ class INotification {
       @if (value.snackbar; as message) {
         <i-notification-snackbar
           [message]="message"
+          [options]="value.snackbarOptions"
           (dismissRequested)="onAction.emit({ type: 'dismiss-snackbar' })"
-          (openRequested)="message.item && onAction.emit({ type: 'open-item', item: message.item })"
+          (openRequested)="onAction.emit({ type: 'open-drawer' })"
         />
       }
     }
@@ -11930,7 +12678,7 @@ class INotification {
         </i-notification-overlay>
       }
     }
-  `, isInline: true, dependencies: [{ kind: "component", type: NotificationOverlay, selector: "i-notification-overlay", inputs: ["open"], outputs: ["closeRequested", "exited"] }, { kind: "component", type: INotificationBell, selector: "i-notification-bell", inputs: ["unreadCount", "expanded"], outputs: ["toggleRequested"] }, { kind: "component", type: INotificationDrawer, selector: "i-notification-drawer", inputs: ["items", "unreadCount", "loading", "hasLoaded", "loadingMore", "readingId", "hasMore", "error", "loadMoreError", "actionError"], outputs: ["closeRequested", "openAllRequested", "itemOpened", "moreRequested", "retryRequested", "readRetryRequested"] }, { kind: "component", type: INotificationSnackbar, selector: "i-notification-snackbar", inputs: ["message"], outputs: ["dismissRequested", "openRequested"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "component", type: NotificationOverlay, selector: "i-notification-overlay", inputs: ["open"], outputs: ["closeRequested", "exited"] }, { kind: "component", type: INotificationBell, selector: "i-notification-bell", inputs: ["unreadCount", "expanded"], outputs: ["toggleRequested"] }, { kind: "component", type: INotificationDrawer, selector: "i-notification-drawer", inputs: ["items", "unreadCount", "loading", "hasLoaded", "loadingMore", "readingId", "hasMore", "error", "loadMoreError", "actionError"], outputs: ["closeRequested", "openAllRequested", "itemOpened", "moreRequested", "retryRequested", "readRetryRequested"] }, { kind: "component", type: INotificationSnackbar, selector: "i-notification-snackbar", inputs: ["message", "options"], outputs: ["dismissRequested", "openRequested"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: INotification, decorators: [{
             type: Component,
@@ -11948,8 +12696,9 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
       @if (value.snackbar; as message) {
         <i-notification-snackbar
           [message]="message"
+          [options]="value.snackbarOptions"
           (dismissRequested)="onAction.emit({ type: 'dismiss-snackbar' })"
-          (openRequested)="message.item && onAction.emit({ type: 'open-item', item: message.item })"
+          (openRequested)="onAction.emit({ type: 'open-drawer' })"
         />
       }
     }
@@ -13358,6 +14107,8 @@ function collectAuthorizationScope(items) {
             }
         }
     }
+    const compare = new Intl.Collator('id', { sensitivity: 'base' }).compare;
+    companies.sort((a, b) => compare(a.name, b.name) || compare(a.code, b.code) || compare(a.id, b.id));
     const menuCompanies = {};
     for (const [code, codes] of menuCompanySets)
         menuCompanies[code] = [...codes];
@@ -13496,6 +14247,7 @@ class IUserMenuStore {
     loadedUserSub = null;
     loadedApplicationId = null;
     generation = 0;
+    authorizationRequest = 0;
     /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
     currentUser = signal(null, ...(ngDevMode ? [{ debugName: "currentUser" }] : []));
     /** Raw current-user DTO as returned by the backend — `null` until loaded. */
@@ -13506,6 +14258,8 @@ class IUserMenuStore {
     favorites = signal([], ...(ngDevMode ? [{ debugName: "favorites" }] : []));
     /** Roles decoded from the access token (for `source: 'role'` permission checks). */
     roles = signal([], ...(ngDevMode ? [{ debugName: "roles" }] : []));
+    /** True while the authorization branch is being refreshed. */
+    authorizationsLoading = signal(false, ...(ngDevMode ? [{ debugName: "authorizationsLoading" }] : []));
     /** Raw effective authorization entries returned by iam-user-api. */
     authorizations = signal([], ...(ngDevMode ? [{ debugName: "authorizations" }] : []));
     authorizationScope = computed(() => collectAuthorizationScope(this.authorizations()), ...(ngDevMode ? [{ debugName: "authorizationScope" }] : []));
@@ -13703,14 +14457,23 @@ class IUserMenuStore {
     /** Loads effective item/function authorizations and their company scope. */
     loadAuthorizations(applicationId) {
         const generation = this.generation;
+        const request = ++this.authorizationRequest;
+        const current = () => generation === this.generation && request === this.authorizationRequest;
+        this.authorizationsLoading.set(true);
+        this.loadErrors.update((errors) => ({ ...errors, authorizations: null }));
         this.clearAuthorizationData();
         return this.menuService.getAuthorizations(applicationId).pipe(tap((items) => {
-            if (generation === this.generation)
+            if (current())
                 this.applyAuthorizations(items);
         }), map(() => this.authorizations()), catchError((error) => {
-            if (generation === this.generation)
+            if (current()) {
                 this.clearAuthorizationData();
+                this.loadErrors.update((errors) => ({ ...errors, authorizations: normalizeApiError(error) }));
+            }
             return throwError(() => error);
+        }), finalize(() => {
+            if (current())
+                this.authorizationsLoading.set(false);
         }));
     }
     applyAuthorizations(items) {
@@ -13773,6 +14536,8 @@ class IUserMenuStore {
     }
     clearData() {
         this.generation++;
+        this.authorizationRequest++;
+        this.authorizationsLoading.set(false);
         this.currentUser.set(null);
         this.rawCurrentUser.set(null);
         this.menus.set([]);
@@ -15106,7 +15871,7 @@ class IHMenu {
         if (this.menu.visibility !== 'no-child') {
             // Treat an unset visibility as expanded so a default (flat) group
             // collapses on the first click (modern nodes have no visibility).
-            this.menu.visibility = this.isGroupExpanded ? 'collapsed' : 'expanded';
+            this.menu = { ...this.menu, visibility: this.isGroupExpanded ? 'collapsed' : 'expanded' };
             this.expandedChange.emit({ menu: this.menu, expanded: this.isGroupExpanded });
         }
         else {
@@ -15374,12 +16139,13 @@ class IHMenu {
         }
       </li>
     }
-  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle", "expandedChange"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }] });
+  `, isInline: true, dependencies: [{ kind: "component", type: IHMenu, selector: "ih-menu", inputs: ["menu", "selectedMenuId", "filter", "favoriteMode", "collapsible", "depth", "dragEnabled", "showApplication", "pathByKey"], outputs: ["clicked", "favoriteToggle", "expandedChange"] }, { kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "pipe", type: IHighlightSearchPipe, name: "highlightSearch" }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHMenu, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-menu',
+                    changeDetection: ChangeDetectionStrategy.OnPush,
                     imports: [NgClass, RouterLink, IHighlightSearchPipe],
                     host: { 'data-ih-menu': '' },
                     template: `
@@ -16101,20 +16867,105 @@ class SidebarResizeController {
     }
 }
 
+/** Temporary expansion choices for the currently applied search term. */
+class SidebarSearchState {
+    term = '';
+    expanded = new Map();
+    constructor(term = '') {
+        this.setTerm(term);
+    }
+    setTerm(value) {
+        const term = value.trim();
+        if (term === this.term)
+            return false;
+        this.term = term;
+        this.expanded.clear();
+        return true;
+    }
+    setExpanded({ menu, expanded }) {
+        const key = getSidebarMenuKey(menu);
+        if (!this.term || !key?.startsWith('main:') || menu.visibility === 'no-child')
+            return false;
+        this.expanded.set(key, expanded);
+        return true;
+    }
+    filter(menus) {
+        return filterMenuTree(menus, this.term, this.expanded);
+    }
+}
+function filterMenuTree(menus, rawTerm, expanded = new Map()) {
+    const term = (rawTerm ?? '').trim().toLowerCase();
+    if (!term)
+        return menus;
+    const filtered = [];
+    for (const menu of menus) {
+        const result = filterMenuBranch(menu, term, expanded);
+        if (result)
+            filtered.push(result);
+    }
+    return filtered;
+}
+function filterMenuBranch(menu, term, expanded, includeBranch = false) {
+    const name = getMenuLabel(menu).toLowerCase();
+    const selfMatches = includeBranch || name.includes(term);
+    const originalChildren = getMenuChildren(menu);
+    const filteredChildren = [];
+    for (const child of originalChildren) {
+        const childResult = filterMenuBranch(child, term, expanded, selfMatches);
+        if (childResult)
+            filteredChildren.push(childResult);
+    }
+    const childMatches = filteredChildren.length > 0;
+    if (!selfMatches && !childMatches)
+        return null;
+    const cloned = { ...menu, child: filteredChildren, children: undefined };
+    if (originalChildren.length && menu.visibility !== 'no-child') {
+        const key = getSidebarMenuKey(menu);
+        cloned.visibility = key && expanded.get(key) === false ? 'collapsed' : 'expanded';
+    }
+    return cloned;
+}
+function flattenNavigableMenus(menus, collapsible = false) {
+    const result = [];
+    const visit = (menu) => {
+        const children = getMenuChildren(menu);
+        const hasChildren = children.length > 0;
+        const isLeaf = menu.type !== 'group' &&
+            Number(menu.menuTypeId) === 3 &&
+            (!hasChildren || menu.visibility === 'no-child');
+        if (isLeaf)
+            result.push(menu);
+        if (collapsible && menu.visibility === 'collapsed')
+            return;
+        for (const c of children)
+            visit(c);
+    };
+    for (const m of menus)
+        visit(m);
+    return result;
+}
+
 class IHSidebar {
     router = inject(Router);
     hostElement = inject(ElementRef);
     zone = inject(NgZone);
     sessionService = inject(ISessionService);
     config = inject(I_AUTH_CONFIG);
-    baseHref = inject(APP_BASE_HREF, { optional: true }) ??
-        new URL(document.baseURI).pathname;
+    baseHref = inject(APP_BASE_HREF, { optional: true }) ?? new URL(document.baseURI).pathname;
     menuState = new SidebarMenuState(null);
     activeMenu;
     menuRevision$ = new BehaviorSubject(0);
     menuStateRevision = signal(0, ...(ngDevMode ? [{ debugName: "menuStateRevision" }] : []));
+    searchState = new SidebarSearchState();
+    appliedFilter$ = new BehaviorSubject('');
+    searchRevision$ = new BehaviorSubject(0);
+    searchSubscription;
+    filterTimer = null;
+    syncFilterAfterNavigation = false;
+    menuLocationPath;
     navigationSubscription;
     menuScrollFrame = null;
+    menuScrollPending = false;
     destroyed = false;
     resizeHandle;
     resizeController;
@@ -16258,28 +17109,56 @@ class IHSidebar {
         });
         this.queryParams = initialQueryParams;
         if (this.router.navigated) {
-            this.queryParams = { ...this.queryParams, ...this.router.parseUrl(this.router.url).queryParams };
+            this.queryParams = {
+                ...this.queryParams,
+                ...this.router.parseUrl(this.router.url).queryParams,
+            };
+            this.menuLocationPath = this.router.url.split(/[?#]/)[0];
             this.menuState.observeLocation(this.router.url, this.baseHref);
         }
         const initialFilter = this.queryParams['menu-filter'] ?? '';
-        this.menuFilter.set(initialFilter);
+        this.searchState.setTerm(initialFilter);
+        this.menuFilter.set(initialFilter.trim());
+        this.appliedFilter$.next(initialFilter.trim());
         this.menuSearch.setValue(initialFilter, { emitEvent: false });
         this.originalMenus$ = this.normalizeMenusStream();
         this.buildMenusStream();
         this.subscribeFullMenus();
         this.subscribeFavorites();
+        this.searchSubscription = this.menuSearch.valueChanges.subscribe((value) => {
+            this.resetSearchSelection();
+            this.cancelFilter();
+            const term = (value ?? '').trim();
+            if (term !== this.menuFilter()) {
+                this.filterTimer = setTimeout(() => this.applyFilter(term), 200);
+            }
+        });
         this.navigationSubscription = this.router.events.subscribe((event) => {
+            if (event instanceof NavigationStart) {
+                this.syncFilterAfterNavigation =
+                    event.navigationTrigger === 'popstate' ||
+                        event.url.split(/[?#]/)[0] !== this.router.url.split(/[?#]/)[0];
+                if (this.syncFilterAfterNavigation)
+                    this.cancelFilter();
+            }
             if (!(event instanceof NavigationEnd))
                 return;
-            if (!this.menuState.hasLocation) {
-                const params = this.router.parseUrl(event.urlAfterRedirects).queryParams;
-                this.queryParams = { ...this.queryParams, ...params };
-                if (params['menu-filter'] !== undefined && params['menu-filter'] !== this.menuSearch.value) {
-                    this.menuSearch.setValue(params['menu-filter']);
-                }
+            const params = this.router.parseUrl(event.urlAfterRedirects).queryParams;
+            this.queryParams = params;
+            const term = params['menu-filter'] ?? '';
+            if (this.syncFilterAfterNavigation || term.trim() !== this.menuFilter()) {
+                this.cancelFilter();
+                this.resetSearchSelection();
+                this.menuSearch.setValue(term, { emitEvent: false });
+                this.applyFilter(term, false);
             }
+            this.syncFilterAfterNavigation = false;
+            const path = event.urlAfterRedirects.split(/[?#]/)[0];
+            const pathChanged = path !== this.menuLocationPath;
+            this.menuLocationPath = path;
             this.menuState.observeLocation(event.urlAfterRedirects, this.baseHref);
-            this.restoreActiveMenu();
+            if (pathChanged)
+                this.restoreActiveMenu();
         });
     }
     ngOnChanges(changes) {
@@ -16287,10 +17166,16 @@ class IHSidebar {
             this.menuState.configureStorage(this.menuStateStorageKey);
             this.refreshMenuState();
         }
+        if (changes['collapsible'] && !changes['collapsible'].firstChange) {
+            this.searchRevision$.next(this.searchRevision$.value + 1);
+        }
         if (changes['visible'] || changes['favoriteMode'])
             this.restoreActiveMenu();
-        if (changes['visible'] || changes['resizable'] || changes['minWidth'] ||
-            changes['maxWidth'] || changes['widthStorageKey']) {
+        if (changes['visible'] ||
+            changes['resizable'] ||
+            changes['minWidth'] ||
+            changes['maxWidth'] ||
+            changes['widthStorageKey']) {
             this.resizeController?.configure(this.resizeOptions());
         }
         if (changes['menusInput$'] && !changes['menusInput$'].firstChange) {
@@ -16304,6 +17189,10 @@ class IHSidebar {
     }
     ngOnDestroy() {
         this.destroyed = true;
+        this.cancelFilter();
+        this.searchSubscription?.unsubscribe();
+        this.appliedFilter$.complete();
+        this.searchRevision$.complete();
         this.navigationSubscription?.unsubscribe();
         if (this.menuScrollFrame !== null)
             cancelAnimationFrame(this.menuScrollFrame);
@@ -16344,6 +17233,10 @@ class IHSidebar {
         });
     }
     onMenuExpansion(event) {
+        if (this.searchState.setExpanded(event)) {
+            this.searchRevision$.next(this.searchRevision$.value + 1);
+            return;
+        }
         this.menuState.setExpanded(event);
         this.refreshMenuState();
     }
@@ -16366,8 +17259,13 @@ class IHSidebar {
             this.scheduleMenuScroll();
     }
     scheduleMenuScroll() {
-        if (this.destroyed)
+        if (!this.destroyed)
+            this.menuScrollPending = true;
+    }
+    ngAfterViewChecked() {
+        if (this.destroyed || !this.menuScrollPending)
             return;
+        this.menuScrollPending = false;
         if (this.menuScrollFrame !== null)
             cancelAnimationFrame(this.menuScrollFrame);
         this.menuScrollFrame = requestAnimationFrame(() => {
@@ -16496,101 +17394,50 @@ class IHSidebar {
         return (this.menusInput$ ?? of([])).pipe(map((menus) => normalizeMenuTree(menus)), shareReplay$1({ bufferSize: 1, refCount: true }));
     }
     buildMenusStream() {
-        let firstEmission = true;
-        const filter$ = this.menuSearch.valueChanges.pipe(startWith(this.menuSearch.value ?? ''), map((v) => (v ?? '').trim()), tap$1((term) => {
-            this.menuFilter.set(term);
-            if (firstEmission) {
-                firstEmission = false;
-                return;
-            }
-            this.updateUrl();
-        }));
-        this.menus$ = combineLatest([this.originalMenus$, filter$, this.menuRevision$]).pipe(map(([menus, term]) => this.filterMenuTree(this.menuState.project(menus, 'main', this.activeMenu), term)), tap$1((filteredMenus) => {
+        const projectedMenus$ = combineLatest([this.originalMenus$, this.menuRevision$]).pipe(map(([menus]) => this.menuState.project(menus, 'main', this.activeMenu)), shareReplay$1({ bufferSize: 1, refCount: true }));
+        this.menus$ = combineLatest([
+            projectedMenus$,
+            this.appliedFilter$.pipe(distinctUntilChanged()),
+            this.searchRevision$,
+        ]).pipe(map(([menus]) => this.searchState.filter(menus)), tap$1((filteredMenus) => {
             this.updateNavigableMenus(filteredMenus);
             this.scheduleMenuScroll();
         }), shareReplay$1({ bufferSize: 1, refCount: true }));
     }
-    filterMenuTree(menus, rawTerm) {
-        const term = (rawTerm ?? '').trim().toLowerCase();
-        if (!term)
-            return menus;
-        const filtered = [];
-        for (const menu of menus) {
-            const result = this.filterMenuBranch(menu, term);
-            if (result) {
-                filtered.push(result);
-            }
-        }
-        return filtered;
+    cancelFilter() {
+        if (this.filterTimer !== null)
+            clearTimeout(this.filterTimer);
+        this.filterTimer = null;
     }
-    filterMenuBranch(menu, term, includeBranch = false) {
-        const name = getMenuLabel(menu).toLowerCase();
-        const selfMatches = includeBranch || name.includes(term);
-        const originalChildren = getMenuChildren(menu);
-        const filteredChildren = [];
-        for (const child of originalChildren) {
-            const childResult = this.filterMenuBranch(child, term, selfMatches);
-            if (childResult) {
-                filteredChildren.push(childResult);
-            }
+    applyFilter(value, syncUrl = true) {
+        this.cancelFilter();
+        if (this.searchState.setTerm(value)) {
+            this.menuFilter.set(this.searchState.term);
+            this.appliedFilter$.next(this.searchState.term);
         }
-        const childMatches = filteredChildren.length > 0;
-        if (!selfMatches && !childMatches) {
-            return null;
-        }
-        const cloned = {
-            ...menu,
-            child: filteredChildren,
-        };
-        if (originalChildren.length && menu.visibility !== 'no-child') {
-            cloned.visibility = 'expanded';
-        }
-        return cloned;
+        if (syncUrl)
+            this.updateUrl();
+    }
+    resetSearchSelection() {
+        this.keyboardNavActive.set(false);
+        this.selectedIndex.set(null);
+        this.selectedMenuId.set(null);
     }
     updateNavigableMenus(filteredMenus) {
-        this.navigableMenus = this.flattenNavigableMenus(filteredMenus);
-        const hasFilter = !!this.menuFilter().trim();
-        if (!this.navigableMenus.length || !hasFilter) {
-            this.keyboardNavActive.set(false);
-            this.selectedIndex.set(null);
-            this.selectedMenuId.set(null);
-            return;
-        }
-        if (this.keyboardNavActive()) {
-            const maxIndex = this.navigableMenus.length - 1;
-            let idx = this.selectedIndex();
-            if (idx === null || idx < 0 || idx > maxIndex) {
-                idx = 0;
-            }
-            this.selectedIndex.set(idx);
-            this.selectedMenuId.set(getMenuKey(this.navigableMenus[idx]));
-        }
-        else {
-            this.selectedIndex.set(null);
-            this.selectedMenuId.set(null);
-        }
-    }
-    flattenNavigableMenus(menus) {
-        const result = [];
-        const visit = (menu) => {
-            const children = getMenuChildren(menu);
-            const hasChildren = children.length > 0;
-            const isLeafMenu = menu.type !== 'group' &&
-                Number(menu.menuTypeId) === 3 &&
-                (!hasChildren || menu.visibility === 'no-child');
-            if (isLeafMenu) {
-                result.push(menu);
-            }
-            for (const child of children) {
-                visit(child);
-            }
-        };
-        for (const m of menus) {
-            visit(m);
-        }
-        return result;
+        this.navigableMenus = flattenNavigableMenus(filteredMenus, this.collapsible);
+        const selected = this.selectedMenuId();
+        const index = selected === null
+            ? -1
+            : this.navigableMenus.findIndex((menu) => getMenuKey(menu) === selected);
+        if (!this.menuFilter() || index < 0)
+            this.resetSearchSelection();
+        else
+            this.selectedIndex.set(index);
     }
     onSearchKeyDown(event) {
+        if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key))
+            return;
+        this.applyFilter(this.menuSearch.value ?? '');
         if (!this.navigableMenus.length)
             return;
         const hasFilter = !!this.menuFilter().trim();
@@ -16731,19 +17578,17 @@ class IHSidebar {
         }
     }
     updateUrl() {
-        const queryParams = { ...this.queryParams };
-        const currentFilter = this.menuFilter().trim();
-        if (currentFilter) {
-            queryParams['menu-filter'] = currentFilter;
-        }
-        else {
-            delete queryParams['menu-filter'];
-        }
+        const current = this.router.parseUrl(this.router.url);
+        const term = this.menuFilter();
+        if ((current.queryParams['menu-filter'] ?? '') === term &&
+            (term || !('menu-filter' in current.queryParams)))
+            return;
         this.router.navigate([], {
-            queryParams,
+            queryParams: { ...current.queryParams, 'menu-filter': term || null },
             queryParamsHandling: 'replace',
+            preserveFragment: true,
+            replaceUrl: true,
         });
-        this.queryParams = queryParams;
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHSidebar, deps: [], target: i0.ɵɵFactoryTarget.Component });
     static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHSidebar, isStandalone: true, selector: "ih-sidebar", inputs: { user$: "user$", menusInput$: "menusInput$", visible: "visible", resizable: "resizable", minWidth: "minWidth", maxWidth: "maxWidth", widthStorageKey: "widthStorageKey", menuStateStorageKey: "menuStateStorageKey", impersonating: "impersonating", footerText: "footerText", favoriteMode: "favoriteMode", favorites$: "favorites$", groupByApplication: "groupByApplication", collapsible: "collapsible", personalProfileUrl: "personalProfileUrl" }, outputs: { onFavoriteToggle: "onFavoriteToggle", onFavoriteReorder: "onFavoriteReorder", onWidthChange: "onWidthChange" }, host: { properties: { "class.hidden": "this.sidebarVisibility", "class.is-resizable": "this.sidebarResizable" } }, viewQueries: [{ propertyName: "resizeHandle", first: true, predicate: ["resizeHandle"], descendants: true, static: true }], usesOnChanges: true, ngImport: i0, template: `
@@ -17429,6 +18274,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
 class ILoadError {
     message = null;
     title = '';
+    contentClass = '';
+    contentStyle = {};
     density = 'default';
     retryDisabled = false;
     retryLoading = false;
@@ -17438,8 +18285,8 @@ class ILoadError {
             this.onRetry.emit();
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ILoadError, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ILoadError, isStandalone: true, selector: "i-load-error", inputs: { message: "message", title: "title", density: "density", retryDisabled: "retryDisabled", retryLoading: "retryLoading" }, outputs: { onRetry: "onRetry" }, host: { properties: { "attr.density": "density", "style.display": "message?.trim() ? null : \"none\"" }, classAttribute: "i-load-error" }, ngImport: i0, template: `@if (message?.trim()) {
-    <div class="i-load-error__content" role="alert">
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ILoadError, isStandalone: true, selector: "i-load-error", inputs: { message: "message", title: "title", contentClass: "contentClass", contentStyle: "contentStyle", density: "density", retryDisabled: "retryDisabled", retryLoading: "retryLoading" }, outputs: { onRetry: "onRetry" }, host: { properties: { "attr.density": "density", "style.display": "message?.trim() ? null : \"none\"" }, classAttribute: "i-load-error" }, ngImport: i0, template: `@if (message?.trim()) {
+    <div class="i-load-error__content" role="alert" [class]="contentClass" [ngStyle]="contentStyle">
       <i-icon
         aria-hidden="true"
         icon="fa-solid fa-circle-exclamation"
@@ -17460,7 +18307,7 @@ class ILoadError {
         >Retry</i-button
       >
     </div>
-  }`, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["placeholder", "disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  }`, isInline: true, dependencies: [{ kind: "component", type: IButton, selector: "i-button", inputs: ["placeholder", "disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "directive", type: NgStyle, selector: "[ngStyle]", inputs: ["ngStyle"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ILoadError, decorators: [{
             type: Component,
@@ -17468,14 +18315,14 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                     selector: 'i-load-error',
                     standalone: true,
                     changeDetection: ChangeDetectionStrategy.OnPush,
-                    imports: [IButton, IIcon],
+                    imports: [IButton, IIcon, NgStyle],
                     host: {
                         class: 'i-load-error',
                         '[attr.density]': 'density',
                         '[style.display]': 'message?.trim() ? null : "none"',
                     },
                     template: `@if (message?.trim()) {
-    <div class="i-load-error__content" role="alert">
+    <div class="i-load-error__content" role="alert" [class]="contentClass" [ngStyle]="contentStyle">
       <i-icon
         aria-hidden="true"
         icon="fa-solid fa-circle-exclamation"
@@ -17501,6 +18348,10 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
         }], propDecorators: { message: [{
                 type: Input
             }], title: [{
+                type: Input
+            }], contentClass: [{
+                type: Input
+            }], contentStyle: [{
                 type: Input
             }], density: [{
                 type: Input
@@ -18206,6 +19057,7 @@ class ISelectCompany {
     innerSelect;
     optionDef;
     placeholder = '';
+    emptyState = {};
     disabled = false;
     set loading(value) { this.loadingValue.set(value); }
     get loading() { return this.loadingValue(); }
@@ -18237,8 +19089,10 @@ class ISelectCompany {
     hosted = computed(() => !!this.hostState && this.scopeValue() !== 'local', ...(ngDevMode ? [{ debugName: "hosted" }] : []));
     effectiveMenuCode = computed(() => this.menuCodeValue() ??
         (this.hosted() ? this.selectionValue()?.menuCode ?? null : null), ...(ngDevMode ? [{ debugName: "effectiveMenuCode" }] : []));
-    companyLoading = computed(() => this.loadingValue() || (this.hosted() &&
-        (!this.store.initialized() || this.store.initializing() || !this.effectiveMenuCode())), ...(ngDevMode ? [{ debugName: "companyLoading" }] : []));
+    menuActive = computed(() => !this.hosted() ||
+        (!!this.selectionValue()?.menuCode && this.effectiveMenuCode() === this.selectionValue()?.menuCode), ...(ngDevMode ? [{ debugName: "menuActive" }] : []));
+    companyLoading = computed(() => this.loadingValue() || this.store.authorizationsLoading() || (this.hosted() &&
+        (!this.store.initialized() || this.store.initializing() || !this.menuActive())), ...(ngDevMode ? [{ debugName: "companyLoading" }] : []));
     constructor() {
         const selection = this.hostState?.selection;
         if (selection) {
@@ -18246,7 +19100,7 @@ class ISelectCompany {
             inject(DestroyRef).onDestroy(unsubscribe);
         }
         effect(() => {
-            if (!this.hosted() || !selection)
+            if (!this.hosted() || !selection || !this.menuActive())
                 return;
             this.selectionRevision();
             const code = this.effectiveMenuCode();
@@ -18268,10 +19122,8 @@ class ISelectCompany {
     companyOptions = computed(() => {
         const companies = this.store.companies();
         const code = this.effectiveMenuCode();
-        if (this.hosted() && !code)
+        if (!code || !this.menuActive())
             return [];
-        if (!code)
-            return companies;
         const allowed = new Set(this.store.menuCompanies()[code] ?? []);
         return companies.filter((company) => allowed.has(company.code));
     }, ...(ngDevMode ? [{ debugName: "companyOptions" }] : []));
@@ -18306,7 +19158,8 @@ class ISelectCompany {
             this.innerSelect?.focus();
     }
     handleSelectChange(change) {
-        if (this.hosted() && !this.hostState?.selection.setCompany(change.value?.id ?? null))
+        if (this.hosted() && (this.companyLoading() || !this.menuActive() ||
+            !this.hostState?.selection.setCompany(change.value?.id ?? null)))
             return;
         this.syncedValue = change.value;
         this.modelValue.set(change.value);
@@ -18316,7 +19169,7 @@ class ISelectCompany {
         this.onOptionSelected.emit(change);
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISelectCompany, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISelectCompany, isStandalone: true, selector: "i-select-company", inputs: { placeholder: "placeholder", disabled: "disabled", loading: "loading", stateScope: "stateScope", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", displayWith: "displayWith", filterPredicate: "filterPredicate", menuCode: "menuCode", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, providers: [
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISelectCompany, isStandalone: true, selector: "i-select-company", inputs: { placeholder: "placeholder", emptyState: "emptyState", disabled: "disabled", loading: "loading", stateScope: "stateScope", invalid: "invalid", filterDelay: "filterDelay", panelPosition: "panelPosition", portalToBody: "portalToBody", panelOffset: "panelOffset", matchTriggerWidth: "matchTriggerWidth", displayWith: "displayWith", filterPredicate: "filterPredicate", menuCode: "menuCode", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, providers: [
             {
                 provide: NG_VALUE_ACCESSOR,
                 useExisting: forwardRef(() => ISelectCompany),
@@ -18326,6 +19179,7 @@ class ISelectCompany {
     <i-select
       [disabled]="disabled || (hosted() && companyLoading())"
       [displayWith]="displayWith ?? 'name'"
+      [emptyState]="emptyState"
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="invalid"
@@ -18349,7 +19203,7 @@ class ISelectCompany {
         </ng-template>
       }
     </i-select>
-  `, isInline: true, dependencies: [{ kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "disabled", "loading", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "trackBy", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: ISelectOptionDefDirective, selector: "[iSelectOption]", inputs: ["iSelectOption"] }, { kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "component", type: ISelect, selector: "i-select", inputs: ["placeholder", "emptyState", "disabled", "loading", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "trackBy", "options", "options$", "displayWith", "filterPredicate", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: ISelectOptionDefDirective, selector: "[iSelectOption]", inputs: ["iSelectOption"] }, { kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISelectCompany, decorators: [{
             type: Component,
@@ -18361,6 +19215,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
     <i-select
       [disabled]="disabled || (hosted() && companyLoading())"
       [displayWith]="displayWith ?? 'name'"
+      [emptyState]="emptyState"
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="invalid"
@@ -18402,6 +19257,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 args: [ISelectOptionDefDirective]
             }], placeholder: [{
                 type: Input
+            }], emptyState: [{
+                type: Input
             }], disabled: [{
                 type: Input
             }], loading: [{
@@ -18439,6 +19296,7 @@ class IFCSelectCompany {
     optionDef;
     label = '';
     placeholder = '';
+    emptyState = {};
     menuCode;
     disabled = false;
     loading = false;
@@ -18517,7 +19375,7 @@ class IFCSelectCompany {
         return resolveControlErrorMessage(this.ngControl, this.label, this.errorMessage);
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCSelectCompany, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IFCSelectCompany, isStandalone: true, selector: "i-fc-select-company", inputs: { label: "label", placeholder: "placeholder", menuCode: "menuCode", disabled: "disabled", loading: "loading", stateScope: "stateScope", invalid: "invalid", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", panelOffset: "panelOffset", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", errorMessage: "errorMessage", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, queries: [{ propertyName: "optionDef", first: true, predicate: ISelectOptionDefDirective, descendants: true }], viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelectCompany, descendants: true }], ngImport: i0, template: `
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IFCSelectCompany, isStandalone: true, selector: "i-fc-select-company", inputs: { label: "label", placeholder: "placeholder", emptyState: "emptyState", menuCode: "menuCode", disabled: "disabled", loading: "loading", stateScope: "stateScope", invalid: "invalid", displayWith: "displayWith", filterDelay: "filterDelay", filterPredicate: "filterPredicate", panelPosition: "panelPosition", panelOffset: "panelOffset", portalToBody: "portalToBody", matchTriggerWidth: "matchTriggerWidth", errorMessage: "errorMessage", value: "value" }, outputs: { onChanged: "onChanged", onOptionSelected: "onOptionSelected" }, queries: [{ propertyName: "optionDef", first: true, predicate: ISelectOptionDefDirective, descendants: true }], viewQueries: [{ propertyName: "innerSelect", first: true, predicate: ISelectCompany, descendants: true }], ngImport: i0, template: `
     @if (label) {
       <label class="i-fc-select__label" (click)="focus()">
         {{ label }} :
@@ -18530,6 +19388,7 @@ class IFCSelectCompany {
     <i-select-company
       [disabled]="disabled || formDisabled"
       [displayWith]="displayWith"
+      [emptyState]="emptyState"
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="invalid || controlInvalid"
@@ -18558,7 +19417,7 @@ class IFCSelectCompany {
     @if (controlInvalid && resolvedErrorText) {
       <div class="i-fc-select__error">{{ resolvedErrorText }}</div>
     }
-  `, isInline: true, dependencies: [{ kind: "component", type: ISelectCompany, selector: "i-select-company", inputs: ["placeholder", "disabled", "loading", "stateScope", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "displayWith", "filterPredicate", "menuCode", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: ISelectOptionDefDirective, selector: "[iSelectOption]", inputs: ["iSelectOption"] }, { kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "component", type: ISelectCompany, selector: "i-select-company", inputs: ["placeholder", "emptyState", "disabled", "loading", "stateScope", "invalid", "filterDelay", "panelPosition", "portalToBody", "panelOffset", "matchTriggerWidth", "displayWith", "filterPredicate", "menuCode", "value"], outputs: ["onChanged", "onOptionSelected"] }, { kind: "directive", type: ISelectOptionDefDirective, selector: "[iSelectOption]", inputs: ["iSelectOption"] }, { kind: "directive", type: NgTemplateOutlet, selector: "[ngTemplateOutlet]", inputs: ["ngTemplateOutletContext", "ngTemplateOutlet", "ngTemplateOutletInjector"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IFCSelectCompany, decorators: [{
             type: Component,
@@ -18579,6 +19438,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
     <i-select-company
       [disabled]="disabled || formDisabled"
       [displayWith]="displayWith"
+      [emptyState]="emptyState"
       [filterDelay]="filterDelay"
       [filterPredicate]="filterPredicate"
       [invalid]="invalid || controlInvalid"
@@ -18619,6 +19479,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             }], label: [{
                 type: Input
             }], placeholder: [{
+                type: Input
+            }], emptyState: [{
                 type: Input
             }], menuCode: [{
                 type: Input
@@ -18896,7 +19758,8 @@ class IUI {
             ISectionModule,
             ISelect,
             ITextArea,
-            IToggle], exports: [IActionPlaceholder,
+            IToggle,
+            ISnackbar], exports: [IActionPlaceholder,
             IAvatar,
             IBanner,
             IButton,
@@ -18923,7 +19786,8 @@ class IUI {
             ISectionModule,
             ISelect,
             ITextArea,
-            IToggle] });
+            IToggle,
+            ISnackbar] });
     static ɵinj = i0.ɵɵngDeclareInjector({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IUI, imports: [ICardModule,
             ICodeViewerModule,
             IDialogModule,
@@ -18969,6 +19833,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                         ISelect,
                         ITextArea,
                         IToggle,
+                        ISnackbar,
                     ],
                     exports: [
                         IActionPlaceholder,
@@ -18999,6 +19864,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                         ISelect,
                         ITextArea,
                         IToggle,
+                        ISnackbar,
                     ],
                 }]
         }] });
@@ -19628,5 +20494,5 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
  * Generated bundle index. Do not edit.
  */
 
-export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IActionPlaceholder, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IBanner, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IEmptyState, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridEmptyDef, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSelection, IHSidebar, IHState, IHStateOwner, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IH_STATE, IHasMnDirective, IHasMnRoute, IHighlightSearch, IHighlightSearchPipe, IIcon, IImageCropper, IImpersonationStateService, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoadError, ILoading, ILoadingRegion, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_EMPTY_STATE_PRESETS, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, highlightSearchParts, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
+export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IActionPlaceholder, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IBanner, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IEmptyState, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridEmptyDef, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSelection, IHSidebar, IHState, IHStateOwner, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IH_STATE, IHasMnDirective, IHasMnRoute, IHighlightSearch, IHighlightSearchPipe, IIcon, IImageCropper, IImpersonationStateService, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoadError, ILoading, ILoadingRegion, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, ISnackbar, ISnackbarRef, ISnackbarService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_EMPTY_STATE_PRESETS, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, I_SNACKBAR_DEFAULTS, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, highlightSearchParts, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
 //# sourceMappingURL=insight-ui.mjs.map

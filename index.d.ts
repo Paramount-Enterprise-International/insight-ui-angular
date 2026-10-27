@@ -1,10 +1,10 @@
 import * as i0 from '@angular/core';
-import { EventEmitter, AfterViewInit, OnInit, OnDestroy, ElementRef, OnChanges, SimpleChanges, AfterContentInit, AfterViewChecked, TrackByFunction, TemplateRef, Type, Injector, InjectionToken, QueryList, PipeTransform, EnvironmentProviders, DestroyRef, Signal } from '@angular/core';
+import { EventEmitter, AfterViewInit, OnChanges, OnDestroy, SimpleChanges, InjectionToken, OnInit, ElementRef, AfterContentInit, AfterViewChecked, TrackByFunction, TemplateRef, Type, Injector, QueryList, PipeTransform, EnvironmentProviders, DestroyRef, Signal } from '@angular/core';
 import { AbstractControl, NgControl, ControlValueAccessor, FormBuilder, FormControl, FormGroup, FormGroupDirective } from '@angular/forms';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { Route, CanActivateFn, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
-import { HttpParams, HttpResponse, HttpInterceptorFn } from '@angular/common/http';
 import * as _insight_ui from '@insight/ui';
+import { HttpParams, HttpResponse, HttpInterceptorFn } from '@angular/common/http';
 
 declare const I_ICON_NAMES: {
     readonly add: "fa-solid fa-plus";
@@ -204,6 +204,127 @@ declare class IBanner implements AfterViewInit {
     static ngAcceptInputType_defaultOpen: unknown;
 }
 
+type ISnackbarPosition = 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
+type ISnackbarDismissReason = 'timeout' | 'close' | 'action' | 'escape' | 'programmatic';
+type ISnackbarOptions = {
+    id?: string;
+    title?: string;
+    variant?: IBannerVariant;
+    position?: ISnackbarPosition;
+    durationMs?: number;
+    prefixIcon?: string;
+    suffixIcon?: string;
+    closable?: boolean;
+    closeLabel?: string;
+    actionLabel?: string;
+    actionDisabled?: boolean;
+    actionLoading?: boolean;
+    dismissOnAction?: boolean;
+    dismissOnEscape?: boolean;
+    pauseOnHover?: boolean;
+    pauseOnFocus?: boolean;
+    pauseOnHidden?: boolean;
+    maxWidth?: string;
+    onAction?: () => void;
+};
+type ISnackbarChanges = Partial<Omit<ISnackbarOptions, 'id'>> & {
+    message?: string;
+};
+type ISnackbarDefaults = {
+    maxVisible?: number;
+};
+type SnackbarRuntimeOptions = ISnackbarOptions & {
+    id: string;
+    scope: object;
+    maxVisible?: number;
+};
+
+declare class ISnackbar implements AfterViewInit, OnChanges, OnDestroy {
+    id: string;
+    message: string | null | undefined;
+    title: string | undefined;
+    variant: IBannerVariant;
+    position: ISnackbarPosition;
+    durationMs: number;
+    prefixIcon: string;
+    suffixIcon: string;
+    closable: boolean;
+    closeLabel: string;
+    actionLabel: string;
+    actionDisabled: boolean;
+    actionLoading: boolean;
+    dismissOnAction: boolean;
+    dismissOnEscape: boolean;
+    pauseOnHover: boolean;
+    pauseOnFocus: boolean;
+    pauseOnHidden: boolean;
+    maxWidth: string;
+    resetKey: unknown;
+    open: boolean | undefined;
+    defaultOpen: boolean;
+    readonly openChange: EventEmitter<boolean>;
+    readonly onAction: EventEmitter<void>;
+    readonly afterDismissed: EventEmitter<ISnackbarDismissReason>;
+    private projected;
+    private readonly host;
+    private readonly platform;
+    private readonly settings;
+    private readonly destroyRef;
+    private mount?;
+    private observer?;
+    private initialized;
+    private internalOpen;
+    private pendingReason;
+    constructor();
+    ngAfterViewInit(): void;
+    ngOnChanges(changes: SimpleChanges): void;
+    requestClose(reason: ISnackbarDismissReason): void;
+    activateAction(): void;
+    ngOnDestroy(): void;
+    private sync;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISnackbar, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISnackbar, "i-snackbar", never, { "id": { "alias": "id"; "required": false; }; "message": { "alias": "message"; "required": false; }; "title": { "alias": "title"; "required": false; }; "variant": { "alias": "variant"; "required": false; }; "position": { "alias": "position"; "required": false; }; "durationMs": { "alias": "durationMs"; "required": false; }; "prefixIcon": { "alias": "prefixIcon"; "required": false; }; "suffixIcon": { "alias": "suffixIcon"; "required": false; }; "closable": { "alias": "closable"; "required": false; }; "closeLabel": { "alias": "closeLabel"; "required": false; }; "actionLabel": { "alias": "actionLabel"; "required": false; }; "actionDisabled": { "alias": "actionDisabled"; "required": false; }; "actionLoading": { "alias": "actionLoading"; "required": false; }; "dismissOnAction": { "alias": "dismissOnAction"; "required": false; }; "dismissOnEscape": { "alias": "dismissOnEscape"; "required": false; }; "pauseOnHover": { "alias": "pauseOnHover"; "required": false; }; "pauseOnFocus": { "alias": "pauseOnFocus"; "required": false; }; "pauseOnHidden": { "alias": "pauseOnHidden"; "required": false; }; "maxWidth": { "alias": "maxWidth"; "required": false; }; "resetKey": { "alias": "resetKey"; "required": false; }; "open": { "alias": "open"; "required": false; }; "defaultOpen": { "alias": "defaultOpen"; "required": false; }; }, { "openChange": "openChange"; "onAction": "onAction"; "afterDismissed": "afterDismissed"; }, never, ["*"], true, never>;
+    static ngAcceptInputType_closable: unknown;
+    static ngAcceptInputType_actionDisabled: unknown;
+    static ngAcceptInputType_actionLoading: unknown;
+    static ngAcceptInputType_dismissOnAction: unknown;
+    static ngAcceptInputType_dismissOnEscape: unknown;
+    static ngAcceptInputType_pauseOnHover: unknown;
+    static ngAcceptInputType_pauseOnFocus: unknown;
+    static ngAcceptInputType_pauseOnHidden: unknown;
+    static ngAcceptInputType_open: unknown;
+    static ngAcceptInputType_defaultOpen: unknown;
+}
+
+declare class ISnackbarRef {
+    readonly id: string;
+    private readonly closed;
+    private readonly close;
+    private finished;
+    constructor(id: string, close: () => void);
+    dismiss(): void;
+    afterDismissed(): Observable<ISnackbarDismissReason>;
+    complete(reason: ISnackbarDismissReason): void;
+}
+declare class ISnackbarService {
+    private readonly doc;
+    private readonly app;
+    private readonly injector;
+    private readonly platform;
+    private readonly settings;
+    private readonly instances;
+    constructor();
+    configure(defaults: ISnackbarDefaults): void;
+    show(message: string, options?: ISnackbarOptions): ISnackbarRef;
+    update(id: string, changes: ISnackbarChanges): void;
+    dismiss(id: string): void;
+    dismissAll(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISnackbarService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<ISnackbarService>;
+}
+
+declare const I_SNACKBAR_DEFAULTS: InjectionToken<ISnackbarDefaults>;
+
 type RouterLinkInput = string | any[] | undefined;
 declare class ICard implements OnInit {
     href?: string | null;
@@ -344,6 +465,7 @@ type IInputAddonText = {
 } & IInputAddonType;
 type IInputAddonButton = {
     type: 'button';
+    disabled?: boolean;
     icon: string;
     onClick?: () => void;
     visible?: boolean;
@@ -532,6 +654,10 @@ declare class ISelectOptionDefDirective<T = any> {
     static ɵfac: i0.ɵɵFactoryDeclaration<ISelectOptionDefDirective<any>, never>;
     static ɵdir: i0.ɵɵDirectiveDeclaration<ISelectOptionDefDirective<any>, "[iSelectOption]", never, { "iSelectOption": { "alias": "iSelectOption"; "required": false; }; }, {}, never, never, true, never>;
 }
+type ISelectEmptyState = string | {
+    empty?: string;
+    notFound?: string;
+};
 type ISelectChange<T = any> = {
     value: T | null;
     label: string;
@@ -539,6 +665,7 @@ type ISelectChange<T = any> = {
 type ISelectPanelPosition = 'top' | 'bottom' | 'left' | 'right' | 'top left' | 'top right' | 'bottom left' | 'bottom right';
 declare class ISelect<T = any> implements ControlValueAccessor, OnInit, OnChanges, AfterContentInit, AfterViewChecked, OnDestroy {
     placeholder: string;
+    emptyState: ISelectEmptyState;
     disabled: boolean;
     loading: boolean;
     invalid: boolean;
@@ -587,6 +714,9 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, OnChange
     private panelPortaled;
     private panelOriginalParent;
     private panelOriginalNextSibling;
+    private lastPanel;
+    private lastPanelOptions;
+    private lastPanelMessage;
     private repositionRaf;
     private listeningGlobal;
     ngOnInit(): void;
@@ -619,7 +749,9 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, OnChange
     onHostInput(event: Event): void;
     onDocumentClick(event: MouseEvent): void;
     get appendAddon(): IInputAddonButton | IInputAddonLoading;
+    get emptyStateText(): string;
     get hasOptionsList(): boolean;
+    get hasPanel(): boolean;
     setActiveIndex(idx: number): void;
     private getPanelElement;
     private getAnchorRect;
@@ -632,13 +764,14 @@ declare class ISelect<T = any> implements ControlValueAccessor, OnInit, OnChange
     private ensureGlobalListeners;
     private removeGlobalListeners;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISelect<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISelect<any>, "i-select", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISelect<any>, "i-select", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "emptyState": { "alias": "emptyState"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
 }
 declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     innerSelect: ISelect<T>;
     label: string;
     disabled: boolean;
     placeholder: string;
+    emptyState: ISelectEmptyState;
     options: T[] | null;
     options$: Observable<T[]> | null;
     loading: boolean;
@@ -674,7 +807,7 @@ declare class IFCSelect<T = any> implements ControlValueAccessor, OnDestroy {
     get required(): boolean;
     get resolvedErrorText(): string | null;
     static ɵfac: i0.ɵɵFactoryDeclaration<IFCSelect<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelect<any>, "i-fc-select", never, { "label": { "alias": "label"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, never, ["*"], true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelect<any>, "i-fc-select", never, { "label": { "alias": "label"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "emptyState": { "alias": "emptyState"; "required": false; }; "options": { "alias": "options"; "required": false; }; "options$": { "alias": "options$"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, never, ["*"], true, never>;
 }
 
 type IDatepickerDay = {
@@ -1285,6 +1418,7 @@ type IGridColumnLike<T = any> = {
     sortable: boolean;
     resizable: boolean;
     width?: IGridColumnWidth;
+    minWidth?: number;
     freeze: boolean;
     headerDef?: TemplateRef<any>;
     cellDef?: TemplateRef<any>;
@@ -1428,12 +1562,13 @@ declare class IGridColumn<T = any> implements IGridColumnLike<T> {
     sortable: boolean;
     resizable: boolean;
     width?: IGridColumnWidth;
+    minWidth?: number;
     freeze: boolean;
     headerDef?: TemplateRef<any>;
     cellDef?: TemplateRef<any>;
     isAuto?: boolean | undefined;
     static ɵfac: i0.ɵɵFactoryDeclaration<IGridColumn<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IGridColumn<any>, "i-grid-column", never, { "fieldName": { "alias": "fieldName"; "required": true; }; "title": { "alias": "title"; "required": false; }; "sortable": { "alias": "sortable"; "required": false; }; "resizable": { "alias": "resizable"; "required": false; }; "width": { "alias": "width"; "required": false; }; "freeze": { "alias": "freeze"; "required": false; }; }, {}, ["headerDef", "cellDef"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IGridColumn<any>, "i-grid-column", never, { "fieldName": { "alias": "fieldName"; "required": true; }; "title": { "alias": "title"; "required": false; }; "sortable": { "alias": "sortable"; "required": false; }; "resizable": { "alias": "resizable"; "required": false; }; "width": { "alias": "width"; "required": false; }; "minWidth": { "alias": "minWidth"; "required": false; }; "freeze": { "alias": "freeze"; "required": false; }; }, {}, ["headerDef", "cellDef"], never, true, never>;
     static ngAcceptInputType_freeze: unknown;
 }
 declare class IGridCustomColumn<T = any> implements IGridColumnLike<T> {
@@ -1441,13 +1576,14 @@ declare class IGridCustomColumn<T = any> implements IGridColumnLike<T> {
     sortable: boolean;
     resizable: boolean;
     width?: IGridColumnWidth;
+    minWidth?: number;
     freeze: boolean;
     fieldName?: string;
     headerDef?: TemplateRef<any>;
     cellDef?: TemplateRef<any>;
     isAuto?: boolean | undefined;
     static ɵfac: i0.ɵɵFactoryDeclaration<IGridCustomColumn<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IGridCustomColumn<any>, "i-grid-custom-column", never, { "title": { "alias": "title"; "required": false; }; "sortable": { "alias": "sortable"; "required": false; }; "resizable": { "alias": "resizable"; "required": false; }; "width": { "alias": "width"; "required": false; }; "freeze": { "alias": "freeze"; "required": false; }; }, {}, ["headerDef", "cellDef"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IGridCustomColumn<any>, "i-grid-custom-column", never, { "title": { "alias": "title"; "required": false; }; "sortable": { "alias": "sortable"; "required": false; }; "resizable": { "alias": "resizable"; "required": false; }; "width": { "alias": "width"; "required": false; }; "minWidth": { "alias": "minWidth"; "required": false; }; "freeze": { "alias": "freeze"; "required": false; }; }, {}, ["headerDef", "cellDef"], never, true, never>;
     static ngAcceptInputType_freeze: unknown;
 }
 declare class IGridColumnGroup<T = any> {
@@ -1464,6 +1600,7 @@ declare class IGridCell {
     private readonly hostCustomColumn;
     private readonly grid;
     private get _column();
+    get minWidth(): number | null;
     get flex(): string;
     private get _isFrozen();
     get frozenClass(): boolean;
@@ -1479,7 +1616,6 @@ declare class IGridHeaderCell {
     private _isResizing;
     private _startX;
     private _startWidth;
-    private readonly _minWidth;
     private readonly el;
     private readonly grid;
     private readonly hostDataColumn;
@@ -1489,6 +1625,7 @@ declare class IGridHeaderCell {
     private get _direction();
     private get _sortableFlag();
     get resizable(): boolean;
+    get minWidth(): number | null;
     get flex(): string;
     get sortable(): boolean;
     get isSorted(): boolean;
@@ -1685,6 +1822,7 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     getColumnDirection(columnId: string): ISortDirection;
     sort(column: IGridColumnLike<any>): void;
     private _applySortToDataSource;
+    getColumnMinWidth(column: IGridColumnLike<any>): number | null;
     getColumnWidth(column: IGridColumnLike<any>): number | null;
     getColumnFlex(column: IGridColumnLike<any>): string;
     setColumnWidth(column: IGridColumnLike<any>, width: number): void;
@@ -1768,11 +1906,13 @@ type INotificationEntry = {
 };
 type INotificationSnackbarMessage = {
     key: number;
+    newCount?: number;
     title: string;
     moduleName?: string;
     item?: INotificationEntry;
 };
-/** Controlled presentation state. All side effects belong to the consumer. */
+type INotificationSnackbarOptions = Pick<ISnackbarOptions, 'id' | 'position' | 'durationMs' | 'prefixIcon' | 'suffixIcon' | 'closable' | 'closeLabel' | 'dismissOnEscape' | 'pauseOnHover' | 'pauseOnFocus' | 'pauseOnHidden' | 'maxWidth'>;
+/** Controlled presentation state. Data and navigation belong to the consumer. */
 type INotificationState = {
     unreadCount: number;
     open?: boolean;
@@ -1786,6 +1926,7 @@ type INotificationState = {
     loadMoreError?: string | null;
     actionError?: string | null;
     snackbar?: INotificationSnackbarMessage | null;
+    snackbarOptions?: INotificationSnackbarOptions;
 };
 type INotificationAction = {
     type: 'toggle';
@@ -1793,6 +1934,8 @@ type INotificationAction = {
     type: 'close';
 } | {
     type: 'open-all';
+} | {
+    type: 'open-drawer';
 } | {
     type: 'open-item';
     item: INotificationEntry;
@@ -1806,7 +1949,7 @@ type INotificationAction = {
     type: 'dismiss-snackbar';
 };
 
-/** Controlled notification UI; consumers own data, navigation and timers. */
+/** Controlled notification UI; consumers own data and navigation. */
 declare class INotification {
     readonly state: i0.InputSignal<INotificationState | null | undefined>;
     readonly onAction: i0.OutputEmitterRef<INotificationAction>;
@@ -1861,10 +2004,11 @@ declare class INotificationItem {
 
 declare class INotificationSnackbar {
     readonly message: i0.InputSignal<INotificationSnackbarMessage>;
+    readonly options: i0.InputSignal<_insight_ui.INotificationSnackbarOptions | undefined>;
     readonly dismissRequested: i0.OutputEmitterRef<void>;
     readonly openRequested: i0.OutputEmitterRef<void>;
     static ɵfac: i0.ɵɵFactoryDeclaration<INotificationSnackbar, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<INotificationSnackbar, "i-notification-snackbar", never, { "message": { "alias": "message"; "required": true; "isSignal": true; }; }, { "dismissRequested": "dismissRequested"; "openRequested": "openRequested"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<INotificationSnackbar, "i-notification-snackbar", never, { "message": { "alias": "message"; "required": true; "isSignal": true; }; "options": { "alias": "options"; "required": false; "isSignal": true; }; }, { "dismissRequested": "dismissRequested"; "openRequested": "openRequested"; }, never, never, true, never>;
 }
 
 type IRoute = Omit<Route, 'data' | 'children'> & {
@@ -2194,7 +2338,7 @@ declare class IHMenu implements OnChanges {
     static ɵcmp: i0.ɵɵComponentDeclaration<IHMenu, "ih-menu", never, { "menu": { "alias": "menu"; "required": false; }; "selectedMenuId": { "alias": "selectedMenuId"; "required": false; }; "filter": { "alias": "filter"; "required": false; }; "favoriteMode": { "alias": "favoriteMode"; "required": false; }; "collapsible": { "alias": "collapsible"; "required": false; }; "depth": { "alias": "depth"; "required": false; }; "dragEnabled": { "alias": "dragEnabled"; "required": false; }; "showApplication": { "alias": "showApplication"; "required": false; }; "pathByKey": { "alias": "pathByKey"; "required": false; }; }, { "clicked": "clicked"; "favoriteToggle": "favoriteToggle"; "expandedChange": "expandedChange"; }, never, never, true, never>;
 }
 
-declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
+declare class IHSidebar implements OnInit, OnChanges, AfterViewChecked, OnDestroy {
     private router;
     private hostElement;
     private readonly zone;
@@ -2205,8 +2349,16 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private activeMenu;
     private readonly menuRevision$;
     private readonly menuStateRevision;
+    private readonly searchState;
+    private readonly appliedFilter$;
+    private readonly searchRevision$;
+    private searchSubscription?;
+    private filterTimer;
+    private syncFilterAfterNavigation;
+    private menuLocationPath?;
     private navigationSubscription?;
     private menuScrollFrame;
+    private menuScrollPending;
     private destroyed;
     private resizeHandle;
     private resizeController?;
@@ -2292,6 +2444,7 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
     private refreshMenuState;
     private restoreActiveMenu;
     private scheduleMenuScroll;
+    ngAfterViewChecked(): void;
     private dragState;
     /** Document mousemove during an active favorites drag (live reorder preview). */
     private onDocumentMouseMove;
@@ -2314,10 +2467,10 @@ declare class IHSidebar implements OnInit, OnChanges, OnDestroy {
      */
     private normalizeMenusStream;
     private buildMenusStream;
-    private filterMenuTree;
-    private filterMenuBranch;
+    private cancelFilter;
+    private applyFilter;
+    private resetSearchSelection;
     private updateNavigableMenus;
-    private flattenNavigableMenus;
     onSearchKeyDown(event: KeyboardEvent): void;
     private ensureKeyboardNavActive;
     private moveSelection;
@@ -2417,13 +2570,15 @@ type ILoadErrorDensity = 'default' | 'compact' | 'inline';
 declare class ILoadError {
     message: string | null | undefined;
     title: string;
+    contentClass: string;
+    contentStyle: Record<string, string | number | null>;
     density: ILoadErrorDensity;
     retryDisabled: boolean;
     retryLoading: boolean;
     readonly onRetry: EventEmitter<void>;
     retry(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<ILoadError, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ILoadError, "i-load-error", never, { "message": { "alias": "message"; "required": false; }; "title": { "alias": "title"; "required": false; }; "density": { "alias": "density"; "required": false; }; "retryDisabled": { "alias": "retryDisabled"; "required": false; }; "retryLoading": { "alias": "retryLoading"; "required": false; }; }, { "onRetry": "onRetry"; }, never, never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ILoadError, "i-load-error", never, { "message": { "alias": "message"; "required": false; }; "title": { "alias": "title"; "required": false; }; "contentClass": { "alias": "contentClass"; "required": false; }; "contentStyle": { "alias": "contentStyle"; "required": false; }; "density": { "alias": "density"; "required": false; }; "retryDisabled": { "alias": "retryDisabled"; "required": false; }; "retryLoading": { "alias": "retryLoading"; "required": false; }; }, { "onRetry": "onRetry"; }, never, never, true, never>;
 }
 
 type ILoadingMode = 'inline' | 'container' | 'fullpage';
@@ -2756,6 +2911,7 @@ declare class ISelectCompany implements ControlValueAccessor {
     private innerSelect?;
     protected optionDef?: ISelectOptionDefDirective<IMenuCompanyDto>;
     placeholder: string;
+    emptyState: ISelectEmptyState;
     disabled: boolean;
     set loading(value: boolean);
     get loading(): boolean;
@@ -2777,6 +2933,7 @@ declare class ISelectCompany implements ControlValueAccessor {
     readonly onOptionSelected: EventEmitter<ISelectChange<IMenuCompanyDto>>;
     protected readonly hosted: i0.Signal<boolean>;
     private readonly effectiveMenuCode;
+    private readonly menuActive;
     protected readonly companyLoading: i0.Signal<boolean>;
     constructor();
     protected readonly companyOptions: i0.Signal<IMenuCompanyDto[]>;
@@ -2791,7 +2948,7 @@ declare class ISelectCompany implements ControlValueAccessor {
     focus(): void;
     protected handleSelectChange(change: ISelectChange<IMenuCompanyDto>): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<ISelectCompany, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISelectCompany, "i-select-company", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "stateScope": { "alias": "stateScope"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "menuCode": { "alias": "menuCode"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISelectCompany, "i-select-company", never, { "placeholder": { "alias": "placeholder"; "required": false; }; "emptyState": { "alias": "emptyState"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "stateScope": { "alias": "stateScope"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "menuCode": { "alias": "menuCode"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
 }
 
 declare class IFCSelectCompany implements ControlValueAccessor, OnDestroy {
@@ -2799,6 +2956,7 @@ declare class IFCSelectCompany implements ControlValueAccessor, OnDestroy {
     protected optionDef?: ISelectOptionDefDirective<IMenuCompanyDto>;
     label: string;
     placeholder: string;
+    emptyState: ISelectEmptyState;
     menuCode?: string | null;
     disabled: boolean;
     loading: boolean;
@@ -2837,7 +2995,7 @@ declare class IFCSelectCompany implements ControlValueAccessor, OnDestroy {
     protected get required(): boolean;
     protected get resolvedErrorText(): string | null;
     static ɵfac: i0.ɵɵFactoryDeclaration<IFCSelectCompany, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelectCompany, "i-fc-select-company", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "menuCode": { "alias": "menuCode"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "stateScope": { "alias": "stateScope"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelectCompany, "i-fc-select-company", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "emptyState": { "alias": "emptyState"; "required": false; }; "menuCode": { "alias": "menuCode"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "stateScope": { "alias": "stateScope"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
 }
 
 /**
@@ -2944,7 +3102,7 @@ declare class IToggle implements ControlValueAccessor {
 
 declare class IUI {
     static ɵfac: i0.ɵɵFactoryDeclaration<IUI, never>;
-    static ɵmod: i0.ɵɵNgModuleDeclaration<IUI, never, [typeof IActionPlaceholder, typeof IAvatar, typeof IBanner, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IDialogModule, typeof IEmptyState, typeof IErrorPage, typeof IFCDatepicker, typeof IFCSelect, typeof IFCTextArea, typeof IGridModule, typeof IHContent, typeof IHighlightSearch, typeof IHSidebar, typeof IIcon, typeof IImageCropper, typeof IInputModule, typeof ILoadError, typeof ILoading, typeof ILoadingRegion, typeof IPill, typeof ISectionModule, typeof ISelect, typeof ITextArea, typeof IToggle], [typeof IActionPlaceholder, typeof IAvatar, typeof IBanner, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IDialogModule, typeof IEmptyState, typeof IErrorPage, typeof IFCDatepicker, typeof IFCSelect, typeof IFCTextArea, typeof IGridModule, typeof IHContent, typeof IHighlightSearch, typeof IHSidebar, typeof IIcon, typeof IImageCropper, typeof IInputModule, typeof ILoadError, typeof ILoading, typeof ILoadingRegion, typeof IPill, typeof ISectionModule, typeof ISelect, typeof ITextArea, typeof IToggle]>;
+    static ɵmod: i0.ɵɵNgModuleDeclaration<IUI, never, [typeof IActionPlaceholder, typeof IAvatar, typeof IBanner, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IDialogModule, typeof IEmptyState, typeof IErrorPage, typeof IFCDatepicker, typeof IFCSelect, typeof IFCTextArea, typeof IGridModule, typeof IHContent, typeof IHighlightSearch, typeof IHSidebar, typeof IIcon, typeof IImageCropper, typeof IInputModule, typeof ILoadError, typeof ILoading, typeof ILoadingRegion, typeof IPill, typeof ISectionModule, typeof ISelect, typeof ITextArea, typeof IToggle, typeof ISnackbar], [typeof IActionPlaceholder, typeof IAvatar, typeof IBanner, typeof IButton, typeof ICardModule, typeof ICodeViewerModule, typeof IDatepicker, typeof IDialogModule, typeof IEmptyState, typeof IErrorPage, typeof IFCDatepicker, typeof IFCSelect, typeof IFCTextArea, typeof IGridModule, typeof IHContent, typeof IHighlightSearch, typeof IHSidebar, typeof IIcon, typeof IImageCropper, typeof IInputModule, typeof ILoadError, typeof ILoading, typeof ILoadingRegion, typeof IPill, typeof ISectionModule, typeof ISelect, typeof ITextArea, typeof IToggle, typeof ISnackbar]>;
     static ɵinj: i0.ɵɵInjectorDeclaration<IUI>;
 }
 
@@ -3814,6 +3972,7 @@ declare class IUserMenuStore {
     private loadedUserSub;
     private loadedApplicationId;
     private generation;
+    private authorizationRequest;
     /** Sidebar-shaped current user (`IUser`) — `null` until loaded. */
     readonly currentUser: i0.WritableSignal<IUser | null>;
     /** Raw current-user DTO as returned by the backend — `null` until loaded. */
@@ -3824,6 +3983,8 @@ declare class IUserMenuStore {
     readonly favorites: i0.WritableSignal<IMenu[]>;
     /** Roles decoded from the access token (for `source: 'role'` permission checks). */
     readonly roles: i0.WritableSignal<string[]>;
+    /** True while the authorization branch is being refreshed. */
+    readonly authorizationsLoading: i0.WritableSignal<boolean>;
     /** Raw effective authorization entries returned by iam-user-api. */
     readonly authorizations: i0.WritableSignal<IEffectiveAuthorizationDto[]>;
     private readonly authorizationScope;
@@ -4507,5 +4668,5 @@ type IEnvironment = {
  */
 declare const environment: IEnvironment;
 
-export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IActionPlaceholder, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IBanner, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IEmptyState, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridEmptyDef, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSelection, IHSidebar, IHState, IHStateOwner, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IH_STATE, IHasMnDirective, IHasMnRoute, IHighlightSearch, IHighlightSearchPipe, IIcon, IImageCropper, IImpersonationStateService, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoadError, ILoading, ILoadingRegion, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_EMPTY_STATE_PRESETS, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, highlightSearchParts, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
-export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBannerVariant, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEmptyStateConfig, IEmptyStateDensity, IEmptyStateKind, IEndImpersonationResult, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IHProjectValidation, IHSelectionApi, IHSelectionSnapshot, IHSelectionStatus, IHStateAdapter, IHStateApi, IHStateError, IHStateNamespaceOptions, IHStateStorage, IHighlightSearchPart, IIconName, IIconSize, IImageCropRect, IImageCropperExportOptions, IImageCropperResult, IImpersonationActor, IImpersonationStatus, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoadErrorDensity, ILoadingMode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, INotificationAction, INotificationEntry, INotificationSnackbarMessage, INotificationState, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISortConfig, ISortDirection, ISortState, ISurfaceLayout, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse };
+export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IActionPlaceholder, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IBanner, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IEmptyState, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridEmptyDef, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSelection, IHSidebar, IHState, IHStateOwner, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IH_STATE, IHasMnDirective, IHasMnRoute, IHighlightSearch, IHighlightSearchPipe, IIcon, IImageCropper, IImpersonationStateService, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoadError, ILoading, ILoadingRegion, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, ISnackbar, ISnackbarRef, ISnackbarService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_EMPTY_STATE_PRESETS, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, I_SNACKBAR_DEFAULTS, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, highlightSearchParts, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
+export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBannerVariant, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEmptyStateConfig, IEmptyStateDensity, IEmptyStateKind, IEndImpersonationResult, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IHProjectValidation, IHSelectionApi, IHSelectionSnapshot, IHSelectionStatus, IHStateAdapter, IHStateApi, IHStateError, IHStateNamespaceOptions, IHStateStorage, IHighlightSearchPart, IIconName, IIconSize, IImageCropRect, IImageCropperExportOptions, IImageCropperResult, IImpersonationActor, IImpersonationStatus, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoadErrorDensity, ILoadingMode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, INotificationAction, INotificationEntry, INotificationSnackbarMessage, INotificationSnackbarOptions, INotificationState, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectEmptyState, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISnackbarChanges, ISnackbarDefaults, ISnackbarDismissReason, ISnackbarOptions, ISnackbarPosition, ISortConfig, ISortDirection, ISortState, ISurfaceLayout, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse, SnackbarRuntimeOptions };
