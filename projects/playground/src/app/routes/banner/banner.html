@@ -16,4 +16,27 @@
   <i-banner closable message="Controlled visibility" [(open)]="open" />
   <i-button (onClick)="open = true">Open Controlled Banner</i-button>
   <i-banner message="Text-only message" /><i-banner />
+  <h2>Snackbar</h2>
+  <p>
+    Messages stack vertically. Hover or focus pauses the timer. Matching IDs update one message.
+  </p>
+  <div class="flex flex-wrap gap-sm">
+    @for (position of positions; track position) {
+      <i-button (onClick)="showSnackbar(position)">{{ position }}</i-button>
+    }
+  </div>
+  <div class="flex flex-wrap gap-sm">
+    @for (variant of variants; track variant) {
+      <i-button (onClick)="showSnackbar('bottom-right', variant)">{{ variant }}</i-button>
+    }
+  </div>
+  <div class="flex flex-wrap gap-sm">
+    <i-button (onClick)="snackbar.configure({})">Unlimited Stack</i-button>
+    <i-button (onClick)="snackbar.configure({ maxVisible: 2 })">Limit to Two per Position</i-button>
+    <i-button (onClick)="showPersistentSnackbar()">Show Persistent Message</i-button>
+    <i-button (onClick)="updateSnackbar()">Update by ID</i-button>
+    <i-button (onClick)="snackbar.dismiss('snackbar-demo-fixed')">Dismiss by ID</i-button>
+    <i-button (onClick)="snackOpen = true">Open Controlled Snackbar</i-button>
+  </div>
+  <i-snackbar message="Controlled snackbar" position="bottom-left" [(open)]="snackOpen" />
 </div>

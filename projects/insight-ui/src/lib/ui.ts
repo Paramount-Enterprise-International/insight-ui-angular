@@ -23,6 +23,7 @@ import { ISectionModule } from './section';
 import { IFCSelect, ISelect } from './select';
 import { IFCTextArea, ITextArea } from './textarea';
 import { IToggle } from './toggle';
+import { ISnackbar } from './snackbar';
 
 @NgModule({
   imports: [
@@ -54,6 +55,7 @@ import { IToggle } from './toggle';
     ISelect,
     ITextArea,
     IToggle,
+    ISnackbar,
   ],
   exports: [
     IActionPlaceholder,
@@ -84,6 +86,7 @@ import { IToggle } from './toggle';
     ISelect,
     ITextArea,
     IToggle,
+    ISnackbar,
   ],
 })
 export class IUI {}

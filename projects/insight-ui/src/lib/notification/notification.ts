@@ -5,7 +5,7 @@ import { INotificationDrawer } from './notification-drawer';
 import { INotificationSnackbar } from './notification-snackbar';
 import type { INotificationAction, INotificationState } from './notification.types';
 
-/** Controlled notification UI; consumers own data, navigation and timers. */
+/** Controlled notification UI; consumers own data and navigation. */
 @Component({
   selector: 'i-notification',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,8 +20,9 @@ import type { INotificationAction, INotificationState } from './notification.typ
       @if (value.snackbar; as message) {
         <i-notification-snackbar
           [message]="message"
+          [options]="value.snackbarOptions"
           (dismissRequested)="onAction.emit({ type: 'dismiss-snackbar' })"
-          (openRequested)="message.item && onAction.emit({ type: 'open-item', item: message.item })"
+          (openRequested)="onAction.emit({ type: 'open-drawer' })"
         />
       }
     }

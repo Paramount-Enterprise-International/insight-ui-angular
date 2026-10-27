@@ -1,45 +1,51 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-
-import { IButton } from '../button';
-import { IIcon } from '../icon';
-
-import type { INotificationSnackbarMessage } from './notification.types';
+import { ISnackbar } from '../snackbar';
+import type { INotificationSnackbarMessage, INotificationState } from './notification.types';
 
 @Component({
   selector: 'i-notification-snackbar',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IButton, IIcon],
+  imports: [ISnackbar],
   template: `
-    <div
-      aria-live="polite"
-      class="notification-snackbar flex align-center gap-md p-lg radius-md"
-      role="status"
+    <i-snackbar
+      variant="info"
+      [closable]="options()?.closable ?? true"
+      [closeLabel]="options()?.closeLabel ?? 'Dismiss notification'"
+      [dismissOnEscape]="options()?.dismissOnEscape ?? true"
+      [durationMs]="options()?.durationMs ?? 5000"
+      [id]="options()?.id ?? 'notification-summary'"
+      [maxWidth]="options()?.maxWidth ?? '400px'"
+      [pauseOnFocus]="options()?.pauseOnFocus ?? true"
+      [pauseOnHidden]="options()?.pauseOnHidden ?? true"
+      [pauseOnHover]="options()?.pauseOnHover ?? true"
+      [position]="options()?.position ?? 'bottom-right'"
+      [prefixIcon]="options()?.prefixIcon ?? message().item?.icon ?? 'fa-solid fa-bell'"
+      [resetKey]="message().key"
+      [suffixIcon]="options()?.suffixIcon ?? ''"
+      (afterDismissed)="dismissRequested.emit()"
     >
-      <i-icon aria-hidden="true" [icon]="message().item?.icon ?? 'fa-solid fa-bell'" />
-      @if (message().item) {
-        <button
-          class="snackbar-content text-left border-none bg-transparent p-0 min-w-0 flex-fill"
-          type="button"
-          (click)="openRequested.emit()"
-        >
-          <span class="block font-semibold">{{ message().moduleName }}</span>
-          <span>{{ message().title }}</span>
-        </button>
-      } @else {
-        <span class="flex-fill">{{ message().title }}</span>
-      }
-      <i-button
-        ariaLabel="Dismiss notification"
-        icon="fa-solid fa-xmark"
-        size="xs"
+      <button
+        class="i-snackbar__content-action snackbar-content"
         type="button"
-        (onClick)="dismissRequested.emit()"
-      />
-    </div>
+        (click)="openRequested.emit()"
+      >
+        @if (message().moduleName) {
+          <span class="block font-semibold">{{ message().moduleName }}</span>
+        }
+        <span>{{ message().title }}</span>
+        @if ((message().newCount ?? 0) > 1) {
+          <span class="block"
+            >and {{ message().newCount! - 1 }} other new
+            {{ message().newCount === 2 ? 'notification' : 'notifications' }}</span
+          >
+        }
+      </button>
+    </i-snackbar>
   `,
 })
 export class INotificationSnackbar {
   readonly message = input.required<INotificationSnackbarMessage>();
+  readonly options = input<INotificationState['snackbarOptions']>();
   readonly dismissRequested = output<void>();
   readonly openRequested = output<void>();
 }

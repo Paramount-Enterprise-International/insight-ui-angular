@@ -1,3 +1,4 @@
+import { NgStyle } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { IButton } from '../button';
 import { IIcon } from '../icon';
@@ -6,14 +7,14 @@ export type ILoadErrorDensity = 'default' | 'compact' | 'inline';
   selector: 'i-load-error',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IButton, IIcon],
+  imports: [IButton, IIcon, NgStyle],
   host: {
     class: 'i-load-error',
     '[attr.density]': 'density',
     '[style.display]': 'message?.trim() ? null : "none"',
   },
   template: `@if (message?.trim()) {
-    <div class="i-load-error__content" role="alert">
+    <div class="i-load-error__content" [class]="contentClass" [ngStyle]="contentStyle" role="alert">
       <i-icon
         aria-hidden="true"
         icon="fa-solid fa-circle-exclamation"
@@ -39,6 +40,8 @@ export type ILoadErrorDensity = 'default' | 'compact' | 'inline';
 export class ILoadError {
   @Input() message: string | null | undefined = null;
   @Input() title = '';
+  @Input() contentClass = '';
+  @Input() contentStyle: Record<string, string | number | null> = {};
   @Input() density: ILoadErrorDensity = 'default';
   @Input() retryDisabled = false;
   @Input() retryLoading = false;

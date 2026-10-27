@@ -202,6 +202,7 @@ export type IGridColumnLike<T = any> = {
   sortable: boolean;
   resizable: boolean;
   width?: IGridColumnWidth;
+  minWidth?: number;
   freeze: boolean;
   headerDef?: TemplateRef<any>;
   cellDef?: TemplateRef<any>;
@@ -786,6 +787,7 @@ export class IGridColumn<T = any> implements IGridColumnLike<T> {
   @Input() sortable = true;
   @Input() resizable = true;
   @Input() width?: IGridColumnWidth;
+  @Input() minWidth?: number;
   @Input({ transform: booleanAttribute }) freeze = false;
 
   @ContentChild(IGridHeaderCellDefDirective, { read: TemplateRef })
@@ -811,6 +813,7 @@ export class IGridCustomColumn<T = any> implements IGridColumnLike<T> {
   @Input() sortable = false;
   @Input() resizable = true;
   @Input() width?: IGridColumnWidth;
+  @Input() minWidth?: number;
   @Input({ transform: booleanAttribute }) freeze = false;
 
   fieldName?: string;
@@ -872,6 +875,15 @@ export class IGridCell {
 
   private get _column(): IGridColumnLike<any> | null {
     return this.column ?? this.hostDataColumn ?? this.hostCustomColumn ?? null;
+  }
+
+  @HostBinding('style.min-width.px')
+  get minWidth(): number | null {
+    if (typeof this.fixedWidth === 'number') {
+      return this.fixedWidth;
+    }
+    const col = this._column;
+    return this.grid && col ? this.grid.getColumnMinWidth(col) : null;
   }
 
   @HostBinding('style.flex')
@@ -949,7 +961,6 @@ export class IGridHeaderCell {
   private _isResizing = false;
   private _startX = 0;
   private _startWidth = 0;
-  private readonly _minWidth = 50;
 
   private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly grid = inject(forwardRef(() => IGrid) as any, {
@@ -991,6 +1002,15 @@ export class IGridHeaderCell {
       return false;
     }
     return col.resizable !== false;
+  }
+
+  @HostBinding('style.min-width.px')
+  get minWidth(): number | null {
+    if (typeof this.fixedWidth === 'number') {
+      return this.fixedWidth;
+    }
+    const col = this._column;
+    return this.grid && col ? this.grid.getColumnMinWidth(col) : null;
   }
 
   @HostBinding('style.flex')
@@ -1108,13 +1128,7 @@ export class IGridHeaderCell {
     }
 
     const delta = event.clientX - this._startX;
-    let newWidth = this._startWidth + delta;
-
-    if (newWidth < this._minWidth) {
-      newWidth = this._minWidth;
-    }
-
-    this.grid.setColumnWidth(col, newWidth);
+    this.grid.setColumnWidth(col, this._startWidth + delta);
   }
 
   @HostListener('document:mouseup')
@@ -2521,20 +2535,25 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   /* ------- column width / flex API ------- */
 
+  getColumnMinWidth(column: IGridColumnLike<any>): number | null {
+    return column.minWidth ?? (column.width === 'fill' ? 150 : null);
+  }
+
   getColumnWidth(column: IGridColumnLike<any>): number | null {
+    const minWidth = this.getColumnMinWidth(column) ?? 0;
     const override = this._columnWidths.get(column);
     if (typeof override === 'number') {
-      return override;
+      return Math.max(override, minWidth);
     }
 
     if (typeof column.width === 'number') {
-      return column.width;
+      return Math.max(column.width, minWidth);
     }
     if (column.width === 'fill') {
       return null;
     }
 
-    return this._defaultColumnWidth;
+    return Math.max(this._defaultColumnWidth, minWidth);
   }
 
   getColumnFlex(column: IGridColumnLike<any>): string {
@@ -2549,7 +2568,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     if (!column) {
       return;
     }
-    this._columnWidths.set(column, width);
+    this._columnWidths.set(column, Math.max(width, this.getColumnMinWidth(column) ?? 0));
   }
 
   /* ------- frozen column helpers ------- */

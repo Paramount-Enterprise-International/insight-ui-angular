@@ -43,7 +43,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '24.22.1'
 
       # 4) Install deps
       - name: Install dependencies
@@ -81,7 +81,7 @@ jobs:
       - name: Build Angular library
         shell: bash
         run: |
-          npx --yes @angular/cli@20 build "$LIB_NAME" --configuration=production
+          npx --yes @angular/cli@20.3.41 build "$LIB_NAME" --configuration=production
 
       # 6.5) Inspect the generated dist package metadata (helps debug NF bundler issues)
       - name: Inspect built package metadata

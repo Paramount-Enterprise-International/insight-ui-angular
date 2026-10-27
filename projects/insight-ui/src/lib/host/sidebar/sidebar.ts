@@ -1,5 +1,6 @@
 import { APP_BASE_HREF, AsyncPipe, NgClass } from '@angular/common';
 import {
+  AfterViewChecked,
   Component,
   computed,
   ElementRef,
@@ -17,15 +18,15 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { NavigationEnd, Router } from '@angular/router';
+import { NavigationEnd, NavigationStart, Router } from '@angular/router';
 import {
   BehaviorSubject,
   combineLatest,
+  distinctUntilChanged,
   map,
   Observable,
   of,
   shareReplay,
-  startWith,
   Subscription,
   tap,
 } from 'rxjs';
@@ -43,19 +44,14 @@ import {
 import { IHMenu } from '../menu/menu';
 import {
   buildFavoritePathMap,
-  getMenuChildren,
   getMenuKey,
-  getMenuLabel,
   getMenuRoute,
   isNewTabMenu,
   isReloadMenu,
   isSpaMenu,
   normalizeMenuTree,
 } from '../menu/menu.utils';
-import {
-  SidebarResizeController,
-  type SidebarResizeOptions,
-} from './sidebar-resize';
+import { SidebarResizeController, type SidebarResizeOptions } from './sidebar-resize';
 import {
   createFavoritesMenu,
   getSidebarMenuKey,
@@ -63,6 +59,7 @@ import {
   resolveSidebarActiveMenu,
   SidebarMenuState,
 } from './sidebar-menu-state';
+import { flattenNavigableMenus, SidebarSearchState } from './sidebar.utils';
 
 @Component({
   selector: 'ih-sidebar',
@@ -198,20 +195,28 @@ import {
     ></div>
   `,
 })
-export class IHSidebar implements OnInit, OnChanges, OnDestroy {
+export class IHSidebar implements OnInit, OnChanges, AfterViewChecked, OnDestroy {
   private router = inject(Router);
   private hostElement = inject(ElementRef);
   private readonly zone = inject(NgZone);
   private readonly sessionService = inject(ISessionService);
   private readonly config = inject(I_AUTH_CONFIG);
-  private readonly baseHref = inject(APP_BASE_HREF, { optional: true }) ??
-    new URL(document.baseURI).pathname;
+  private readonly baseHref =
+    inject(APP_BASE_HREF, { optional: true }) ?? new URL(document.baseURI).pathname;
   private readonly menuState = new SidebarMenuState(null);
   private activeMenu: IMenu | undefined;
   private readonly menuRevision$ = new BehaviorSubject(0);
   private readonly menuStateRevision = signal(0);
+  private readonly searchState = new SidebarSearchState();
+  private readonly appliedFilter$ = new BehaviorSubject('');
+  private readonly searchRevision$ = new BehaviorSubject(0);
+  private searchSubscription?: Subscription;
+  private filterTimer: ReturnType<typeof setTimeout> | null = null;
+  private syncFilterAfterNavigation = false;
+  private menuLocationPath?: string;
   private navigationSubscription?: Subscription;
   private menuScrollFrame: number | null = null;
+  private menuScrollPending = false;
   private destroyed = false;
   @ViewChild('resizeHandle', { static: true })
   private resizeHandle!: ElementRef<HTMLElement>;
@@ -375,13 +380,14 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
 
   ngOnInit(): void {
     this.menuState.configureStorage(this.menuStateStorageKey);
-    this.resizeController = this.zone.runOutsideAngular(() =>
-      new SidebarResizeController(
-        this.hostElement.nativeElement as HTMLElement,
-        this.resizeHandle.nativeElement,
-        this.resizeOptions(),
-        (width) => this.zone.run(() => this.onWidthChange.emit(width)),
-      ),
+    this.resizeController = this.zone.runOutsideAngular(
+      () =>
+        new SidebarResizeController(
+          this.hostElement.nativeElement as HTMLElement,
+          this.resizeHandle.nativeElement,
+          this.resizeOptions(),
+          (width) => this.zone.run(() => this.onWidthChange.emit(width)),
+        ),
     );
     document.addEventListener('keydown', this.onDocumentKeydown);
     document.addEventListener('pointerdown', this.onDocumentPointerDown);
@@ -396,13 +402,19 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
     this.queryParams = initialQueryParams;
 
     if (this.router.navigated) {
-      this.queryParams = { ...this.queryParams, ...this.router.parseUrl(this.router.url).queryParams };
+      this.queryParams = {
+        ...this.queryParams,
+        ...this.router.parseUrl(this.router.url).queryParams,
+      };
+      this.menuLocationPath = this.router.url.split(/[?#]/)[0];
       this.menuState.observeLocation(this.router.url, this.baseHref);
     }
 
     const initialFilter = (this.queryParams['menu-filter'] as string) ?? '';
 
-    this.menuFilter.set(initialFilter);
+    this.searchState.setTerm(initialFilter);
+    this.menuFilter.set(initialFilter.trim());
+    this.appliedFilter$.next(initialFilter.trim());
     this.menuSearch.setValue(initialFilter, { emitEvent: false });
 
     this.originalMenus$ = this.normalizeMenusStream();
@@ -412,17 +424,38 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
     this.subscribeFullMenus();
     this.subscribeFavorites();
 
-    this.navigationSubscription = this.router.events.subscribe((event) => {
-      if (!(event instanceof NavigationEnd)) return;
-      if (!this.menuState.hasLocation) {
-        const params = this.router.parseUrl(event.urlAfterRedirects).queryParams;
-        this.queryParams = { ...this.queryParams, ...params };
-        if (params['menu-filter'] !== undefined && params['menu-filter'] !== this.menuSearch.value) {
-          this.menuSearch.setValue(params['menu-filter']);
-        }
+    this.searchSubscription = this.menuSearch.valueChanges.subscribe((value) => {
+      this.resetSearchSelection();
+      this.cancelFilter();
+      const term = (value ?? '').trim();
+      if (term !== this.menuFilter()) {
+        this.filterTimer = setTimeout(() => this.applyFilter(term), 200);
       }
+    });
+
+    this.navigationSubscription = this.router.events.subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        this.syncFilterAfterNavigation =
+          event.navigationTrigger === 'popstate' ||
+          event.url.split(/[?#]/)[0] !== this.router.url.split(/[?#]/)[0];
+        if (this.syncFilterAfterNavigation) this.cancelFilter();
+      }
+      if (!(event instanceof NavigationEnd)) return;
+      const params = this.router.parseUrl(event.urlAfterRedirects).queryParams;
+      this.queryParams = params;
+      const term = (params['menu-filter'] as string) ?? '';
+      if (this.syncFilterAfterNavigation || term.trim() !== this.menuFilter()) {
+        this.cancelFilter();
+        this.resetSearchSelection();
+        this.menuSearch.setValue(term, { emitEvent: false });
+        this.applyFilter(term, false);
+      }
+      this.syncFilterAfterNavigation = false;
+      const path = event.urlAfterRedirects.split(/[?#]/)[0];
+      const pathChanged = path !== this.menuLocationPath;
+      this.menuLocationPath = path;
       this.menuState.observeLocation(event.urlAfterRedirects, this.baseHref);
-      this.restoreActiveMenu();
+      if (pathChanged) this.restoreActiveMenu();
     });
   }
 
@@ -431,10 +464,16 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
       this.menuState.configureStorage(this.menuStateStorageKey);
       this.refreshMenuState();
     }
+    if (changes['collapsible'] && !changes['collapsible'].firstChange) {
+      this.searchRevision$.next(this.searchRevision$.value + 1);
+    }
     if (changes['visible'] || changes['favoriteMode']) this.restoreActiveMenu();
     if (
-      changes['visible'] || changes['resizable'] || changes['minWidth'] ||
-      changes['maxWidth'] || changes['widthStorageKey']
+      changes['visible'] ||
+      changes['resizable'] ||
+      changes['minWidth'] ||
+      changes['maxWidth'] ||
+      changes['widthStorageKey']
     ) {
       this.resizeController?.configure(this.resizeOptions());
     }
@@ -452,6 +491,10 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
+    this.cancelFilter();
+    this.searchSubscription?.unsubscribe();
+    this.appliedFilter$.complete();
+    this.searchRevision$.complete();
     this.navigationSubscription?.unsubscribe();
     if (this.menuScrollFrame !== null) cancelAnimationFrame(this.menuScrollFrame);
     this.menuRevision$.complete();
@@ -495,6 +538,10 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   }
 
   onMenuExpansion(event: MenuExpansionChange): void {
+    if (this.searchState.setExpanded(event)) {
+      this.searchRevision$.next(this.searchRevision$.value + 1);
+      return;
+    }
     this.menuState.setExpanded(event);
     this.refreshMenuState();
   }
@@ -518,7 +565,12 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   }
 
   private scheduleMenuScroll(): void {
-    if (this.destroyed) return;
+    if (!this.destroyed) this.menuScrollPending = true;
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.destroyed || !this.menuScrollPending) return;
+    this.menuScrollPending = false;
     if (this.menuScrollFrame !== null) cancelAnimationFrame(this.menuScrollFrame);
     this.menuScrollFrame = requestAnimationFrame(() => {
       this.menuScrollFrame = null;
@@ -675,27 +727,17 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   }
 
   private buildMenusStream(): void {
-    let firstEmission = true;
-
-    const filter$ = this.menuSearch.valueChanges.pipe(
-      startWith(this.menuSearch.value ?? ''),
-      map((v) => (v ?? '').trim()),
-      tap((term) => {
-        this.menuFilter.set(term);
-
-        if (firstEmission) {
-          firstEmission = false;
-          return;
-        }
-
-        this.updateUrl();
-      }),
+    const projectedMenus$ = combineLatest([this.originalMenus$, this.menuRevision$]).pipe(
+      map(([menus]) => this.menuState.project(menus, 'main', this.activeMenu)),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
 
-    this.menus$ = combineLatest([this.originalMenus$, filter$, this.menuRevision$]).pipe(
-      map(([menus, term]) =>
-        this.filterMenuTree(this.menuState.project(menus, 'main', this.activeMenu), term),
-      ),
+    this.menus$ = combineLatest([
+      projectedMenus$,
+      this.appliedFilter$.pipe(distinctUntilChanged()),
+      this.searchRevision$,
+    ]).pipe(
+      map(([menus]) => this.searchState.filter(menus)),
       tap((filteredMenus) => {
         this.updateNavigableMenus(filteredMenus);
         this.scheduleMenuScroll();
@@ -704,115 +746,40 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
     );
   }
 
-  private filterMenuTree(menus: IMenu[], rawTerm: string): IMenu[] {
-    const term = (rawTerm ?? '').trim().toLowerCase();
-
-    if (!term) return menus;
-
-    const filtered: IMenu[] = [];
-
-    for (const menu of menus) {
-      const result = this.filterMenuBranch(menu, term);
-
-      if (result) {
-        filtered.push(result);
-      }
-    }
-
-    return filtered;
+  private cancelFilter(): void {
+    if (this.filterTimer !== null) clearTimeout(this.filterTimer);
+    this.filterTimer = null;
   }
 
-  private filterMenuBranch(menu: IMenu, term: string, includeBranch = false): IMenu | null {
-    const name = getMenuLabel(menu).toLowerCase();
-    const selfMatches = includeBranch || name.includes(term);
-
-    const originalChildren = getMenuChildren(menu);
-
-    const filteredChildren: IMenu[] = [];
-
-    for (const child of originalChildren) {
-      const childResult = this.filterMenuBranch(child, term, selfMatches);
-
-      if (childResult) {
-        filteredChildren.push(childResult);
-      }
+  private applyFilter(value: string, syncUrl = true): void {
+    this.cancelFilter();
+    if (this.searchState.setTerm(value)) {
+      this.menuFilter.set(this.searchState.term);
+      this.appliedFilter$.next(this.searchState.term);
     }
+    if (syncUrl) this.updateUrl();
+  }
 
-    const childMatches = filteredChildren.length > 0;
-
-    if (!selfMatches && !childMatches) {
-      return null;
-    }
-
-    const cloned: IMenu = {
-      ...menu,
-      child: filteredChildren,
-    };
-
-    if (originalChildren.length && menu.visibility !== 'no-child') {
-      cloned.visibility = 'expanded';
-    }
-
-    return cloned;
+  private resetSearchSelection(): void {
+    this.keyboardNavActive.set(false);
+    this.selectedIndex.set(null);
+    this.selectedMenuId.set(null);
   }
 
   private updateNavigableMenus(filteredMenus: IMenu[]): void {
-    this.navigableMenus = this.flattenNavigableMenus(filteredMenus);
-
-    const hasFilter = !!this.menuFilter().trim();
-
-    if (!this.navigableMenus.length || !hasFilter) {
-      this.keyboardNavActive.set(false);
-      this.selectedIndex.set(null);
-      this.selectedMenuId.set(null);
-      return;
-    }
-
-    if (this.keyboardNavActive()) {
-      const maxIndex = this.navigableMenus.length - 1;
-      let idx = this.selectedIndex();
-
-      if (idx === null || idx < 0 || idx > maxIndex) {
-        idx = 0;
-      }
-
-      this.selectedIndex.set(idx);
-      this.selectedMenuId.set(getMenuKey(this.navigableMenus[idx]));
-    } else {
-      this.selectedIndex.set(null);
-      this.selectedMenuId.set(null);
-    }
-  }
-
-  private flattenNavigableMenus(menus: IMenu[]): IMenu[] {
-    const result: IMenu[] = [];
-
-    const visit = (menu: IMenu): void => {
-      const children = getMenuChildren(menu);
-      const hasChildren = children.length > 0;
-
-      const isLeafMenu =
-        menu.type !== 'group' &&
-        Number(menu.menuTypeId) === 3 &&
-        (!hasChildren || menu.visibility === 'no-child');
-
-      if (isLeafMenu) {
-        result.push(menu);
-      }
-
-      for (const child of children) {
-        visit(child);
-      }
-    };
-
-    for (const m of menus) {
-      visit(m);
-    }
-
-    return result;
+    this.navigableMenus = flattenNavigableMenus(filteredMenus, this.collapsible);
+    const selected = this.selectedMenuId();
+    const index =
+      selected === null
+        ? -1
+        : this.navigableMenus.findIndex((menu) => getMenuKey(menu) === selected);
+    if (!this.menuFilter() || index < 0) this.resetSearchSelection();
+    else this.selectedIndex.set(index);
   }
 
   onSearchKeyDown(event: KeyboardEvent): void {
+    if (!['ArrowDown', 'ArrowUp', 'Enter'].includes(event.key)) return;
+    this.applyFilter(this.menuSearch.value ?? '');
     if (!this.navigableMenus.length) return;
 
     const hasFilter = !!this.menuFilter().trim();
@@ -989,20 +956,19 @@ export class IHSidebar implements OnInit, OnChanges, OnDestroy {
   }
 
   updateUrl(): void {
-    const queryParams = { ...this.queryParams };
-    const currentFilter = this.menuFilter().trim();
-
-    if (currentFilter) {
-      queryParams['menu-filter'] = currentFilter;
-    } else {
-      delete queryParams['menu-filter'];
-    }
+    const current = this.router.parseUrl(this.router.url);
+    const term = this.menuFilter();
+    if (
+      (current.queryParams['menu-filter'] ?? '') === term &&
+      (term || !('menu-filter' in current.queryParams))
+    )
+      return;
 
     this.router.navigate([], {
-      queryParams,
+      queryParams: { ...current.queryParams, 'menu-filter': term || null },
       queryParamsHandling: 'replace',
+      preserveFragment: true,
+      replaceUrl: true,
     });
-
-    this.queryParams = queryParams;
   }
 }

@@ -2,6 +2,7 @@
 export * from './lib/action-placeholder';
 export * from './lib/avatar';
 export * from './lib/banner';
+export * from './lib/snackbar';
 export * from './lib/button';
 export * from './lib/card';
 export * from './lib/code-viewer';
