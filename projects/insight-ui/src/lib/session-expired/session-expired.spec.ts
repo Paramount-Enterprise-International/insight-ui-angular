@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import {
-  isSessionExpiredError,
   ISessionExpiredService,
+  isSessionExpiredError,
   toSessionExpiredReason,
 } from './session-expired';
 

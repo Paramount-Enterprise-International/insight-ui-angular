@@ -160,7 +160,7 @@ describe('auth refresh retry contracts', () => {
     });
   }
 
-  for (const failure of [
+  const refreshFailures: { status: number; errorCode: string; name?: string }[] = [
     { status: 0, errorCode: 'NETWORK_ERROR' },
     { status: 0, name: 'TimeoutError', errorCode: 'REQUEST_TIMEOUT' },
     { status: 0, name: 'AbortError', errorCode: 'REQUEST_ABORTED' },
@@ -168,7 +168,8 @@ describe('auth refresh retry contracts', () => {
     { status: 503, errorCode: 'AUTH_SSO_UNAVAILABLE' },
     { status: 503, errorCode: 'AUTH_SESSION_REVOKED' },
     { status: 403, errorCode: 'CSRF_INVALID' },
-  ]) {
+  ];
+  for (const failure of refreshFailures) {
     it(`preserves the session when refresh fails with ${failure.status}/${failure.errorCode}`, () => {
       const onUnauthorized = jasmine.createSpy('onUnauthorized');
       config.onUnauthorized = onUnauthorized;

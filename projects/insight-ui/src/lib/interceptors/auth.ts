@@ -11,8 +11,8 @@ import { ICsrfService } from '../csrf/csrf';
 import { impersonationContextKey } from '../impersonation/impersonation-utils';
 import {
   extractProblemDetailsErrorCode,
-  isSessionExpiredError,
   ISessionExpiredService,
+  isSessionExpiredError,
   toSessionExpiredReason,
 } from '../session-expired/session-expired';
 import { ISessionService } from '../session/session';
