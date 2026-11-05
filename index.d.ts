@@ -3499,14 +3499,15 @@ type IAuthConfig = {
      */
     appId?: string;
     /**
-     * How the auth interceptor handles a failed session refresh:
+     * How the auth interceptor handles IAM session rejection:
      * - `'dialog'`: show the library session-expired dialog (default).
      * - `'redirect'`: legacy behaviour — full-page redirect to the signin page.
      * When `onUnauthorized` is provided it takes precedence and disables both.
      */
     unauthorizedHandling?: 'dialog' | 'redirect';
     /**
-     * Optional consumer-owned handler invoked when a session refresh fails.
+     * Optional consumer-owned handler invoked when IAM rejects the session,
+     * including invalid impersonation and unauthorized End Impersonation.
      * Overrides `unauthorizedHandling` — neither the dialog nor the redirect
      * runs when this is provided.
      */
@@ -4270,9 +4271,8 @@ declare const extractProblemDetailsErrorCode: (error: unknown) => string | undef
 /** Maps current backend and legacy error codes to the session-expired UI states. */
 declare const toSessionExpiredReason: (errorCode: string | undefined) => ISessionExpiredReason | undefined;
 /**
- * True when an error is semantically a session-expiry event (HTTP 401/498 or a
- * recognized session-related error code). Other statuses are business/transport
- * errors and must be handled by the caller instead of forcing a logout.
+ * Classifies IAM session rejection (HTTP 401/498 or a recognized session code).
+ * Transport, cancellation, timeout and server errors never indicate expiry.
  */
 declare const isSessionExpiredError: (error: unknown) => boolean;
 /**

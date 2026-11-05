@@ -13464,20 +13464,19 @@ const toSessionExpiredReason = (errorCode) => {
     }
 };
 /**
- * True when an error is semantically a session-expiry event (HTTP 401/498 or a
- * recognized session-related error code). Other statuses are business/transport
- * errors and must be handled by the caller instead of forcing a logout.
+ * Classifies IAM session rejection (HTTP 401/498 or a recognized session code).
+ * Transport, cancellation, timeout and server errors never indicate expiry.
  */
 const isSessionExpiredError = (error) => {
-    if (error instanceof HttpErrorResponse) {
-        if (error.status === 401 || error.status === 498) {
-            return true;
-        }
+    const { status, name } = (error ?? {});
+    if (status === 0 ||
+        (status !== undefined && status >= 500) ||
+        name === 'AbortError' ||
+        name === 'TimeoutError') {
+        return false;
     }
-    if (error?.status === 401 ||
-        error?.status === 498) {
+    if (status === 401 || status === 498)
         return true;
-    }
     return toSessionExpiredReason(extractProblemDetailsErrorCode(error)) !== undefined;
 };
 /**
@@ -13567,7 +13566,9 @@ const authInterceptor = (req, next) => {
             return throwError(() => error);
         if (extractProblemDetailsErrorCode(error) === 'IMPERSONATION_SESSION_INVALID')
             return expire(error);
-        return session.refreshToken().pipe(catchError(expire), switchMap((newToken) => {
+        return session.refreshToken().pipe(catchError((refreshError) => isSessionExpiredError(refreshError)
+            ? expire(refreshError)
+            : throwError(() => refreshError)), switchMap((newToken) => {
             let retry = addAuthHeader(req, newToken);
             const csrfToken = csrf.getToken();
             if (csrfToken)
@@ -13576,7 +13577,9 @@ const authInterceptor = (req, next) => {
                 retry = retry.clone({
                     headers: retry.headers.delete('X-CSRF-Token'),
                 });
-            return next(retry).pipe(catchError((retryError) => retryError instanceof HttpErrorResponse && retryError.status === 401
+            return next(retry).pipe(catchError((retryError) => retryError instanceof HttpErrorResponse &&
+                retryError.status === 401 &&
+                extractProblemDetailsErrorCode(retryError) === 'IMPERSONATION_SESSION_INVALID'
                 ? expire(retryError)
                 : throwError(() => retryError)));
         }));
