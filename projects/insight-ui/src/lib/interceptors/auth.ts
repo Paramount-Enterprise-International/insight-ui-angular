@@ -12,6 +12,7 @@ import { impersonationContextKey } from '../impersonation/impersonation-utils';
 import {
   extractProblemDetailsErrorCode,
   ISessionExpiredService,
+  isSessionExpiredError,
   toSessionExpiredReason,
 } from '../session-expired/session-expired';
 import { ISessionService } from '../session/session';
@@ -80,7 +81,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEv
       if (extractProblemDetailsErrorCode(error) === 'IMPERSONATION_SESSION_INVALID')
         return expire(error);
       return session.refreshToken().pipe(
-        catchError(expire),
+        catchError((refreshError: unknown) =>
+          isSessionExpiredError(refreshError)
+            ? expire(refreshError)
+            : throwError(() => refreshError),
+        ),
         switchMap((newToken) => {
           let retry = addAuthHeader(req, newToken);
           const csrfToken = csrf.getToken();
@@ -91,7 +96,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next): Observable<HttpEv
             });
           return next(retry).pipe(
             catchError((retryError: unknown) =>
-              retryError instanceof HttpErrorResponse && retryError.status === 401
+              retryError instanceof HttpErrorResponse &&
+              retryError.status === 401 &&
+              extractProblemDetailsErrorCode(retryError) === 'IMPERSONATION_SESSION_INVALID'
                 ? expire(retryError)
                 : throwError(() => retryError),
             ),
