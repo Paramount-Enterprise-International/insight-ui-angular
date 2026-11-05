@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, signal } from '@angular/core';
 
 import type { INormalizedApiError } from '../api/api-error';
@@ -56,22 +55,20 @@ export const toSessionExpiredReason = (
 };
 
 /**
- * True when an error is semantically a session-expiry event (HTTP 401/498 or a
- * recognized session-related error code). Other statuses are business/transport
- * errors and must be handled by the caller instead of forcing a logout.
+ * Classifies IAM session rejection (HTTP 401/498 or a recognized session code).
+ * Transport, cancellation, timeout and server errors never indicate expiry.
  */
 export const isSessionExpiredError = (error: unknown): boolean => {
-  if (error instanceof HttpErrorResponse) {
-    if (error.status === 401 || error.status === 498) {
-      return true;
-    }
-  }
+  const { status, name } = (error ?? {}) as { status?: number; name?: string };
   if (
-    (error as { status?: number } | null)?.status === 401 ||
-    (error as { status?: number } | null)?.status === 498
+    status === 0 ||
+    (status !== undefined && status >= 500) ||
+    name === 'AbortError' ||
+    name === 'TimeoutError'
   ) {
-    return true;
+    return false;
   }
+  if (status === 401 || status === 498) return true;
   return toSessionExpiredReason(extractProblemDetailsErrorCode(error)) !== undefined;
 };
 

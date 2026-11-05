@@ -30,6 +30,8 @@ describe('auth refresh retry contracts', () => {
     csrfTokenMaxAgeSeconds: 7170,
   };
   beforeEach(() => {
+    config.onUnauthorized = undefined;
+    config.unauthorizedHandling = undefined;
     refreshed = new Subject<string>();
     session = jasmine.createSpyObj('session', ['getAccessToken', 'refreshToken', 'clearSession']);
     session.getAccessToken.and.returnValue('old');
@@ -110,27 +112,119 @@ describe('auth refresh retry contracts', () => {
     expect(session.refreshToken).toHaveBeenCalledTimes(1);
   });
 
-  it('expires when refresh fails or the only retry stays unauthorized', () => {
-    session.refreshToken.and.returnValue(
-      throwError(() => ({ status: 401, errorCode: 'AUTH_SESSION_REVOKED' })),
-    );
-    api.get('/item').subscribe({ error: (error) => expect(error.status).toBe(401) });
+  for (const errorCode of [
+    'AUTH_TOKEN_EXPIRED',
+    'AUTH_NO_SESSION',
+    'AUTH_SESSION_REVOKED',
+    'AUTH_SESSION_REPLACED',
+  ]) {
+    it(`expires when IAM refresh rejects the session with ${errorCode}`, () => {
+      session.refreshToken.and.returnValue(throwError(() => ({ status: 401, errorCode })));
+      api.get('/item').subscribe({ error: (error) => expect(error.errorCode).toBe(errorCode) });
+      http
+        .expectOne(config.api.identity + '/item')
+        .flush({}, { status: 401, statusText: 'Unauthorized' });
+      expect(session.clearSession).toHaveBeenCalledTimes(1);
+      expect(expired.show).toHaveBeenCalledTimes(1);
+      expect(session.refreshToken).toHaveBeenCalledTimes(1);
+    });
+  }
+
+  for (const mode of ['dialog', 'redirect', 'handler'] as const) {
+    it(`propagates retry 401 from a business API without ${mode} expiry handling`, () => {
+      const onUnauthorized = jasmine.createSpy('onUnauthorized');
+      if (mode === 'handler') config.onUnauthorized = onUnauthorized;
+      else config.unauthorizedHandling = mode;
+      const currentUrl = window.location.href;
+      let received: unknown;
+      const options = { apiUrl: 'https://business.test/api' };
+      api.get('/item', undefined, options).subscribe({ error: (error) => (received = error) });
+      http
+        .expectOne(options.apiUrl + '/item')
+        .flush({}, { status: 401, statusText: 'Unauthorized' });
+      refreshed.next('new');
+      const retry = http.expectOne(options.apiUrl + '/item');
+      expect(retry.request.headers.get('Authorization')).toBe('Bearer new');
+      retry.flush(
+        { errorCode: 'BUSINESS_UNAUTHORIZED', message: 'Local credentials rejected' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+      expect(received).toEqual(
+        jasmine.objectContaining({ status: 401, errorCode: 'BUSINESS_UNAUTHORIZED' }),
+      );
+      expect(session.refreshToken).toHaveBeenCalledTimes(1);
+      expect(session.clearSession).not.toHaveBeenCalled();
+      expect(expired.show).not.toHaveBeenCalled();
+      expect(onUnauthorized).not.toHaveBeenCalled();
+      expect(window.location.href).toBe(currentUrl);
+    });
+  }
+
+  for (const failure of [
+    { status: 0, errorCode: 'NETWORK_ERROR' },
+    { status: 0, name: 'TimeoutError', errorCode: 'REQUEST_TIMEOUT' },
+    { status: 0, name: 'AbortError', errorCode: 'REQUEST_ABORTED' },
+    { status: 500, errorCode: 'INTERNAL_SERVER_ERROR' },
+    { status: 503, errorCode: 'AUTH_SSO_UNAVAILABLE' },
+    { status: 503, errorCode: 'AUTH_SESSION_REVOKED' },
+    { status: 403, errorCode: 'CSRF_INVALID' },
+  ]) {
+    it(`preserves the session when refresh fails with ${failure.status}/${failure.errorCode}`, () => {
+      const onUnauthorized = jasmine.createSpy('onUnauthorized');
+      config.onUnauthorized = onUnauthorized;
+      session.refreshToken.and.returnValue(throwError(() => failure));
+      let received: unknown;
+      api.get('/item').subscribe({ error: (error) => (received = error) });
+      http
+        .expectOne(config.api.identity + '/item')
+        .flush({}, { status: 401, statusText: 'Unauthorized' });
+      expect(received).toEqual(jasmine.objectContaining(failure));
+      expect(session.refreshToken).toHaveBeenCalledTimes(1);
+      expect(session.clearSession).not.toHaveBeenCalled();
+      expect(expired.show).not.toHaveBeenCalled();
+      expect(onUnauthorized).not.toHaveBeenCalled();
+    });
+  }
+
+  it('retains invalid impersonation expiry on the retry', () => {
+    api.get('/item').subscribe({ error: () => undefined });
     http
       .expectOne(config.api.identity + '/item')
       .flush({}, { status: 401, statusText: 'Unauthorized' });
-    expect(session.clearSession).toHaveBeenCalledTimes(1);
-    expect(expired.show).toHaveBeenCalledTimes(1);
-    session.refreshToken.and.returnValue(refreshed);
-    api.get('/again').subscribe({ error: (error) => expect(error.status).toBe(401) });
-    http
-      .expectOne(config.api.identity + '/again')
-      .flush({}, { status: 401, statusText: 'Unauthorized' });
     refreshed.next('new');
     http
-      .expectOne(config.api.identity + '/again')
+      .expectOne(config.api.identity + '/item')
+      .flush(
+        { errorCode: 'IMPERSONATION_SESSION_INVALID' },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+    expect(session.refreshToken).toHaveBeenCalledTimes(1);
+    expect(session.clearSession).toHaveBeenCalledTimes(1);
+    expect(expired.show).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains immediate expiry for unauthorized End Impersonation', () => {
+    api.post('/auth/impersonation/end', {}).subscribe({ error: () => undefined });
+    http
+      .expectOne(config.api.identity + '/auth/impersonation/end')
       .flush({}, { status: 401, statusText: 'Unauthorized' });
-    expect(session.refreshToken).toHaveBeenCalledTimes(2);
-    expect(expired.show).toHaveBeenCalledTimes(2);
+    expect(session.refreshToken).not.toHaveBeenCalled();
+    expect(session.clearSession).toHaveBeenCalledTimes(1);
+    expect(expired.show).toHaveBeenCalledTimes(1);
+  });
+
+  it('invokes the configured handler only for IAM session rejection', () => {
+    const rejection = { status: 401, errorCode: 'AUTH_SESSION_REVOKED' };
+    const onUnauthorized = jasmine.createSpy('onUnauthorized');
+    config.onUnauthorized = onUnauthorized;
+    session.refreshToken.and.returnValue(throwError(() => rejection));
+    api.get('/item').subscribe({ error: () => undefined });
+    http
+      .expectOne(config.api.identity + '/item')
+      .flush({}, { status: 401, statusText: 'Unauthorized' });
+    expect(onUnauthorized).toHaveBeenCalledOnceWith(rejection);
+    expect(session.clearSession).toHaveBeenCalledTimes(1);
+    expect(expired.show).not.toHaveBeenCalled();
   });
 
   it('passes bearer-free and auth endpoint requests without refresh', () => {
@@ -166,7 +260,7 @@ describe('auth refresh retry contracts', () => {
     api.get('/a', undefined, { signal: controller.signal }).subscribe({
       error: (error) => expect(error.errorCode).toBe('REQUEST_ABORTED'),
     });
-    api.get('/b').subscribe();
+    api.get('/b').subscribe((result) => expect(result).toEqual({ ok: true }));
     http
       .expectOne(config.api.identity + '/a')
       .flush({}, { status: 401, statusText: 'Unauthorized' });
@@ -177,6 +271,7 @@ describe('auth refresh retry contracts', () => {
     refreshed.next('new');
     http.expectNone(config.api.identity + '/a');
     http.expectOne(config.api.identity + '/b').flush({ ok: true });
+    expect(session.clearSession).not.toHaveBeenCalled();
     expect(expired.show).not.toHaveBeenCalled();
   });
 });

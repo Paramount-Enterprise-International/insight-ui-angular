@@ -1,7 +1,35 @@
 import { TestBed } from '@angular/core/testing';
-import { toSessionExpiredReason } from './session-expired';
+import {
+  isSessionExpiredError,
+  ISessionExpiredService,
+  toSessionExpiredReason,
+} from './session-expired';
 
-import { ISessionExpiredService } from './session-expired';
+describe('isSessionExpiredError', () => {
+  it('recognizes IAM rejection statuses and legacy session codes', () => {
+    expect(isSessionExpiredError({ status: 401 })).toBeTrue();
+    expect(isSessionExpiredError({ status: 498 })).toBeTrue();
+    expect(isSessionExpiredError({ error: { code: 'SESSION_REVOKED' } })).toBeTrue();
+    expect(isSessionExpiredError({ status: 403, errorCode: 'CSRF_INVALID' })).toBeFalse();
+  });
+
+  for (const failure of [
+    { status: 0 },
+    { status: 500 },
+    { status: 503 },
+    { name: 'AbortError' },
+    { name: 'TimeoutError' },
+  ]) {
+    it(`does not classify ${JSON.stringify(failure)} as expiry even with a session code`, () => {
+      expect(isSessionExpiredError({ ...failure, errorCode: 'AUTH_NO_SESSION' })).toBeFalse();
+    });
+  }
+
+  it('does not classify missing or unrecognized errors as expiry', () => {
+    expect(isSessionExpiredError(null)).toBeFalse();
+    expect(isSessionExpiredError(new Error('Refresh timed out'))).toBeFalse();
+  });
+});
 
 describe('ISessionExpiredService', () => {
   let service: ISessionExpiredService;

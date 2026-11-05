@@ -370,8 +370,12 @@ have status 0, names AbortError/TimeoutError and codes REQUEST_ABORTED/REQUEST_T
 They do not trigger the session-expiry flow.
 
 A 401 triggers one refresh and one retry with the refreshed Authorization and
-current CSRF token. Retry business errors propagate without clearing the session;
-refresh failure or a retry still unauthorized uses the configured expiry flow.
+current CSRF token. Retry errors, including another 401 after successful refresh,
+propagate without clearing the session or invoking `onUnauthorized`/dialog/redirect.
+Only IAM refresh rejection (401/498 or a recognized session-invalid code) uses
+the configured expiry flow. Refresh network errors, timeouts and 5xx failures
+propagate without clearing the session. Invalid impersonation responses and 401
+from End Impersonation retain their immediate expiry handling.
 Auth endpoints and `skipBearer: true` bypass session Bearer injection and refresh.
 Error bodies returned as binary/text are decoded before normalization; non-JSON
 payloads fall back safely without displaying HTML or transport messages.
