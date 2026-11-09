@@ -1,5 +1,14 @@
 import { APP_BASE_HREF, AsyncPipe } from '@angular/common';
-import { Component, effect, EventEmitter, inject, Input, Output, signal } from '@angular/core';
+import {
+  Component,
+  effect,
+  ErrorHandler,
+  EventEmitter,
+  inject,
+  Input,
+  Output,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import {
   ActivatedRoute,
@@ -12,7 +21,6 @@ import {
   RouteConfigLoadEnd,
   RouteConfigLoadStart,
   Router,
-  RouterLink,
   RouterOutlet,
 } from '@angular/router';
 import { combineLatest, filter, map, Observable, shareReplay, startWith } from 'rxjs';
@@ -31,7 +39,7 @@ import { IHTitleBreadcrumbService } from '../shell/title-breadcrumb.service';
 
 @Component({
   selector: 'ih-content',
-  imports: [RouterOutlet, AsyncPipe, RouterLink, INotification, ILoading],
+  imports: [RouterOutlet, AsyncPipe, INotification, ILoading],
   template: `
     <div class="ih-content-header">
       <a
@@ -69,8 +77,7 @@ import { IHTitleBreadcrumbService } from '../shell/title-breadcrumb.service';
                 <a
                   class="ih-content-breadcrumb ih-content-breadcrumb__link"
                   [attr.href]="overrideHref(b.url)"
-                  [routerLink]="overrideRouterLink(b.url)"
-                  (click)="onOverrideBreadcrumbClick($event)"
+                  (click)="onOverrideBreadcrumbClick($event, b.url)"
                 >
                   {{ b.label }}
                 </a>
@@ -103,8 +110,8 @@ import { IHTitleBreadcrumbService } from '../shell/title-breadcrumb.service';
                   @if (breadcrumb.url) {
                     <a
                       class="ih-content-breadcrumb ih-content-breadcrumb__link"
-                      [routerLink]="overrideRouterLink(breadcrumb.url)"
-                      (click)="onOverrideBreadcrumbClick($event)"
+                      [attr.href]="overrideHref(breadcrumb.url)"
+                      (click)="onOverrideBreadcrumbClick($event, breadcrumb.url)"
                       >{{ breadcrumb.label }}</a
                     >
                   } @else {
@@ -151,6 +158,7 @@ export class IHContent {
 
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly errorHandler = inject(ErrorHandler);
 
   readonly pageLoading = signal(false);
   private readonly pendingRouteLoads = new Set<Route>();
@@ -274,17 +282,20 @@ export class IHContent {
     this.onSidebarToggled.emit(this.sidebarVisibility);
   }
 
-  onOverrideBreadcrumbClick(e: MouseEvent): void {
-    // Only for normal left-click navigation.
-    // Let browser handle right-click, ctrl/cmd-click, middle click, etc.
+  onOverrideBreadcrumbClick(e: MouseEvent, url: string): void {
     if (e.button !== 0) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
 
-    // Angular routerLink will update the URL via pushState.
-    // React Router BrowserRouter will not notice unless popstate is fired.
-    queueMicrotask(() => {
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    });
+    e.preventDefault();
+    void this.router
+      .navigateByUrl(this.overrideRouterLink(url))
+      .then((navigated) => {
+        // Notify hosted routers only after Angular has committed the new location.
+        if (navigated) {
+          window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+        }
+      })
+      .catch((error: unknown) => this.errorHandler.handleError(error));
   }
 
   private normalizeBaseHref(): string {
@@ -319,8 +330,7 @@ export class IHContent {
   }
 
   /**
-   * RouterLink will prefix baseHref automatically.
-   * So we must NOT include baseHref in the value passed to [routerLink].
+   * Angular router URLs exclude baseHref, which the location strategy adds.
    *
    * baseHref "/-/" examples:
    * - "/-/dashboard" -> "/dashboard"

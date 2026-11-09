@@ -1,8 +1,8 @@
 import { APP_BASE_HREF } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
-import { Component, signal } from '@angular/core';
+import { Component, ErrorHandler, signal } from '@angular/core';
 import { type ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
-import { provideRouter, Router, type Routes } from '@angular/router';
+import { type CanActivateFn, provideRouter, Router, type Routes } from '@angular/router';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { IUserMenuStore } from '../../store/user-menu';
 import { ISessionService } from '../../session/session';
@@ -122,6 +122,129 @@ describe('host and remote breadcrumb composition', () => {
     expect(text).toContain('Customer');
     expect(text).toContain('Remote page');
     expect(text).not.toContain('Backend label');
+  });
+});
+
+describe('breadcrumb navigation after a deep-link reload', () => {
+  async function setup(override: boolean, guard: CanActivateFn) {
+    TestBed.configureTestingModule({
+      imports: [IHContent],
+      providers: [
+        provideHttpClient(),
+        { provide: APP_BASE_HREF, useValue: '/-/' },
+        provideRouter([
+          {
+            path: 'people',
+            data: {
+              remoteMount: true,
+              hostBreadcrumbs: [
+                { label: 'Sales' },
+                { label: 'Customers', url: '/-/people?tab=all#summary' },
+              ],
+            },
+            children: [
+              { path: '', pathMatch: 'full', component: Page, canActivate: [guard] },
+              { path: ':id', component: Page, data: { title: 'Details' } },
+            ],
+          },
+        ]),
+        { provide: ISessionService, useValue: { initializing: signal(false) } },
+        {
+          provide: IUserMenuStore,
+          useFactory: (): Pick<IUserMenuStore, 'initializing' | 'menus$'> => ({
+            initializing: signal(false),
+            menus$: toObservable(signal<IMenu[]>([])),
+          }),
+        },
+      ],
+    });
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/people/123');
+    if (override) {
+      TestBed.inject(IHTitleBreadcrumbService).setBreadcrumbs([
+        { label: 'Sales' },
+        { label: 'Customers', url: '/-/people?tab=all#summary' },
+        { label: 'Details' },
+      ]);
+    }
+    const fixture = TestBed.createComponent(IHContent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const link = fixture.nativeElement.querySelector('a.ih-content-breadcrumb') as HTMLAnchorElement;
+    const events: { url: string; state: unknown }[] = [];
+    spyOn(window, 'dispatchEvent').and.callFake((event: Event) => {
+      if (event instanceof PopStateEvent) events.push({ url: router.url, state: event.state });
+      return true;
+    });
+    return { fixture, router, link, events };
+  }
+
+  for (const override of [false, true]) {
+    const source = override ? 'override' : 'route';
+
+    it(`waits for ${source} navigation before notifying hosted routers`, async () => {
+      let resolve!: (allowed: boolean) => void;
+      let entered!: () => void;
+      const pending = new Promise<boolean>((done) => {
+        resolve = done;
+      });
+      const guarding = new Promise<void>((done) => {
+        entered = done;
+      });
+      const { fixture, router, link, events } = await setup(override, () => {
+        entered();
+        return pending;
+      });
+
+      expect(link.getAttribute('href')).toBe('/-/people?tab=all#summary');
+      link.click();
+      await guarding;
+      expect(router.url).toBe('/people/123');
+      expect(events).toEqual([]);
+      resolve(true);
+      await fixture.whenStable();
+
+      expect(router.url).toBe('/people?tab=all#summary');
+      expect(events).toEqual([{ url: router.url, state: window.history.state }]);
+    });
+
+    it(`does not notify hosted routers when ${source} navigation is denied`, async () => {
+      const { fixture, router, link, events } = await setup(override, () => false);
+      link.click();
+      await fixture.whenStable();
+      expect(router.url).toBe('/people/123');
+      expect(events).toEqual([]);
+    });
+  }
+
+  it('preserves native browser handling for modified and middle clicks', async () => {
+    const { fixture, router, events } = await setup(false, () => true);
+    const navigate = spyOn(router, 'navigateByUrl');
+    for (const options of [
+      { ctrlKey: true },
+      { metaKey: true },
+      { shiftKey: true },
+      { altKey: true },
+      { button: 1 },
+    ]) {
+      const event = new MouseEvent('click', { button: 0, cancelable: true, ...options });
+      fixture.componentInstance.onOverrideBreadcrumbClick(event, '/people');
+      expect(event.defaultPrevented).toBeFalse();
+    }
+    expect(navigate).not.toHaveBeenCalled();
+    expect(events).toEqual([]);
+  });
+
+  it('reports navigation errors without notifying hosted routers', async () => {
+    const error = new Error('Navigation failed');
+    const { fixture, router, link, events } = await setup(false, () => Promise.reject(error));
+    const handleError = spyOn(TestBed.inject(ErrorHandler), 'handleError');
+    link.click();
+    await fixture.whenStable();
+    expect(handleError).toHaveBeenCalledWith(error);
+    expect(router.url).toBe('/people/123');
+    expect(events).toEqual([]);
   });
 });
 
