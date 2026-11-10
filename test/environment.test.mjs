@@ -30,7 +30,8 @@ const environment = {
     user: 'https://iam.invalid/users',
     configuration: 'https://iam.invalid/configuration',
   },
-  api: { crm: 'https://app.invalid/crm' },
+  apiUrl: 'https://app.invalid/crm',
+  api: { reporting: 'https://reports.invalid/api' },
   signinUrl: 'https://app.invalid/login',
   apiKey: 'fixture-key',
   appId: 'fixture-app',
@@ -39,7 +40,8 @@ const environment = {
 test('environment mapping isolates platform endpoints and omits unspecified auth overrides', () => {
   const config = adapters.getIEnvironmentAuthConfig(environment);
   assert.equal(config.api, environment.platformApi);
-  assert.equal(config.api.crm, undefined);
+  assert.equal(config.api.reporting, undefined);
+  assert.equal(Object.hasOwn(config, 'apiUrl'), false);
   assert.equal(config.apiKey, environment.apiKey);
   for (const key of ['tokenLifespan', 'csrfTokenMaxAgeSeconds', 'allowedReturnOrigins'])
     assert.equal(Object.hasOwn(config, key), false);
@@ -73,11 +75,22 @@ test('partial overrides omit undefined values and retain explicit settings', () 
   assert.deepEqual(config.allowedReturnOrigins, ['https://approved.invalid']);
 });
 test('business endpoint lookup never falls back to platform APIs', () => {
-  assert.equal(adapters.requireIEnvironmentApi(environment, 'crm'), 'https://app.invalid/crm');
+  assert.equal(
+    adapters.requireIEnvironmentApi(environment, 'reporting'),
+    'https://reports.invalid/api',
+  );
   for (const name of ['identity', 'missing', 'toString'])
     assert.throws(
       () => adapters.requireIEnvironmentApi(environment, name),
       /Missing application environment endpoint/,
     );
-  assert.throws(() => adapters.requireIEnvironmentApi({ ...environment, api: undefined }, 'crm'));
+  assert.throws(() =>
+    adapters.requireIEnvironmentApi({ ...environment, api: undefined }, 'reporting'),
+  );
+});
+
+test('primary business URLs are required without falling back to platform or named endpoints', () => {
+  assert.equal(adapters.requireIEnvironmentApiUrl(environment), environment.apiUrl);
+  for (const apiUrl of [undefined, '', '   '])
+    assert.throws(() => adapters.requireIEnvironmentApiUrl({ ...environment, apiUrl }), /apiUrl/);
 });
