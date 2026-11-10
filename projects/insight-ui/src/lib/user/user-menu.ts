@@ -1,10 +1,8 @@
 import { inject, Injectable } from '@angular/core';
 import { map, Observable, throwError } from 'rxjs';
-
-import { environment as defaultEnvironment } from '../../environments/environment';
-import { I_AUTH_CONFIG } from '../auth/auth-config';
 import { IApiService } from '../api/api';
-
+import { I_AUTH_CONFIG } from '../auth/auth-config';
+import { I_AUTH_DEFAULTS } from '../auth/auth-defaults';
 import type {
   IEffectiveAuthorizationDto,
   IFavoriteMenuItemDto,
@@ -12,7 +10,6 @@ import type {
   IMenuNodeDto,
   IUserMenuEnvelopeDto,
 } from './user.types';
-
 /**
  * Current-user navigation & favorites service — calls iam-user-api's
  * application-scoped `/me/applications/:applicationId/*` endpoints. These endpoints return
@@ -20,7 +17,7 @@ import type {
  * the app-wide body-as-data convention.
  *
  * Base URL: `{api.user}` from the resolved auth config (defaults to the
- * library environment file). Consumer apps override via
+ * shared auth defaults). Consumer apps override via
  * `provideIAuth({ api: { user: '...' } })`.
  */
 @Injectable({ providedIn: 'root' })
@@ -29,7 +26,7 @@ export class IUserMenuService {
   private readonly config = inject(I_AUTH_CONFIG);
 
   private get baseUrl(): string {
-    return this.config.api['user'] ?? defaultEnvironment.api.user;
+    return this.config.api['user'] ?? I_AUTH_DEFAULTS.api.user;
   }
 
   private resolveApplicationId(applicationId?: string): string | null {
@@ -44,9 +41,7 @@ export class IUserMenuService {
   private missingApplicationId<T>(): Observable<T> {
     return throwError(
       () =>
-        new Error(
-          '[@insight/ui] applicationId is required to load current-user application data.',
-        ),
+        new Error('[@insight/ui] applicationId is required to load current-user application data.'),
     );
   }
 
