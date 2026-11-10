@@ -1,5 +1,5 @@
 /** BFF/session and IAM service URLs, separate from application business APIs. */
-export interface IPlatformApi {
+export type IPlatformApi = {
   /** This application's session backend/BFF; IAM itself uses its identity service. No default host. */
   identity: string;
   /** IAM user, menu and authorization service URL. Required for every consumer. */
@@ -8,10 +8,10 @@ export interface IPlatformApi {
   configuration: string;
   /** Additional platform service URLs, such as application, apim or notification. */
   [service: string]: string;
-}
+};
 
 /** Shared consumer configuration. Optional feature fields only affect code that reads them. */
-export interface IEnvironment {
+export type IEnvironment = {
   /** Deployment stage, for example local, development, staging or production. No default. */
   releaseStage: string;
   /** Required BFF/session and IAM endpoints. These are passed to the auth runtime. */
@@ -84,4 +84,4 @@ export interface IEnvironment {
   realmId?: string;
   /** BOQ mapping from IAM company IDs to business company codes; omitted leaves mappings unavailable. Supplying it does not grant access. */
   companyCodeByIamId?: Readonly<Record<string, string>>;
-}
+};

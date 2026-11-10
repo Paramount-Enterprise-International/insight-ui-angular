@@ -1,12 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 
-import { environment as defaultEnvironment } from '../../environments/environment';
 import {
   getDefaultIAuthConfig,
   I_AUTH_CONFIG,
   IAuthConfig,
   validateIAuthConfig,
 } from './auth-config';
+import { I_AUTH_DEFAULTS } from './auth-defaults';
 import { provideIAuth } from './provide-insight-auth';
 
 const VALID_OVERRIDES = {
@@ -39,12 +39,12 @@ describe('provideIAuth', () => {
     const config = TestBed.inject(I_AUTH_CONFIG);
 
     expect(config.api.identity).toBe('https://app.example.com/api');
-    expect(config.api['user']).toBe(defaultEnvironment.api.user);
+    expect(config.api['user']).toBe(I_AUTH_DEFAULTS.api.user);
     expect(config.signinUrl).toBe('https://app.example.com/api/auth/login');
     expect(config.callbackPath).toBe('/auth/callback');
     expect(config.allowedReturnOrigins).toEqual([window.location.origin]);
-    expect(config.tokenLifespan).toEqual(defaultEnvironment.tokenLifespan);
-    expect(config.csrfTokenMaxAgeSeconds).toBe(defaultEnvironment.csrfTokenMaxAgeSeconds);
+    expect(config.tokenLifespan).toEqual(I_AUTH_DEFAULTS.tokenLifespan);
+    expect(config.csrfTokenMaxAgeSeconds).toBe(I_AUTH_DEFAULTS.csrfTokenMaxAgeSeconds);
     expect(config.endpoints?.refresh).toBe('/auth/refresh');
     expect(config.endpoints?.impersonationEnd).toBe('/auth/impersonation/end');
   });
@@ -66,7 +66,7 @@ describe('provideIAuth', () => {
 
     expect(config.api.identity).toBe('https://app.example.com/api');
     expect(config.api['product']).toBe('https://product.example.com/api');
-    expect(config.api['user']).toBe(defaultEnvironment.api.user);
+    expect(config.api['user']).toBe(I_AUTH_DEFAULTS.api.user);
   });
 
   it('deep-merges an `endpoints` override, keeping the other endpoint defaults', () => {

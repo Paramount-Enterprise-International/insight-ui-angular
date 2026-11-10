@@ -126,7 +126,15 @@ describe('host and remote breadcrumb composition', () => {
 });
 
 describe('breadcrumb navigation after a deep-link reload', () => {
-  async function setup(override: boolean, guard: CanActivateFn) {
+  async function setup(
+    override: boolean,
+    guard: CanActivateFn,
+  ): Promise<{
+    fixture: ComponentFixture<IHContent>;
+    router: Router;
+    link: HTMLAnchorElement;
+    events: { url: string; state: unknown }[];
+  }> {
     TestBed.configureTestingModule({
       imports: [IHContent],
       providers: [
@@ -171,7 +179,9 @@ describe('breadcrumb navigation after a deep-link reload', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
-    const link = fixture.nativeElement.querySelector('a.ih-content-breadcrumb') as HTMLAnchorElement;
+    const link = fixture.nativeElement.querySelector(
+      'a.ih-content-breadcrumb',
+    ) as HTMLAnchorElement;
     const events: { url: string; state: unknown }[] = [];
     spyOn(window, 'dispatchEvent').and.callFake((event: Event) => {
       if (event instanceof PopStateEvent) events.push({ url: router.url, state: event.state });
@@ -280,7 +290,9 @@ describe('page bundle loading', () => {
     const pending = new Promise<typeof Page>((done) => {
       resolve = done;
     });
-    const { fixture, router, host } = setup([{ path: 'slow', loadComponent: (): Promise<typeof Page> => pending }]);
+    const { fixture, router, host } = setup([
+      { path: 'slow', loadComponent: (): Promise<typeof Page> => pending },
+    ]);
     void router.navigateByUrl('/slow');
     tick();
     fixture.detectChanges();
@@ -299,7 +311,9 @@ describe('page bundle loading', () => {
     const pending = new Promise<typeof Page>((_, fail) => {
       reject = fail;
     });
-    const { fixture, router, host } = setup([{ path: 'slow', loadComponent: (): Promise<typeof Page> => pending }]);
+    const { fixture, router, host } = setup([
+      { path: 'slow', loadComponent: (): Promise<typeof Page> => pending },
+    ]);
     void router.navigateByUrl('/slow').catch(() => undefined);
     tick();
     fixture.detectChanges();
