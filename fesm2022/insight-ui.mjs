@@ -1,10 +1,10 @@
 import * as i0 from '@angular/core';
-import { Input, ChangeDetectionStrategy, Component, HostBinding, EventEmitter, inject, ChangeDetectorRef, DestroyRef, booleanAttribute, ViewChild, Output, InjectionToken, signal, Injectable, ElementRef, PLATFORM_ID, effect, ApplicationRef, EnvironmentInjector, createComponent, isDevMode, NgModule, HostListener, Directive, forwardRef, input, computed, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, Injector, ContentChildren, ViewContainerRef, output, viewChild, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER, untracked } from '@angular/core';
+import { Input, ChangeDetectionStrategy, Component, HostBinding, EventEmitter, inject, ChangeDetectorRef, DestroyRef, booleanAttribute, ViewChild, Output, isDevMode, NgModule, ElementRef, HostListener, Directive, forwardRef, input, computed, Pipe, TemplateRef, NgZone, ContentChild, Renderer2, InjectionToken, Injectable, Injector, ContentChildren, ViewContainerRef, output, PLATFORM_ID, viewChild, signal, effect, ApplicationRef, EnvironmentInjector, createComponent, ErrorHandler, ViewChildren, makeEnvironmentProviders, APP_INITIALIZER, untracked } from '@angular/core';
 import * as i1$1 from '@angular/common';
-import { NgClass, NgTemplateOutlet, isPlatformBrowser, DOCUMENT, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, Location, APP_BASE_HREF } from '@angular/common';
+import { NgClass, NgTemplateOutlet, CommonModule, formatDate, NgComponentOutlet, NgStyle, AsyncPipe, DOCUMENT, isPlatformBrowser, Location, APP_BASE_HREF } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute, NavigationStart, RouteConfigLoadStart, RouteConfigLoadEnd, NavigationEnd, NavigationCancel, NavigationError, NavigationSkipped, RouterOutlet } from '@angular/router';
-import { ReplaySubject, firstValueFrom, Subject, BehaviorSubject, map, throwError, from, defer, Observable, forkJoin, of, finalize as finalize$1, timeout, lastValueFrom, filter as filter$1, startWith, combineLatest, shareReplay as shareReplay$1, distinctUntilChanged, tap as tap$1, take as take$1, takeUntil, switchMap as switchMap$1, EMPTY, catchError as catchError$1 } from 'rxjs';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { firstValueFrom, Subject, BehaviorSubject, map, ReplaySubject, throwError, from, defer, Observable, forkJoin, of, finalize as finalize$1, timeout, lastValueFrom, filter as filter$1, startWith, combineLatest, shareReplay as shareReplay$1, distinctUntilChanged, tap as tap$1, take as take$1, takeUntil, switchMap as switchMap$1, EMPTY, catchError as catchError$1 } from 'rxjs';
 import * as i1 from '@angular/forms';
 import { Validators, NG_VALUE_ACCESSOR, NgControl, FormGroupDirective, FormBuilder, FormControl, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { debounceTime, tap, map as map$1, catchError, switchMap, filter, take, finalize, shareReplay } from 'rxjs/operators';
@@ -756,667 +756,6 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 type: HostBinding,
                 args: ['attr.data-mode']
             }] } });
-
-const regions = new WeakMap();
-const limits = new WeakMap();
-let sequence = 0;
-function nextSnackbarId() {
-    return `i-snackbar-${++sequence}`;
-}
-function position(options) {
-    return options.position ?? 'bottom-right';
-}
-function acquireRegion(doc, value) {
-    let map = regions.get(doc);
-    if (!map)
-        regions.set(doc, (map = new Map()));
-    let region = map.get(value);
-    if (!region) {
-        const selector = `[data-i-snackbar-viewport="${value}"]`;
-        const element = doc.querySelector(selector) ?? doc.createElement('div');
-        element.classList.add('i-snackbar-viewport');
-        element.setAttribute('data-i-snackbar-viewport', value);
-        if (!element.isConnected)
-            doc.body.appendChild(element);
-        region = { element, entries: [], position: value };
-        map.set(value, region);
-    }
-    return region;
-}
-function arrange(region) {
-    const counts = new Map();
-    for (const entry of region.entries) {
-        const scope = entry.options.scope;
-        const count = counts.get(scope) ?? 0;
-        const visible = count < (limits.get(scope) ?? Infinity);
-        if (visible)
-            counts.set(scope, count + 1);
-        entry.setVisible(visible);
-    }
-}
-function place(region, element) {
-    if (region.position.startsWith('top-')) {
-        region.element.prepend(element);
-    }
-    else {
-        region.element.appendChild(element);
-    }
-}
-function revealNewest(region) {
-    const scroll = () => {
-        if (!region.element.isConnected || !region.entries.some((entry) => entry.interactive))
-            return;
-        region.element.scrollTop = region.position.startsWith('top-') ? 0 : region.element.scrollHeight;
-    };
-    const view = region.element.ownerDocument.defaultView;
-    const schedule = () => {
-        if (!view?.requestAnimationFrame) {
-            scroll();
-            return;
-        }
-        if (region.scrollFrame !== undefined)
-            return;
-        region.scrollFrame = view.requestAnimationFrame(() => {
-            region.scrollFrame = undefined;
-            scroll();
-        });
-    };
-    schedule();
-    clearTimeout(region.scrollTimer);
-    // Recheck the edge after the entrance animation and the latest burst settle.
-    region.scrollTimer = setTimeout(() => {
-        region.scrollTimer = undefined;
-        schedule();
-    }, 200);
-}
-/** Owns one portal's queue admission, remaining duration, and dismiss transition. */
-class SnackbarMount {
-    element;
-    options;
-    doc;
-    request;
-    dismissed;
-    region;
-    timer;
-    exitTimer;
-    remaining = 0;
-    duration = 5000;
-    started = 0;
-    visible = false;
-    hovering = false;
-    focused = false;
-    requested = false;
-    closing = false;
-    destroyed = false;
-    constructor(element, options, request, dismissed) {
-        this.element = element;
-        this.doc = element.ownerDocument;
-        this.options = options;
-        this.request = request;
-        this.dismissed = dismissed;
-        this.region = acquireRegion(this.doc, position(options));
-        this.element.classList.add('i-snackbar');
-        this.element.addEventListener('mouseenter', this.enter);
-        this.element.addEventListener('mouseleave', this.leave);
-        this.element.addEventListener('focusin', this.focusIn);
-        this.element.addEventListener('focusout', this.focusOut);
-        this.element.addEventListener('keydown', this.keydown);
-        this.doc.addEventListener('visibilitychange', this.visibility);
-        this.region.entries.push(this);
-        place(this.region, element);
-        this.update(options, true);
-    }
-    update(options, reset = false) {
-        if (this.destroyed)
-            return;
-        this.pauseClock();
-        const oldPosition = position(this.options);
-        this.options = options;
-        const limit = options.maxVisible;
-        limits.set(options.scope, Number.isInteger(limit) && limit > 0 ? limit : Infinity);
-        this.element.dataset['snackbarId'] = options.id;
-        this.element.style.setProperty('--i-snackbar-max-width', options.maxWidth ?? '400px');
-        if (oldPosition !== position(options)) {
-            const focused = this.element.contains(this.doc.activeElement)
-                ? this.doc.activeElement
-                : null;
-            this.detach();
-            this.region = acquireRegion(this.doc, position(options));
-            this.region.entries.push(this);
-            place(this.region, this.element);
-            focused?.focus({ preventScroll: true });
-        }
-        if (reset) {
-            clearTimeout(this.exitTimer);
-            this.exitTimer = undefined;
-            this.element.classList.remove('i-snackbar--closing');
-            this.closing = false;
-            this.requested = false;
-            const duration = options.durationMs ?? 5000;
-            this.duration = Number.isFinite(duration) && duration > 0 ? duration : 0;
-            this.remaining = this.duration;
-        }
-        arrange(this.region);
-        if (this.visible && (reset || oldPosition !== position(options)))
-            revealNewest(this.region);
-        this.resumeClock();
-    }
-    setVisible(value) {
-        this.pauseClock();
-        const appeared = value && !this.visible;
-        this.visible = value;
-        this.element.hidden = !value;
-        if (appeared)
-            revealNewest(this.region);
-        this.resumeClock();
-    }
-    requestDismiss(reason) {
-        if (this.destroyed || this.closing || this.requested)
-            return;
-        this.pauseClock();
-        this.requested = true;
-        this.request(reason);
-    }
-    get interactive() {
-        return this.visible && !this.destroyed && !this.closing && !this.requested;
-    }
-    close(reason) {
-        if (this.destroyed || this.closing)
-            return;
-        this.closing = true;
-        this.pauseClock();
-        this.element.classList.add('i-snackbar--closing');
-        const reduceMotion = this.doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-        this.exitTimer = setTimeout(() => {
-            this.destroy();
-            this.dismissed(reason);
-        }, this.visible && !reduceMotion ? 180 : 0);
-    }
-    destroy() {
-        if (this.destroyed)
-            return;
-        this.destroyed = true;
-        clearTimeout(this.timer);
-        clearTimeout(this.exitTimer);
-        this.element.removeEventListener('mouseenter', this.enter);
-        this.element.removeEventListener('mouseleave', this.leave);
-        this.element.removeEventListener('focusin', this.focusIn);
-        this.element.removeEventListener('focusout', this.focusOut);
-        this.element.removeEventListener('keydown', this.keydown);
-        this.doc.removeEventListener('visibilitychange', this.visibility);
-        this.element.remove();
-        this.detach();
-    }
-    detach() {
-        this.region.entries = this.region.entries.filter((entry) => entry !== this);
-        arrange(this.region);
-        if (!this.region.entries.length) {
-            clearTimeout(this.region.scrollTimer);
-            this.region.scrollTimer = undefined;
-            if (this.region.scrollFrame !== undefined) {
-                this.doc.defaultView?.cancelAnimationFrame?.(this.region.scrollFrame);
-                this.region.scrollFrame = undefined;
-            }
-            if (!this.region.element.childElementCount)
-                this.region.element.remove();
-            regions.get(this.doc)?.delete(this.region.position);
-        }
-    }
-    pauseClock() {
-        if (this.timer !== undefined) {
-            clearTimeout(this.timer);
-            this.timer = undefined;
-            this.remaining = Math.max(0, this.remaining - (Date.now() - this.started));
-        }
-    }
-    resumeClock() {
-        if (this.destroyed ||
-            this.closing ||
-            this.requested ||
-            !this.visible ||
-            (this.hovering && this.options.pauseOnHover !== false) ||
-            (this.focused && this.options.pauseOnFocus !== false) ||
-            (this.doc.visibilityState === 'hidden' && this.options.pauseOnHidden !== false) ||
-            this.duration <= 0 ||
-            this.timer !== undefined)
-            return;
-        this.started = Date.now();
-        this.timer = setTimeout(() => {
-            this.timer = undefined;
-            this.remaining = 0;
-            this.requestDismiss('timeout');
-        }, this.remaining);
-    }
-    enter = () => {
-        this.pauseClock();
-        this.hovering = true;
-        this.resumeClock();
-    };
-    leave = () => {
-        this.pauseClock();
-        this.hovering = false;
-        this.resumeClock();
-    };
-    focusIn = () => {
-        this.pauseClock();
-        this.focused = true;
-        this.resumeClock();
-    };
-    focusOut = (event) => {
-        if (event.relatedTarget && this.element.contains(event.relatedTarget))
-            return;
-        this.pauseClock();
-        this.focused = false;
-        this.resumeClock();
-    };
-    visibility = () => {
-        this.pauseClock();
-        this.resumeClock();
-    };
-    keydown = (event) => {
-        if (event.key !== 'Escape' ||
-            event.defaultPrevented ||
-            this.options.dismissOnEscape === false ||
-            !this.element.contains(this.doc.activeElement))
-            return;
-        event.preventDefault();
-        event.stopPropagation();
-        this.requestDismiss('escape');
-    };
-}
-
-const I_SNACKBAR_DEFAULTS = new InjectionToken('I_SNACKBAR_DEFAULTS', {
-    providedIn: 'root',
-    factory: () => ({}),
-});
-class SnackbarSettings {
-    defaults = signal(inject(I_SNACKBAR_DEFAULTS), ...(ngDevMode ? [{ debugName: "defaults" }] : []));
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: SnackbarSettings, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: SnackbarSettings, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: SnackbarSettings, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }] });
-
-class ISnackbar {
-    id = nextSnackbarId();
-    message = '';
-    title;
-    variant = 'neutral';
-    position = 'bottom-right';
-    durationMs = 5000;
-    prefixIcon = '';
-    suffixIcon = '';
-    closable = true;
-    closeLabel = 'Close';
-    actionLabel = '';
-    actionDisabled = false;
-    actionLoading = false;
-    dismissOnAction = true;
-    dismissOnEscape = true;
-    pauseOnHover = true;
-    pauseOnFocus = true;
-    pauseOnHidden = true;
-    maxWidth = '400px';
-    resetKey;
-    open;
-    defaultOpen = true;
-    openChange = new EventEmitter();
-    onAction = new EventEmitter();
-    afterDismissed = new EventEmitter();
-    projected;
-    host = inject(ElementRef).nativeElement;
-    platform = inject(PLATFORM_ID);
-    settings = inject(SnackbarSettings);
-    destroyRef = inject(DestroyRef);
-    mount;
-    observer;
-    initialized = false;
-    internalOpen = true;
-    pendingReason = 'programmatic';
-    constructor() {
-        this.host.hidden = true;
-        effect(() => {
-            this.settings.defaults();
-            if (this.initialized)
-                this.sync();
-        });
-    }
-    ngAfterViewInit() {
-        this.internalOpen = this.defaultOpen;
-        this.initialized = true;
-        if (!isPlatformBrowser(this.platform))
-            return;
-        const Observer = this.host.ownerDocument.defaultView?.MutationObserver;
-        if (Observer) {
-            this.observer = new Observer(() => this.sync());
-            this.observer.observe(this.projected.nativeElement, {
-                childList: true,
-                characterData: true,
-                subtree: true,
-            });
-        }
-        this.sync();
-    }
-    ngOnChanges(changes) {
-        if (changes['resetKey'] || (changes['open'] && this.open))
-            this.pendingReason = 'programmatic';
-        if (changes['resetKey'] && this.initialized && this.open === undefined)
-            this.internalOpen = true;
-        const reset = ['message', 'title', 'durationMs', 'resetKey'].some((key) => !!changes[key]) ||
-            (!!changes['open'] && this.open === true);
-        this.sync(reset);
-    }
-    requestClose(reason) {
-        this.mount?.requestDismiss(reason);
-    }
-    activateAction() {
-        if (this.actionDisabled || this.actionLoading || !this.mount?.interactive)
-            return;
-        this.onAction.emit();
-        if (this.dismissOnAction)
-            this.requestClose('action');
-    }
-    ngOnDestroy() {
-        this.observer?.disconnect();
-        this.mount?.destroy();
-    }
-    sync(reset = false) {
-        if (!this.initialized || this.destroyRef.destroyed || !isPlatformBrowser(this.platform))
-            return;
-        const hasChildren = [...this.projected.nativeElement.childNodes].some((node) => node.nodeType === 1 || (node.nodeType === 3 && !!node.textContent?.trim()));
-        if (!(this.open ?? this.internalOpen) ||
-            (!this.message?.trim() && !this.title?.trim() && !hasChildren)) {
-            this.mount?.close(this.pendingReason);
-            return;
-        }
-        const options = {
-            id: this.id,
-            position: this.position,
-            durationMs: this.durationMs,
-            closable: this.closable,
-            dismissOnEscape: this.dismissOnEscape,
-            pauseOnHover: this.pauseOnHover,
-            pauseOnFocus: this.pauseOnFocus,
-            pauseOnHidden: this.pauseOnHidden,
-            maxWidth: this.maxWidth,
-        };
-        const runtime = {
-            ...options,
-            id: this.id,
-            scope: this.settings,
-            maxVisible: this.settings.defaults().maxVisible,
-        };
-        if (this.mount) {
-            this.mount.update(runtime, reset);
-            return;
-        }
-        this.mount = new SnackbarMount(this.host, runtime, (reason) => {
-            this.pendingReason = reason;
-            if (this.open === undefined)
-                this.internalOpen = false;
-            this.openChange.emit(false);
-            this.sync();
-        }, (reason) => {
-            this.mount = undefined;
-            this.afterDismissed.emit(reason);
-        });
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbar, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISnackbar, isStandalone: true, selector: "i-snackbar", inputs: { id: "id", message: "message", title: "title", variant: "variant", position: "position", durationMs: "durationMs", prefixIcon: "prefixIcon", suffixIcon: "suffixIcon", closable: ["closable", "closable", booleanAttribute], closeLabel: "closeLabel", actionLabel: "actionLabel", actionDisabled: ["actionDisabled", "actionDisabled", booleanAttribute], actionLoading: ["actionLoading", "actionLoading", booleanAttribute], dismissOnAction: ["dismissOnAction", "dismissOnAction", booleanAttribute], dismissOnEscape: ["dismissOnEscape", "dismissOnEscape", booleanAttribute], pauseOnHover: ["pauseOnHover", "pauseOnHover", booleanAttribute], pauseOnFocus: ["pauseOnFocus", "pauseOnFocus", booleanAttribute], pauseOnHidden: ["pauseOnHidden", "pauseOnHidden", booleanAttribute], maxWidth: "maxWidth", resetKey: "resetKey", open: ["open", "open", (value) => value === null || value === undefined ? undefined : booleanAttribute(value)], defaultOpen: ["defaultOpen", "defaultOpen", booleanAttribute] }, outputs: { openChange: "openChange", onAction: "onAction", afterDismissed: "afterDismissed" }, host: { classAttribute: "i-snackbar" }, viewQueries: [{ propertyName: "projected", first: true, predicate: ["projected"], descendants: true, static: true }], usesOnChanges: true, ngImport: i0, template: `
-    <i-banner
-      aria-atomic="true"
-      [attr.aria-live]="variant === 'danger' ? 'assertive' : 'polite'"
-      [closable]="closable"
-      [closeLabel]="closeLabel"
-      [open]="true"
-      [prefixIcon]="prefixIcon"
-      [suffixIcon]="suffixIcon"
-      [variant]="variant"
-      (onClose)="requestClose('close')"
-    >
-      <div class="i-snackbar__layout">
-        <div class="i-snackbar__copy">
-          @if (title?.trim()) {
-            <div class="i-snackbar__title">{{ title }}</div>
-          }
-          @if (message?.trim()) {
-            <div class="i-snackbar__message">{{ message }}</div>
-          }
-          <div #projected class="i-snackbar__content"><ng-content /></div>
-        </div>
-        @if (actionLabel) {
-          <i-button
-            size="sm"
-            type="button"
-            [disabled]="actionDisabled"
-            [loading]="actionLoading"
-            (onClick)="activateAction()"
-            >{{ actionLabel }}</i-button
-          >
-        }
-      </div>
-    </i-banner>
-  `, isInline: true, dependencies: [{ kind: "component", type: IBanner, selector: "i-banner", inputs: ["message", "variant", "prefixIcon", "suffixIcon", "closable", "closeLabel", "open", "defaultOpen"], outputs: ["openChange", "onClose"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["placeholder", "disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbar, decorators: [{
-            type: Component,
-            args: [{
-                    selector: 'i-snackbar',
-                    changeDetection: ChangeDetectionStrategy.OnPush,
-                    imports: [IBanner, IButton],
-                    host: { class: 'i-snackbar' },
-                    template: `
-    <i-banner
-      aria-atomic="true"
-      [attr.aria-live]="variant === 'danger' ? 'assertive' : 'polite'"
-      [closable]="closable"
-      [closeLabel]="closeLabel"
-      [open]="true"
-      [prefixIcon]="prefixIcon"
-      [suffixIcon]="suffixIcon"
-      [variant]="variant"
-      (onClose)="requestClose('close')"
-    >
-      <div class="i-snackbar__layout">
-        <div class="i-snackbar__copy">
-          @if (title?.trim()) {
-            <div class="i-snackbar__title">{{ title }}</div>
-          }
-          @if (message?.trim()) {
-            <div class="i-snackbar__message">{{ message }}</div>
-          }
-          <div #projected class="i-snackbar__content"><ng-content /></div>
-        </div>
-        @if (actionLabel) {
-          <i-button
-            size="sm"
-            type="button"
-            [disabled]="actionDisabled"
-            [loading]="actionLoading"
-            (onClick)="activateAction()"
-            >{{ actionLabel }}</i-button
-          >
-        }
-      </div>
-    </i-banner>
-  `,
-                }]
-        }], ctorParameters: () => [], propDecorators: { id: [{
-                type: Input
-            }], message: [{
-                type: Input
-            }], title: [{
-                type: Input
-            }], variant: [{
-                type: Input
-            }], position: [{
-                type: Input
-            }], durationMs: [{
-                type: Input
-            }], prefixIcon: [{
-                type: Input
-            }], suffixIcon: [{
-                type: Input
-            }], closable: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], closeLabel: [{
-                type: Input
-            }], actionLabel: [{
-                type: Input
-            }], actionDisabled: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], actionLoading: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], dismissOnAction: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], dismissOnEscape: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], pauseOnHover: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], pauseOnFocus: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], pauseOnHidden: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], maxWidth: [{
-                type: Input
-            }], resetKey: [{
-                type: Input
-            }], open: [{
-                type: Input,
-                args: [{
-                        transform: (value) => value === null || value === undefined ? undefined : booleanAttribute(value),
-                    }]
-            }], defaultOpen: [{
-                type: Input,
-                args: [{ transform: booleanAttribute }]
-            }], openChange: [{
-                type: Output
-            }], onAction: [{
-                type: Output
-            }], afterDismissed: [{
-                type: Output
-            }], projected: [{
-                type: ViewChild,
-                args: ['projected', { static: true }]
-            }] } });
-
-class ISnackbarRef {
-    id;
-    closed = new ReplaySubject(1);
-    close;
-    finished = false;
-    constructor(id, close) {
-        this.id = id;
-        this.close = close;
-    }
-    dismiss() {
-        this.close();
-    }
-    afterDismissed() {
-        return this.closed.asObservable();
-    }
-    complete(reason) {
-        if (this.finished)
-            return;
-        this.finished = true;
-        this.closed.next(reason);
-        this.closed.complete();
-    }
-}
-class ISnackbarService {
-    doc = inject(DOCUMENT);
-    app = inject(ApplicationRef);
-    injector = inject(EnvironmentInjector);
-    platform = inject(PLATFORM_ID);
-    settings = inject(SnackbarSettings);
-    instances = new Map();
-    constructor() {
-        inject(DestroyRef).onDestroy(() => {
-            for (const instance of this.instances.values()) {
-                if (!instance.component.hostView.destroyed) {
-                    this.app.detachView(instance.component.hostView);
-                    instance.component.destroy();
-                }
-                instance.ref.complete('programmatic');
-            }
-            this.instances.clear();
-        });
-    }
-    configure(defaults) {
-        this.settings.defaults.set({ ...defaults });
-    }
-    show(message, options = {}) {
-        const id = options.id ?? nextSnackbarId();
-        const existing = this.instances.get(id);
-        if (existing) {
-            this.update(id, { ...options, message });
-            return existing.ref;
-        }
-        const ref = new ISnackbarRef(id, () => this.dismiss(id));
-        if (!isPlatformBrowser(this.platform) || (!message.trim() && !options.title?.trim())) {
-            ref.complete('programmatic');
-            return ref;
-        }
-        const host = this.doc.createElement('i-snackbar');
-        const component = createComponent(ISnackbar, {
-            hostElement: host,
-            environmentInjector: this.injector,
-        });
-        const instance = { ref, component, options: { ...options, id }, revision: 0 };
-        this.instances.set(id, instance);
-        component.instance.onAction.subscribe(() => instance.options.onAction?.());
-        component.instance.afterDismissed.subscribe((reason) => {
-            if (this.instances.get(id) !== instance)
-                return;
-            this.instances.delete(id);
-            this.app.detachView(component.hostView);
-            component.destroy();
-            ref.complete(reason);
-        });
-        for (const [key, value] of Object.entries(instance.options))
-            if (key !== 'onAction')
-                component.setInput(key, value);
-        component.setInput('message', message);
-        component.setInput('resetKey', 0);
-        this.app.attachView(component.hostView);
-        component.changeDetectorRef.detectChanges();
-        return ref;
-    }
-    update(id, changes) {
-        const instance = this.instances.get(id);
-        if (!instance)
-            return;
-        instance.options = { ...instance.options, ...changes };
-        for (const [key, value] of Object.entries(changes))
-            if (key !== 'onAction')
-                instance.component.setInput(key, value);
-        instance.component.setInput('resetKey', ++instance.revision);
-        instance.component.changeDetectorRef.detectChanges();
-    }
-    dismiss(id) {
-        this.instances.get(id)?.component.instance.requestClose('programmatic');
-    }
-    dismissAll() {
-        for (const id of this.instances.keys())
-            this.dismiss(id);
-    }
-    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbarService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
-    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbarService, providedIn: 'root' });
-}
-i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbarService, decorators: [{
-            type: Injectable,
-            args: [{ providedIn: 'root' }]
-        }], ctorParameters: () => [] });
 
 /**
  * ICard
@@ -12531,6 +11870,667 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 }]
         }], propDecorators: { items: [{ type: i0.Input, args: [{ isSignal: true, alias: "items", required: false }] }], unreadCount: [{ type: i0.Input, args: [{ isSignal: true, alias: "unreadCount", required: false }] }], loading: [{ type: i0.Input, args: [{ isSignal: true, alias: "loading", required: false }] }], hasLoaded: [{ type: i0.Input, args: [{ isSignal: true, alias: "hasLoaded", required: false }] }], loadingMore: [{ type: i0.Input, args: [{ isSignal: true, alias: "loadingMore", required: false }] }], readingId: [{ type: i0.Input, args: [{ isSignal: true, alias: "readingId", required: false }] }], hasMore: [{ type: i0.Input, args: [{ isSignal: true, alias: "hasMore", required: false }] }], error: [{ type: i0.Input, args: [{ isSignal: true, alias: "error", required: false }] }], loadMoreError: [{ type: i0.Input, args: [{ isSignal: true, alias: "loadMoreError", required: false }] }], actionError: [{ type: i0.Input, args: [{ isSignal: true, alias: "actionError", required: false }] }], closeRequested: [{ type: i0.Output, args: ["closeRequested"] }], openAllRequested: [{ type: i0.Output, args: ["openAllRequested"] }], itemOpened: [{ type: i0.Output, args: ["itemOpened"] }], moreRequested: [{ type: i0.Output, args: ["moreRequested"] }], retryRequested: [{ type: i0.Output, args: ["retryRequested"] }], readRetryRequested: [{ type: i0.Output, args: ["readRetryRequested"] }] } });
 
+const regions = new WeakMap();
+const limits = new WeakMap();
+let sequence = 0;
+function nextSnackbarId() {
+    return `i-snackbar-${++sequence}`;
+}
+function position(options) {
+    return options.position ?? 'bottom-right';
+}
+function acquireRegion(doc, value) {
+    let map = regions.get(doc);
+    if (!map)
+        regions.set(doc, (map = new Map()));
+    let region = map.get(value);
+    if (!region) {
+        const selector = `[data-i-snackbar-viewport="${value}"]`;
+        const element = doc.querySelector(selector) ?? doc.createElement('div');
+        element.classList.add('i-snackbar-viewport');
+        element.setAttribute('data-i-snackbar-viewport', value);
+        if (!element.isConnected)
+            doc.body.appendChild(element);
+        region = { element, entries: [], position: value };
+        map.set(value, region);
+    }
+    return region;
+}
+function arrange(region) {
+    const counts = new Map();
+    for (const entry of region.entries) {
+        const scope = entry.options.scope;
+        const count = counts.get(scope) ?? 0;
+        const visible = count < (limits.get(scope) ?? Infinity);
+        if (visible)
+            counts.set(scope, count + 1);
+        entry.setVisible(visible);
+    }
+}
+function place(region, element) {
+    if (region.position.startsWith('top-')) {
+        region.element.prepend(element);
+    }
+    else {
+        region.element.appendChild(element);
+    }
+}
+function revealNewest(region) {
+    const scroll = () => {
+        if (!region.element.isConnected || !region.entries.some((entry) => entry.interactive))
+            return;
+        region.element.scrollTop = region.position.startsWith('top-') ? 0 : region.element.scrollHeight;
+    };
+    const view = region.element.ownerDocument.defaultView;
+    const schedule = () => {
+        if (!view?.requestAnimationFrame) {
+            scroll();
+            return;
+        }
+        if (region.scrollFrame !== undefined)
+            return;
+        region.scrollFrame = view.requestAnimationFrame(() => {
+            region.scrollFrame = undefined;
+            scroll();
+        });
+    };
+    schedule();
+    clearTimeout(region.scrollTimer);
+    // Recheck the edge after the entrance animation and the latest burst settle.
+    region.scrollTimer = setTimeout(() => {
+        region.scrollTimer = undefined;
+        schedule();
+    }, 200);
+}
+/** Owns one portal's queue admission, remaining duration, and dismiss transition. */
+class SnackbarMount {
+    element;
+    options;
+    doc;
+    request;
+    dismissed;
+    region;
+    timer;
+    exitTimer;
+    remaining = 0;
+    duration = 5000;
+    started = 0;
+    visible = false;
+    hovering = false;
+    focused = false;
+    requested = false;
+    closing = false;
+    destroyed = false;
+    constructor(element, options, request, dismissed) {
+        this.element = element;
+        this.doc = element.ownerDocument;
+        this.options = options;
+        this.request = request;
+        this.dismissed = dismissed;
+        this.region = acquireRegion(this.doc, position(options));
+        this.element.classList.add('i-snackbar');
+        this.element.addEventListener('mouseenter', this.enter);
+        this.element.addEventListener('mouseleave', this.leave);
+        this.element.addEventListener('focusin', this.focusIn);
+        this.element.addEventListener('focusout', this.focusOut);
+        this.element.addEventListener('keydown', this.keydown);
+        this.doc.addEventListener('visibilitychange', this.visibility);
+        this.region.entries.push(this);
+        place(this.region, element);
+        this.update(options, true);
+    }
+    update(options, reset = false) {
+        if (this.destroyed)
+            return;
+        this.pauseClock();
+        const oldPosition = position(this.options);
+        this.options = options;
+        const limit = options.maxVisible;
+        limits.set(options.scope, Number.isInteger(limit) && limit > 0 ? limit : Infinity);
+        this.element.dataset['snackbarId'] = options.id;
+        this.element.style.setProperty('--i-snackbar-max-width', options.maxWidth ?? '400px');
+        if (oldPosition !== position(options)) {
+            const focused = this.element.contains(this.doc.activeElement)
+                ? this.doc.activeElement
+                : null;
+            this.detach();
+            this.region = acquireRegion(this.doc, position(options));
+            this.region.entries.push(this);
+            place(this.region, this.element);
+            focused?.focus({ preventScroll: true });
+        }
+        if (reset) {
+            clearTimeout(this.exitTimer);
+            this.exitTimer = undefined;
+            this.element.classList.remove('i-snackbar--closing');
+            this.closing = false;
+            this.requested = false;
+            const duration = options.durationMs ?? 5000;
+            this.duration = Number.isFinite(duration) && duration > 0 ? duration : 0;
+            this.remaining = this.duration;
+        }
+        arrange(this.region);
+        if (this.visible && (reset || oldPosition !== position(options)))
+            revealNewest(this.region);
+        this.resumeClock();
+    }
+    setVisible(value) {
+        this.pauseClock();
+        const appeared = value && !this.visible;
+        this.visible = value;
+        this.element.hidden = !value;
+        if (appeared)
+            revealNewest(this.region);
+        this.resumeClock();
+    }
+    requestDismiss(reason) {
+        if (this.destroyed || this.closing || this.requested)
+            return;
+        this.pauseClock();
+        this.requested = true;
+        this.request(reason);
+    }
+    get interactive() {
+        return this.visible && !this.destroyed && !this.closing && !this.requested;
+    }
+    close(reason) {
+        if (this.destroyed || this.closing)
+            return;
+        this.closing = true;
+        this.pauseClock();
+        this.element.classList.add('i-snackbar--closing');
+        const reduceMotion = this.doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        this.exitTimer = setTimeout(() => {
+            this.destroy();
+            this.dismissed(reason);
+        }, this.visible && !reduceMotion ? 180 : 0);
+    }
+    destroy() {
+        if (this.destroyed)
+            return;
+        this.destroyed = true;
+        clearTimeout(this.timer);
+        clearTimeout(this.exitTimer);
+        this.element.removeEventListener('mouseenter', this.enter);
+        this.element.removeEventListener('mouseleave', this.leave);
+        this.element.removeEventListener('focusin', this.focusIn);
+        this.element.removeEventListener('focusout', this.focusOut);
+        this.element.removeEventListener('keydown', this.keydown);
+        this.doc.removeEventListener('visibilitychange', this.visibility);
+        this.element.remove();
+        this.detach();
+    }
+    detach() {
+        this.region.entries = this.region.entries.filter((entry) => entry !== this);
+        arrange(this.region);
+        if (!this.region.entries.length) {
+            clearTimeout(this.region.scrollTimer);
+            this.region.scrollTimer = undefined;
+            if (this.region.scrollFrame !== undefined) {
+                this.doc.defaultView?.cancelAnimationFrame?.(this.region.scrollFrame);
+                this.region.scrollFrame = undefined;
+            }
+            if (!this.region.element.childElementCount)
+                this.region.element.remove();
+            regions.get(this.doc)?.delete(this.region.position);
+        }
+    }
+    pauseClock() {
+        if (this.timer !== undefined) {
+            clearTimeout(this.timer);
+            this.timer = undefined;
+            this.remaining = Math.max(0, this.remaining - (Date.now() - this.started));
+        }
+    }
+    resumeClock() {
+        if (this.destroyed ||
+            this.closing ||
+            this.requested ||
+            !this.visible ||
+            (this.hovering && this.options.pauseOnHover !== false) ||
+            (this.focused && this.options.pauseOnFocus !== false) ||
+            (this.doc.visibilityState === 'hidden' && this.options.pauseOnHidden !== false) ||
+            this.duration <= 0 ||
+            this.timer !== undefined)
+            return;
+        this.started = Date.now();
+        this.timer = setTimeout(() => {
+            this.timer = undefined;
+            this.remaining = 0;
+            this.requestDismiss('timeout');
+        }, this.remaining);
+    }
+    enter = () => {
+        this.pauseClock();
+        this.hovering = true;
+        this.resumeClock();
+    };
+    leave = () => {
+        this.pauseClock();
+        this.hovering = false;
+        this.resumeClock();
+    };
+    focusIn = () => {
+        this.pauseClock();
+        this.focused = true;
+        this.resumeClock();
+    };
+    focusOut = (event) => {
+        if (event.relatedTarget && this.element.contains(event.relatedTarget))
+            return;
+        this.pauseClock();
+        this.focused = false;
+        this.resumeClock();
+    };
+    visibility = () => {
+        this.pauseClock();
+        this.resumeClock();
+    };
+    keydown = (event) => {
+        if (event.key !== 'Escape' ||
+            event.defaultPrevented ||
+            this.options.dismissOnEscape === false ||
+            !this.element.contains(this.doc.activeElement))
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.requestDismiss('escape');
+    };
+}
+
+const I_SNACKBAR_DEFAULTS = new InjectionToken('I_SNACKBAR_DEFAULTS', {
+    providedIn: 'root',
+    factory: () => ({}),
+});
+class SnackbarSettings {
+    defaults = signal(inject(I_SNACKBAR_DEFAULTS), ...(ngDevMode ? [{ debugName: "defaults" }] : []));
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: SnackbarSettings, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: SnackbarSettings, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: SnackbarSettings, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }] });
+
+class ISnackbar {
+    id = nextSnackbarId();
+    message = '';
+    title;
+    variant = 'neutral';
+    position = 'bottom-right';
+    durationMs = 5000;
+    prefixIcon = '';
+    suffixIcon = '';
+    closable = true;
+    closeLabel = 'Close';
+    actionLabel = '';
+    actionDisabled = false;
+    actionLoading = false;
+    dismissOnAction = true;
+    dismissOnEscape = true;
+    pauseOnHover = true;
+    pauseOnFocus = true;
+    pauseOnHidden = true;
+    maxWidth = '400px';
+    resetKey;
+    open;
+    defaultOpen = true;
+    openChange = new EventEmitter();
+    onAction = new EventEmitter();
+    afterDismissed = new EventEmitter();
+    projected;
+    host = inject(ElementRef).nativeElement;
+    platform = inject(PLATFORM_ID);
+    settings = inject(SnackbarSettings);
+    destroyRef = inject(DestroyRef);
+    mount;
+    observer;
+    initialized = false;
+    internalOpen = true;
+    pendingReason = 'programmatic';
+    constructor() {
+        this.host.hidden = true;
+        effect(() => {
+            this.settings.defaults();
+            if (this.initialized)
+                this.sync();
+        });
+    }
+    ngAfterViewInit() {
+        this.internalOpen = this.defaultOpen;
+        this.initialized = true;
+        if (!isPlatformBrowser(this.platform))
+            return;
+        const Observer = this.host.ownerDocument.defaultView?.MutationObserver;
+        if (Observer) {
+            this.observer = new Observer(() => this.sync());
+            this.observer.observe(this.projected.nativeElement, {
+                childList: true,
+                characterData: true,
+                subtree: true,
+            });
+        }
+        this.sync();
+    }
+    ngOnChanges(changes) {
+        if (changes['resetKey'] || (changes['open'] && this.open))
+            this.pendingReason = 'programmatic';
+        if (changes['resetKey'] && this.initialized && this.open === undefined)
+            this.internalOpen = true;
+        const reset = ['message', 'title', 'durationMs', 'resetKey'].some((key) => !!changes[key]) ||
+            (!!changes['open'] && this.open === true);
+        this.sync(reset);
+    }
+    requestClose(reason) {
+        this.mount?.requestDismiss(reason);
+    }
+    activateAction() {
+        if (this.actionDisabled || this.actionLoading || !this.mount?.interactive)
+            return;
+        this.onAction.emit();
+        if (this.dismissOnAction)
+            this.requestClose('action');
+    }
+    ngOnDestroy() {
+        this.observer?.disconnect();
+        this.mount?.destroy();
+    }
+    sync(reset = false) {
+        if (!this.initialized || this.destroyRef.destroyed || !isPlatformBrowser(this.platform))
+            return;
+        const hasChildren = [...this.projected.nativeElement.childNodes].some((node) => node.nodeType === 1 || (node.nodeType === 3 && !!node.textContent?.trim()));
+        if (!(this.open ?? this.internalOpen) ||
+            (!this.message?.trim() && !this.title?.trim() && !hasChildren)) {
+            this.mount?.close(this.pendingReason);
+            return;
+        }
+        const options = {
+            id: this.id,
+            position: this.position,
+            durationMs: this.durationMs,
+            closable: this.closable,
+            dismissOnEscape: this.dismissOnEscape,
+            pauseOnHover: this.pauseOnHover,
+            pauseOnFocus: this.pauseOnFocus,
+            pauseOnHidden: this.pauseOnHidden,
+            maxWidth: this.maxWidth,
+        };
+        const runtime = {
+            ...options,
+            id: this.id,
+            scope: this.settings,
+            maxVisible: this.settings.defaults().maxVisible,
+        };
+        if (this.mount) {
+            this.mount.update(runtime, reset);
+            return;
+        }
+        this.mount = new SnackbarMount(this.host, runtime, (reason) => {
+            this.pendingReason = reason;
+            if (this.open === undefined)
+                this.internalOpen = false;
+            this.openChange.emit(false);
+            this.sync();
+        }, (reason) => {
+            this.mount = undefined;
+            this.afterDismissed.emit(reason);
+        });
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbar, deps: [], target: i0.ɵɵFactoryTarget.Component });
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: ISnackbar, isStandalone: true, selector: "i-snackbar", inputs: { id: "id", message: "message", title: "title", variant: "variant", position: "position", durationMs: "durationMs", prefixIcon: "prefixIcon", suffixIcon: "suffixIcon", closable: ["closable", "closable", booleanAttribute], closeLabel: "closeLabel", actionLabel: "actionLabel", actionDisabled: ["actionDisabled", "actionDisabled", booleanAttribute], actionLoading: ["actionLoading", "actionLoading", booleanAttribute], dismissOnAction: ["dismissOnAction", "dismissOnAction", booleanAttribute], dismissOnEscape: ["dismissOnEscape", "dismissOnEscape", booleanAttribute], pauseOnHover: ["pauseOnHover", "pauseOnHover", booleanAttribute], pauseOnFocus: ["pauseOnFocus", "pauseOnFocus", booleanAttribute], pauseOnHidden: ["pauseOnHidden", "pauseOnHidden", booleanAttribute], maxWidth: "maxWidth", resetKey: "resetKey", open: ["open", "open", (value) => value === null || value === undefined ? undefined : booleanAttribute(value)], defaultOpen: ["defaultOpen", "defaultOpen", booleanAttribute] }, outputs: { openChange: "openChange", onAction: "onAction", afterDismissed: "afterDismissed" }, host: { classAttribute: "i-snackbar" }, viewQueries: [{ propertyName: "projected", first: true, predicate: ["projected"], descendants: true, static: true }], usesOnChanges: true, ngImport: i0, template: `
+    <i-banner
+      aria-atomic="true"
+      [attr.aria-live]="variant === 'danger' ? 'assertive' : 'polite'"
+      [closable]="closable"
+      [closeLabel]="closeLabel"
+      [open]="true"
+      [prefixIcon]="prefixIcon"
+      [suffixIcon]="suffixIcon"
+      [variant]="variant"
+      (onClose)="requestClose('close')"
+    >
+      <div class="i-snackbar__layout">
+        <div class="i-snackbar__copy">
+          @if (title?.trim()) {
+            <div class="i-snackbar__title">{{ title }}</div>
+          }
+          @if (message?.trim()) {
+            <div class="i-snackbar__message">{{ message }}</div>
+          }
+          <div #projected class="i-snackbar__content"><ng-content /></div>
+        </div>
+        @if (actionLabel) {
+          <i-button
+            size="sm"
+            type="button"
+            [disabled]="actionDisabled"
+            [loading]="actionLoading"
+            (onClick)="activateAction()"
+            >{{ actionLabel }}</i-button
+          >
+        }
+      </div>
+    </i-banner>
+  `, isInline: true, dependencies: [{ kind: "component", type: IBanner, selector: "i-banner", inputs: ["message", "variant", "prefixIcon", "suffixIcon", "closable", "closeLabel", "open", "defaultOpen"], outputs: ["openChange", "onClose"] }, { kind: "component", type: IButton, selector: "i-button", inputs: ["placeholder", "disabled", "loading", "type", "ariaLabel", "loadingText", "variant", "size", "icon", "routerLink", "queryParams", "fragment", "state", "href", "target", "rel"], outputs: ["onClick"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbar, decorators: [{
+            type: Component,
+            args: [{
+                    selector: 'i-snackbar',
+                    changeDetection: ChangeDetectionStrategy.OnPush,
+                    imports: [IBanner, IButton],
+                    host: { class: 'i-snackbar' },
+                    template: `
+    <i-banner
+      aria-atomic="true"
+      [attr.aria-live]="variant === 'danger' ? 'assertive' : 'polite'"
+      [closable]="closable"
+      [closeLabel]="closeLabel"
+      [open]="true"
+      [prefixIcon]="prefixIcon"
+      [suffixIcon]="suffixIcon"
+      [variant]="variant"
+      (onClose)="requestClose('close')"
+    >
+      <div class="i-snackbar__layout">
+        <div class="i-snackbar__copy">
+          @if (title?.trim()) {
+            <div class="i-snackbar__title">{{ title }}</div>
+          }
+          @if (message?.trim()) {
+            <div class="i-snackbar__message">{{ message }}</div>
+          }
+          <div #projected class="i-snackbar__content"><ng-content /></div>
+        </div>
+        @if (actionLabel) {
+          <i-button
+            size="sm"
+            type="button"
+            [disabled]="actionDisabled"
+            [loading]="actionLoading"
+            (onClick)="activateAction()"
+            >{{ actionLabel }}</i-button
+          >
+        }
+      </div>
+    </i-banner>
+  `,
+                }]
+        }], ctorParameters: () => [], propDecorators: { id: [{
+                type: Input
+            }], message: [{
+                type: Input
+            }], title: [{
+                type: Input
+            }], variant: [{
+                type: Input
+            }], position: [{
+                type: Input
+            }], durationMs: [{
+                type: Input
+            }], prefixIcon: [{
+                type: Input
+            }], suffixIcon: [{
+                type: Input
+            }], closable: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], closeLabel: [{
+                type: Input
+            }], actionLabel: [{
+                type: Input
+            }], actionDisabled: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], actionLoading: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], dismissOnAction: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], dismissOnEscape: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], pauseOnHover: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], pauseOnFocus: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], pauseOnHidden: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], maxWidth: [{
+                type: Input
+            }], resetKey: [{
+                type: Input
+            }], open: [{
+                type: Input,
+                args: [{
+                        transform: (value) => value === null || value === undefined ? undefined : booleanAttribute(value),
+                    }]
+            }], defaultOpen: [{
+                type: Input,
+                args: [{ transform: booleanAttribute }]
+            }], openChange: [{
+                type: Output
+            }], onAction: [{
+                type: Output
+            }], afterDismissed: [{
+                type: Output
+            }], projected: [{
+                type: ViewChild,
+                args: ['projected', { static: true }]
+            }] } });
+
+class ISnackbarRef {
+    id;
+    closed = new ReplaySubject(1);
+    close;
+    finished = false;
+    constructor(id, close) {
+        this.id = id;
+        this.close = close;
+    }
+    dismiss() {
+        this.close();
+    }
+    afterDismissed() {
+        return this.closed.asObservable();
+    }
+    complete(reason) {
+        if (this.finished)
+            return;
+        this.finished = true;
+        this.closed.next(reason);
+        this.closed.complete();
+    }
+}
+class ISnackbarService {
+    doc = inject(DOCUMENT);
+    app = inject(ApplicationRef);
+    injector = inject(EnvironmentInjector);
+    platform = inject(PLATFORM_ID);
+    settings = inject(SnackbarSettings);
+    instances = new Map();
+    constructor() {
+        inject(DestroyRef).onDestroy(() => {
+            for (const instance of this.instances.values()) {
+                if (!instance.component.hostView.destroyed) {
+                    this.app.detachView(instance.component.hostView);
+                    instance.component.destroy();
+                }
+                instance.ref.complete('programmatic');
+            }
+            this.instances.clear();
+        });
+    }
+    configure(defaults) {
+        this.settings.defaults.set({ ...defaults });
+    }
+    show(message, options = {}) {
+        const id = options.id ?? nextSnackbarId();
+        const existing = this.instances.get(id);
+        if (existing) {
+            this.update(id, { ...options, message });
+            return existing.ref;
+        }
+        const ref = new ISnackbarRef(id, () => this.dismiss(id));
+        if (!isPlatformBrowser(this.platform) || (!message.trim() && !options.title?.trim())) {
+            ref.complete('programmatic');
+            return ref;
+        }
+        const host = this.doc.createElement('i-snackbar');
+        const component = createComponent(ISnackbar, {
+            hostElement: host,
+            environmentInjector: this.injector,
+        });
+        const instance = { ref, component, options: { ...options, id }, revision: 0 };
+        this.instances.set(id, instance);
+        component.instance.onAction.subscribe(() => instance.options.onAction?.());
+        component.instance.afterDismissed.subscribe((reason) => {
+            if (this.instances.get(id) !== instance)
+                return;
+            this.instances.delete(id);
+            this.app.detachView(component.hostView);
+            component.destroy();
+            ref.complete(reason);
+        });
+        for (const [key, value] of Object.entries(instance.options))
+            if (key !== 'onAction')
+                component.setInput(key, value);
+        component.setInput('message', message);
+        component.setInput('resetKey', 0);
+        this.app.attachView(component.hostView);
+        component.changeDetectorRef.detectChanges();
+        return ref;
+    }
+    update(id, changes) {
+        const instance = this.instances.get(id);
+        if (!instance)
+            return;
+        instance.options = { ...instance.options, ...changes };
+        for (const [key, value] of Object.entries(changes))
+            if (key !== 'onAction')
+                instance.component.setInput(key, value);
+        instance.component.setInput('resetKey', ++instance.revision);
+        instance.component.changeDetectorRef.detectChanges();
+    }
+    dismiss(id) {
+        this.instances.get(id)?.component.instance.requestClose('programmatic');
+    }
+    dismissAll() {
+        for (const id of this.instances.keys())
+            this.dismiss(id);
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbarService, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbarService, providedIn: 'root' });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: ISnackbarService, decorators: [{
+            type: Injectable,
+            args: [{ providedIn: 'root' }]
+        }], ctorParameters: () => [] });
+
 class INotificationSnackbar {
     message = input.required(...(ngDevMode ? [{ debugName: "message" }] : []));
     options = input(...(ngDevMode ? [undefined, { debugName: "options" }] : []));
@@ -12921,33 +12921,21 @@ function findBreadcrumbMenuChain(menus, path) {
     return best;
 }
 
-/**
- * Default environment for `@insight/ui`'s shared data layer.
- *
- * `api.identity` and `signinUrl` are intentionally EMPTY -
- * the library does not default to any shared identity provider. Each consumer
- * app supplies its own values (its own BFF/identity host) via
- * `provideIAuth()`. The `user`/`configuration`/`application` keys keep
- * defaulting to the platform services and can still be overridden.
- */
-const environment = {
-    production: false,
-    releaseStage: 'development',
-    appName: 'Insight UI',
-    version: '1.0.2',
+/** Shared runtime defaults; consumer deployment configuration never comes from this module. */
+const I_AUTH_DEFAULTS = {
     api: {
-        identity: '',
         user: 'https://account-dev.paramountenterprise.co.id/api/v1/users',
         configuration: 'https://account-dev.paramountenterprise.co.id/api/v1',
         application: 'https://account-dev.paramountenterprise.co.id/api/v1/applications',
     },
-    signinUrl: '',
     tokenLifespan: {
         accessTokenSeconds: 3600,
         refreshTokenSeconds: 7200,
         ssoSessionMaxSeconds: 54000,
     },
     csrfTokenMaxAgeSeconds: 7170,
+    apiKey: undefined,
+    appId: undefined,
 };
 
 /** Default relative endpoint paths for the configured identity host. */
@@ -12967,24 +12955,24 @@ function getDefaultIAuthEndpoints() {
  * values via `provideIAuth({ ... })` and is validated fail-fast when it
  * forgets. All other fields default sensibly: `allowedReturnOrigins` to this
  * app's own origin, `endpoints` to the platform/BFF path contract, and lifespan /
- * csrf / api-key values from the library's default environment.
+ * csrf / api-key values from the library's shared auth defaults.
  */
 function getDefaultIAuthConfig() {
     return {
         api: {
             identity: '', // no default identity host - the consumer app supplies its own
-            user: environment.api.user,
-            configuration: environment.api.configuration,
-            application: environment.api.application,
+            user: I_AUTH_DEFAULTS.api.user,
+            configuration: I_AUTH_DEFAULTS.api.configuration,
+            application: I_AUTH_DEFAULTS.api.application,
         },
         signinUrl: '', // no default sign-in page - the consumer app supplies its own
         callbackPath: '/auth/callback',
         allowedReturnOrigins: [window.location.origin],
-        tokenLifespan: { ...environment.tokenLifespan },
-        csrfTokenMaxAgeSeconds: environment.csrfTokenMaxAgeSeconds,
+        tokenLifespan: { ...I_AUTH_DEFAULTS.tokenLifespan },
+        csrfTokenMaxAgeSeconds: I_AUTH_DEFAULTS.csrfTokenMaxAgeSeconds,
         endpoints: { ...getDefaultIAuthEndpoints() },
-        apiKey: environment.apiKey,
-        appId: environment.appId,
+        apiKey: I_AUTH_DEFAULTS.apiKey,
+        appId: I_AUTH_DEFAULTS.appId,
         unauthorizedHandling: 'dialog',
     };
 }
@@ -14125,14 +14113,14 @@ function collectAuthorizationScope(items) {
  * the app-wide body-as-data convention.
  *
  * Base URL: `{api.user}` from the resolved auth config (defaults to the
- * library environment file). Consumer apps override via
+ * shared auth defaults). Consumer apps override via
  * `provideIAuth({ api: { user: '...' } })`.
  */
 class IUserMenuService {
     api = inject(IApiService);
     config = inject(I_AUTH_CONFIG);
     get baseUrl() {
-        return this.config.api['user'] ?? environment.api.user;
+        return this.config.api['user'] ?? I_AUTH_DEFAULTS.api.user;
     }
     resolveApplicationId(applicationId) {
         const id = applicationId ?? this.config.appId;
@@ -14220,14 +14208,14 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
  * `user.mapper.ts` (`mapToSidebarUser`).
  *
  * Base URL: `{api.user}` from the resolved auth config (defaults to the
- * library environment file). Output type overridable via the generic — the
+ * shared auth defaults). Output type overridable via the generic — the
  * library default is the raw `ICurrentUserDto` DTO.
  */
 class ICurrentUserService {
     api = inject(IApiService);
     config = inject(I_AUTH_CONFIG);
     get baseUrl() {
-        return this.config.api['user'] ?? environment.api.user;
+        return this.config.api['user'] ?? I_AUTH_DEFAULTS.api.user;
     }
     /** GET `{api.user}/users/user` — raw current-user DTO. Override `T` to use your own response type. */
     getCurrentUser() {
@@ -15047,6 +15035,7 @@ class IHContent {
     onNotificationAction = new EventEmitter();
     router = inject(Router);
     activatedRoute = inject(ActivatedRoute);
+    errorHandler = inject(ErrorHandler);
     pageLoading = signal(false, ...(ngDevMode ? [{ debugName: "pageLoading" }] : []));
     pendingRouteLoads = new Set();
     navigationId = this.router.getCurrentNavigation()?.id ?? null;
@@ -15144,18 +15133,21 @@ class IHContent {
         this.sidebarVisibility = !this.sidebarVisibility;
         this.onSidebarToggled.emit(this.sidebarVisibility);
     }
-    onOverrideBreadcrumbClick(e) {
-        // Only for normal left-click navigation.
-        // Let browser handle right-click, ctrl/cmd-click, middle click, etc.
+    onOverrideBreadcrumbClick(e, url) {
         if (e.button !== 0)
             return;
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
             return;
-        // Angular routerLink will update the URL via pushState.
-        // React Router BrowserRouter will not notice unless popstate is fired.
-        queueMicrotask(() => {
-            window.dispatchEvent(new PopStateEvent('popstate'));
-        });
+        e.preventDefault();
+        void this.router
+            .navigateByUrl(this.overrideRouterLink(url))
+            .then((navigated) => {
+            // Notify hosted routers only after Angular has committed the new location.
+            if (navigated) {
+                window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+            }
+        })
+            .catch((error) => this.errorHandler.handleError(error));
     }
     normalizeBaseHref() {
         let b = (this.baseHref ?? '/').trim();
@@ -15184,8 +15176,7 @@ class IHContent {
         return u;
     }
     /**
-     * RouterLink will prefix baseHref automatically.
-     * So we must NOT include baseHref in the value passed to [routerLink].
+     * Angular router URLs exclude baseHref, which the location strategy adds.
      *
      * baseHref "/-/" examples:
      * - "/-/dashboard" -> "/dashboard"
@@ -15261,8 +15252,7 @@ class IHContent {
                 <a
                   class="ih-content-breadcrumb ih-content-breadcrumb__link"
                   [attr.href]="overrideHref(b.url)"
-                  [routerLink]="overrideRouterLink(b.url)"
-                  (click)="onOverrideBreadcrumbClick($event)"
+                  (click)="onOverrideBreadcrumbClick($event, b.url)"
                 >
                   {{ b.label }}
                 </a>
@@ -15295,8 +15285,8 @@ class IHContent {
                   @if (breadcrumb.url) {
                     <a
                       class="ih-content-breadcrumb ih-content-breadcrumb__link"
-                      [routerLink]="overrideRouterLink(breadcrumb.url)"
-                      (click)="onOverrideBreadcrumbClick($event)"
+                      [attr.href]="overrideHref(breadcrumb.url)"
+                      (click)="onOverrideBreadcrumbClick($event, breadcrumb.url)"
                       >{{ breadcrumb.label }}</a
                     >
                   } @else {
@@ -15335,13 +15325,13 @@ class IHContent {
         <i-loading class="ih-content-page-loading" label="Loading page..." mode="container" />
       }
     </div>
-  `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "directive", type: RouterLink, selector: "[routerLink]", inputs: ["target", "queryParams", "fragment", "queryParamsHandling", "state", "info", "relativeTo", "preserveFragment", "skipLocationChange", "replaceUrl", "routerLink"] }, { kind: "component", type: INotification, selector: "i-notification", inputs: ["state"], outputs: ["onAction"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light", "mode"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
+  `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "component", type: INotification, selector: "i-notification", inputs: ["state"], outputs: ["onAction"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light", "mode"] }, { kind: "pipe", type: AsyncPipe, name: "async" }] });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHContent, decorators: [{
             type: Component,
             args: [{
                     selector: 'ih-content',
-                    imports: [RouterOutlet, AsyncPipe, RouterLink, INotification, ILoading],
+                    imports: [RouterOutlet, AsyncPipe, INotification, ILoading],
                     template: `
     <div class="ih-content-header">
       <a
@@ -15379,8 +15369,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 <a
                   class="ih-content-breadcrumb ih-content-breadcrumb__link"
                   [attr.href]="overrideHref(b.url)"
-                  [routerLink]="overrideRouterLink(b.url)"
-                  (click)="onOverrideBreadcrumbClick($event)"
+                  (click)="onOverrideBreadcrumbClick($event, b.url)"
                 >
                   {{ b.label }}
                 </a>
@@ -15413,8 +15402,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                   @if (breadcrumb.url) {
                     <a
                       class="ih-content-breadcrumb ih-content-breadcrumb__link"
-                      [routerLink]="overrideRouterLink(breadcrumb.url)"
-                      (click)="onOverrideBreadcrumbClick($event)"
+                      [attr.href]="overrideHref(breadcrumb.url)"
+                      (click)="onOverrideBreadcrumbClick($event, breadcrumb.url)"
                       >{{ breadcrumb.label }}</a
                     >
                   } @else {
@@ -20491,11 +20480,49 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 }]
         }] });
 
+/** Map public environment fields to auth overrides without replacing defaults with undefined. */
+function getIEnvironmentAuthConfig(environment) {
+    return {
+        api: environment.platformApi,
+        signinUrl: environment.signinUrl,
+        apiKey: environment.apiKey,
+        appId: environment.appId,
+        ...(environment.allowedReturnOrigins === undefined
+            ? {}
+            : { allowedReturnOrigins: environment.allowedReturnOrigins }),
+        ...(environment.tokenLifespan === undefined
+            ? {}
+            : {
+                tokenLifespan: {
+                    ...(environment.tokenLifespan.accessTokenSeconds === undefined
+                        ? {}
+                        : { accessTokenSeconds: environment.tokenLifespan.accessTokenSeconds }),
+                    ...(environment.tokenLifespan.refreshTokenSeconds === undefined
+                        ? {}
+                        : { refreshTokenSeconds: environment.tokenLifespan.refreshTokenSeconds }),
+                    ...(environment.tokenLifespan.ssoSessionMaxSeconds === undefined
+                        ? {}
+                        : { ssoSessionMaxSeconds: environment.tokenLifespan.ssoSessionMaxSeconds }),
+                },
+            }),
+        ...(environment.csrfTokenMaxAgeSeconds === undefined
+            ? {}
+            : { csrfTokenMaxAgeSeconds: environment.csrfTokenMaxAgeSeconds }),
+    };
+}
+/** Require a business endpoint before dispatch; never fall back to a platform endpoint. */
+function requireIEnvironmentApi(environment, service) {
+    const value = environment.api?.[service];
+    if (typeof value !== 'string' || !value.trim())
+        throw new Error('Missing application environment endpoint: api.' + service);
+    return value;
+}
+
 // UI Components
 
 /**
  * Generated bundle index. Do not edit.
  */
 
-export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IActionPlaceholder, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IBanner, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IEmptyState, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridEmptyDef, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSelection, IHSidebar, IHState, IHStateOwner, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IH_STATE, IHasMnDirective, IHasMnRoute, IHighlightSearch, IHighlightSearchPipe, IIcon, IImageCropper, IImpersonationStateService, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoadError, ILoading, ILoadingRegion, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, ISnackbar, ISnackbarRef, ISnackbarService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_EMPTY_STATE_PRESETS, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, I_SNACKBAR_DEFAULTS, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, highlightSearchParts, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
+export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IActionPlaceholder, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IBanner, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IEmptyState, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridEmptyDef, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSelection, IHSidebar, IHState, IHStateOwner, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IH_STATE, IHasMnDirective, IHasMnRoute, IHighlightSearch, IHighlightSearchPipe, IIcon, IImageCropper, IImpersonationStateService, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoadError, ILoading, ILoadingRegion, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, ISnackbar, ISnackbarRef, ISnackbarService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_EMPTY_STATE_PRESETS, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, I_SNACKBAR_DEFAULTS, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getIEnvironmentAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, highlightSearchParts, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIEnvironmentApi, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
 //# sourceMappingURL=insight-ui.mjs.map

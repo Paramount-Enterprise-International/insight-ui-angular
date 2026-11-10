@@ -1,5 +1,5 @@
 import * as i0 from '@angular/core';
-import { EventEmitter, AfterViewInit, OnChanges, OnDestroy, SimpleChanges, InjectionToken, OnInit, ElementRef, AfterContentInit, AfterViewChecked, TrackByFunction, TemplateRef, Type, Injector, QueryList, PipeTransform, EnvironmentProviders, DestroyRef, Signal } from '@angular/core';
+import { EventEmitter, AfterViewInit, OnInit, OnDestroy, ElementRef, OnChanges, SimpleChanges, AfterContentInit, AfterViewChecked, TrackByFunction, TemplateRef, Type, Injector, InjectionToken, QueryList, PipeTransform, EnvironmentProviders, DestroyRef, Signal } from '@angular/core';
 import { AbstractControl, NgControl, ControlValueAccessor, FormBuilder, FormControl, FormGroup, FormGroupDirective } from '@angular/forms';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { Route, CanActivateFn, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
@@ -203,127 +203,6 @@ declare class IBanner implements AfterViewInit {
     static ngAcceptInputType_open: unknown;
     static ngAcceptInputType_defaultOpen: unknown;
 }
-
-type ISnackbarPosition = 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
-type ISnackbarDismissReason = 'timeout' | 'close' | 'action' | 'escape' | 'programmatic';
-type ISnackbarOptions = {
-    id?: string;
-    title?: string;
-    variant?: IBannerVariant;
-    position?: ISnackbarPosition;
-    durationMs?: number;
-    prefixIcon?: string;
-    suffixIcon?: string;
-    closable?: boolean;
-    closeLabel?: string;
-    actionLabel?: string;
-    actionDisabled?: boolean;
-    actionLoading?: boolean;
-    dismissOnAction?: boolean;
-    dismissOnEscape?: boolean;
-    pauseOnHover?: boolean;
-    pauseOnFocus?: boolean;
-    pauseOnHidden?: boolean;
-    maxWidth?: string;
-    onAction?: () => void;
-};
-type ISnackbarChanges = Partial<Omit<ISnackbarOptions, 'id'>> & {
-    message?: string;
-};
-type ISnackbarDefaults = {
-    maxVisible?: number;
-};
-type SnackbarRuntimeOptions = ISnackbarOptions & {
-    id: string;
-    scope: object;
-    maxVisible?: number;
-};
-
-declare class ISnackbar implements AfterViewInit, OnChanges, OnDestroy {
-    id: string;
-    message: string | null | undefined;
-    title: string | undefined;
-    variant: IBannerVariant;
-    position: ISnackbarPosition;
-    durationMs: number;
-    prefixIcon: string;
-    suffixIcon: string;
-    closable: boolean;
-    closeLabel: string;
-    actionLabel: string;
-    actionDisabled: boolean;
-    actionLoading: boolean;
-    dismissOnAction: boolean;
-    dismissOnEscape: boolean;
-    pauseOnHover: boolean;
-    pauseOnFocus: boolean;
-    pauseOnHidden: boolean;
-    maxWidth: string;
-    resetKey: unknown;
-    open: boolean | undefined;
-    defaultOpen: boolean;
-    readonly openChange: EventEmitter<boolean>;
-    readonly onAction: EventEmitter<void>;
-    readonly afterDismissed: EventEmitter<ISnackbarDismissReason>;
-    private projected;
-    private readonly host;
-    private readonly platform;
-    private readonly settings;
-    private readonly destroyRef;
-    private mount?;
-    private observer?;
-    private initialized;
-    private internalOpen;
-    private pendingReason;
-    constructor();
-    ngAfterViewInit(): void;
-    ngOnChanges(changes: SimpleChanges): void;
-    requestClose(reason: ISnackbarDismissReason): void;
-    activateAction(): void;
-    ngOnDestroy(): void;
-    private sync;
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISnackbar, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<ISnackbar, "i-snackbar", never, { "id": { "alias": "id"; "required": false; }; "message": { "alias": "message"; "required": false; }; "title": { "alias": "title"; "required": false; }; "variant": { "alias": "variant"; "required": false; }; "position": { "alias": "position"; "required": false; }; "durationMs": { "alias": "durationMs"; "required": false; }; "prefixIcon": { "alias": "prefixIcon"; "required": false; }; "suffixIcon": { "alias": "suffixIcon"; "required": false; }; "closable": { "alias": "closable"; "required": false; }; "closeLabel": { "alias": "closeLabel"; "required": false; }; "actionLabel": { "alias": "actionLabel"; "required": false; }; "actionDisabled": { "alias": "actionDisabled"; "required": false; }; "actionLoading": { "alias": "actionLoading"; "required": false; }; "dismissOnAction": { "alias": "dismissOnAction"; "required": false; }; "dismissOnEscape": { "alias": "dismissOnEscape"; "required": false; }; "pauseOnHover": { "alias": "pauseOnHover"; "required": false; }; "pauseOnFocus": { "alias": "pauseOnFocus"; "required": false; }; "pauseOnHidden": { "alias": "pauseOnHidden"; "required": false; }; "maxWidth": { "alias": "maxWidth"; "required": false; }; "resetKey": { "alias": "resetKey"; "required": false; }; "open": { "alias": "open"; "required": false; }; "defaultOpen": { "alias": "defaultOpen"; "required": false; }; }, { "openChange": "openChange"; "onAction": "onAction"; "afterDismissed": "afterDismissed"; }, never, ["*"], true, never>;
-    static ngAcceptInputType_closable: unknown;
-    static ngAcceptInputType_actionDisabled: unknown;
-    static ngAcceptInputType_actionLoading: unknown;
-    static ngAcceptInputType_dismissOnAction: unknown;
-    static ngAcceptInputType_dismissOnEscape: unknown;
-    static ngAcceptInputType_pauseOnHover: unknown;
-    static ngAcceptInputType_pauseOnFocus: unknown;
-    static ngAcceptInputType_pauseOnHidden: unknown;
-    static ngAcceptInputType_open: unknown;
-    static ngAcceptInputType_defaultOpen: unknown;
-}
-
-declare class ISnackbarRef {
-    readonly id: string;
-    private readonly closed;
-    private readonly close;
-    private finished;
-    constructor(id: string, close: () => void);
-    dismiss(): void;
-    afterDismissed(): Observable<ISnackbarDismissReason>;
-    complete(reason: ISnackbarDismissReason): void;
-}
-declare class ISnackbarService {
-    private readonly doc;
-    private readonly app;
-    private readonly injector;
-    private readonly platform;
-    private readonly settings;
-    private readonly instances;
-    constructor();
-    configure(defaults: ISnackbarDefaults): void;
-    show(message: string, options?: ISnackbarOptions): ISnackbarRef;
-    update(id: string, changes: ISnackbarChanges): void;
-    dismiss(id: string): void;
-    dismissAll(): void;
-    static ɵfac: i0.ɵɵFactoryDeclaration<ISnackbarService, never>;
-    static ɵprov: i0.ɵɵInjectableDeclaration<ISnackbarService>;
-}
-
-declare const I_SNACKBAR_DEFAULTS: InjectionToken<ISnackbarDefaults>;
 
 type RouterLinkInput = string | any[] | undefined;
 declare class ICard implements OnInit {
@@ -1890,6 +1769,41 @@ declare class IHighlightSearchPipe implements PipeTransform {
     static ɵpipe: i0.ɵɵPipeDeclaration<IHighlightSearchPipe, "highlightSearch", true>;
 }
 
+type ISnackbarPosition = 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
+type ISnackbarDismissReason = 'timeout' | 'close' | 'action' | 'escape' | 'programmatic';
+type ISnackbarOptions = {
+    id?: string;
+    title?: string;
+    variant?: IBannerVariant;
+    position?: ISnackbarPosition;
+    durationMs?: number;
+    prefixIcon?: string;
+    suffixIcon?: string;
+    closable?: boolean;
+    closeLabel?: string;
+    actionLabel?: string;
+    actionDisabled?: boolean;
+    actionLoading?: boolean;
+    dismissOnAction?: boolean;
+    dismissOnEscape?: boolean;
+    pauseOnHover?: boolean;
+    pauseOnFocus?: boolean;
+    pauseOnHidden?: boolean;
+    maxWidth?: string;
+    onAction?: () => void;
+};
+type ISnackbarChanges = Partial<Omit<ISnackbarOptions, 'id'>> & {
+    message?: string;
+};
+type ISnackbarDefaults = {
+    maxVisible?: number;
+};
+type SnackbarRuntimeOptions = ISnackbarOptions & {
+    id: string;
+    scope: object;
+    maxVisible?: number;
+};
+
 /** Presentation models shared by the bell, drawer, and snackbar. */
 type INotificationEntry = {
     notificationId: string;
@@ -2145,6 +2059,7 @@ declare class IHContent {
     readonly onNotificationAction: EventEmitter<INotificationAction>;
     private readonly router;
     private readonly activatedRoute;
+    private readonly errorHandler;
     readonly pageLoading: i0.WritableSignal<boolean>;
     private readonly pendingRouteLoads;
     private navigationId;
@@ -2167,12 +2082,11 @@ declare class IHContent {
     readonly pageTitle$: Observable<string | null>;
     private routeBreadcrumbState;
     toggleSidebar(): void;
-    onOverrideBreadcrumbClick(e: MouseEvent): void;
+    onOverrideBreadcrumbClick(e: MouseEvent, url: string): void;
     private normalizeBaseHref;
     private normalizePath;
     /**
-     * RouterLink will prefix baseHref automatically.
-     * So we must NOT include baseHref in the value passed to [routerLink].
+     * Angular router URLs exclude baseHref, which the location strategy adds.
      *
      * baseHref "/-/" examples:
      * - "/-/dashboard" -> "/dashboard"
@@ -2998,6 +2912,92 @@ declare class IFCSelectCompany implements ControlValueAccessor, OnDestroy {
     static ɵcmp: i0.ɵɵComponentDeclaration<IFCSelectCompany, "i-fc-select-company", never, { "label": { "alias": "label"; "required": false; }; "placeholder": { "alias": "placeholder"; "required": false; }; "emptyState": { "alias": "emptyState"; "required": false; }; "menuCode": { "alias": "menuCode"; "required": false; }; "disabled": { "alias": "disabled"; "required": false; }; "loading": { "alias": "loading"; "required": false; }; "stateScope": { "alias": "stateScope"; "required": false; }; "invalid": { "alias": "invalid"; "required": false; }; "displayWith": { "alias": "displayWith"; "required": false; }; "filterDelay": { "alias": "filterDelay"; "required": false; }; "filterPredicate": { "alias": "filterPredicate"; "required": false; }; "panelPosition": { "alias": "panelPosition"; "required": false; }; "panelOffset": { "alias": "panelOffset"; "required": false; }; "portalToBody": { "alias": "portalToBody"; "required": false; }; "matchTriggerWidth": { "alias": "matchTriggerWidth"; "required": false; }; "errorMessage": { "alias": "errorMessage"; "required": false; }; "value": { "alias": "value"; "required": false; }; }, { "onChanged": "onChanged"; "onOptionSelected": "onOptionSelected"; }, ["optionDef"], never, true, never>;
 }
 
+declare class ISnackbar implements AfterViewInit, OnChanges, OnDestroy {
+    id: string;
+    message: string | null | undefined;
+    title: string | undefined;
+    variant: IBannerVariant;
+    position: ISnackbarPosition;
+    durationMs: number;
+    prefixIcon: string;
+    suffixIcon: string;
+    closable: boolean;
+    closeLabel: string;
+    actionLabel: string;
+    actionDisabled: boolean;
+    actionLoading: boolean;
+    dismissOnAction: boolean;
+    dismissOnEscape: boolean;
+    pauseOnHover: boolean;
+    pauseOnFocus: boolean;
+    pauseOnHidden: boolean;
+    maxWidth: string;
+    resetKey: unknown;
+    open: boolean | undefined;
+    defaultOpen: boolean;
+    readonly openChange: EventEmitter<boolean>;
+    readonly onAction: EventEmitter<void>;
+    readonly afterDismissed: EventEmitter<ISnackbarDismissReason>;
+    private projected;
+    private readonly host;
+    private readonly platform;
+    private readonly settings;
+    private readonly destroyRef;
+    private mount?;
+    private observer?;
+    private initialized;
+    private internalOpen;
+    private pendingReason;
+    constructor();
+    ngAfterViewInit(): void;
+    ngOnChanges(changes: SimpleChanges): void;
+    requestClose(reason: ISnackbarDismissReason): void;
+    activateAction(): void;
+    ngOnDestroy(): void;
+    private sync;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISnackbar, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<ISnackbar, "i-snackbar", never, { "id": { "alias": "id"; "required": false; }; "message": { "alias": "message"; "required": false; }; "title": { "alias": "title"; "required": false; }; "variant": { "alias": "variant"; "required": false; }; "position": { "alias": "position"; "required": false; }; "durationMs": { "alias": "durationMs"; "required": false; }; "prefixIcon": { "alias": "prefixIcon"; "required": false; }; "suffixIcon": { "alias": "suffixIcon"; "required": false; }; "closable": { "alias": "closable"; "required": false; }; "closeLabel": { "alias": "closeLabel"; "required": false; }; "actionLabel": { "alias": "actionLabel"; "required": false; }; "actionDisabled": { "alias": "actionDisabled"; "required": false; }; "actionLoading": { "alias": "actionLoading"; "required": false; }; "dismissOnAction": { "alias": "dismissOnAction"; "required": false; }; "dismissOnEscape": { "alias": "dismissOnEscape"; "required": false; }; "pauseOnHover": { "alias": "pauseOnHover"; "required": false; }; "pauseOnFocus": { "alias": "pauseOnFocus"; "required": false; }; "pauseOnHidden": { "alias": "pauseOnHidden"; "required": false; }; "maxWidth": { "alias": "maxWidth"; "required": false; }; "resetKey": { "alias": "resetKey"; "required": false; }; "open": { "alias": "open"; "required": false; }; "defaultOpen": { "alias": "defaultOpen"; "required": false; }; }, { "openChange": "openChange"; "onAction": "onAction"; "afterDismissed": "afterDismissed"; }, never, ["*"], true, never>;
+    static ngAcceptInputType_closable: unknown;
+    static ngAcceptInputType_actionDisabled: unknown;
+    static ngAcceptInputType_actionLoading: unknown;
+    static ngAcceptInputType_dismissOnAction: unknown;
+    static ngAcceptInputType_dismissOnEscape: unknown;
+    static ngAcceptInputType_pauseOnHover: unknown;
+    static ngAcceptInputType_pauseOnFocus: unknown;
+    static ngAcceptInputType_pauseOnHidden: unknown;
+    static ngAcceptInputType_open: unknown;
+    static ngAcceptInputType_defaultOpen: unknown;
+}
+
+declare class ISnackbarRef {
+    readonly id: string;
+    private readonly closed;
+    private readonly close;
+    private finished;
+    constructor(id: string, close: () => void);
+    dismiss(): void;
+    afterDismissed(): Observable<ISnackbarDismissReason>;
+    complete(reason: ISnackbarDismissReason): void;
+}
+declare class ISnackbarService {
+    private readonly doc;
+    private readonly app;
+    private readonly injector;
+    private readonly platform;
+    private readonly settings;
+    private readonly instances;
+    constructor();
+    configure(defaults: ISnackbarDefaults): void;
+    show(message: string, options?: ISnackbarOptions): ISnackbarRef;
+    update(id: string, changes: ISnackbarChanges): void;
+    dismiss(id: string): void;
+    dismissAll(): void;
+    static ɵfac: i0.ɵɵFactoryDeclaration<ISnackbarService, never>;
+    static ɵprov: i0.ɵɵInjectableDeclaration<ISnackbarService>;
+}
+
+declare const I_SNACKBAR_DEFAULTS: InjectionToken<ISnackbarDefaults>;
+
 /**
  * ITextarea
  * Version: 1.1.1
@@ -3544,7 +3544,7 @@ type IAuthConfigOverrides = Partial<Omit<IAuthConfig, 'api' | 'tokenLifespan'>> 
  * values via `provideIAuth({ ... })` and is validated fail-fast when it
  * forgets. All other fields default sensibly: `allowedReturnOrigins` to this
  * app's own origin, `endpoints` to the platform/BFF path contract, and lifespan /
- * csrf / api-key values from the library's default environment.
+ * csrf / api-key values from the library's shared auth defaults.
  */
 declare function getDefaultIAuthConfig(): IAuthConfig;
 /**
@@ -3892,7 +3892,7 @@ declare function collectAuthorizationScope(items: readonly IEffectiveAuthorizati
  * the app-wide body-as-data convention.
  *
  * Base URL: `{api.user}` from the resolved auth config (defaults to the
- * library environment file). Consumer apps override via
+ * shared auth defaults). Consumer apps override via
  * `provideIAuth({ api: { user: '...' } })`.
  */
 declare class IUserMenuService {
@@ -3937,7 +3937,7 @@ declare class IUserMenuService {
  * `user.mapper.ts` (`mapToSidebarUser`).
  *
  * Base URL: `{api.user}` from the resolved auth config (defaults to the
- * library environment file). Output type overridable via the generic — the
+ * shared auth defaults). Output type overridable via the generic — the
  * library default is the raw `ICurrentUserDto` DTO.
  */
 declare class ICurrentUserService {
@@ -4620,53 +4620,99 @@ declare class IHState {
     static ɵprov: i0.ɵɵInjectableDeclaration<IHState>;
 }
 
-/**
- * Shape of `@insight/ui`'s default environment.
- *
- * The library's services read a subset of these fields. `api` is an open-ended
- * registry of backend base URLs so consumer apps can register additional
- * service endpoints.
- */
+/** BFF/session and IAM service URLs, separate from application business APIs. */
+type IPlatformApi = {
+    /** This application's session backend/BFF; IAM itself uses its identity service. No default host. */
+    identity: string;
+    /** IAM user, menu and authorization service URL. Required for every consumer. */
+    user: string;
+    /** IAM configuration/error-catalog service URL. Required for every consumer. */
+    configuration: string;
+    /** Additional platform service URLs, such as application, apim or notification. */
+    [service: string]: string;
+};
+/** Shared consumer configuration. Optional feature fields only affect code that reads them. */
 type IEnvironment = {
-    production: boolean;
+    /** Deployment stage, for example local, development, staging or production. No default. */
     releaseStage: string;
-    appName: string;
-    version: string;
-    /** API base URLs grouped by backend service. `identity` is intentionally empty in the default env - the consumer app supplies its own BFF/identity host. */
-    api: {
-        identity: string;
-        user: string;
-        configuration: string;
-        application: string;
-        [key: string]: string;
+    /** Required BFF/session and IAM endpoints. These are passed to the auth runtime. */
+    platformApi: IPlatformApi;
+    /** Business endpoints owned by this application. Omit when none are needed; URLs do not activate features. */
+    api?: {
+        [service: string]: string;
     };
-    /** Full URL of this app's sign-in page. Left empty by default - set by the consumer app. */
+    /** This application's sign-in page or BFF login URL. No default. */
     signinUrl: string;
-    tokenLifespan: {
-        accessTokenSeconds: number;
-        refreshTokenSeconds: number;
-        ssoSessionMaxSeconds: number;
-    };
-    /** CSRF token max age in seconds (backend cookie maxAge minus a safety buffer). */
-    csrfTokenMaxAgeSeconds: number;
-    /** This app's registered application API key (attached as `Api-Key` header). */
-    apiKey?: string;
-    /** This app's application id (used as the default filter when loading effective menus). */
-    appId?: string;
-    /** Personal Profile page URL opened from the sidebar user dropdown. Defaults to the shared account URL when empty. */
+    /** Registered application key used by the existing platform and business transports. No default. */
+    apiKey: string;
+    /** Registered application identifier used by application-scoped services. No default. */
+    appId: string;
+    /** Host or standalone shell profile destination. Omit to keep the sidebar's existing fallback. */
     personalProfileUrl?: string;
+    /** Auth redirect allowlist override. Omit to allow the current origin; does not modify another runtime. */
+    allowedReturnOrigins?: string[];
+    /** Auth timing overrides in seconds. Omitted values use library defaults (3600, 7200, 54000). */
+    tokenLifespan?: {
+        /** Access-token fallback lifetime. Default: 3600 seconds. */
+        accessTokenSeconds?: number;
+        /** Refresh-token fallback lifetime. Default: 7200 seconds. */
+        refreshTokenSeconds?: number;
+        /** Maximum SSO session lifetime. Default: 54000 seconds. */
+        ssoSessionMaxSeconds?: number;
+    };
+    /** CSRF cache lifetime override in seconds. Omit for the library default of 7170. */
+    csrfTokenMaxAgeSeconds?: number;
+    /** Standalone router basename; omitted uses '/'. Supplying it does not change a host's mount path. */
+    basePath?: string;
+    /** Docs SSO content base URL/path; omitted uses the current origin. Does not register documentation routes. */
+    docsContentBase?: string;
+    /** Venus preview storage isolation flag; omitted is false. Supplying it does not enable mock mode. */
+    preview?: boolean;
+    /** Atlas notification controller settings; omitted leaves notifications unconfigured. Supplying them does not start a controller. */
+    notification?: {
+        /** Destination opened by notification navigation. Required when the controller is enabled. */
+        centralNotificationUrl: string;
+        /** Polling interval used by the notification controller, in milliseconds. */
+        refreshIntervalMs: number;
+        /** Notification snackbar duration, in milliseconds. */
+        snackbarDurationMs: number;
+    };
+    /** IAM password-policy fallback flag; omitted uses true (strict policy). Supplying it does not enable IAM flows. */
+    securityMode?: boolean;
+    /** IAM MFA challenge timeout override. Omit for the existing 300-second fallback. */
+    mfaChallengeSessionTimeoutSeconds?: number;
+    /** IAM reCAPTCHA site keys; IAM requires both keys. Omitted means unconfigured in other consumers; keys do not activate the feature. */
+    recaptcha?: {
+        /** Site key read by IAM's reCAPTCHA v3 flow. */
+        v3SiteKey: string;
+        /** Site key read by IAM's reCAPTCHA v2 fallback flow. */
+        v2SiteKey: string;
+    };
+    /** IAM opt-in feature settings; omitted keeps the test header disabled. Supplying them does not activate features in other consumers. */
+    features?: {
+        /** Enables IAM's existing application-key test header only. Omit/false leaves it disabled. */
+        enableApiKeyHeader: boolean;
+    };
+    /** IAM manual test credential, used only with features.enableApiKeyHeader. No default. */
+    applicationApiKeyForTesting?: string;
+    /** Finance business storage namespace. Required by Finance; does not create storage automatically. */
+    storageNamespace?: string;
+    /** Finance legacy uploaded-asset base URL, separate from API endpoints. No default. */
+    legacyAssetBaseUrl?: string;
+    /** Existing business audit username mapping. Empty/omitted keeps the owning feature unavailable. */
+    auditUsernameSource?: string;
+    /** Venus FMS username mapping. Empty/omitted keeps the owning feature unavailable. */
+    fmsUsernameSource?: string;
+    /** BOQ/Venus secondary credential realm. Empty/omitted keeps realm-dependent operations unavailable. */
+    realmId?: string;
+    /** BOQ mapping from IAM company IDs to business company codes; omitted leaves mappings unavailable. Supplying it does not grant access. */
+    companyCodeByIamId?: Readonly<Record<string, string>>;
 };
 
-/**
- * Default environment for `@insight/ui`'s shared data layer.
- *
- * `api.identity` and `signinUrl` are intentionally EMPTY -
- * the library does not default to any shared identity provider. Each consumer
- * app supplies its own values (its own BFF/identity host) via
- * `provideIAuth()`. The `user`/`configuration`/`application` keys keep
- * defaulting to the platform services and can still be overridden.
- */
-declare const environment: IEnvironment;
+/** Map public environment fields to auth overrides without replacing defaults with undefined. */
+declare function getIEnvironmentAuthConfig(environment: IEnvironment): IAuthConfigOverrides;
+/** Require a business endpoint before dispatch; never fall back to a platform endpoint. */
+declare function requireIEnvironmentApi(environment: IEnvironment, service: string): string;
 
-export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IActionPlaceholder, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IBanner, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IEmptyState, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridEmptyDef, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSelection, IHSidebar, IHState, IHStateOwner, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IH_STATE, IHasMnDirective, IHasMnRoute, IHighlightSearch, IHighlightSearchPipe, IIcon, IImageCropper, IImpersonationStateService, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoadError, ILoading, ILoadingRegion, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, ISnackbar, ISnackbarRef, ISnackbarService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_EMPTY_STATE_PRESETS, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, I_SNACKBAR_DEFAULTS, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, environment, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, highlightSearchParts, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
-export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBannerVariant, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEmptyStateConfig, IEmptyStateDensity, IEmptyStateKind, IEndImpersonationResult, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IHProjectValidation, IHSelectionApi, IHSelectionSnapshot, IHSelectionStatus, IHStateAdapter, IHStateApi, IHStateError, IHStateNamespaceOptions, IHStateStorage, IHighlightSearchPart, IIconName, IIconSize, IImageCropRect, IImageCropperExportOptions, IImageCropperResult, IImpersonationActor, IImpersonationStatus, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoadErrorDensity, ILoadingMode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, INotificationAction, INotificationEntry, INotificationSnackbarMessage, INotificationSnackbarOptions, INotificationState, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectEmptyState, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISnackbarChanges, ISnackbarDefaults, ISnackbarDismissReason, ISnackbarOptions, ISnackbarPosition, ISortConfig, ISortDirection, ISortState, ISurfaceLayout, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse, SnackbarRuntimeOptions };
+export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IActionPlaceholder, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IBanner, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IEmptyState, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridEmptyDef, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSelection, IHSidebar, IHState, IHStateOwner, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IH_STATE, IHasMnDirective, IHasMnRoute, IHighlightSearch, IHighlightSearchPipe, IIcon, IImageCropper, IImpersonationStateService, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoadError, ILoading, ILoadingRegion, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, ISnackbar, ISnackbarRef, ISnackbarService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_EMPTY_STATE_PRESETS, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, I_SNACKBAR_DEFAULTS, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getIEnvironmentAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, highlightSearchParts, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIEnvironmentApi, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
+export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBannerVariant, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEmptyStateConfig, IEmptyStateDensity, IEmptyStateKind, IEndImpersonationResult, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IHProjectValidation, IHSelectionApi, IHSelectionSnapshot, IHSelectionStatus, IHStateAdapter, IHStateApi, IHStateError, IHStateNamespaceOptions, IHStateStorage, IHighlightSearchPart, IIconName, IIconSize, IImageCropRect, IImageCropperExportOptions, IImageCropperResult, IImpersonationActor, IImpersonationStatus, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoadErrorDensity, ILoadingMode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, INotificationAction, INotificationEntry, INotificationSnackbarMessage, INotificationSnackbarOptions, INotificationState, IPaginatorState, IPermissionInput, IPermissionPredicate, IPillSize, IPillVariant, IPlatformApi, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectEmptyState, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISnackbarChanges, ISnackbarDefaults, ISnackbarDismissReason, ISnackbarOptions, ISnackbarPosition, ISortConfig, ISortDirection, ISortState, ISurfaceLayout, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse, SnackbarRuntimeOptions };
