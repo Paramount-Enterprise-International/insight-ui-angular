@@ -31,10 +31,18 @@ export function getIEnvironmentAuthConfig(environment: IEnvironment): IAuthConfi
   };
 }
 
-/** Require a business endpoint before dispatch; never fall back to a platform endpoint. */
+/** Require an explicit named API endpoint; never fall back to a platform endpoint. */
 export function requireIEnvironmentApi(environment: IEnvironment, service: string): string {
   const value = environment.api?.[service];
   if (typeof value !== 'string' || !value.trim())
     throw new Error('Missing application environment endpoint: api.' + service);
+  return value;
+}
+
+/** Require the primary API URL; never use a platform endpoint as a fallback. */
+export function requireIEnvironmentApiUrl(environment: IEnvironment): string {
+  const value = environment.apiUrl;
+  if (typeof value !== 'string' || !value.trim())
+    throw new Error('Missing application environment endpoint: apiUrl');
   return value;
 }
