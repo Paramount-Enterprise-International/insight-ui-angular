@@ -654,6 +654,7 @@ Load the matching insight-ui-css build; these components share its tokens and su
     [contentStyle]="{ padding: '24px', gap: '16px' }"
   />
   ```
+
 - `ILoadingRegion` retains DOM and measured height during refresh, sets aria-busy,
   and blocks content with inert. Its inputs/props include loading, error, label,
   contextKey, initialMinHeight, height, containerClass, contentClass, and layout.
@@ -734,3 +735,13 @@ These library playground routes require no IAM menu or access code.
 
 **Banner rename:** use `neutral` instead of the former `default` variant.
 Omitting variant still selects info.
+
+## Consumer environment contract
+
+Consumers import `IEnvironment` from `@insight/ui` and declare `export const environment: IEnvironment = { ... };` directly. The documented contract lives in `projects/insight-ui/src/lib/auth/environment.ts`.
+
+`platformApi` contains required BFF/IAM identity, user and configuration endpoints; optional `api` contains business endpoints. `releaseStage` replaces environment production flags. Application-specific fields are optional and documented; supplying them does not activate features or modify another runtime.
+
+`getIEnvironmentAuthConfig(environment)` maps only auth settings and omits unspecified overrides. `requireIEnvironmentApi(environment, service)` fails clearly for a missing business endpoint instead of falling back to a platform API. Auth defaults live in tracked `auth-defaults.ts`, independently of consumer-local configuration.
+
+Run `node --test --experimental-test-isolation=none test/environment.test.mjs` for focused contract/default checks. Coordinate this contract release with consumer dependency updates; do not reuse old deployment modules unchanged.
