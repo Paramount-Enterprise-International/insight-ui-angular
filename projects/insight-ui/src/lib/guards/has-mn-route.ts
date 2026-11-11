@@ -11,6 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, type Route, RouterOutlet } from '@angular/router';
 
 import { evaluatePermission, type IPermissionInput } from '../directives/has-mn';
+import { IPermissionMapStore } from '../directives/permission-map';
 import { IErrorPage } from '../error-page/error-page';
 import type { IBreadcrumbItem, IRoute } from '../host/host.types';
 import { IHTitleBreadcrumbService } from '../host/shell/title-breadcrumb.service';
@@ -37,6 +38,7 @@ import { IUserMenuStore } from '../store/user-menu';
 export class IHasMnRoute {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(IUserMenuStore);
+  private readonly permissionMap = inject(IPermissionMapStore, { optional: true });
   private readonly session = inject(ISessionService);
   private readonly shell = inject(IHTitleBreadcrumbService);
   private readonly destroyRef = inject(DestroyRef);
@@ -46,11 +48,18 @@ export class IHasMnRoute {
       !this.session.initializing() &&
       this.session.isAuth() &&
       this.store.initialized() &&
-      !this.store.initializing(),
+      !this.store.initializing() &&
+      this.permissionMap?.state().status !== 'loading',
   );
-  readonly allowed = computed(() =>
-    evaluatePermission(this.permission, this.store.authorizationSource()),
-  );
+  readonly allowed = computed(() => {
+    const state = this.permissionMap?.state();
+    if (state && state.status !== 'ready') return false;
+    return evaluatePermission(
+      this.permission,
+      this.store.authorizationSource(),
+      state?.mapping ?? {},
+    );
+  });
 
   constructor() {
     effect(() => {
