@@ -8,7 +8,7 @@ import { firstValueFrom, Subject, BehaviorSubject, map, ReplaySubject, throwErro
 import * as i1 from '@angular/forms';
 import { Validators, NG_VALUE_ACCESSOR, NgControl, FormGroupDirective, FormBuilder, FormControl, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { debounceTime, tap, map as map$1, catchError, switchMap, filter, take, finalize, shareReplay } from 'rxjs/operators';
-import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { toObservable, takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 
 class IActionPlaceholder {
     size = 'md';
@@ -19861,8 +19861,67 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 }]
         }] });
 
+const PERMISSION_MAP_CONFIG = new InjectionToken('I_PERMISSION_MAP_CONFIG');
+/** Validate untrusted JSON and take an immutable snapshot of its own entries. */
+function validatePermissionMap(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error('Permission mapping must be a JSON object.');
+    }
+    const entries = Object.entries(value).map(([key, codes]) => {
+        if (!key.trim() || (typeof codes !== 'string' && !Array.isArray(codes))) {
+            throw new Error('Permission mappings must contain strings or arrays of strings.');
+        }
+        const list = Array.isArray(codes) ? codes : [codes];
+        if (list.some((code) => typeof code !== 'string' || !code.trim())) {
+            throw new Error('Mapped menu codes must be non-empty strings.');
+        }
+        return [key, Array.isArray(codes) ? Object.freeze([...codes]) : codes];
+    });
+    return Object.freeze(Object.fromEntries(entries));
+}
+/** Scoped to the injector that owns the remote's route collection. Never root-provided. */
+class IPermissionMapStore {
+    config = inject(PERMISSION_MAP_CONFIG);
+    current = new BehaviorSubject({ status: 'loading', mapping: null });
+    state = toSignal(this.current, { requireSync: true });
+    state$ = this.current.asObservable();
+    constructor() {
+        if (typeof this.config === 'function') {
+            const load = this.config;
+            void Promise.resolve()
+                .then(load)
+                .then((mapping) => this.apply(mapping))
+                .catch(() => {
+                this.current.next({ status: 'error', mapping: null });
+                console.error('[@insight/ui] Unable to load permission mapping.');
+            });
+        }
+        else {
+            this.apply(this.config);
+        }
+    }
+    apply(mapping) {
+        try {
+            this.current.next({ status: 'ready', mapping: validatePermissionMap(mapping) });
+        }
+        catch {
+            this.current.next({ status: 'error', mapping: null });
+            console.error('[@insight/ui] Invalid permission mapping.');
+        }
+    }
+    static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IPermissionMapStore, deps: [], target: i0.ɵɵFactoryTarget.Injectable });
+    static ɵprov = i0.ɵɵngDeclareInjectable({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IPermissionMapStore });
+}
+i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IPermissionMapStore, decorators: [{
+            type: Injectable
+        }], ctorParameters: () => [] });
+/** Provide on a remote route root (or standalone root), never on the shared host root. */
+function provideMenuPermissionMapping(config) {
+    return [{ provide: PERMISSION_MAP_CONFIG, useValue: config }, IPermissionMapStore];
+}
+
 /** Evaluates permission input without exposing mutable store state. */
-function evaluatePermission(value, source) {
+function evaluatePermission(value, source, mapping = {}) {
     if (!value)
         return false;
     if (typeof value === 'function') {
@@ -19874,12 +19933,17 @@ function evaluatePermission(value, source) {
             return false;
         }
     }
-    const codes = Array.isArray(value) ? value : [value];
-    return codes.some((code) => source.menuCodes.includes(code));
+    const codes = typeof value === 'string' ? [value] : value;
+    return codes.some((code) => {
+        const mapped = Object.prototype.hasOwnProperty.call(mapping, code) ? mapping[code] : code;
+        const candidates = typeof mapped === 'string' ? [mapped] : mapped;
+        return candidates.some((candidate) => source.menuCodes.includes(candidate));
+    });
 }
 /** Shared reactive implementation for the positive and inverse permission directives. */
 class IMenuGateDirective {
     store = inject(IUserMenuStore);
+    permissionMap = inject(IPermissionMapStore, { optional: true });
     templateRef = inject((TemplateRef));
     viewContainer = inject(ViewContainerRef);
     value$ = new BehaviorSubject(null);
@@ -19891,10 +19955,13 @@ class IMenuGateDirective {
             this.store.authorizationSource$,
             this.store.initializing$,
             this.store.initialized$,
+            this.permissionMap?.state$ ?? of(null),
         ])
-            .pipe(map(([value]) => this.store.initializing() || !this.store.initialized()
+            .pipe(map(([value, , , , permissionMap]) => this.store.initializing() ||
+            !this.store.initialized() ||
+            (permissionMap !== null && permissionMap.status !== 'ready')
             ? null
-            : evaluatePermission(value, this.store.authorizationSource())), distinctUntilChanged())
+            : evaluatePermission(value, this.store.authorizationSource(), permissionMap?.mapping ?? {})), distinctUntilChanged())
             .subscribe((state) => this.renderView(state));
     }
     ngOnDestroy() {
@@ -20086,6 +20153,7 @@ function requireRouteAccess(options = {}) {
 class IHasMnRoute {
     route = inject(ActivatedRoute);
     store = inject(IUserMenuStore);
+    permissionMap = inject(IPermissionMapStore, { optional: true });
     session = inject(ISessionService);
     shell = inject(IHTitleBreadcrumbService);
     destroyRef = inject(DestroyRef);
@@ -20093,8 +20161,14 @@ class IHasMnRoute {
     ready = computed(() => !this.session.initializing() &&
         this.session.isAuth() &&
         this.store.initialized() &&
-        !this.store.initializing(), ...(ngDevMode ? [{ debugName: "ready" }] : []));
-    allowed = computed(() => evaluatePermission(this.permission, this.store.authorizationSource()), ...(ngDevMode ? [{ debugName: "allowed" }] : []));
+        !this.store.initializing() &&
+        this.permissionMap?.state().status !== 'loading', ...(ngDevMode ? [{ debugName: "ready" }] : []));
+    allowed = computed(() => {
+        const state = this.permissionMap?.state();
+        if (state && state.status !== 'ready')
+            return false;
+        return evaluatePermission(this.permission, this.store.authorizationSource(), state?.mapping ?? {});
+    }, ...(ngDevMode ? [{ debugName: "allowed" }] : []));
     constructor() {
         effect(() => {
             if (!this.session.initializing() &&
@@ -20531,5 +20605,5 @@ function requireIEnvironmentApiUrl(environment) {
  * Generated bundle index. Do not edit.
  */
 
-export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IActionPlaceholder, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IBanner, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IEmptyState, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridEmptyDef, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSelection, IHSidebar, IHState, IHStateOwner, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IH_STATE, IHasMnDirective, IHasMnRoute, IHighlightSearch, IHighlightSearchPipe, IIcon, IImageCropper, IImpersonationStateService, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoadError, ILoading, ILoadingRegion, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, ISnackbar, ISnackbarRef, ISnackbarService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_EMPTY_STATE_PRESETS, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, I_SNACKBAR_DEFAULTS, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getIEnvironmentAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, highlightSearchParts, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, readImpersonationActor, readImpersonationClaims, requireAccess, requireIEnvironmentApi, requireIEnvironmentApiUrl, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig };
+export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IActionPlaceholder, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IBanner, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IEmptyState, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridEmptyDef, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSelection, IHSidebar, IHState, IHStateOwner, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IH_STATE, IHasMnDirective, IHasMnRoute, IHighlightSearch, IHighlightSearchPipe, IIcon, IImageCropper, IImpersonationStateService, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoadError, ILoading, ILoadingRegion, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPermissionMapStore, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, ISnackbar, ISnackbarRef, ISnackbarService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_EMPTY_STATE_PRESETS, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, I_SNACKBAR_DEFAULTS, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getIEnvironmentAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, highlightSearchParts, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, provideMenuPermissionMapping, readImpersonationActor, readImpersonationClaims, requireAccess, requireIEnvironmentApi, requireIEnvironmentApiUrl, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig, validatePermissionMap };
 //# sourceMappingURL=insight-ui.mjs.map
