@@ -745,3 +745,40 @@ Consumers import `IEnvironment` from `@insight/ui` and declare `export const env
 `getIEnvironmentAuthConfig(environment)` maps only auth settings and omits unspecified overrides. `requireIEnvironmentApiUrl(environment)` requires the primary business endpoint; `requireIEnvironmentApi(environment, service)` requires an explicit named override. Both fail clearly for missing configuration instead of falling back to a platform API. Auth defaults live in tracked `auth-defaults.ts`, independently of consumer-local configuration.
 
 Run `node --test --experimental-test-isolation=none test/environment.test.mjs` for focused contract/default checks. Coordinate this contract release with consumer dependency updates; do not reuse old deployment modules unchanged.
+
+
+## Remote-scoped hybrid permission mapping
+
+Provide a mapping on each remote route root, not the host application root:
+
+```ts
+import { provideMenuPermissionMapping } from '@insight/ui';
+
+{
+  path: '',
+  providers: [provideMenuPermissionMapping({
+    'commission.approve': ['atlas.sales.commission.approve', 'atlas.sales.incentive.approve'],
+    'commission.reject': 'atlas.sales.commission.reject',
+    'disabled-action': [],
+  })],
+  children: commissionRoutes,
+}
+```
+
+The provider also accepts an async loader `() => Promise<IPermissionMap>`.
+The remote owns fetching its ConfigMap-backed JSON. Without a provider, existing
+menu-code checks behave exactly as before. With a provider, an own mapping key
+replaces that input with its menu code(s); absent keys fall back to direct menu-code
+checks. Arrays use ANY-match semantics. Empty mapped arrays deny access, with no
+fallback. Mappings resolve one level only. Predicate inputs keep the original
+authorization source unchanged.
+
+`*iHasMn`, `*iNotHasMn`, and the `hasMn()` route helper share these rules. Both
+directives stay hidden while loading or after a loading/validation error; protected
+routes show loading and then deny access on error. Invalid JSON shapes and empty
+menu-code strings are rejected. Each injector owns an immutable mapping snapshot.
+Provide it on every exported collection and in standalone mode. Dialogs rendered
+by a host-level outlet do not inherit the route injector; provide the same mapping
+on those dialog components too if their templates use mapped permission keys.
+
+These checks control UI visibility. The backend must still authorize each action.
