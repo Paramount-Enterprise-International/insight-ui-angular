@@ -19868,8 +19868,12 @@ function validatePermissionMap(value) {
         throw new Error('Permission mapping must be a JSON object.');
     }
     const entries = Object.entries(value).map(([key, codes]) => {
-        if (!key.trim() || (typeof codes !== 'string' && !Array.isArray(codes))) {
-            throw new Error('Permission mappings must contain strings or arrays of strings.');
+        if (!key.trim())
+            throw new Error('Permission mapping keys must be non-empty strings.');
+        if (typeof codes === 'boolean')
+            return [key, codes];
+        if (typeof codes !== 'string' && !Array.isArray(codes)) {
+            throw new Error('Permission mappings must contain booleans, strings or arrays of strings.');
         }
         const list = Array.isArray(codes) ? codes : [codes];
         if (list.some((code) => typeof code !== 'string' || !code.trim())) {
@@ -19882,7 +19886,10 @@ function validatePermissionMap(value) {
 /** Scoped to the injector that owns the remote's route collection. Never root-provided. */
 class IPermissionMapStore {
     config = inject(PERMISSION_MAP_CONFIG);
-    current = new BehaviorSubject({ status: 'loading', mapping: null });
+    current = new BehaviorSubject({
+        status: 'loading',
+        mapping: null,
+    });
     state = toSignal(this.current, { requireSync: true });
     state$ = this.current.asObservable();
     constructor() {
@@ -19936,6 +19943,8 @@ function evaluatePermission(value, source, mapping = {}) {
     const codes = typeof value === 'string' ? [value] : value;
     return codes.some((code) => {
         const mapped = Object.prototype.hasOwnProperty.call(mapping, code) ? mapping[code] : code;
+        if (typeof mapped === 'boolean')
+            return mapped;
         const candidates = typeof mapped === 'string' ? [mapped] : mapped;
         return candidates.some((candidate) => source.menuCodes.includes(candidate));
     });

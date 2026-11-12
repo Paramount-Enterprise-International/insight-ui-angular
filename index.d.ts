@@ -4094,8 +4094,8 @@ declare class IUserMenuStore {
     static ɵprov: i0.ɵɵInjectableDeclaration<IUserMenuStore>;
 }
 
-/** Local permission keys mapped to one or more authorized menu codes (ANY match). */
-type IPermissionMap = Readonly<Record<string, string | readonly string[]>>;
+/** Local keys mapped to menu codes (ANY match) or explicit boolean UI overrides. */
+type IPermissionMap = Readonly<Record<string, boolean | string | readonly string[]>>;
 type IPermissionMapConfig = IPermissionMap | (() => Promise<IPermissionMap>);
 type IPermissionMapState = {
     status: 'loading' | 'error';
