@@ -760,6 +760,8 @@ import { provideMenuPermissionMapping } from '@insight/ui';
     'commission.approve': ['atlas.sales.commission.approve', 'atlas.sales.incentive.approve'],
     'commission.reject': 'atlas.sales.commission.reject',
     'disabled-action': [],
+    'can.export.excel': true, // Explicit UI override for development
+    'can.delete': false,
   })],
   children: commissionRoutes,
 }
@@ -770,7 +772,11 @@ The remote owns fetching its ConfigMap-backed JSON. Without a provider, existing
 menu-code checks behave exactly as before. With a provider, an own mapping key
 replaces that input with its menu code(s); absent keys fall back to direct menu-code
 checks. Arrays use ANY-match semantics. Empty mapped arrays deny access, with no
-fallback. Mappings resolve one level only. Predicate inputs keep the original
+fallback. Boolean values bypass menu-code checks: `true` allows, `false` denies
+without falling back. These are explicit UI overrides (for example, development
+feature switches), not backend grants. Boolean values are supported only in the
+mapping, not as direct directive inputs or entries inside mapped arrays.
+Mappings resolve one level only. Predicate inputs keep the original
 authorization source unchanged.
 
 `*iHasMn`, `*iNotHasMn`, and the `hasMn()` route helper share these rules. Both

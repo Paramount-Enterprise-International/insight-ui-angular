@@ -39,6 +39,7 @@ export function evaluatePermission(
   const codes: readonly string[] = typeof value === 'string' ? [value] : value;
   return codes.some((code) => {
     const mapped = Object.prototype.hasOwnProperty.call(mapping, code) ? mapping[code] : code;
+    if (typeof mapped === 'boolean') return mapped;
     const candidates = typeof mapped === 'string' ? [mapped] : mapped;
     return candidates.some((candidate) => source.menuCodes.includes(candidate));
   });
