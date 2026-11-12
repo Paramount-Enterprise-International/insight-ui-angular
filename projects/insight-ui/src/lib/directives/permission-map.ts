@@ -2,8 +2,8 @@ import { inject, Injectable, InjectionToken, type Provider } from '@angular/core
 import { toSignal } from '@angular/core/rxjs-interop';
 import { BehaviorSubject } from 'rxjs';
 
-/** Local permission keys mapped to one or more authorized menu codes (ANY match). */
-export type IPermissionMap = Readonly<Record<string, string | readonly string[]>>;
+/** Local keys mapped to menu codes (ANY match) or explicit boolean UI overrides. */
+export type IPermissionMap = Readonly<Record<string, boolean | string | readonly string[]>>;
 export type IPermissionMapConfig = IPermissionMap | (() => Promise<IPermissionMap>);
 export type IPermissionMapState =
   | { status: 'loading' | 'error'; mapping: null }
@@ -17,8 +17,10 @@ export function validatePermissionMap(value: unknown): IPermissionMap {
     throw new Error('Permission mapping must be a JSON object.');
   }
   const entries = Object.entries(value).map(([key, codes]) => {
-    if (!key.trim() || (typeof codes !== 'string' && !Array.isArray(codes))) {
-      throw new Error('Permission mappings must contain strings or arrays of strings.');
+    if (!key.trim()) throw new Error('Permission mapping keys must be non-empty strings.');
+    if (typeof codes === 'boolean') return [key, codes];
+    if (typeof codes !== 'string' && !Array.isArray(codes)) {
+      throw new Error('Permission mappings must contain booleans, strings or arrays of strings.');
     }
     const list: unknown[] = Array.isArray(codes) ? codes : [codes];
     if (list.some((code) => typeof code !== 'string' || !code.trim())) {
@@ -33,7 +35,10 @@ export function validatePermissionMap(value: unknown): IPermissionMap {
 @Injectable()
 export class IPermissionMapStore {
   private readonly config = inject(PERMISSION_MAP_CONFIG);
-  private readonly current = new BehaviorSubject<IPermissionMapState>({ status: 'loading', mapping: null });
+  private readonly current = new BehaviorSubject<IPermissionMapState>({
+    status: 'loading',
+    mapping: null,
+  });
   readonly state = toSignal(this.current, { requireSync: true });
   readonly state$ = this.current.asObservable();
 

@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { IDialogOutlet, IDialogService } from '../dialog/dialog';
 import { hasMn } from '../guards/has-mn-route';
 import { ISessionService } from '../session/session';
 import { IUserMenuStore } from '../store/user-menu';
@@ -32,6 +33,16 @@ const source: IAuthorizationSource = {
 })
 class PermissionPage {}
 
+@Component({
+  standalone: true,
+  imports: [IHasMnDirective, INotHasMnDirective],
+  providers: [provideMenuPermissionMapping({ action: true, approved: false })],
+  template: `<span *iHasMn="'action'" class="dialog-allowed">enabled</span>
+    <span *iHasMn="'approved'" class="dialog-blocked">blocked</span>
+    <span *iNotHasMn="'approved'" class="dialog-inverse">disabled</span>`,
+})
+class BooleanPermissionDialog {}
+
 describe('hybrid permission mapping', () => {
   it('uses mapped ANY codes, direct fallback and empty mappings without recursive resolution', () => {
     const mapping = {
@@ -49,6 +60,19 @@ describe('hybrid permission mapping', () => {
     expect(evaluatePermission('chain', source, mapping)).toBeTrue();
     expect(evaluatePermission((s) => s.menuCodes.includes('approved'), source, mapping)).toBeTrue();
     expect(evaluatePermission('toString', source, mapping)).toBeFalse();
+  });
+
+  it('honors explicit booleans before menu-code fallback and keeps ANY matching', () => {
+    const mapping = validatePermissionMap({ 'can.export.excel': true, action: false });
+    expect(evaluatePermission('can.export.excel', source, mapping)).toBeTrue();
+    expect(evaluatePermission('action', source, mapping)).toBeFalse();
+    expect(evaluatePermission(['action', 'can.export.excel'], source, mapping)).toBeTrue();
+    expect(evaluatePermission(['action', 'missing'], source, mapping)).toBeFalse();
+    expect(evaluatePermission('approved', source, mapping)).toBeTrue();
+    expect(() => validatePermissionMap({ action: [true] })).toThrow();
+    expect(() => validatePermissionMap({ action: 1 })).toThrow();
+    expect(() => validatePermissionMap({ action: 'true' })).not.toThrow();
+    expect(evaluatePermission('action', source, { action: 'true' })).toBeFalse();
   });
 
   it('validates JSON, preserves explicit empty arrays and snapshots mutable input', () => {
@@ -122,6 +146,65 @@ describe('scoped permission providers', () => {
     await harness.fixture.whenStable();
     harness.detectChanges();
     expect(harness.routeNativeElement?.querySelector('.allowed')).not.toBeNull();
+  });
+
+  it('uses true and false overrides for route gates and both directives', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          {
+            path: 'enabled',
+            providers: [provideMenuPermissionMapping({ action: true })],
+            children: [hasMn('action', { path: '', component: PermissionPage })],
+          },
+          {
+            path: 'disabled',
+            providers: [provideMenuPermissionMapping({ action: false })],
+            component: PermissionPage,
+          },
+          {
+            path: 'blocked',
+            providers: [provideMenuPermissionMapping({ approved: false })],
+            children: [hasMn('approved', { path: '', component: PermissionPage })],
+          },
+        ]),
+      ],
+    });
+    initializeStore();
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/enabled');
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(harness.routeNativeElement?.querySelector('.allowed')).not.toBeNull();
+    expect(harness.routeNativeElement?.querySelector('.denied')).toBeNull();
+    await harness.navigateByUrl('/disabled');
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(harness.routeNativeElement?.querySelector('.allowed')).toBeNull();
+    expect(harness.routeNativeElement?.querySelector('.denied')).not.toBeNull();
+    await harness.navigateByUrl('/blocked');
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    expect(harness.routeNativeElement?.textContent).toContain('Unauthorized Access');
+  });
+
+  it('honors boolean overrides inside detached dialogs without using the host mapping', async () => {
+    TestBed.configureTestingModule({
+      imports: [IDialogOutlet],
+      providers: [provideMenuPermissionMapping({ action: false, approved: true })],
+    });
+    initializeStore();
+    const fixture = TestBed.createComponent(IDialogOutlet);
+    const ref = TestBed.inject(IDialogService).open(BooleanPermissionDialog);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.dialog-allowed')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.dialog-blocked')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.dialog-inverse')).not.toBeNull();
+    ref.close();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('i-dialog-container')).toBeNull();
   });
 
   it('hides both directive branches while loading, then reacts to mapping and authorization', async () => {
