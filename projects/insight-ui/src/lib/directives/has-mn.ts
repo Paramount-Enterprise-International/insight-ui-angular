@@ -7,10 +7,11 @@ import {
   TemplateRef,
   ViewContainerRef,
 } from '@angular/core';
-import { BehaviorSubject, combineLatest, distinctUntilChanged, map, Subscription } from 'rxjs';
+import { BehaviorSubject, combineLatest, distinctUntilChanged, map, of, Subscription } from 'rxjs';
 
 import { IUserMenuStore } from '../store/user-menu';
 import type { IAuthorizationSource } from '../user';
+import { type IPermissionMap, IPermissionMapStore } from './permission-map';
 
 /** Flexible permission check against the current authorization snapshot. */
 export type IPermissionPredicate = (source: IAuthorizationSource) => boolean;
@@ -22,6 +23,7 @@ export type IPermissionInput = string | readonly string[] | IPermissionPredicate
 export function evaluatePermission(
   value: IPermissionInput | null,
   source: IAuthorizationSource,
+  mapping: IPermissionMap = {},
 ): boolean {
   if (!value) return false;
 
@@ -34,8 +36,13 @@ export function evaluatePermission(
     }
   }
 
-  const codes = Array.isArray(value) ? value : [value];
-  return codes.some((code) => source.menuCodes.includes(code));
+  const codes: readonly string[] = typeof value === 'string' ? [value] : value;
+  return codes.some((code) => {
+    const mapped = Object.prototype.hasOwnProperty.call(mapping, code) ? mapping[code] : code;
+    if (typeof mapped === 'boolean') return mapped;
+    const candidates = typeof mapped === 'string' ? [mapped] : mapped;
+    return candidates.some((candidate) => source.menuCodes.includes(candidate));
+  });
 }
 
 /** Shared reactive implementation for the positive and inverse permission directives. */
@@ -44,6 +51,7 @@ export abstract class IMenuGateDirective implements OnInit, OnDestroy {
   protected abstract readonly invert: boolean;
 
   protected readonly store = inject(IUserMenuStore);
+  private readonly permissionMap = inject(IPermissionMapStore, { optional: true });
   private readonly templateRef = inject(TemplateRef<unknown>);
   private readonly viewContainer = inject(ViewContainerRef);
 
@@ -57,12 +65,19 @@ export abstract class IMenuGateDirective implements OnInit, OnDestroy {
       this.store.authorizationSource$,
       this.store.initializing$,
       this.store.initialized$,
+      this.permissionMap?.state$ ?? of(null),
     ])
       .pipe(
-        map(([value]) =>
-          this.store.initializing() || !this.store.initialized()
+        map(([value, , , , permissionMap]) =>
+          this.store.initializing() ||
+          !this.store.initialized() ||
+          (permissionMap !== null && permissionMap.status !== 'ready')
             ? null
-            : evaluatePermission(value, this.store.authorizationSource()),
+            : evaluatePermission(
+                value,
+                this.store.authorizationSource(),
+                permissionMap?.mapping ?? {},
+              ),
         ),
         distinctUntilChanged(),
       )
