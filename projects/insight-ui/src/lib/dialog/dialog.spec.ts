@@ -1,6 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, inject } from '@angular/core';
-import { I_DIALOG_DATA, IDialog, IDialogContainer, IDialogOutlet, IDialogRef, IDialogService } from './dialog';
+import {
+  I_DIALOG_DATA,
+  IAlertService,
+  IConfirmService,
+  IDialog,
+  IDialogContainer,
+  IDialogOutlet,
+  IDialogRef,
+  IDialogService,
+} from './dialog';
 
 describe('IDialogOutlet', () => {
   let fixture: ComponentFixture<IDialogOutlet>;
@@ -21,7 +30,6 @@ describe('IDialogOutlet', () => {
   });
 });
 
-
 @Component({
   selector: 'i-test-dialog-content',
   imports: [IDialog],
@@ -31,6 +39,71 @@ class ServiceContent {
   readonly data = inject<{ title: string }>(I_DIALOG_DATA);
   readonly ref = inject<IDialogRef<string>>(IDialogRef);
 }
+
+describe('Alert and Confirm description security', () => {
+  const description =
+    '<strong onclick="alert(1)" class="unsafe" data-test="x" aria-label="unsafe">Name</strong>' +
+    '<br><b>B</b><em>E</em><i>I</i>' +
+    '<script>alert(1)</script><img src="x" onerror="alert(1)">' +
+    '<svg onload="alert(1)"></svg><iframe srcdoc="unsafe"></iframe>' +
+    '<a href="javascript:alert(1)">Link</a><input autofocus>' +
+    '&lt;b&gt;Literal&lt;/b&gt; &amp; O&#39;Brien';
+
+  for (const kind of ['alert', 'confirm'] as const) {
+    it(`sanitizes the rendered ${kind} while retaining formatting and escaped names`, () => {
+      TestBed.configureTestingModule({ imports: [IDialogOutlet] });
+      const fixture = TestBed.createComponent(IDialogOutlet);
+      if (kind === 'alert') {
+        TestBed.inject(IAlertService).warning('Notice', description).subscribe();
+      } else {
+        TestBed.inject(IConfirmService).warning('Notice', description).subscribe();
+      }
+      fixture.detectChanges();
+      const body = fixture.nativeElement.querySelector('p') as HTMLElement;
+      expect(body.querySelector('strong')?.textContent).toBe('Name');
+      expect(body.querySelector('br')).not.toBeNull();
+      expect(body.querySelectorAll('b, em, i').length).toBe(3);
+      expect(body.querySelector('script, img, svg, iframe, a, input')).toBeNull();
+      expect(
+        Array.from(body.querySelectorAll('*')).every((node) => node.attributes.length === 0),
+      ).toBeTrue();
+      expect(body.textContent).toContain("<b>Literal</b> & O'Brien");
+      fixture.destroy();
+    });
+  }
+
+  it('retains confirm, cancel and required Reason results', () => {
+    TestBed.configureTestingModule({ imports: [IDialogOutlet] });
+    const fixture = TestBed.createComponent(IDialogOutlet);
+    const service = TestBed.inject(IConfirmService);
+    const result = jasmine.createSpy('result');
+    const click = (label: string): void => {
+      const button = Array.from(
+        fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+      ).find((node) => node.textContent?.trim() === label)!;
+      button.click();
+      fixture.detectChanges();
+    };
+    service.warning('Confirm', '<b>Continue?</b>', true).subscribe(result);
+    fixture.detectChanges();
+    click('Confirm');
+    expect(result).not.toHaveBeenCalled();
+    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+    textarea.value = 'Approved reason';
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    click('Confirm');
+    expect(result).toHaveBeenCalledWith('Approved reason');
+    service.warning('Confirm', 'Continue?').subscribe(result);
+    fixture.detectChanges();
+    click('Cancel');
+    expect(result.calls.mostRecent().args[0]).toBeUndefined();
+    service.warning('Confirm', 'Continue?').subscribe(result);
+    fixture.detectChanges();
+    click('Confirm');
+    expect(result.calls.mostRecent().args[0]).toBeTrue();
+    fixture.destroy();
+  });
+});
 
 describe('IDialogContainer controlled content', () => {
   let fixture: ComponentFixture<IDialogContainer>;
@@ -78,7 +151,9 @@ describe('service dialog compatibility', () => {
     const service = TestBed.inject(IDialogService);
     service.open(ServiceContent, { data: { title: 'Legacy instance' } });
     const fixture = TestBed.createComponent(IDialogContainer);
-    const subscription = service.dialogs$.subscribe(dialogs => fixture.componentRef.setInput('instance', dialogs[0]));
+    const subscription = service.dialogs$.subscribe((dialogs) =>
+      fixture.componentRef.setInput('instance', dialogs[0]),
+    );
     fixture.detectChanges();
     const ref = fixture.componentInstance.instance!.ref;
     const close = spyOn(ref, 'close').and.callThrough();

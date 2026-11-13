@@ -30,6 +30,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { IFCTextArea } from '../textarea/textarea';
+import { sanitizeDialogDescription } from './sanitize-description';
 
 /**
  * CONFIG + TOKENS
@@ -432,7 +433,8 @@ export class IDialog {
 
   get confirmAction(): IDialogActionConfirm | undefined {
     return this.normalizedActions.find((a) => a.type === 'confirm') as
-      IDialogActionConfirm | undefined;
+      | IDialogActionConfirm
+      | undefined;
   }
 
   get customActions(): IDialogActionCustom[] {
@@ -441,7 +443,8 @@ export class IDialog {
 
   get cancelAction(): IDialogActionCancel | undefined {
     return this.normalizedActions.find((a) => a.type === 'cancel') as
-      IDialogActionCancel | undefined;
+      | IDialogActionCancel
+      | undefined;
   }
 
   onConfirmClick(): void {
@@ -494,12 +497,13 @@ export type IAlertData = {
         <i-icon icon="x-circle" size="3xl" />
       }
       <h4>{{ data.title }}</h4>
-      <p [innerHtml]="data.description"></p>
+      <p [innerHtml]="sanitizedDescription"></p>
     </i-dialog>
   `,
 })
 export class IAlert {
   data: IAlertData = inject(I_DIALOG_DATA);
+  readonly sanitizedDescription = sanitizeDialogDescription(this.data.description);
 
   dialog: IDialogRef<IAlert> = inject(IDialogRef);
 
@@ -587,7 +591,7 @@ export type IConfirmData = {
       <i-icon icon="x-circle" size="3xl" />
     }
     <h4>{{ data.title }}</h4>
-    <p [innerHtml]="data.description"></p>
+    <p [innerHtml]="sanitizedDescription"></p>
     @if (data.reason) {
       <form class="mt-xs" [formGroup]="formGroup" (ngSubmit)="onSubmit()">
         <i-fc-textarea
@@ -605,6 +609,7 @@ export type IConfirmData = {
 })
 export class IConfirm {
   data: IConfirmData = inject(I_DIALOG_DATA);
+  readonly sanitizedDescription = sanitizeDialogDescription(this.data.description);
 
   dialog: IDialogRef<IConfirm> = inject(IDialogRef);
 
