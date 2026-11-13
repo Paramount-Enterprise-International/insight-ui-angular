@@ -185,6 +185,11 @@ export type IGridSelectionChange<T = any> = {
   lastChanged: T | null;
 };
 
+export type IGridSetSelectedOptions = {
+  /** Include disabled rows in programmatic selection. Hidden rows remain excluded. */
+  includeDisabled?: boolean;
+};
+
 /* ----------------------------------------------------
  * COLUMN WIDTH TYPES
  * ---------------------------------------------------- */
@@ -1586,9 +1591,12 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
    * Per-row predicate to DISABLE (but still show) the selection checkbox/radio
    * for specific rows (e.g. already-owned/assigned rows). Disabled rows are
    * excluded from select-all and tree cascade/indeterminate logic, and cannot
-   * be toggled via checkbox, row click, or programmatic API.
+   * be toggled by user interaction. Programmatic selection requires includeDisabled.
    */
   @Input() selectionRowDisabled?: (row: T) => boolean;
+
+  /** Checked indicator for disabled checkboxes; does not add rows to the selection. */
+  @Input() selectionRowChecked?: (row: T) => boolean;
 
   /** Tree mode */
   @Input() tree: string | boolean | null = null;
@@ -2100,7 +2108,16 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     return this._selection.has(row);
   }
 
+  private _isDisabledCheckboxChecked(row: T): boolean {
+    return (
+      this.selectionMode === 'multiple' &&
+      this.isSelectionDisabled(row) &&
+      (!!this.selectionRowChecked?.(row) || this._selection.has(row))
+    );
+  }
+
   getRowChecked(row: T): boolean {
+    if (this._isDisabledCheckboxChecked(row)) return true;
     if (!this.treeEnabled) {
       return this.isRowSelected(row);
     }
@@ -2127,6 +2144,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
   }
 
   getRowIndeterminate(row: T): boolean {
+    if (this._isDisabledCheckboxChecked(row)) return false;
     if (!this.treeEnabled) {
       return false;
     }
@@ -2240,6 +2258,10 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     let current = this._treeMeta.get(row)?.parent ?? null;
 
     while (current) {
+      if (!this.isRowSelectable(current)) {
+        current = this._treeMeta.get(current)?.parent ?? null;
+        continue;
+      }
       const descendants = this._getTreeDescendants(current).filter((r) => this.isRowSelectable(r));
       if (!descendants.length) {
         current = this._treeMeta.get(current)?.parent ?? null;
@@ -2333,8 +2355,9 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
 
   /**
    * Programmatically REPLACES the current selection with the given rows.
-   * Rows that are not present in the current data, or that are hidden/disabled
-   * for selection (`selectionRowHidden` / `selectionRowDisabled`), are ignored.
+   * Rows outside the current data and hidden rows are ignored. Disabled rows
+   * are ignored unless options.includeDisabled is true. User selection and
+   * select-all never toggle included disabled rows. clearSelection resets all rows.
    * Emits a single `onSelectionChange` only when the resulting selection
    * actually differs from the current one.
    *
@@ -2343,7 +2366,7 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
    * `afterNextRender`). Selection is identity-based and persists across page
    * changes in client-side mode.
    */
-  setSelected(rows: T[]): void {
+  setSelected(rows: T[], options: IGridSetSelectedOptions = {}): void {
     if (!this.selectionMode) {
       return;
     }
@@ -2351,7 +2374,11 @@ export class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     const valid = new Set(this._getAllDataRows());
     const next = new Set<T>();
     for (const row of rows) {
-      if (valid.has(row) && this.isRowSelectable(row)) {
+      if (
+        valid.has(row) &&
+        !this.isSelectionHidden(row) &&
+        (options.includeDisabled === true || !this.isSelectionDisabled(row))
+      ) {
         next.add(row);
       }
     }

@@ -24,18 +24,310 @@ class GridHostComponent {
   data = [{ name: 'Alice' }];
 }
 
+type CheckedDisabledRow = {
+  name: string;
+  disabled?: boolean;
+  owned?: boolean;
+  hidden?: boolean;
+  children?: CheckedDisabledRow[];
+};
+
+@Component({
+  imports: [IGrid, IGridColumn],
+  template: `<i-grid
+    [dataSource]="data"
+    [selectionMode]="mode"
+    [selectionRowChecked]="checked"
+    [selectionRowDisabled]="disabled"
+    [selectionRowHidden]="hidden"
+    [showNumberColumn]="false"
+    [tree]="tree"
+    [treeInitialExpandLevel]="99"
+    (onSelectionChange)="changes.push($event.selected)"
+    ><i-grid-column fieldName="name" title="Name"
+  /></i-grid>`,
+})
+class CheckedDisabledHost {
+  @ViewChild(IGrid) grid!: IGrid<CheckedDisabledRow>;
+  data = new IGridDataSource<CheckedDisabledRow>(
+    [
+      { name: 'Available' },
+      { name: 'Owned', disabled: true, owned: true },
+      { name: 'Unavailable', disabled: true },
+      { name: 'Hidden', disabled: true, owned: true, hidden: true },
+    ],
+    { paginator: false },
+  );
+  mode: 'multiple' | 'single' = 'multiple';
+  tree = false;
+  disabled = (row: CheckedDisabledRow): boolean => !!row.disabled;
+  hidden = (row: CheckedDisabledRow): boolean => !!row.hidden;
+  checked = (row: CheckedDisabledRow): boolean => !!row.owned;
+  changes: CheckedDisabledRow[][] = [];
+}
+
+describe('IGrid checked disabled indicators', () => {
+  let fixture: ComponentFixture<CheckedDisabledHost>;
+  let host: CheckedDisabledHost;
+  const rowInput = (name: string): HTMLInputElement => {
+    const row = Array.from(
+      fixture.nativeElement.querySelectorAll('i-grid-row') as NodeListOf<HTMLElement>,
+    ).find((entry) => entry.textContent?.trim() === name)!;
+    return row.querySelector('input')!;
+  };
+  const selectAll = (): HTMLInputElement =>
+    fixture.nativeElement.querySelector('i-grid-header-row input[type="checkbox"]');
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ imports: [CheckedDisabledHost] });
+    fixture = TestBed.createComponent(CheckedDisabledHost);
+    host = fixture.componentInstance;
+    fixture.detectChanges();
+    host.changes = [];
+  });
+
+  it('shows checked disabled rows without selecting or counting them', () => {
+    expect(rowInput('Owned').checked).toBeTrue();
+    expect(rowInput('Owned').disabled).toBeTrue();
+    expect(rowInput('Unavailable').checked).toBeFalse();
+    expect(selectAll().checked).toBeFalse();
+    expect(selectAll().indeterminate).toBeFalse();
+    expect(host.grid.selectedRows).toEqual([]);
+    expect(host.changes).toEqual([]);
+    rowInput('Owned').click();
+    expect(host.changes).toEqual([]);
+    selectAll().click();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows.map((row) => row.name)).toEqual(['Available']);
+    expect(host.changes.at(-1)?.map((row) => row.name)).toEqual(['Available']);
+    expect(selectAll().checked).toBeTrue();
+    selectAll().click();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([]);
+    expect(rowInput('Owned').checked).toBeTrue();
+    host.grid.setSelected([host.data.data[1]]);
+    host.grid.clearSelection();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([]);
+    expect(rowInput('Owned').checked).toBeTrue();
+  });
+
+  it('restores indicators after filtering and data source replacement without selecting owned rows', () => {
+    host.data.filter = 'Available';
+    fixture.detectChanges();
+    host.data.filter = '';
+    fixture.detectChanges();
+    expect(rowInput('Owned').checked).toBeTrue();
+    host.data = new IGridDataSource(
+      host.data.data.map((row) => ({ ...row })),
+      { paginator: false },
+    );
+    fixture.detectChanges();
+    expect(rowInput('Owned').checked).toBeTrue();
+    expect(host.grid.selectedRows).toEqual([]);
+    expect(host.changes).toEqual([]);
+  });
+
+  it('applies only to disabled checkboxes and reacts to predicate changes', () => {
+    host.checked = (): boolean => true;
+    fixture.detectChanges();
+    expect(rowInput('Available').checked).toBeFalse();
+    expect(rowInput('Unavailable').checked).toBeTrue();
+    host.checked = (): boolean => false;
+    fixture.detectChanges();
+    expect(rowInput('Owned').checked).toBeFalse();
+    host.checked = (): boolean => true;
+    host.mode = 'single';
+    fixture.detectChanges();
+    expect(rowInput('Owned').type).toBe('radio');
+    expect(rowInput('Owned').checked).toBeFalse();
+    expect(host.grid.selectedRows).toEqual([]);
+  });
+
+  it('includes disabled rows only when explicitly requested and preserves them through select-all', () => {
+    host.checked = (): boolean => false;
+    fixture.detectChanges();
+    const available = host.data.data[0];
+    const owned = host.data.data[1];
+    const hidden = host.data.data[3];
+    host.grid.setSelected([owned, available, hidden, { name: 'Ghost', disabled: true }], {
+      includeDisabled: true,
+    });
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([owned, available]);
+    expect(host.changes.at(-1)).toEqual([owned, available]);
+    expect(rowInput('Owned').checked).toBeTrue();
+    expect(rowInput('Owned').disabled).toBeTrue();
+    selectAll().click();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([owned]);
+    expect(selectAll().checked).toBeFalse();
+    expect(selectAll().indeterminate).toBeFalse();
+    selectAll().click();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([owned, available]);
+    const events = host.changes.length;
+    host.grid.setSelected([owned, available], { includeDisabled: true });
+    expect(host.changes.length).toBe(events);
+    host.grid.setSelected([owned, available]);
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([available]);
+    expect(rowInput('Owned').checked).toBeFalse();
+  });
+
+  for (const hidden of [false, true]) {
+    it(`excludes ${hidden ? 'hidden' : 'disabled'} ancestors during tree selection`, () => {
+      host.tree = true;
+      host.data = new IGridDataSource<CheckedDisabledRow>(
+        [
+          {
+            name: 'Parent',
+            disabled: true,
+            owned: true,
+            hidden,
+            children: [
+              { name: 'Child A' },
+              { name: 'Child B' },
+              { name: 'Owned child', disabled: true, owned: true },
+            ],
+          },
+        ],
+        { paginator: false },
+      );
+      fixture.detectChanges();
+      rowInput('Child A').click();
+      fixture.detectChanges();
+      expect(host.changes.at(-1)?.map((row) => row.name)).toEqual(['Child A']);
+      expect(rowInput('Owned child').checked).toBeTrue();
+      if (!hidden) {
+        expect(rowInput('Parent').checked).toBeTrue();
+        expect(rowInput('Parent').indeterminate).toBeFalse();
+      }
+      selectAll().click();
+      fixture.detectChanges();
+      expect(host.grid.selectedRows.map((row) => row.name).sort()).toEqual(['Child A', 'Child B']);
+      selectAll().click();
+      fixture.detectChanges();
+      expect(host.grid.selectedRows).toEqual([]);
+      expect(rowInput('Owned child').checked).toBeTrue();
+    });
+  }
+
+  it('retains explicitly included disabled tree parents and children until programmatically cleared', () => {
+    host.tree = true;
+    host.checked = (): boolean => false;
+    const parent: CheckedDisabledRow = {
+      name: 'Parent',
+      disabled: true,
+      children: [{ name: 'Child A' }, { name: 'Child B' }, { name: 'Owned child', disabled: true }],
+    };
+    const owned = parent.children![2];
+    host.data = new IGridDataSource([parent], { paginator: false });
+    fixture.detectChanges();
+    host.grid.setSelected([parent, owned], { includeDisabled: true });
+    fixture.detectChanges();
+    rowInput('Child A').click();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([parent, owned, parent.children![0]]);
+    expect(rowInput('Parent').checked).toBeTrue();
+    expect(rowInput('Parent').indeterminate).toBeFalse();
+    selectAll().click();
+    fixture.detectChanges();
+    selectAll().click();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([parent, owned]);
+    host.grid.clearSelection();
+    fixture.detectChanges();
+    expect(rowInput('Parent').checked).toBeFalse();
+    expect(rowInput('Owned child').checked).toBeFalse();
+  });
+});
+
+@Component({
+  imports: [IGrid, IGridColumn],
+  template: `<i-grid [dataSource]="data" [showNumberColumn]="false">
+    <i-grid-column fieldName="team" title="Team" [sortable]="true" />
+    <i-grid-column fieldName="name" title="Name" [sortable]="true" />
+  </i-grid>`,
+})
+class SortReplacementHost {
+  rows = [
+    { team: 'A', name: 'Zoe' },
+    { team: 'B', name: 'Ada' },
+    { team: 'A', name: 'Bea' },
+  ];
+  data = new IGridDataSource(this.rows, { paginator: { pageSize: 10 } });
+}
+
+describe('IGrid sort across data source replacement', () => {
+  it('retains explicit multi-sort through replacement and no-result recovery', () => {
+    TestBed.configureTestingModule({ imports: [SortReplacementHost] });
+    const fixture = TestBed.createComponent(SortReplacementHost);
+    fixture.detectChanges();
+    const host = fixture.componentInstance;
+    const click = (title: string): void => {
+      const header = Array.from(
+        fixture.nativeElement.querySelectorAll('i-grid-header-cell') as NodeListOf<HTMLElement>,
+      ).find((node) => node.textContent?.trim() === title)!;
+      header.click();
+      fixture.detectChanges();
+    };
+    click('Team');
+    click('Name');
+    const sort: NonNullable<typeof host.data.sort> = [
+      { active: 'team', direction: 'asc' },
+      { active: 'name', direction: 'asc' },
+    ];
+    expect(host.data.sort).toEqual(sort);
+    host.data = new IGridDataSource(host.rows, {
+      sort: host.data.sort,
+      paginator: { pageSize: 10 },
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toMatch(/Bea[\s\S]*Zoe[\s\S]*Ada/);
+    const grid = fixture.nativeElement.querySelector('i-grid');
+    host.data.filter = 'missing';
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('i-grid-row').length).toBe(0);
+    host.data.filter = '';
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('i-grid')).toBe(grid);
+    expect(fixture.nativeElement.textContent).toMatch(/Bea[\s\S]*Zoe[\s\S]*Ada/);
+    click('Team');
+    expect(host.data.sort?.[0]).toEqual({ active: 'team', direction: 'desc' });
+    click('Name');
+    click('Name');
+    expect(host.data.sort).toEqual([{ active: 'team', direction: 'desc' }]);
+    click('Team');
+    expect(host.data.sort).toBeNull();
+  });
+
+  it('uses the replacement source sort when the data context changes', () => {
+    TestBed.configureTestingModule({ imports: [SortReplacementHost] });
+    const fixture = TestBed.createComponent(SortReplacementHost);
+    fixture.detectChanges();
+    const host = fixture.componentInstance;
+    host.data.sort = { active: 'team', direction: 'desc' };
+    host.data = new IGridDataSource(host.rows, { sort: { active: 'name', direction: 'desc' } });
+    fixture.detectChanges();
+    const header = fixture.nativeElement.querySelectorAll('i-grid-header-cell')[1] as HTMLElement;
+    header.click();
+    fixture.detectChanges();
+    expect(host.data.sort).toBeNull();
+    host.data = new IGridDataSource(host.rows);
+    fixture.detectChanges();
+    header.click();
+    fixture.detectChanges();
+    expect(host.data.sort).toEqual([{ active: 'name', direction: 'asc' }]);
+  });
+});
+
 @Component({
   standalone: true,
   imports: [IGrid, IGridColumn, IGridCustomColumn, IGridColumnGroup],
   template: `
     <i-grid [dataSource]="data" [showNumberColumn]="false">
-      <i-grid-column
-        fieldName="name"
-        freeze
-        title="Name"
-        [minWidth]="minWidth"
-        [width]="width"
-      />
+      <i-grid-column fieldName="name" freeze title="Name" [minWidth]="minWidth" [width]="width" />
       <i-grid-column-group title="Identity">
         <i-grid-column fieldName="status" freeze title="Status" [minWidth]="90" [width]="80" />
       </i-grid-column-group>
