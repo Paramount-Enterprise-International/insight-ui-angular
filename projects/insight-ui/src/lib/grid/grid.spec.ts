@@ -24,6 +24,225 @@ class GridHostComponent {
   data = [{ name: 'Alice' }];
 }
 
+type CheckedDisabledRow = {
+  name: string;
+  disabled?: boolean;
+  owned?: boolean;
+  hidden?: boolean;
+  children?: CheckedDisabledRow[];
+};
+
+@Component({
+  imports: [IGrid, IGridColumn],
+  template: `<i-grid
+    [dataSource]="data"
+    [selectionMode]="mode"
+    [selectionRowChecked]="checked"
+    [selectionRowDisabled]="disabled"
+    [selectionRowHidden]="hidden"
+    [showNumberColumn]="false"
+    [tree]="tree"
+    [treeInitialExpandLevel]="99"
+    (onSelectionChange)="changes.push($event.selected)"
+    ><i-grid-column fieldName="name" title="Name"
+  /></i-grid>`,
+})
+class CheckedDisabledHost {
+  @ViewChild(IGrid) grid!: IGrid<CheckedDisabledRow>;
+  data = new IGridDataSource<CheckedDisabledRow>(
+    [
+      { name: 'Available' },
+      { name: 'Owned', disabled: true, owned: true },
+      { name: 'Unavailable', disabled: true },
+      { name: 'Hidden', disabled: true, owned: true, hidden: true },
+    ],
+    { paginator: false },
+  );
+  mode: 'multiple' | 'single' = 'multiple';
+  tree = false;
+  disabled = (row: CheckedDisabledRow): boolean => !!row.disabled;
+  hidden = (row: CheckedDisabledRow): boolean => !!row.hidden;
+  checked = (row: CheckedDisabledRow): boolean => !!row.owned;
+  changes: CheckedDisabledRow[][] = [];
+}
+
+describe('IGrid checked disabled indicators', () => {
+  let fixture: ComponentFixture<CheckedDisabledHost>;
+  let host: CheckedDisabledHost;
+  const rowInput = (name: string): HTMLInputElement => {
+    const row = Array.from(
+      fixture.nativeElement.querySelectorAll('i-grid-row') as NodeListOf<HTMLElement>,
+    ).find((entry) => entry.textContent?.trim() === name)!;
+    return row.querySelector('input')!;
+  };
+  const selectAll = (): HTMLInputElement =>
+    fixture.nativeElement.querySelector('i-grid-header-row input[type="checkbox"]');
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({ imports: [CheckedDisabledHost] });
+    fixture = TestBed.createComponent(CheckedDisabledHost);
+    host = fixture.componentInstance;
+    fixture.detectChanges();
+    host.changes = [];
+  });
+
+  it('shows checked disabled rows without selecting or counting them', () => {
+    expect(rowInput('Owned').checked).toBeTrue();
+    expect(rowInput('Owned').disabled).toBeTrue();
+    expect(rowInput('Unavailable').checked).toBeFalse();
+    expect(selectAll().checked).toBeFalse();
+    expect(selectAll().indeterminate).toBeFalse();
+    expect(host.grid.selectedRows).toEqual([]);
+    expect(host.changes).toEqual([]);
+    rowInput('Owned').click();
+    expect(host.changes).toEqual([]);
+    selectAll().click();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows.map((row) => row.name)).toEqual(['Available']);
+    expect(host.changes.at(-1)?.map((row) => row.name)).toEqual(['Available']);
+    expect(selectAll().checked).toBeTrue();
+    selectAll().click();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([]);
+    expect(rowInput('Owned').checked).toBeTrue();
+    host.grid.setSelected([host.data.data[1]]);
+    host.grid.clearSelection();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([]);
+    expect(rowInput('Owned').checked).toBeTrue();
+  });
+
+  it('restores indicators after filtering and data source replacement without selecting owned rows', () => {
+    host.data.filter = 'Available';
+    fixture.detectChanges();
+    host.data.filter = '';
+    fixture.detectChanges();
+    expect(rowInput('Owned').checked).toBeTrue();
+    host.data = new IGridDataSource(
+      host.data.data.map((row) => ({ ...row })),
+      { paginator: false },
+    );
+    fixture.detectChanges();
+    expect(rowInput('Owned').checked).toBeTrue();
+    expect(host.grid.selectedRows).toEqual([]);
+    expect(host.changes).toEqual([]);
+  });
+
+  it('applies only to disabled checkboxes and reacts to predicate changes', () => {
+    host.checked = (): boolean => true;
+    fixture.detectChanges();
+    expect(rowInput('Available').checked).toBeFalse();
+    expect(rowInput('Unavailable').checked).toBeTrue();
+    host.checked = (): boolean => false;
+    fixture.detectChanges();
+    expect(rowInput('Owned').checked).toBeFalse();
+    host.checked = (): boolean => true;
+    host.mode = 'single';
+    fixture.detectChanges();
+    expect(rowInput('Owned').type).toBe('radio');
+    expect(rowInput('Owned').checked).toBeFalse();
+    expect(host.grid.selectedRows).toEqual([]);
+  });
+
+  it('includes disabled rows only when explicitly requested and preserves them through select-all', () => {
+    host.checked = (): boolean => false;
+    fixture.detectChanges();
+    const available = host.data.data[0];
+    const owned = host.data.data[1];
+    const hidden = host.data.data[3];
+    host.grid.setSelected([owned, available, hidden, { name: 'Ghost', disabled: true }], {
+      includeDisabled: true,
+    });
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([owned, available]);
+    expect(host.changes.at(-1)).toEqual([owned, available]);
+    expect(rowInput('Owned').checked).toBeTrue();
+    expect(rowInput('Owned').disabled).toBeTrue();
+    selectAll().click();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([owned]);
+    expect(selectAll().checked).toBeFalse();
+    expect(selectAll().indeterminate).toBeFalse();
+    selectAll().click();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([owned, available]);
+    const events = host.changes.length;
+    host.grid.setSelected([owned, available], { includeDisabled: true });
+    expect(host.changes.length).toBe(events);
+    host.grid.setSelected([owned, available]);
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([available]);
+    expect(rowInput('Owned').checked).toBeFalse();
+  });
+
+  for (const hidden of [false, true]) {
+    it(`excludes ${hidden ? 'hidden' : 'disabled'} ancestors during tree selection`, () => {
+      host.tree = true;
+      host.data = new IGridDataSource<CheckedDisabledRow>(
+        [
+          {
+            name: 'Parent',
+            disabled: true,
+            owned: true,
+            hidden,
+            children: [
+              { name: 'Child A' },
+              { name: 'Child B' },
+              { name: 'Owned child', disabled: true, owned: true },
+            ],
+          },
+        ],
+        { paginator: false },
+      );
+      fixture.detectChanges();
+      rowInput('Child A').click();
+      fixture.detectChanges();
+      expect(host.changes.at(-1)?.map((row) => row.name)).toEqual(['Child A']);
+      expect(rowInput('Owned child').checked).toBeTrue();
+      if (!hidden) {
+        expect(rowInput('Parent').checked).toBeTrue();
+        expect(rowInput('Parent').indeterminate).toBeFalse();
+      }
+      selectAll().click();
+      fixture.detectChanges();
+      expect(host.grid.selectedRows.map((row) => row.name).sort()).toEqual(['Child A', 'Child B']);
+      selectAll().click();
+      fixture.detectChanges();
+      expect(host.grid.selectedRows).toEqual([]);
+      expect(rowInput('Owned child').checked).toBeTrue();
+    });
+  }
+
+  it('retains explicitly included disabled tree parents and children until programmatically cleared', () => {
+    host.tree = true;
+    host.checked = (): boolean => false;
+    const parent: CheckedDisabledRow = {
+      name: 'Parent',
+      disabled: true,
+      children: [{ name: 'Child A' }, { name: 'Child B' }, { name: 'Owned child', disabled: true }],
+    };
+    const owned = parent.children![2];
+    host.data = new IGridDataSource([parent], { paginator: false });
+    fixture.detectChanges();
+    host.grid.setSelected([parent, owned], { includeDisabled: true });
+    fixture.detectChanges();
+    rowInput('Child A').click();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([parent, owned, parent.children![0]]);
+    expect(rowInput('Parent').checked).toBeTrue();
+    expect(rowInput('Parent').indeterminate).toBeFalse();
+    selectAll().click();
+    fixture.detectChanges();
+    selectAll().click();
+    fixture.detectChanges();
+    expect(host.grid.selectedRows).toEqual([parent, owned]);
+    host.grid.clearSelection();
+    fixture.detectChanges();
+    expect(rowInput('Parent').checked).toBeFalse();
+    expect(rowInput('Owned child').checked).toBeFalse();
+  });
+});
+
 @Component({
   imports: [IGrid, IGridColumn],
   template: `<i-grid [dataSource]="data" [showNumberColumn]="false">

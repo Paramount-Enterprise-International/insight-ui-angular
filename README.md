@@ -692,6 +692,37 @@ Load the matching insight-ui-css build; these components share its tokens and su
   Source changes/destruction invalidate pending exports. Remote images must permit
   canvas export; export failures reject the Promise. File limits remain app-owned.
 
+### Checked disabled grid rows
+
+`selectionRowChecked` adds a checked indicator to disabled checkboxes in multiple
+selection mode. It does not select the row, change counts, or add it to selection
+events. Enabled checkboxes and radio buttons keep their existing behavior.
+
+```html
+<i-grid
+  [dataSource]="dataSource"
+  selectionMode="multiple"
+  [selectionRowDisabled]="isOwned"
+  [selectionRowChecked]="isOwned"
+>
+  <!-- Existing columns -->
+</i-grid>
+```
+
+When the owner needs old and new rows in the complete selection, explicitly use:
+
+```ts
+grid.setSelected(rowsToSave, { includeDisabled: true });
+```
+
+The optional `IGridSetSelectedOptions.includeDisabled` defaults to false. With it
+enabled, provided disabled rows appear in `selectedRows` and `onSelectionChange`.
+User actions and Select All preserve those rows while changing eligible rows;
+disabled rows remain excluded from header and tree aggregation. Hidden rows and
+rows outside the current data are always ignored. `clearSelection()` or an
+explicit replacement resets the selection. Reapply selection using current row
+objects after replacing a data source. No dependency update is part of this source change.
+
 ### Grid column minimum width
 
 `IGridColumn` and `IGridCustomColumn` accept an optional numeric `minWidth` in
