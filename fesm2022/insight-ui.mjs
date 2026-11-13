@@ -6084,6 +6084,47 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                 type: Input
             }] } });
 
+const FORMATTING_TAGS = new Set(['strong', 'b', 'em', 'i', 'br']);
+const BLOCKED_TAGS = new Set([
+    'script',
+    'style',
+    'iframe',
+    'object',
+    'embed',
+    'svg',
+    'math',
+    'template',
+]);
+/** Retains inline dialog formatting without attributes or active content. */
+function sanitizeDialogDescription(description) {
+    if (typeof document === 'undefined') {
+        return description.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    const source = document.createElement('template');
+    source.innerHTML = description;
+    const result = document.createElement('div');
+    const append = (node, parent) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            parent.appendChild(document.createTextNode(node.textContent ?? ''));
+            return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE)
+            return;
+        const element = node;
+        const tag = element.localName;
+        if (element.namespaceURI !== 'http://www.w3.org/1999/xhtml' || BLOCKED_TAGS.has(tag))
+            return;
+        const target = FORMATTING_TAGS.has(tag) ? document.createElement(tag) : parent;
+        if (target !== parent)
+            parent.appendChild(target);
+        for (const child of Array.from(element.childNodes))
+            append(child, target);
+    };
+    for (const child of Array.from(source.content.childNodes))
+        append(child, result);
+    return result.innerHTML;
+}
+
 // i-dialog.ts (Angular) — full updated file (visible removed from action types)
 const I_DIALOG_DATA = new InjectionToken('I_DIALOG_DATA');
 /**
@@ -6520,6 +6561,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             }] } });
 class IAlert {
     data = inject(I_DIALOG_DATA);
+    sanitizedDescription = sanitizeDialogDescription(this.data.description);
     dialog = inject(IDialogRef);
     get alertClass() {
         return `i-alert i-alert-${this.data.type}`;
@@ -6552,7 +6594,7 @@ class IAlert {
         <i-icon icon="x-circle" size="3xl" />
       }
       <h4>{{ data.title }}</h4>
-      <p [innerHtml]="data.description"></p>
+      <p [innerHtml]="sanitizedDescription"></p>
     </i-dialog>
   `, isInline: true, dependencies: [{ kind: "directive", type: NgClass, selector: "[ngClass]", inputs: ["class", "ngClass"] }, { kind: "component", type: IIcon, selector: "i-icon", inputs: ["icon", "size"] }, { kind: "component", type: IDialog, selector: "i-dialog", inputs: ["title", "actions"], outputs: ["onOk", "onConfirm", "onSave", "onCustomAction"] }] });
 }
@@ -6585,7 +6627,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
         <i-icon icon="x-circle" size="3xl" />
       }
       <h4>{{ data.title }}</h4>
-      <p [innerHtml]="data.description"></p>
+      <p [innerHtml]="sanitizedDescription"></p>
     </i-dialog>
   `,
                 }]
@@ -6629,6 +6671,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
         }] });
 class IConfirm {
     data = inject(I_DIALOG_DATA);
+    sanitizedDescription = sanitizeDialogDescription(this.data.description);
     dialog = inject(IDialogRef);
     formBuilder = inject(FormBuilder);
     reason = new FormControl('', [Validators.required]);
@@ -6680,7 +6723,7 @@ class IConfirm {
       <i-icon icon="x-circle" size="3xl" />
     }
     <h4>{{ data.title }}</h4>
-    <p [innerHtml]="data.description"></p>
+    <p [innerHtml]="sanitizedDescription"></p>
     @if (data.reason) {
       <form class="mt-xs" [formGroup]="formGroup" (ngSubmit)="onSubmit()">
         <i-fc-textarea
@@ -6728,7 +6771,7 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
       <i-icon icon="x-circle" size="3xl" />
     }
     <h4>{{ data.title }}</h4>
-    <p [innerHtml]="data.description"></p>
+    <p [innerHtml]="sanitizedDescription"></p>
     @if (data.reason) {
       <form class="mt-xs" [formGroup]="formGroup" (ngSubmit)="onSubmit()">
         <i-fc-textarea
@@ -9098,9 +9141,11 @@ class IGrid {
      * Per-row predicate to DISABLE (but still show) the selection checkbox/radio
      * for specific rows (e.g. already-owned/assigned rows). Disabled rows are
      * excluded from select-all and tree cascade/indeterminate logic, and cannot
-     * be toggled via checkbox, row click, or programmatic API.
+     * be toggled by user interaction. Programmatic selection requires includeDisabled.
      */
     selectionRowDisabled;
+    /** Checked indicator for disabled checkboxes; does not add rows to the selection. */
+    selectionRowChecked;
     /** Tree mode */
     tree = null;
     /** Indent per tree level (px) */
@@ -9506,7 +9551,14 @@ class IGrid {
     isRowSelected(row) {
         return this._selection.has(row);
     }
+    _isDisabledCheckboxChecked(row) {
+        return (this.selectionMode === 'multiple' &&
+            this.isSelectionDisabled(row) &&
+            (!!this.selectionRowChecked?.(row) || this._selection.has(row)));
+    }
     getRowChecked(row) {
+        if (this._isDisabledCheckboxChecked(row))
+            return true;
         if (!this.treeEnabled) {
             return this.isRowSelected(row);
         }
@@ -9527,6 +9579,8 @@ class IGrid {
         return this._selection.has(row);
     }
     getRowIndeterminate(row) {
+        if (this._isDisabledCheckboxChecked(row))
+            return false;
         if (!this.treeEnabled) {
             return false;
         }
@@ -9623,6 +9677,10 @@ class IGrid {
         }
         let current = this._treeMeta.get(row)?.parent ?? null;
         while (current) {
+            if (!this.isRowSelectable(current)) {
+                current = this._treeMeta.get(current)?.parent ?? null;
+                continue;
+            }
             const descendants = this._getTreeDescendants(current).filter((r) => this.isRowSelectable(r));
             if (!descendants.length) {
                 current = this._treeMeta.get(current)?.parent ?? null;
@@ -9706,8 +9764,9 @@ class IGrid {
     }
     /**
      * Programmatically REPLACES the current selection with the given rows.
-     * Rows that are not present in the current data, or that are hidden/disabled
-     * for selection (`selectionRowHidden` / `selectionRowDisabled`), are ignored.
+     * Rows outside the current data and hidden rows are ignored. Disabled rows
+     * are ignored unless options.includeDisabled is true. User selection and
+     * select-all never toggle included disabled rows. clearSelection resets all rows.
      * Emits a single `onSelectionChange` only when the resulting selection
      * actually differs from the current one.
      *
@@ -9716,14 +9775,16 @@ class IGrid {
      * `afterNextRender`). Selection is identity-based and persists across page
      * changes in client-side mode.
      */
-    setSelected(rows) {
+    setSelected(rows, options = {}) {
         if (!this.selectionMode) {
             return;
         }
         const valid = new Set(this._getAllDataRows());
         const next = new Set();
         for (const row of rows) {
-            if (valid.has(row) && this.isRowSelectable(row)) {
+            if (valid.has(row) &&
+                !this.isSelectionHidden(row) &&
+                (options.includeDisabled === true || !this.isSelectionDisabled(row))) {
                 next.add(row);
             }
         }
@@ -10302,7 +10363,7 @@ class IGrid {
         return groups.length > 0 || directCols.length > 0 || directCustom.length > 0;
     }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IGrid, deps: [], target: i0.ɵɵFactoryTarget.Component });
-    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IGrid, isStandalone: true, selector: "i-grid", inputs: { dataSource: "dataSource", emptyState: "emptyState", selectionMode: "selectionMode", selectionRowHidden: "selectionRowHidden", selectionRowDisabled: "selectionRowDisabled", tree: "tree", treeIndent: "treeIndent", trackBy: "trackBy", treeColumn: "treeColumn", treeInitialExpandLevel: "treeInitialExpandLevel", showNumberColumn: ["showNumberColumn", "showNumberColumn", booleanAttribute], sortMode: "sortMode" }, outputs: { onSelectionChange: "onSelectionChange", onRowClick: "onRowClick", onRowExpandChange: "onRowExpandChange", onExpandedRowsChange: "onExpandedRowsChange", onServerSortChange: "onServerSortChange", onServerPageChange: "onServerPageChange", onServerFilterChange: "onServerFilterChange" }, host: { attributes: { "data-i-surface": "flush" }, properties: { "attr.role": "showGridChrome ? \"table\" : null" }, classAttribute: "i-grid" }, queries: [{ propertyName: "emptyDef", first: true, predicate: IGridEmptyDef, descendants: true }, { propertyName: "expandableRowDef", first: true, predicate: IGridRowDefDirective, descendants: true }, { propertyName: "columnDefs", predicate: IGridColumn }, { propertyName: "customColumnDefs", predicate: IGridCustomColumn }, { propertyName: "columnGroupDefs", predicate: IGridColumnGroup }], exportAs: ["iGrid"], usesOnChanges: true, ngImport: i0, template: `<i-grid-viewport>
+    static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IGrid, isStandalone: true, selector: "i-grid", inputs: { dataSource: "dataSource", emptyState: "emptyState", selectionMode: "selectionMode", selectionRowHidden: "selectionRowHidden", selectionRowDisabled: "selectionRowDisabled", selectionRowChecked: "selectionRowChecked", tree: "tree", treeIndent: "treeIndent", trackBy: "trackBy", treeColumn: "treeColumn", treeInitialExpandLevel: "treeInitialExpandLevel", showNumberColumn: ["showNumberColumn", "showNumberColumn", booleanAttribute], sortMode: "sortMode" }, outputs: { onSelectionChange: "onSelectionChange", onRowClick: "onRowClick", onRowExpandChange: "onRowExpandChange", onExpandedRowsChange: "onExpandedRowsChange", onServerSortChange: "onServerSortChange", onServerPageChange: "onServerPageChange", onServerFilterChange: "onServerFilterChange" }, host: { attributes: { "data-i-surface": "flush" }, properties: { "attr.role": "showGridChrome ? \"table\" : null" }, classAttribute: "i-grid" }, queries: [{ propertyName: "emptyDef", first: true, predicate: IGridEmptyDef, descendants: true }, { propertyName: "expandableRowDef", first: true, predicate: IGridRowDefDirective, descendants: true }, { propertyName: "columnDefs", predicate: IGridColumn }, { propertyName: "customColumnDefs", predicate: IGridCustomColumn }, { propertyName: "columnGroupDefs", predicate: IGridColumnGroup }], exportAs: ["iGrid"], usesOnChanges: true, ngImport: i0, template: `<i-grid-viewport>
       <!-- HEADER -->
       @if (headerItems.length && showGridChrome) {
         <i-grid-header-row>
@@ -11058,6 +11119,8 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
             }], selectionRowHidden: [{
                 type: Input
             }], selectionRowDisabled: [{
+                type: Input
+            }], selectionRowChecked: [{
                 type: Input
             }], tree: [{
                 type: Input
@@ -20178,6 +20241,10 @@ class IHasMnRoute {
             return false;
         return evaluatePermission(this.permission, this.store.authorizationSource(), state?.mapping ?? {});
     }, ...(ngDevMode ? [{ debugName: "allowed" }] : []));
+    loadFailed = computed(() => {
+        const errors = this.store.loadErrors();
+        return [errors.menus, errors.authorizations].some((error) => !!error && error.errorCode !== USER_APPLICATION_MAPPING_NOT_FOUND);
+    }, ...(ngDevMode ? [{ debugName: "loadFailed" }] : []));
     constructor() {
         effect(() => {
             if (!this.session.initializing() &&
@@ -20188,7 +20255,7 @@ class IHasMnRoute {
             }
         });
         effect((onCleanup) => {
-            if (!this.ready() || this.allowed())
+            if (!this.ready() || this.allowed() || this.loadFailed())
                 return;
             untracked(() => {
                 const previousTitle = this.shell.titleOverride();
@@ -20205,16 +20272,27 @@ class IHasMnRoute {
             });
         });
     }
+    retry() {
+        if (this.store.initializing())
+            return;
+        this.store.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+    }
     static ɵfac = i0.ɵɵngDeclareFactory({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHasMnRoute, deps: [], target: i0.ɵɵFactoryTarget.Component });
     static ɵcmp = i0.ɵɵngDeclareComponent({ minVersion: "17.0.0", version: "20.3.34", type: IHasMnRoute, isStandalone: true, selector: "i-has-mn-route", ngImport: i0, template: `
     @if (!ready()) {
       <i-loading label="Loading access..." mode="container" />
+    } @else if (loadFailed()) {
+      <i-load-error
+        message="Failed to load your access rights. Please try again."
+        title="Failed to load access."
+        (onRetry)="retry()"
+      />
     } @else if (!allowed()) {
       <i-error-page kind="forbidden" role="alert" />
     } @else {
       <router-outlet />
     }
-  `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "component", type: IErrorPage, selector: "i-error-page", inputs: ["kind", "mode", "title", "description", "icon", "code", "supportEmail", "actions"], outputs: ["onAction"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light", "mode"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
+  `, isInline: true, dependencies: [{ kind: "directive", type: RouterOutlet, selector: "router-outlet", inputs: ["name", "routerOutletData"], outputs: ["activate", "deactivate", "attach", "detach"], exportAs: ["outlet"] }, { kind: "component", type: IErrorPage, selector: "i-error-page", inputs: ["kind", "mode", "title", "description", "icon", "code", "supportEmail", "actions"], outputs: ["onAction"] }, { kind: "component", type: ILoading, selector: "i-loading", inputs: ["label", "light", "mode"] }, { kind: "component", type: ILoadError, selector: "i-load-error", inputs: ["message", "title", "contentClass", "contentStyle", "density", "retryDisabled", "retryLoading"], outputs: ["onRetry"] }], changeDetection: i0.ChangeDetectionStrategy.OnPush });
 }
 i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImport: i0, type: IHasMnRoute, decorators: [{
             type: Component,
@@ -20222,10 +20300,16 @@ i0.ɵɵngDeclareClassMetadata({ minVersion: "12.0.0", version: "20.3.34", ngImpo
                     selector: 'i-has-mn-route',
                     standalone: true,
                     changeDetection: ChangeDetectionStrategy.OnPush,
-                    imports: [RouterOutlet, IErrorPage, ILoading],
+                    imports: [RouterOutlet, IErrorPage, ILoading, ILoadError],
                     template: `
     @if (!ready()) {
       <i-loading label="Loading access..." mode="container" />
+    } @else if (loadFailed()) {
+      <i-load-error
+        message="Failed to load your access rights. Please try again."
+        title="Failed to load access."
+        (onRetry)="retry()"
+      />
     } @else if (!allowed()) {
       <i-error-page kind="forbidden" role="alert" />
     } @else {

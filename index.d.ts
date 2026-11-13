@@ -1016,6 +1016,7 @@ type IAlertData = {
 };
 declare class IAlert {
     data: IAlertData;
+    readonly sanitizedDescription: string;
     dialog: IDialogRef<IAlert>;
     get alertClass(): string;
     submit(): void;
@@ -1040,6 +1041,7 @@ type IConfirmData = {
 };
 declare class IConfirm {
     data: IConfirmData;
+    readonly sanitizedDescription: string;
     dialog: IDialogRef<IConfirm>;
     formBuilder: FormBuilder;
     reason: FormControl;
@@ -1290,6 +1292,10 @@ type IGridSelectionMode = false | 'single' | 'multiple';
 type IGridSelectionChange<T = any> = {
     selected: T[];
     lastChanged: T | null;
+};
+type IGridSetSelectedOptions = {
+    /** Include disabled rows in programmatic selection. Hidden rows remain excluded. */
+    includeDisabled?: boolean;
 };
 type IGridColumnWidth = number | 'fill';
 type IGridColumnLike<T = any> = {
@@ -1557,9 +1563,11 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
      * Per-row predicate to DISABLE (but still show) the selection checkbox/radio
      * for specific rows (e.g. already-owned/assigned rows). Disabled rows are
      * excluded from select-all and tree cascade/indeterminate logic, and cannot
-     * be toggled via checkbox, row click, or programmatic API.
+     * be toggled by user interaction. Programmatic selection requires includeDisabled.
      */
     selectionRowDisabled?: (row: T) => boolean;
+    /** Checked indicator for disabled checkboxes; does not add rows to the selection. */
+    selectionRowChecked?: (row: T) => boolean;
     /** Tree mode */
     tree: string | boolean | null;
     /** Indent per tree level (px) */
@@ -1667,6 +1675,7 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     /** A row participates in selection UI/logic only if not hidden and not disabled. */
     isRowSelectable(row: T): boolean;
     isRowSelected(row: T): boolean;
+    private _isDisabledCheckboxChecked;
     getRowChecked(row: T): boolean;
     getRowIndeterminate(row: T): boolean;
     get selectedRows(): T[];
@@ -1684,8 +1693,9 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     clearSelection(): void;
     /**
      * Programmatically REPLACES the current selection with the given rows.
-     * Rows that are not present in the current data, or that are hidden/disabled
-     * for selection (`selectionRowHidden` / `selectionRowDisabled`), are ignored.
+     * Rows outside the current data and hidden rows are ignored. Disabled rows
+     * are ignored unless options.includeDisabled is true. User selection and
+     * select-all never toggle included disabled rows. clearSelection resets all rows.
      * Emits a single `onSelectionChange` only when the resulting selection
      * actually differs from the current one.
      *
@@ -1694,7 +1704,7 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
      * `afterNextRender`). Selection is identity-based and persists across page
      * changes in client-side mode.
      */
-    setSelected(rows: T[]): void;
+    setSelected(rows: T[], options?: IGridSetSelectedOptions): void;
     private _sameSelection;
     private _reconcileSelectionWithData;
     private _reconcileExpandedWithData;
@@ -1741,7 +1751,7 @@ declare class IGrid<T> implements AfterContentInit, OnChanges, OnDestroy {
     getRowTrack(row: T, index: number): any;
     private _hasExplicitColumns;
     static ɵfac: i0.ɵɵFactoryDeclaration<IGrid<any>, never>;
-    static ɵcmp: i0.ɵɵComponentDeclaration<IGrid<any>, "i-grid", ["iGrid"], { "dataSource": { "alias": "dataSource"; "required": false; }; "emptyState": { "alias": "emptyState"; "required": false; }; "selectionMode": { "alias": "selectionMode"; "required": false; }; "selectionRowHidden": { "alias": "selectionRowHidden"; "required": false; }; "selectionRowDisabled": { "alias": "selectionRowDisabled"; "required": false; }; "tree": { "alias": "tree"; "required": false; }; "treeIndent": { "alias": "treeIndent"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "treeColumn": { "alias": "treeColumn"; "required": false; }; "treeInitialExpandLevel": { "alias": "treeInitialExpandLevel"; "required": false; }; "showNumberColumn": { "alias": "showNumberColumn"; "required": false; }; "sortMode": { "alias": "sortMode"; "required": false; }; }, { "onSelectionChange": "onSelectionChange"; "onRowClick": "onRowClick"; "onRowExpandChange": "onRowExpandChange"; "onExpandedRowsChange": "onExpandedRowsChange"; "onServerSortChange": "onServerSortChange"; "onServerPageChange": "onServerPageChange"; "onServerFilterChange": "onServerFilterChange"; }, ["emptyDef", "expandableRowDef", "columnDefs", "customColumnDefs", "columnGroupDefs"], never, true, never>;
+    static ɵcmp: i0.ɵɵComponentDeclaration<IGrid<any>, "i-grid", ["iGrid"], { "dataSource": { "alias": "dataSource"; "required": false; }; "emptyState": { "alias": "emptyState"; "required": false; }; "selectionMode": { "alias": "selectionMode"; "required": false; }; "selectionRowHidden": { "alias": "selectionRowHidden"; "required": false; }; "selectionRowDisabled": { "alias": "selectionRowDisabled"; "required": false; }; "selectionRowChecked": { "alias": "selectionRowChecked"; "required": false; }; "tree": { "alias": "tree"; "required": false; }; "treeIndent": { "alias": "treeIndent"; "required": false; }; "trackBy": { "alias": "trackBy"; "required": false; }; "treeColumn": { "alias": "treeColumn"; "required": false; }; "treeInitialExpandLevel": { "alias": "treeInitialExpandLevel"; "required": false; }; "showNumberColumn": { "alias": "showNumberColumn"; "required": false; }; "sortMode": { "alias": "sortMode"; "required": false; }; }, { "onSelectionChange": "onSelectionChange"; "onRowClick": "onRowClick"; "onRowExpandChange": "onRowExpandChange"; "onExpandedRowsChange": "onExpandedRowsChange"; "onServerSortChange": "onServerSortChange"; "onServerPageChange": "onServerPageChange"; "onServerFilterChange": "onServerFilterChange"; }, ["emptyDef", "expandableRowDef", "columnDefs", "customColumnDefs", "columnGroupDefs"], never, true, never>;
     static ngAcceptInputType_showNumberColumn: unknown;
 }
 declare const I_GRID_DECLARATIONS: (typeof IGridExpandableRow)[];
@@ -4233,7 +4243,9 @@ declare class IHasMnRoute {
     readonly permission: IPermissionInput;
     readonly ready: i0.Signal<boolean>;
     readonly allowed: i0.Signal<boolean>;
+    readonly loadFailed: i0.Signal<boolean>;
     constructor();
+    retry(): void;
     static ɵfac: i0.ɵɵFactoryDeclaration<IHasMnRoute, never>;
     static ɵcmp: i0.ɵɵComponentDeclaration<IHasMnRoute, "i-has-mn-route", never, {}, {}, never, never, true, never>;
 }
@@ -4754,4 +4766,4 @@ declare function requireIEnvironmentApi(environment: IEnvironment, service: stri
 declare function requireIEnvironmentApiUrl(environment: IEnvironment): string;
 
 export { COUNTDOWN_THRESHOLD_MS, DEFAULT_PERSONAL_PROFILE_URL, IActionPlaceholder, IAlert, IAlertService, IApiService, IAuthCallback, IAuthService, IAvatar, IBanner, IButton, ICard, ICardBody, ICardFooter, ICardImage, ICardModule, ICodeViewer, ICodeViewerModule, IConfirm, IConfirmService, ICsrfService, ICurrentUserService, IDatepicker, IDialog, IDialogCloseDirective, IDialogContainer, IDialogModule, IDialogOutlet, IDialogRef, IDialogService, IEmptyState, IErrorPage, IFCDatepicker, IFCInput, IFCSelect, IFCSelectCompany, IFCTextArea, IGrid, IGridCell, IGridCellDefDirective, IGridColumn, IGridColumnGroup, IGridCustomColumn, IGridDataSource, IGridEmptyDef, IGridExpandableRow, IGridHeaderCell, IGridHeaderCellDefDirective, IGridHeaderCellGroup, IGridHeaderCellGroupColumns, IGridHeaderRowDirective, IGridModule, IGridRowDefDirective, IGridRowDirective, IGridViewport, IHContent, IHImpersonationBanner, IHMenu, IHSelection, IHSidebar, IHState, IHStateOwner, IHTitleBreadcrumbService, IH_SKIP_BEARER_HEADER, IH_STATE, IHasMnDirective, IHasMnRoute, IHighlightSearch, IHighlightSearchPipe, IIcon, IImageCropper, IImpersonationStateService, IInput, IInputAddon, IInputMaskDirective, IInputModule, ILoadError, ILoading, ILoadingRegion, IMPERSONATION_CONFIRMATION, IMPERSONATION_INFORMATION, IMenuGateDirective, INotHasMnDirective, INotification, INotificationBell, INotificationDrawer, INotificationItem, INotificationSnackbar, IPaginator, IPermissionMapStore, IPill, ISection, ISectionBody, ISectionFilter, ISectionFooter, ISectionHeader, ISectionModule, ISectionSubHeader, ISectionTab, ISectionTabContent, ISectionTabHeader, ISectionTabs, ISelect, ISelectCompany, ISelectOptionDefDirective, ISessionExpiredDialog, ISessionExpiredService, ISessionService, ISnackbar, ISnackbarRef, ISnackbarService, IStorageService, ITextArea, IToggle, IUI, IUserMenuService, IUserMenuStore, I_AUTH_CONFIG, I_DIALOG_DATA, I_EMPTY_STATE_PRESETS, I_ERROR_PAGE_ACTIONS, I_ERROR_PAGE_PRESETS, I_ERROR_PAGE_SUPPORT_EMAIL, I_GRID_DECLARATIONS, I_ICON_NAMES, I_ICON_SIZES, I_IMPERSONATION_ERROR_RESOLVER, I_SNACKBAR_DEFAULTS, MAX_TIMER_DELAY_MS, UNAUTHORIZED_ACCESS_PATH, USER_APPLICATION_MAPPING_NOT_FOUND, actorDisplayNameFromToken, authGuard, authInterceptor, buildExternalSigninUrl, buildFavoritePathMap, collectAuthorizationScope, collectLeafRoutes, collectMenuChain, collectMenuCodes, evaluatePermission, extractAccessTokenFromHash, extractProblemDetailsErrorCode, findFirstLeafRoute, findMenuNameById, formatApiFieldErrors, formatCountdown, getAuthEndpointPath, getAuthEndpointUrl, getDefaultIAuthConfig, getDefaultIAuthEndpoints, getIEnvironmentAuthConfig, getMenuChildren, getMenuKey, getMenuLabel, getMenuRoute, grantEndLabel, hasAnyMenuCode, hasAnyRoute, hasMenuChildren, hasMn, highlightSearchParts, impersonationContextKey, isControlRequired, isGroupNode, isHttpRoute, isImpersonationCsrfError, isLeafItem, isModuleMenu, isNewTabMenu, isReloadMenu, isSessionExpiredError, isSpaMenu, mapToSidebarUser, normalizeApiError, normalizeImpersonationStatus, normalizeMenuTree, normalizeRoutePath, notificationDate, provideIAuth, provideMenuPermissionMapping, readImpersonationActor, readImpersonationClaims, requireAccess, requireIEnvironmentApi, requireIEnvironmentApiUrl, requireIdentityHost, requireRouteAccess, resolveApiErrorDisplayMessage, resolveControlErrorMessage, resolveGrantEnd, resolveImpersonationRedirect, sanitizeReturnUrl, toIMenu, toIMenuFavorite, toIMenus, toSessionExpiredReason, truncateNotificationText, validateIAuthConfig, validatePermissionMap };
-export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBannerVariant, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEmptyStateConfig, IEmptyStateDensity, IEmptyStateKind, IEndImpersonationResult, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IHNavigationSnapshot, IHProjectValidation, IHSelectionApi, IHSelectionSnapshot, IHSelectionStatus, IHStateAdapter, IHStateApi, IHStateError, IHStateNamespaceOptions, IHStateStorage, IHighlightSearchPart, IIconName, IIconSize, IImageCropRect, IImageCropperExportOptions, IImageCropperResult, IImpersonationActor, IImpersonationStatus, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoadErrorDensity, ILoadingMode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, INotificationAction, INotificationEntry, INotificationSnackbarMessage, INotificationSnackbarOptions, INotificationState, IPaginatorState, IPermissionInput, IPermissionMap, IPermissionMapConfig, IPermissionMapState, IPermissionPredicate, IPillSize, IPillVariant, IPlatformApi, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectEmptyState, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISnackbarChanges, ISnackbarDefaults, ISnackbarDismissReason, ISnackbarOptions, ISnackbarPosition, ISortConfig, ISortDirection, ISortState, ISurfaceLayout, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse, SnackbarRuntimeOptions };
+export type { IAccessCheck, IAccessCheckSource, IAlertData, IApiErrorCatalogResolver, IApiErrorDisplayFormatter, IApiErrorExtensionValue, IApiOptions, IApiResponse, IAuthConfig, IAuthConfigOverrides, IAuthEndpoints, IAuthUser, IAuthorizationSource, IBannerVariant, IBreadcrumbItem, IButtonSize, IButtonType, IButtonVariant, IConfirmData, ICurrentUserDto, IDatepickerPanelPosition, IDialogAction, IDialogActionCancel, IDialogActionConfirm, IDialogActionCustom, IDialogActionOK, IDialogActionObject, IDialogActionSave, IDialogActionType, IDialogActionTypes, IDialogConfig, IEffectiveAuthorizationDto, IEffectiveAuthorizationType, IEmptyStateConfig, IEmptyStateDensity, IEmptyStateKind, IEndImpersonationResult, IEnvironment, IErrorContext, IErrorPageAction, IErrorPageKind, IErrorPageMode, IFavoriteMenuItemDto, IFavoriteOrderItemDto, IForgotPasswordResponse, IFormControlErrorMessage, IGridColumnLike, IGridColumnWidth, IGridDataSourceConfig, IGridFilter, IGridHeaderItem, IGridPaginatorInput, IGridSelectionChange, IGridSelectionMode, IGridServerSideConfig, IGridSetSelectedOptions, IHNavigationSnapshot, IHProjectValidation, IHSelectionApi, IHSelectionSnapshot, IHSelectionStatus, IHStateAdapter, IHStateApi, IHStateError, IHStateNamespaceOptions, IHStateStorage, IHighlightSearchPart, IIconName, IIconSize, IImageCropRect, IImageCropperExportOptions, IImageCropperResult, IImpersonationActor, IImpersonationStatus, IInputAddonButton, IInputAddonIcon, IInputAddonKind, IInputAddonLink, IInputAddonLoading, IInputAddonText, IInputAddonType, IInputAddons, IInputMask, IInputMaskType, IKnownErrorCode, ILoadErrorDensity, ILoadingMode, ILoginResponse, IMenu, IMenuApplication, IMenuApplicationDto, IMenuCompany, IMenuCompanyDto, IMenuFavoriteReorderEvent, IMenuFavoriteToggleEvent, IMenuGroup, IMenuNodeDto, IMenuOpenIn, IMenuOpenInDto, IMfaChallengeResponse, IMissingMenuCodePolicy, INormalizedApiError, INotificationAction, INotificationEntry, INotificationSnackbarMessage, INotificationSnackbarOptions, INotificationState, IPaginatorState, IPermissionInput, IPermissionMap, IPermissionMapConfig, IPermissionMapState, IPermissionPredicate, IPillSize, IPillVariant, IPlatformApi, IRefreshResponse, IResetPasswordResponse, IRoute, IRouteAccessOptions, IRouteMenuCodeResolver, IRoutes, ISanitizedReturnUrl, ISelectChange, ISelectEmptyState, ISelectOptionContext, ISelectPanelPosition, ISessionExpiredReason, ISessionUser, ISnackbarChanges, ISnackbarDefaults, ISnackbarDismissReason, ISnackbarOptions, ISnackbarPosition, ISortConfig, ISortDirection, ISortState, ISurfaceLayout, IToggleSize, ITokenLifespan, IUISize, IUIVariant, IUser, IUserMenuEnvelopeDto, IUserMenuLoadErrors, IUserMenuLoadSource, IValidateResetTokenResponse, SnackbarRuntimeOptions };
