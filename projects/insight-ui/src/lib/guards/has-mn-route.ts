@@ -11,11 +11,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, type Route, RouterOutlet } from '@angular/router';
 
 import { evaluatePermission, type IPermissionInput } from '../directives/has-mn';
+import { USER_APPLICATION_MAPPING_NOT_FOUND } from '../api/error-codes';
 import { IPermissionMapStore } from '../directives/permission-map';
 import { IErrorPage } from '../error-page/error-page';
 import type { IBreadcrumbItem, IRoute } from '../host/host.types';
 import { IHTitleBreadcrumbService } from '../host/shell/title-breadcrumb.service';
 import { ILoading } from '../loading/loading';
+import { ILoadError } from '../load-error/load-error';
 import { ISessionService } from '../session/session';
 import { IUserMenuStore } from '../store/user-menu';
 
@@ -24,10 +26,16 @@ import { IUserMenuStore } from '../store/user-menu';
   selector: 'i-has-mn-route',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, IErrorPage, ILoading],
+  imports: [RouterOutlet, IErrorPage, ILoading, ILoadError],
   template: `
     @if (!ready()) {
       <i-loading label="Loading access..." mode="container" />
+    } @else if (loadFailed()) {
+      <i-load-error
+        message="Failed to load your access rights. Please try again."
+        title="Failed to load access."
+        (onRetry)="retry()"
+      />
     } @else if (!allowed()) {
       <i-error-page kind="forbidden" role="alert" />
     } @else {
@@ -60,6 +68,12 @@ export class IHasMnRoute {
       state?.mapping ?? {},
     );
   });
+  readonly loadFailed = computed(() => {
+    const errors = this.store.loadErrors();
+    return [errors.menus, errors.authorizations].some(
+      (error) => !!error && error.errorCode !== USER_APPLICATION_MAPPING_NOT_FOUND,
+    );
+  });
 
   constructor() {
     effect(() => {
@@ -74,7 +88,7 @@ export class IHasMnRoute {
     });
 
     effect((onCleanup) => {
-      if (!this.ready() || this.allowed()) return;
+      if (!this.ready() || this.allowed() || this.loadFailed()) return;
       untracked(() => {
         const previousTitle = this.shell.titleOverride();
         const previousCrumbs = this.shell.breadcrumbsOverride();
@@ -89,6 +103,11 @@ export class IHasMnRoute {
         });
       });
     });
+  }
+
+  retry(): void {
+    if (this.store.initializing()) return;
+    this.store.load().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
 }
 

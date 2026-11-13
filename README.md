@@ -1,5 +1,27 @@
 # InsightUiAngular
 
+## Dialog description sanitization
+
+Alert and Confirm keep their existing `description` string and service signatures.
+Descriptions support only `strong`, `b`, `em`, `i`, and `br`, without attributes.
+The implementation parses a detached, inert template and reconstructs new text
+and allowlisted HTML elements. Active content and foreign namespaces are dropped;
+other HTML wrappers are removed while their text is retained. Angular's HTML
+sanitizer remains active during rendering. No package dependency is added.
+
+Escape untrusted values before interpolating them into description markup.
+Escaped names remain literal text. This is a restriction of the existing HTML
+contract: links, images, classes, styles, and event handlers are not supported.
+
+## Route access load errors
+
+`hasMn` renders `ILoadError` with Retry when menus or effective authorizations
+fail to load. Retry uses the existing user-menu store and waits while it loads.
+Missing application mappings and successfully loaded data without the required
+permission still render forbidden. Profile/favorite failures alone do not block
+the route. Existing permission mappings and route metadata behavior are retained.
+These source changes require a separately approved library release for deployed consumers.
+
 ## Host shared state
 
 `IHStateOwner` is created once by the host. Namespaces use `session` by default;
@@ -745,7 +767,6 @@ Consumers import `IEnvironment` from `@insight/ui` and declare `export const env
 `getIEnvironmentAuthConfig(environment)` maps only auth settings and omits unspecified overrides. `requireIEnvironmentApiUrl(environment)` requires the primary business endpoint; `requireIEnvironmentApi(environment, service)` requires an explicit named override. Both fail clearly for missing configuration instead of falling back to a platform API. Auth defaults live in tracked `auth-defaults.ts`, independently of consumer-local configuration.
 
 Run `node --test --experimental-test-isolation=none test/environment.test.mjs` for focused contract/default checks. Coordinate this contract release with consumer dependency updates; do not reuse old deployment modules unchanged.
-
 
 ## Remote-scoped hybrid permission mapping
 

@@ -25,17 +25,90 @@ class GridHostComponent {
 }
 
 @Component({
+  imports: [IGrid, IGridColumn],
+  template: `<i-grid [dataSource]="data" [showNumberColumn]="false">
+    <i-grid-column fieldName="team" title="Team" [sortable]="true" />
+    <i-grid-column fieldName="name" title="Name" [sortable]="true" />
+  </i-grid>`,
+})
+class SortReplacementHost {
+  rows = [
+    { team: 'A', name: 'Zoe' },
+    { team: 'B', name: 'Ada' },
+    { team: 'A', name: 'Bea' },
+  ];
+  data = new IGridDataSource(this.rows, { paginator: { pageSize: 10 } });
+}
+
+describe('IGrid sort across data source replacement', () => {
+  it('retains explicit multi-sort through replacement and no-result recovery', () => {
+    TestBed.configureTestingModule({ imports: [SortReplacementHost] });
+    const fixture = TestBed.createComponent(SortReplacementHost);
+    fixture.detectChanges();
+    const host = fixture.componentInstance;
+    const click = (title: string): void => {
+      const header = Array.from(
+        fixture.nativeElement.querySelectorAll('i-grid-header-cell') as NodeListOf<HTMLElement>,
+      ).find((node) => node.textContent?.trim() === title)!;
+      header.click();
+      fixture.detectChanges();
+    };
+    click('Team');
+    click('Name');
+    const sort: NonNullable<typeof host.data.sort> = [
+      { active: 'team', direction: 'asc' },
+      { active: 'name', direction: 'asc' },
+    ];
+    expect(host.data.sort).toEqual(sort);
+    host.data = new IGridDataSource(host.rows, {
+      sort: host.data.sort,
+      paginator: { pageSize: 10 },
+    });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toMatch(/Bea[\s\S]*Zoe[\s\S]*Ada/);
+    const grid = fixture.nativeElement.querySelector('i-grid');
+    host.data.filter = 'missing';
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('i-grid-row').length).toBe(0);
+    host.data.filter = '';
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('i-grid')).toBe(grid);
+    expect(fixture.nativeElement.textContent).toMatch(/Bea[\s\S]*Zoe[\s\S]*Ada/);
+    click('Team');
+    expect(host.data.sort?.[0]).toEqual({ active: 'team', direction: 'desc' });
+    click('Name');
+    click('Name');
+    expect(host.data.sort).toEqual([{ active: 'team', direction: 'desc' }]);
+    click('Team');
+    expect(host.data.sort).toBeNull();
+  });
+
+  it('uses the replacement source sort when the data context changes', () => {
+    TestBed.configureTestingModule({ imports: [SortReplacementHost] });
+    const fixture = TestBed.createComponent(SortReplacementHost);
+    fixture.detectChanges();
+    const host = fixture.componentInstance;
+    host.data.sort = { active: 'team', direction: 'desc' };
+    host.data = new IGridDataSource(host.rows, { sort: { active: 'name', direction: 'desc' } });
+    fixture.detectChanges();
+    const header = fixture.nativeElement.querySelectorAll('i-grid-header-cell')[1] as HTMLElement;
+    header.click();
+    fixture.detectChanges();
+    expect(host.data.sort).toBeNull();
+    host.data = new IGridDataSource(host.rows);
+    fixture.detectChanges();
+    header.click();
+    fixture.detectChanges();
+    expect(host.data.sort).toEqual([{ active: 'name', direction: 'asc' }]);
+  });
+});
+
+@Component({
   standalone: true,
   imports: [IGrid, IGridColumn, IGridCustomColumn, IGridColumnGroup],
   template: `
     <i-grid [dataSource]="data" [showNumberColumn]="false">
-      <i-grid-column
-        fieldName="name"
-        freeze
-        title="Name"
-        [minWidth]="minWidth"
-        [width]="width"
-      />
+      <i-grid-column fieldName="name" freeze title="Name" [minWidth]="minWidth" [width]="width" />
       <i-grid-column-group title="Identity">
         <i-grid-column fieldName="status" freeze title="Status" [minWidth]="90" [width]="80" />
       </i-grid-column-group>

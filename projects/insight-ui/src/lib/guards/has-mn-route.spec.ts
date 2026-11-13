@@ -114,6 +114,72 @@ describe('hasMn Angular routes', () => {
     harness = await RouterTestingHarness.create();
   });
 
+  for (const source of ['menus', 'authorizations'] as const) {
+    it(`retries a failed ${source} load without denying or mounting protected content`, async () => {
+      store.loadErrors.update((errors) => ({ ...errors, [source]: { status: 500 } }));
+      const load = spyOn(store, 'load').and.callFake(() => {
+        store.initializing.set(true);
+        store.initialized.set(false);
+        return of(undefined);
+      });
+      await harness.navigateByUrl('/reports/42?tab=info');
+      await settle();
+      expect(harness.routeNativeElement?.querySelector('i-load-error')).not.toBeNull();
+      expect(harness.routeNativeElement?.querySelector('i-error-page')).toBeNull();
+      expect(shell.titleOverride()).not.toBe('Unauthorized Access');
+      expect(mounts).toBe(0);
+      const button = harness.routeNativeElement?.querySelector(
+        'i-load-error button',
+      ) as HTMLButtonElement;
+      button.click();
+      button.click();
+      await settle();
+      expect(load).toHaveBeenCalledTimes(1);
+      expect(harness.routeNativeElement?.textContent).toContain('Loading access...');
+      store.initializing.set(false);
+      store.initialized.set(true);
+      await settle();
+      expect(harness.routeNativeElement?.querySelector('i-load-error')).not.toBeNull();
+      store.loadErrors.update((errors) => ({ ...errors, [source]: null }));
+      grant('reports');
+      await settle();
+      expect(harness.routeNativeElement?.textContent).toContain('report-42-info-resolved-value');
+      expect(TestBed.inject(Router).url).toBe('/reports/42?tab=info');
+      expect(harness.routeNativeElement?.querySelector('i-load-error')).toBeNull();
+      expect(shell.titleOverride()).toBeNull();
+      expect(shell.breadcrumbsOverride()).toBeNull();
+    });
+  }
+
+  it('keeps missing application mappings forbidden and ignores profile/favorite failures', async () => {
+    store.loadErrors.set({
+      user: { status: 500 },
+      favorites: { status: 500 },
+      menus: { errorCode: 'USER_APPLICATION_MAPPING_NOT_FOUND' },
+      authorizations: { errorCode: 'USER_APPLICATION_MAPPING_NOT_FOUND' },
+    });
+    await harness.navigateByUrl('/reports/42');
+    await settle();
+    expect(harness.routeNativeElement?.querySelector('i-error-page')).not.toBeNull();
+    expect(harness.routeNativeElement?.querySelector('i-load-error')).toBeNull();
+    store.loadErrors.update((errors) => ({ ...errors, menus: null, authorizations: null }));
+    grant('reports');
+    await settle();
+    expect(harness.routeNativeElement?.textContent).toContain('report-42');
+    expect(shell.titleOverride()).toBeNull();
+  });
+
+  it('restores denial metadata when access refresh fails', async () => {
+    await harness.navigateByUrl('/reports/42');
+    await settle();
+    expect(shell.titleOverride()).toBe('Unauthorized Access');
+    store.loadErrors.update((errors) => ({ ...errors, menus: { status: 503 } }));
+    await settle();
+    expect(harness.routeNativeElement?.querySelector('i-load-error')).not.toBeNull();
+    expect(shell.titleOverride()).toBeNull();
+    expect(shell.breadcrumbsOverride()).toBeNull();
+  });
+
   it('renders an in-place 403 without constructing the denied page', async () => {
     await harness.navigateByUrl('/reports/42?tab=info');
     await settle();
